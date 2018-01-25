@@ -1,0 +1,52 @@
+From eaa595140ee061a1806e7938ab5597a6e787196b Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Fri, 4 Aug 2017 16:42:37 +0530
+Subject: [PATCH 01/10] Fix incomplete frame error
+
+Bug: 63522067
+Bug: 64380403
+Test: ran POC before/after
+Change-Id: If22f2ed8936e0ead9fcfa64ddde99e85c10cecd2
+(cherry picked from commit ee0e003a0fd2280ecd0eeecd2e2f19250a96c3af)
+---
+ decoder/ihevcd_decode.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/decoder/ihevcd_decode.c b/decoder/ihevcd_decode.c
+index 04ad8f5..44abcef 100644
+--- a/decoder/ihevcd_decode.c
++++ b/decoder/ihevcd_decode.c
+@@ -69,6 +69,7 @@
+ #include "ihevcd_fmt_conv.h"
+ #include "ihevcd_job_queue.h"
+ #include "ihevcd_debug.h"
++#include "ihevcd_parse_slice.h"
+ #include "ihevcd_process_slice.h"
+ #include "ihevcd_ittiam_logo.h"
+ #include "ihevcd_profile.h"
+@@ -698,6 +699,22 @@ WORD32 ihevcd_decode(iv_obj_t *ps_codec_obj, void *pv_api_ip, void *pv_api_op)
+         return IV_FAIL;
+     }
+ 
++    if(1 == ps_codec->i4_pic_present && 0 == ps_codec->s_parse.i4_end_of_frame)
++    {
++        slice_header_t *ps_slice_hdr_next;
++        ps_codec->i4_slice_error = 1;
++        ps_codec->s_parse.i4_cur_slice_idx--;
++        if(ps_codec->s_parse.i4_cur_slice_idx < 0)
++            ps_codec->s_parse.i4_cur_slice_idx = 0;
++
++        ps_slice_hdr_next = ps_codec->s_parse.ps_slice_hdr_base + ((ps_codec->s_parse.i4_cur_slice_idx + 1) & (MAX_SLICE_HDR_CNT - 1));
++        ps_slice_hdr_next->i2_ctb_x = -1;
++        ps_slice_hdr_next->i2_ctb_y = -1;
++
++        ihevcd_parse_slice_data(ps_codec);
++        ASSERT(ps_codec->s_parse.i4_end_of_frame != 0);
++    }
++
+     if(1 == ps_codec->i4_pic_present)
+     {
+         WORD32 i;
+-- 
+2.7.4
+

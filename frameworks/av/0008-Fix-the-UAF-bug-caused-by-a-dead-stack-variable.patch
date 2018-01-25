@@ -1,0 +1,43 @@
+From 46521732ac47aecf18d0f626680f17c82b91c5b7 Mon Sep 17 00:00:00 2001
+From: Pawin Vongmasa <pawin@google.com>
+Date: Wed, 26 Jul 2017 16:42:54 -0700
+Subject: [PATCH 8/8] Fix the UAF bug caused by a dead stack variable
+
+The original code attempts to copy data from a location pointed to by a
+local variable that has gone out of scope. This CL moves the copy
+operation into the scope.
+
+Test: make cts -j123 && cts-tradefed run cts-dev -m \
+CtsMediaTestCases --compatibility:module-arg \
+CtsMediaTestCases:include-annotation:\
+android.platform.test.annotations.RequiresDevice
+
+Bug: 63773604
+Change-Id: I980630b6ac30875c2df65664668d4d6b7414f3a7
+---
+ media/libstagefright/MPEG4Writer.cpp | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/media/libstagefright/MPEG4Writer.cpp b/media/libstagefright/MPEG4Writer.cpp
+index 5e96c2b..6ca2abb 100644
+--- a/media/libstagefright/MPEG4Writer.cpp
++++ b/media/libstagefright/MPEG4Writer.cpp
+@@ -1674,10 +1674,12 @@ void MPEG4Writer::Track::getCodecSpecificDataFromInputFormatIfPossible() {
+             || !strcasecmp(mime, MEDIA_MIMETYPE_AUDIO_AAC)) {
+         if (mMeta->findData(kKeyESDS, &type, &data, &size)) {
+             ESDS esds(data, size);
+-            if (esds.getCodecSpecificInfo(&data, &size) != OK) {
+-                data = NULL;
+-                size = 0;
++            if (esds.getCodecSpecificInfo(&data, &size) == OK &&
++                    data != NULL &&
++                    copyCodecSpecificData((uint8_t*)data, size) == OK) {
++                mGotAllCodecSpecificData = true;
+             }
++            return;
+         }
+     }
+     if (data != NULL && copyCodecSpecificData((uint8_t *)data, size) == OK) {
+-- 
+2.7.4
+

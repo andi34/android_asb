@@ -1,0 +1,38 @@
+From 7464f4ef675a3fef11188dd57249eea8e46244f9 Mon Sep 17 00:00:00 2001
+From: Leon Scroggins III <scroggo@google.com>
+Date: Tue, 3 Oct 2017 14:00:20 -0400
+Subject: [PATCH 2/4] Throw OOME if Bitmap.nativeCreate fails
+
+Bug:33846679
+Test: I6ab6cb7a3b3151641a9f9b02b0bfc484e0a4524b
+
+This matches the old behavior, prior to switching from Java allocated
+pixel memory to native allocations (b/27762775). It also better matches
+what has happened - we ran out of memory. (Better than the current
+behavior - NullPointerException in the Java code, or an alternative
+solution of returning null, which would likely result in NPEs in the
+calling code.)
+
+Merged-In: I3958ed1106ac94fb1d3f30e044b620d984875211
+Change-Id: I3958ed1106ac94fb1d3f30e044b620d984875211
+(cherry picked from commit 5906a4869cdf5c39eba1d9a3125aff894c5e804d)
+---
+ core/jni/android/graphics/Bitmap.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/core/jni/android/graphics/Bitmap.cpp b/core/jni/android/graphics/Bitmap.cpp
+index 72755ce..3e6fe3f 100755
+--- a/core/jni/android/graphics/Bitmap.cpp
++++ b/core/jni/android/graphics/Bitmap.cpp
+@@ -725,6 +725,8 @@ static jobject Bitmap_creator(JNIEnv* env, jobject, jintArray jColors,
+ 
+     Bitmap* nativeBitmap = GraphicsJNI::allocateJavaPixelRef(env, &bitmap, NULL);
+     if (!nativeBitmap) {
++        ALOGE("OOM allocating Bitmap with dimensions %i x %i", width, height);
++        doThrowOOME(env);
+         return NULL;
+     }
+ 
+-- 
+2.7.4
+

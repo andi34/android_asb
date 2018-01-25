@@ -1,0 +1,86 @@
+From 15a1416162ea86b50c4d9a2e230fe3999139af38 Mon Sep 17 00:00:00 2001
+From: Beverly <beverlyt@google.com>
+Date: Fri, 1 Sep 2017 14:56:50 -0400
+Subject: [PATCH 4/4] DO NOT MERGE Backporting potential usb tapjacking
+ precaution.
+
+Bug: 62187985
+Test: manual, backport
+Change-Id: Iaceff6bb1da5fbf3d80a8e85923199bd8cab06bd
+MERGED-IN: I3bdcd1876cd6dbe8a728bbce74edb52ab79f3e4c
+MERGED-IN: Ic58ddd6d54e96f522445e67b90760dcfed13c27d
+---
+ packages/SystemUI/res/values/strings.xml           |  6 ++++++
+ .../android/systemui/usb/UsbDebuggingActivity.java | 25 ++++++++++++++++++++++
+ 2 files changed, 31 insertions(+)
+
+diff --git a/packages/SystemUI/res/values/strings.xml b/packages/SystemUI/res/values/strings.xml
+index 4a51329..f841c84 100644
+--- a/packages/SystemUI/res/values/strings.xml
++++ b/packages/SystemUI/res/values/strings.xml
+@@ -1701,4 +1701,10 @@
+     <!-- Text body for dialog alerting user that their phone has reached a certain temperature and may start to slow down in order to cool down. [CHAR LIMIT=300] -->
+     <string name="high_temp_dialog_message">Your phone will automatically try to cool down. You can still use your phone, but it may run slower.\n\nOnce your phone has cooled down, it will run normally.</string>
+ 
++
++    <!-- Warning shown when user input has been blocked due to another app overlaying screen
++         content. Since we don't know what the app is showing on top of the input target, we
++         can't verify user consent. [CHAR LIMIT=NONE] -->
++    <string name="touch_filtered_warning">Because an app is obscuring a permission request, Settings
++        can’t verify your response.</string>
+ </resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/usb/UsbDebuggingActivity.java b/packages/SystemUI/src/com/android/systemui/usb/UsbDebuggingActivity.java
+index f5447a2..329dd99 100644
+--- a/packages/SystemUI/src/com/android/systemui/usb/UsbDebuggingActivity.java
++++ b/packages/SystemUI/src/com/android/systemui/usb/UsbDebuggingActivity.java
+@@ -31,8 +31,12 @@ import android.os.ServiceManager;
+ import android.os.SystemProperties;
+ import android.util.Log;
+ import android.view.LayoutInflater;
++import android.view.MotionEvent;
+ import android.view.View;
++import android.view.Window;
++import android.view.WindowManager;
+ import android.widget.CheckBox;
++import android.widget.Toast;
+ 
+ import com.android.internal.app.AlertActivity;
+ import com.android.internal.app.AlertController;
+@@ -48,6 +52,10 @@ public class UsbDebuggingActivity extends AlertActivity
+ 
+     @Override
+     public void onCreate(Bundle icicle) {
++        Window window = getWindow();
++        window.addPrivateFlags(WindowManager.LayoutParams.PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS);
++        window.setType(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG);
++
+         super.onCreate(icicle);
+ 
+         if (SystemProperties.getInt("service.adb.tcp.port", 0) == 0) {
+@@ -79,6 +87,23 @@ public class UsbDebuggingActivity extends AlertActivity
+         ap.mView = checkbox;
+ 
+         setupAlert();
++
++        // adding touch listener on affirmative button - checks if window is obscured
++        // if obscured, do not let user give permissions (could be tapjacking involved)
++        final View.OnTouchListener filterTouchListener = (View v, MotionEvent event) -> {
++            // Filter obscured touches by consuming them.
++            if (((event.getFlags() & MotionEvent.FLAG_WINDOW_IS_OBSCURED) != 0)
++                    || ((event.getFlags() & MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED) != 0)) {
++                if (event.getAction() == MotionEvent.ACTION_UP) {
++                    Toast.makeText(v.getContext(),
++                            R.string.touch_filtered_warning,
++                            Toast.LENGTH_SHORT).show();
++                }
++                return true;
++            }
++            return false;
++        };
++        mAlert.getButton(BUTTON_POSITIVE).setOnTouchListener(filterTouchListener);
+     }
+ 
+     private class UsbDisconnectedReceiver extends BroadcastReceiver {
+-- 
+2.7.4
+

@@ -1,0 +1,41 @@
+From 18b1e3f2db9b33c70d8b63986dcdde22128edbe3 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Wed, 4 Oct 2017 10:10:39 +0530
+Subject: [PATCH 3/8] Access AVCDEC context after create fail check
+
+Bug: 66969281
+Change-Id: I7c293417079da991cfad675a2d5563423d751610
+(cherry picked from commit 8e6a6fe2e1542b3333ffecb7307a5de671c8a785)
+---
+ media/libstagefright/codecs/avcdec/SoftAVCDec.cpp | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp b/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp
+index 1f47155..43ef4a4 100644
+--- a/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp
++++ b/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp
+@@ -318,10 +318,6 @@ status_t SoftAVC::initDecoder() {
+ 
+         status = ivdec_api_function(mCodecCtx, (void *)&s_create_ip, (void *)&s_create_op);
+ 
+-        mCodecCtx = (iv_obj_t*)s_create_op.s_ivd_create_op_t.pv_handle;
+-        mCodecCtx->pv_fxns = dec_fxns;
+-        mCodecCtx->u4_size = sizeof(iv_obj_t);
+-
+         if (status != IV_SUCCESS) {
+             ALOGE("Error in create: 0x%x",
+                     s_create_op.s_ivd_create_op_t.u4_error_code);
+@@ -329,6 +325,10 @@ status_t SoftAVC::initDecoder() {
+             mCodecCtx = NULL;
+             return UNKNOWN_ERROR;
+         }
++
++        mCodecCtx = (iv_obj_t*)s_create_op.s_ivd_create_op_t.pv_handle;
++        mCodecCtx->pv_fxns = dec_fxns;
++        mCodecCtx->u4_size = sizeof(iv_obj_t);
+     }
+ 
+     /* Reset the plugin state */
+-- 
+2.7.4
+

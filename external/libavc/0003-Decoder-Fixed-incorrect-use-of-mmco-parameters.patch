@@ -1,0 +1,66 @@
+From d026c72112734562ea200c33df111d771eddb069 Mon Sep 17 00:00:00 2001
+From: Ritu Baldwa <ritu.baldwa@ittiam.com>
+Date: Mon, 9 Oct 2017 13:52:45 +0530
+Subject: [PATCH 3/4] Decoder: Fixed incorrect use of mmco parameters.
+
+Added extra structure to read mmco values and copied only once per
+picture.
+
+Bug: 65735716
+
+Change-Id: I25b08a37bc78342042c52957774b089abce1a54b
+(cherry picked from commit 3c70b9a190875938fc57164d9295a3ec791554df)
+---
+ decoder/ih264d_dpb_mgr.c     | 2 +-
+ decoder/ih264d_parse_slice.c | 9 +++++++++
+ decoder/ih264d_structs.h     | 1 +
+ 3 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/decoder/ih264d_dpb_mgr.c b/decoder/ih264d_dpb_mgr.c
+index 0a61ffd..998e97a 100644
+--- a/decoder/ih264d_dpb_mgr.c
++++ b/decoder/ih264d_dpb_mgr.c
+@@ -842,7 +842,7 @@ WORD32 ih264d_ref_idx_reordering(dec_struct_t *ps_dec, UWORD8 uc_lx)
+ WORD32 ih264d_read_mmco_commands(struct _DecStruct * ps_dec)
+ {
+     dec_bit_stream_t *ps_bitstrm = ps_dec->ps_bitstrm;
+-    dpb_commands_t *ps_dpb_cmds = ps_dec->ps_dpb_cmds;
++    dpb_commands_t *ps_dpb_cmds = &(ps_dec->s_dpb_cmds_scratch);
+     dec_slice_params_t * ps_slice = ps_dec->ps_cur_slice;
+     WORD32 j;
+     UWORD8 u1_buf_mode;
+diff --git a/decoder/ih264d_parse_slice.c b/decoder/ih264d_parse_slice.c
+index 2d8a9af..609c2fe 100644
+--- a/decoder/ih264d_parse_slice.c
++++ b/decoder/ih264d_parse_slice.c
+@@ -1858,6 +1858,15 @@ WORD32 ih264d_parse_decode_slice(UWORD8 u1_is_idr_slice,
+     if(ret != OK)
+         return ret;
+ 
++    if(u1_nal_ref_idc != 0)
++    {
++        if(!ps_dec->ps_dpb_cmds->u1_dpb_commands_read)
++        {
++            memcpy((void *)ps_dec->ps_dpb_cmds, (void *)(&(ps_dec->s_dpb_cmds_scratch)),
++                   sizeof(dpb_commands_t));
++        }
++    }
++
+     /* storing last Mb X and MbY of the slice */
+     ps_dec->i2_prev_slice_mbx = ps_dec->u2_mbx;
+     ps_dec->i2_prev_slice_mby = ps_dec->u2_mby;
+diff --git a/decoder/ih264d_structs.h b/decoder/ih264d_structs.h
+index c83c34e..daf753b 100644
+--- a/decoder/ih264d_structs.h
++++ b/decoder/ih264d_structs.h
+@@ -968,6 +968,7 @@ typedef struct _DecStruct
+     /* Variables for Decode Buffer Management */
+     dpb_manager_t *ps_dpb_mgr;
+     dpb_commands_t *ps_dpb_cmds;
++    dpb_commands_t s_dpb_cmds_scratch;
+ 
+     /* Variables Required for N MB design */
+     dec_mb_info_t *ps_nmb_info;
+-- 
+2.7.4
+

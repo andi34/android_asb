@@ -1,0 +1,27 @@
+From 06a6214f1ff053824b5c0b7da3509f417322aba0 Mon Sep 17 00:00:00 2001
+From: Chong Zhang <chz@google.com>
+Date: Tue, 24 Oct 2017 16:07:18 -0700
+Subject: [PATCH 3/4] mtp: fix double free of thumbnail data
+
+bug: 67864232
+Change-Id: I6eb51be839df12317273830521c70a4ed80f9496
+(cherry picked from commit e6b98532ee03d0ac1ca93382699893172454a946)
+---
+ media/jni/android_mtp_MtpDatabase.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/media/jni/android_mtp_MtpDatabase.cpp b/media/jni/android_mtp_MtpDatabase.cpp
+index 7217832..feff102 100644
+--- a/media/jni/android_mtp_MtpDatabase.cpp
++++ b/media/jni/android_mtp_MtpDatabase.cpp
+@@ -948,6 +948,7 @@ void* MyMtpDatabase::getThumbnail(MtpObjectHandle handle, size_t& outThumbSize)
+                         outThumbSize = image_data.thumbnail.length;
+                     } else {
+                         free(result);
++                        result = NULL;
+                     }
+                 }
+                 break;
+-- 
+2.7.4
+
