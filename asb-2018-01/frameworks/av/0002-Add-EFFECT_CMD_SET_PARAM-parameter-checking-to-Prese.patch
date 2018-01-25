@@ -1,0 +1,33 @@
+From 1d257ce1c7c53dc5475a5f2fbd5c0ad0917df555 Mon Sep 17 00:00:00 2001
+From: Mikhail Naganov <mnaganov@google.com>
+Date: Tue, 24 Oct 2017 14:44:43 -0700
+Subject: [PATCH 2/3] Add EFFECT_CMD_SET_PARAM parameter checking to Preset
+ Reverb
+
+Bug: 67647856
+Test: Added CTS tests
+(cherry picked from commit ee804dfa15cc2d34e5d67a9b437cd023349d633b)
+
+Change-Id: Ib13b3730d9227d8b31c3fca16886b0041f15138c
+---
+ media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+index f2343af..8c02b34 100644
+--- a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
++++ b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+@@ -1765,6 +1765,10 @@ int Reverb_setParameter (ReverbContext *pContext, void *pParam, void *pValue, in
+         if (param != REVERB_PARAM_PRESET) {
+             return -EINVAL;
+         }
++        if (vsize < (int)sizeof(uint16_t)) {
++            android_errorWriteLog(0x534e4554, "67647856");
++            return -EINVAL;
++        }
+ 
+         uint16_t preset = *(uint16_t *)pValue;
+         ALOGV("set REVERB_PARAM_PRESET, preset %d", preset);
+-- 
+2.7.4
+

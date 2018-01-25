@@ -1,0 +1,44 @@
+From 8d5631bc4a6c238d734c1e34f62da15354733a56 Mon Sep 17 00:00:00 2001
+From: tintin <tintinweb@oststrom.com>
+Date: Fri, 13 Oct 2017 11:11:48 -0700
+Subject: [PATCH] libnetutil: Check dhcp respose packet length
+
+Bug: 67474440
+Test: Manual
+
+Signed-off-by: Dmitry Shmidt <dimitrysh@google.com>
+(cherry picked from commit 61f25d4a3657e79659963d12005afa8c30883015)
+
+Change-Id: I12f68594186d71d0609909f86699111903d7c8a3
+---
+ libnetutils/packet.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/libnetutils/packet.c b/libnetutils/packet.c
+index be4e0db..7527da7 100644
+--- a/libnetutils/packet.c
++++ b/libnetutils/packet.c
+@@ -218,6 +218,20 @@ int receive_packet(int s, struct dhcp_msg *msg)
+      * to construct the pseudo header used in the checksum calculation.
+      */
+     dhcp_size = ntohs(packet.udp.len) - sizeof(packet.udp);
++    /*
++     * check validity of dhcp_size.
++     * 1) cannot be negative or zero.
++     * 2) src buffer contains enough bytes to copy
++     * 3) cannot exceed destination buffer
++     */
++    if ((dhcp_size <= 0) ||
++        ((int)(nread - sizeof(struct iphdr) - sizeof(struct udphdr)) < dhcp_size) ||
++        ((int)sizeof(struct dhcp_msg) < dhcp_size)) {
++#if VERBOSE
++        ALOGD("Malformed Packet");
++#endif
++        return -1;
++    }
+     saddr = packet.ip.saddr;
+     daddr = packet.ip.daddr;
+     nread = ntohs(packet.ip.tot_len);
+-- 
+2.7.4
+

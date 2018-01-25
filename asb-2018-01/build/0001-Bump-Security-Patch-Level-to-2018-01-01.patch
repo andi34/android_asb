@@ -1,0 +1,55 @@
+From 2a15e2a4150ad7076ce84cd2cfbc2bcb7eaf3db3 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sun, 14 Jan 2018 13:51:32 +0100
+Subject: [PATCH] Bump Security Patch Level to 2018-01-01
+
+Android Bulletin Jan. 2018:
+---------------------------
+CVE-2017-13176	A-68341964	High	Change 202459
+CVE-2017-13177	A-68320413	Crit.	no libhevc
+CVE-2017-0855	A-64452857	High	Change 202460
+CVE-2017-13191	A-64380403	High	no libhevc
+CVE-2017-13192	A-64380202	High	no libhevc
+CVE-2017-13193	A-65718319	High	no libhevc
+CVE-2017-13195	A-65398821	High	no libhevc
+CVE-2017-13196	A-63522067	High	no libhevc
+CVE-2017-13208	A-67474440	Crit.	Change 202461
+CVE-2017-13210	A-67782345	High	Change 202462
+
+Pixel/Nexus Bulletin Jan. 2018:
+-------------------------------
+CVE-2017-0846	A-64934810 [2]	Mod.
+CVE-2017-13201	A-63982768	Mod.
+CVE-2017-13202	A-67647856	Mod.	Change 202463
+CVE-2017-13206	A-65025048	Mod.	Change 202464
+CVE-2017-13185 	A-65123471	High	no libhevc
+CVE-2017-13187 	A-65034175	High	no libhevc
+CVE-2017-13188 	A-65280786	High	Change 202465
+CVE-2017-13200 	A-63100526	Mod.	Change 202466
+CVE-2017-13194 	A-64710201	High	Change 202467
+CVE-2017-13198 	A-68399117	High
+CVE-2017-13212 	A-62187985	Mod.	Change 202469
+
+Reference Version: 5.1.1
+
+Change-Id: I2dac4a3fc0e5cb083983a78b940e19b30601cb53
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 6ce6e11..de9117b 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-12-01
++  PLATFORM_SECURITY_PATCH := 2018-01-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

@@ -1,0 +1,35 @@
+From 265d3a54f12448d75642dc7526e21e0d06d12580 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 9 Oct 2017 14:59:43 -0700
+Subject: [PATCH 3/3] Fix edge case when applying id3 unsynchronization
+
+Bug: 63100526
+Test: opened poc, other files
+(cherry picked from commit 3e70296461c5f260988ab21854a6f43fdafea764)
+
+Change-Id: Ie82637f3c6194c034bbaa992cbcdb23be0c22270
+---
+ media/libstagefright/id3/ID3.cpp | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index 97f1778..9dc0ca0 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -389,7 +389,12 @@ bool ID3::removeUnsynchronizationV2_4(bool iTunesHack) {
+                     --mSize;
+                     --dataSize;
+                 }
+-                mData[writeOffset++] = mData[readOffset++];
++                if (i + 1 < dataSize) {
++                    // Only move data if there's actually something to move.
++                    // This handles the special case of the data being only [0xff, 0x00]
++                    // which should be converted to just 0xff if unsynchronization is on.
++                    mData[writeOffset++] = mData[readOffset++];
++                }
+             }
+             // move the remaining data following this frame
+             if (readOffset <= oldSize) {
+-- 
+2.7.4
+

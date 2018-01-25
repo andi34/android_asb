@@ -1,0 +1,31 @@
+From 82035710351ce5ba1b370ef4f26cf4a7b49a5507 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 25 Aug 2015 19:07:10 -0700
+Subject: [PATCH] Sonivox: sanity check headerLength in XMF_ReadNode.
+
+Bug: 23342881
+Bug: 35472997
+Change-Id: I025338c5f0b39cac89ad786afc69cf085e830568
+(cherry picked from commit eefb545f69f6ae1e8b32150dd9a28b73cc751f17)
+CVE-2017-0644
+---
+ arm-wt-22k/lib_src/eas_xmf.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/eas_xmf.c b/arm-wt-22k/lib_src/eas_xmf.c
+index 5b398c4..169eb7e 100644
+--- a/arm-wt-22k/lib_src/eas_xmf.c
++++ b/arm-wt-22k/lib_src/eas_xmf.c
+@@ -586,6 +586,9 @@ static EAS_RESULT XMF_ReadNode (EAS_HW_DATA_HANDLE hwInstData, S_XMF_DATA *pXMFD
+     if ((result = EAS_HWFilePos(hwInstData, pXMFData->fileHandle, &offset)) != EAS_SUCCESS)
+         return result;
+ 
++    if (offset - nodeOffset > headerLength)
++        return EAS_FAILURE;
++
+     /* skip to node contents */
+     if ((result = EAS_HWFileSeek(hwInstData, pXMFData->fileHandle, nodeOffset + headerLength)) != EAS_SUCCESS)
+         return result;
+-- 
+2.7.4
+
