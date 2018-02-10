@@ -1,0 +1,57 @@
+From 182da20b1506f69423af393198f14e158e8f43eb Mon Sep 17 00:00:00 2001
+From: Ivan Kutepov <its.kutepov@gmail.com>
+Date: Thu, 8 Feb 2018 02:54:03 +0300
+Subject: [PATCH] ASB February 2018, update security string to 2018-02-01
+
+Implemented patches:
+======================================
+Media framework
+CVE-2017-13228 A-69478425 Critical
+CVE-2017-13229 A-68160703 Critical
+CVE-2017-13230 A-65483665 Critical
+CVE-2017-13232 A-68953950 High
+CVE-2017-13233 A-62851602 High
+CVE-2017-13234 A-68159767 High
+CVE-2017-13235 A-68342866 High
+CVE-2017-13241 A-69065651 Moderate
+
+System
+CVE-2017-13242 A-62672248 Moderate
+
+HAL
+CVE-2017-11041 A-35269676* High
+
+NOT Implemented, because not relevant
+=====================================
+Framework
+CVE-2017-13239 A-66244132 Moderate 8.0
+CVE-2017-13240 A-68694819 Moderate 8.0, 8.1
+
+Media framework
+CVE-2017-13231 A-67962232 High     8.0, 8.1
+
+System
+CVE-2017-13236 A-68217699 Moderate 8.0, 8.1
+CVE-2017-13243 A-38258991 Moderate (not publicly available)
+
+Change-Id: I91117d71f7c28e3fe05c2a40a5513c66d73c8d4e
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index ba155e6..c44c1da 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-01-01
++  PLATFORM_SECURITY_PATCH := 2018-02-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+
