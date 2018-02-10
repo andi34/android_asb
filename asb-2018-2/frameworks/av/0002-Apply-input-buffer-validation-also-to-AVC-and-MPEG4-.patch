@@ -1,0 +1,131 @@
+From 0c89a836f2bccbc0156ed31ce69ea361bbb41967 Mon Sep 17 00:00:00 2001
+From: Dongwon Kang <dwkang@google.com>
+Date: Mon, 20 Nov 2017 17:55:24 -0800
+Subject: [PATCH 2/3] Apply input buffer validation also to AVC and MPEG4
+ encoders
+
+Input buffer validation is existing only on VPX encoders. This patch
+applies the checking also to the other sw video encoders.
+
+Bug: 69065651 Bug: 27569635
+Test: run poc with and without the patch.
+Test: pass post submit media CTS tests after disabling hw encoders.
+
+Merged-In: I1358df64352577fd6d41cd4bfec18be37c98fe6f
+Change-Id: I1358df64352577fd6d41cd4bfec18be37c98fe6f
+(cherry picked from commit fed57366c58aa69ad8f1df5191d6bf48e58d86a8)
+---
+ media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp         |  6 ++++++
+ .../codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp              |  8 ++++++++
+ media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp    | 15 +++++++--------
+ .../libstagefright/include/SoftVideoEncoderOMXComponent.h |  2 ++
+ media/libstagefright/omx/SoftVideoEncoderOMXComponent.cpp | 13 +++++++++++++
+ 5 files changed, 36 insertions(+), 8 deletions(-)
+
+diff --git a/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp b/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp
+index 5b06722..7bfa051 100644
+--- a/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp
++++ b/media/libstagefright/codecs/avcenc/SoftAVCEnc.cpp
+@@ -1191,6 +1191,12 @@ OMX_ERRORTYPE SoftAVC::setEncodeArgs(
+     ps_inp_raw_buf->e_color_fmt = mIvVideoColorFormat;
+     source = NULL;
+     if ((inputBufferHeader != NULL) && inputBufferHeader->nFilledLen) {
++        OMX_ERRORTYPE error = validateInputBuffer(inputBufferHeader);
++        if (error != OMX_ErrorNone) {
++            ALOGE("b/69065651");
++            android_errorWriteLog(0x534e4554, "69065651");
++            return error;
++        }
+         source = inputBufferHeader->pBuffer + inputBufferHeader->nOffset;
+ 
+         if (mInputDataIsMeta) {
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+index d5a26d3..7d2131d 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+@@ -437,6 +437,14 @@ void SoftMPEG4Encoder::onQueueFilled(OMX_U32 /* portIndex */) {
+         }
+ 
+         if (inHeader->nFilledLen > 0) {
++            OMX_ERRORTYPE error = validateInputBuffer(inHeader);
++            if (error != OMX_ErrorNone) {
++                ALOGE("b/69065651");
++                android_errorWriteLog(0x534e4554, "69065651");
++                mSignalledError = true;
++                notify(OMX_EventError, error, 0, 0);
++                return;
++            }
+             const uint8_t *inputData = NULL;
+             if (mInputDataIsMeta) {
+                 inputData =
+diff --git a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+index 56e1f77..04d8dda 100644
+--- a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
++++ b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+@@ -731,6 +731,13 @@ void SoftVPXEncoder::onQueueFilled(OMX_U32 /* portIndex */) {
+             return;
+         }
+ 
++        OMX_ERRORTYPE error = validateInputBuffer(inputBufferHeader);
++        if (error != OMX_ErrorNone) {
++            ALOGE("b/27569635");
++            android_errorWriteLog(0x534e4554, "27569635");
++            notify(OMX_EventError, error, 0, 0);
++            return;
++        }
+         const uint8_t *source =
+             inputBufferHeader->pBuffer + inputBufferHeader->nOffset;
+ 
+@@ -746,14 +753,6 @@ void SoftVPXEncoder::onQueueFilled(OMX_U32 /* portIndex */) {
+                 return;
+             }
+         } else {
+-            if (inputBufferHeader->nFilledLen < frameSize) {
+-                android_errorWriteLog(0x534e4554, "27569635");
+-                notify(OMX_EventError, OMX_ErrorUndefined, 0, 0);
+-                return;
+-            } else if (inputBufferHeader->nFilledLen > frameSize) {
+-                ALOGW("Input buffer contains too many pixels");
+-            }
+-
+             if (mColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+                 ConvertYUV420SemiPlanarToYUV420Planar(
+                         source, mConversionBuffer, mWidth, mHeight);
+diff --git a/media/libstagefright/include/SoftVideoEncoderOMXComponent.h b/media/libstagefright/include/SoftVideoEncoderOMXComponent.h
+index b43635d..02555a2 100644
+--- a/media/libstagefright/include/SoftVideoEncoderOMXComponent.h
++++ b/media/libstagefright/include/SoftVideoEncoderOMXComponent.h
+@@ -68,6 +68,8 @@ protected:
+ 
+     virtual OMX_ERRORTYPE getExtensionIndex(const char *name, OMX_INDEXTYPE *index);
+ 
++    OMX_ERRORTYPE validateInputBuffer(const OMX_BUFFERHEADERTYPE *inputBufferHeader);
++
+     enum {
+         kInputPortIndex = 0,
+         kOutputPortIndex = 1,
+diff --git a/media/libstagefright/omx/SoftVideoEncoderOMXComponent.cpp b/media/libstagefright/omx/SoftVideoEncoderOMXComponent.cpp
+index 0f9c118..9d302dd 100644
+--- a/media/libstagefright/omx/SoftVideoEncoderOMXComponent.cpp
++++ b/media/libstagefright/omx/SoftVideoEncoderOMXComponent.cpp
+@@ -656,4 +656,17 @@ OMX_ERRORTYPE SoftVideoEncoderOMXComponent::getExtensionIndex(
+     return SimpleSoftOMXComponent::getExtensionIndex(name, index);
+ }
+ 
++OMX_ERRORTYPE SoftVideoEncoderOMXComponent::validateInputBuffer(
++        const OMX_BUFFERHEADERTYPE *inputBufferHeader) {
++    size_t frameSize = mInputDataIsMeta ?
++            max(sizeof(VideoNativeMetadata), sizeof(VideoGrallocMetadata))
++            : mWidth * mHeight * 3 / 2;
++    if (inputBufferHeader->nFilledLen < frameSize) {
++        return OMX_ErrorUndefined;
++    } else if (inputBufferHeader->nFilledLen > frameSize) {
++        ALOGW("Input buffer contains more data than expected.");
++    }
++    return OMX_ErrorNone;
++}
++
+ }  // namespace android
+-- 
+2.7.4
+

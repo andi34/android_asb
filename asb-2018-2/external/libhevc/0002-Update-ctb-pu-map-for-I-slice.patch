@@ -1,0 +1,118 @@
+From fba52aa26d064041e71beb9aa7f339bb62e8fbf3 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Thu, 22 Jun 2017 15:36:50 +0530
+Subject: [PATCH 2/2] Update ctb pu map for I slice
+
+The update in I slice is required for P/B slices in the same
+frame for accessing neighbor pus.
+
+Bug: 62851602
+Bug: 63522067
+Test: re-run PoC from b/62851602
+Change-Id: Ie5e43f1cd5649b2745b6527654bc24d8c7d42932
+(cherry picked from commit 43f126112a8f2000cd0744f2fc5d545ff1a9a70c)
+---
+ decoder/ihevcd_parse_slice.c   | 31 ++++++++++++++++++++++---------
+ decoder/ihevcd_process_slice.c | 29 ++++++++++++++++++++++-------
+ 2 files changed, 44 insertions(+), 16 deletions(-)
+
+diff --git a/decoder/ihevcd_parse_slice.c b/decoder/ihevcd_parse_slice.c
+index c1b067e..aedfbe7 100644
+--- a/decoder/ihevcd_parse_slice.c
++++ b/decoder/ihevcd_parse_slice.c
+@@ -3111,15 +3111,7 @@ IHEVCD_ERROR_T ihevcd_parse_slice_data(codec_t *ps_codec)
+                 UWORD32 *pu4_nbr_pu_idx = ps_proc->pu4_pic_pu_idx_map;
+                 WORD32 nbr_pu_idx_strd = MAX_CTB_SIZE / MIN_PU_SIZE + 2;
+                 pu_t *ps_pu;
+-
+-                for(row = 0; row < ctb_size / MIN_PU_SIZE; row++)
+-                {
+-                    for(col = 0; col < ctb_size / MIN_PU_SIZE; col++)
+-                    {
+-                        pu1_pic_pu_map_ctb[row * ctb_size / MIN_PU_SIZE + col] = 0;
+-                    }
+-                }
+-
++                WORD32 ctb_size_in_min_pu = (ctb_size / MIN_PU_SIZE);
+ 
+                 /* Neighbor PU idx update inside CTB */
+                 /* 1byte per 4x4. Indicates the PU idx that 4x4 block belongs to */
+@@ -3170,6 +3162,27 @@ IHEVCD_ERROR_T ihevcd_parse_slice_data(codec_t *ps_codec)
+ 
+                     }
+                 }
++
++                /* Updating the CTB level PU idx (Used for collocated MV pred)*/
++                {
++                    WORD32 ctb_row, ctb_col, index_pic_map, index_nbr_map;
++                    WORD32 first_pu_of_ctb;
++                    first_pu_of_ctb = pu4_nbr_pu_idx[1 + nbr_pu_idx_strd];
++
++                    index_pic_map = 0 * ctb_size_in_min_pu + 0;
++                    index_nbr_map = (0 + 1) * nbr_pu_idx_strd + (0 + 1);
++
++                    for(ctb_row = 0; ctb_row < ctb_size_in_min_pu; ctb_row++)
++                    {
++                        for(ctb_col = 0; ctb_col < ctb_size_in_min_pu; ctb_col++)
++                        {
++                            pu1_pic_pu_map_ctb[index_pic_map + ctb_col] = pu4_nbr_pu_idx[index_nbr_map + ctb_col]
++                                            - first_pu_of_ctb;
++                        }
++                        index_pic_map += ctb_size_in_min_pu;
++                        index_nbr_map += nbr_pu_idx_strd;
++                    }
++                }
+             }
+ 
+             /*************************************************/
+diff --git a/decoder/ihevcd_process_slice.c b/decoder/ihevcd_process_slice.c
+index f57cc31..72db2cc 100644
+--- a/decoder/ihevcd_process_slice.c
++++ b/decoder/ihevcd_process_slice.c
+@@ -704,14 +704,8 @@ IHEVCD_ERROR_T ihevcd_process(process_ctxt_t *ps_proc)
+                     WORD32 row, col;
+                     UWORD32 *pu4_nbr_pu_idx = ps_proc->pu4_pic_pu_idx_map;
+                     WORD32 nbr_pu_idx_strd = MAX_CTB_SIZE / MIN_PU_SIZE + 2;
++                    WORD32 ctb_size_in_min_pu = (ctb_size / MIN_PU_SIZE);
+ 
+-                    for(row = 0; row < ctb_size / MIN_PU_SIZE; row++)
+-                    {
+-                        for(col = 0; col < ctb_size / MIN_PU_SIZE; col++)
+-                        {
+-                            pu1_pic_pu_map_ctb[row * ctb_size / MIN_PU_SIZE + col] = 0;
+-                        }
+-                    }
+                     /* Neighbor PU idx update inside CTB */
+                     /* 1byte per 4x4. Indicates the PU idx that 4x4 block belongs to */
+ 
+@@ -760,6 +754,27 @@ IHEVCD_ERROR_T ihevcd_process(process_ctxt_t *ps_proc)
+                                             pu4_nbr_pu_idx[(ctb_size_left / MIN_PU_SIZE) * nbr_pu_idx_strd + i + 1];
+ 
+                         }
++
++                        /* Updating the CTB level PU idx (Used for collocated MV pred)*/
++                        {
++                            WORD32 ctb_row, ctb_col, index_pic_map, index_nbr_map;
++                            WORD32 first_pu_of_ctb;
++                            first_pu_of_ctb = pu4_nbr_pu_idx[1 + nbr_pu_idx_strd];
++
++                            index_pic_map = 0 * ctb_size_in_min_pu + 0;
++                            index_nbr_map = (0 + 1) * nbr_pu_idx_strd + (0 + 1);
++
++                            for(ctb_row = 0; ctb_row < ctb_size_in_min_pu; ctb_row++)
++                            {
++                                for(ctb_col = 0; ctb_col < ctb_size_in_min_pu; ctb_col++)
++                                {
++                                    pu1_pic_pu_map_ctb[index_pic_map + ctb_col] = pu4_nbr_pu_idx[index_nbr_map + ctb_col]
++                                                    - first_pu_of_ctb;
++                                }
++                                index_pic_map += ctb_size_in_min_pu;
++                                index_nbr_map += nbr_pu_idx_strd;
++                            }
++                        }
+                     }
+                 }
+             }
+-- 
+2.7.4
+

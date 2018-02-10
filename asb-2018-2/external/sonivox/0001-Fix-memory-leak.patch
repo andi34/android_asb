@@ -1,0 +1,60 @@
+From 8550736f70285cff8dfd552e3d78c6c1bffbee97 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 6 Nov 2017 12:18:41 -0800
+Subject: [PATCH 1/2] Fix memory leak
+
+Bug: 68159767
+Test: build
+Change-Id: Iecbb69e59ccbe33989ad9d76f6826c22cda7724b
+(cherry picked from commit 2815be21f2f5e8f1d345f35bf9b3a008fc546efa)
+---
+ arm-wt-22k/lib_src/eas_mdls.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/eas_mdls.c b/arm-wt-22k/lib_src/eas_mdls.c
+index 8097ba4..3ec24a0 100644
+--- a/arm-wt-22k/lib_src/eas_mdls.c
++++ b/arm-wt-22k/lib_src/eas_mdls.c
+@@ -602,6 +602,7 @@ EAS_RESULT DLSParser (EAS_HW_DATA_HANDLE hwInstData, EAS_FILE_HANDLE fileHandle,
+         if ((dls.regionCount == 0) || (dls.regionCount > DLS_MAX_REGION_COUNT))
+         {
+             { /* dpp: EAS_ReportEx(_EAS_SEVERITY_ERROR, "DLS file contains invalid #regions [%u]\n", dls.regionCount); */ }
++            EAS_HWFree(dls.hwInstData, dls.wsmpData);
+             return EAS_ERROR_FILE_FORMAT;
+         }
+ 
+@@ -609,6 +610,7 @@ EAS_RESULT DLSParser (EAS_HW_DATA_HANDLE hwInstData, EAS_FILE_HANDLE fileHandle,
+         if ((dls.artCount == 0) || (dls.artCount > DLS_MAX_ART_COUNT))
+         {
+             { /* dpp: EAS_ReportEx(_EAS_SEVERITY_ERROR, "DLS file contains invalid #articulations [%u]\n", dls.regionCount); */ }
++            EAS_HWFree(dls.hwInstData, dls.wsmpData);
+             return EAS_ERROR_FILE_FORMAT;
+         }
+ 
+@@ -616,6 +618,7 @@ EAS_RESULT DLSParser (EAS_HW_DATA_HANDLE hwInstData, EAS_FILE_HANDLE fileHandle,
+         if ((dls.instCount == 0) || (dls.instCount > DLS_MAX_INST_COUNT))
+         {
+             { /* dpp: EAS_ReportEx(_EAS_SEVERITY_ERROR, "DLS file contains invalid #instruments [%u]\n", dls.instCount); */ }
++            EAS_HWFree(dls.hwInstData, dls.wsmpData);
+             return EAS_ERROR_FILE_FORMAT;
+         }
+ 
+@@ -636,6 +639,7 @@ EAS_RESULT DLSParser (EAS_HW_DATA_HANDLE hwInstData, EAS_FILE_HANDLE fileHandle,
+         /* calculate final memory size */
+         size = (EAS_I32) sizeof(S_EAS) + instSize + rgnPoolSize + artPoolSize + (2 * waveLenSize) + (EAS_I32) dls.wavePoolSize;
+         if (size <= 0) {
++            EAS_HWFree(dls.hwInstData, dls.wsmpData);
+             return EAS_ERROR_FILE_FORMAT;
+         }
+ 
+@@ -644,6 +648,7 @@ EAS_RESULT DLSParser (EAS_HW_DATA_HANDLE hwInstData, EAS_FILE_HANDLE fileHandle,
+         if (dls.pDLS == NULL)
+         {
+             { /* dpp: EAS_ReportEx(_EAS_SEVERITY_ERROR, "EAS_HWMalloc failed for DLS memory allocation size %ld\n", size); */ }
++            EAS_HWFree(dls.hwInstData, dls.wsmpData);
+             return EAS_ERROR_MALLOC_FAILED;
+         }
+         EAS_HWMemSet(dls.pDLS, 0, size);
+-- 
+2.7.4
+

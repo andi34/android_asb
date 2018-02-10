@@ -1,0 +1,30 @@
+From 9f73c62155d3b9610830591fb9f85e4618a29ece Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Fri, 1 Dec 2017 16:12:08 -0800
+Subject: [PATCH 3/3] httplive: check for malformed EXT-X-STREAM-INF
+
+Bug: 68342866
+Test: adb shell am start -a android.intent.action.VIEW -d http://localhost:1137/index.html
+Change-Id: I479f9e0b7ca828d048ef88b23b4948e3c1472b3c
+(cherry picked from commit e3bd8dd81e51b4d02484e7eec0d725ba9c254c68)
+---
+ media/libstagefright/httplive/M3UParser.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/media/libstagefright/httplive/M3UParser.cpp b/media/libstagefright/httplive/M3UParser.cpp
+index c04549a..78a2dd0 100644
+--- a/media/libstagefright/httplive/M3UParser.cpp
++++ b/media/libstagefright/httplive/M3UParser.cpp
+@@ -897,6 +897,9 @@ status_t M3UParser::parseStreamInf(
+         }
+     }
+ 
++    if (meta->get() == NULL) {
++        return ERROR_MALFORMED;
++    }
+     return OK;
+ }
+ 
+-- 
+2.7.4
+
