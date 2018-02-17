@@ -1,0 +1,96 @@
+From 7d466dd7213ba73527339a69332b96bd594c9bfe Mon Sep 17 00:00:00 2001
+From: Siyamed Sinir <siyamed@google.com>
+Date: Wed, 6 Sep 2017 15:15:44 -0700
+Subject: [PATCH 3/4] Prevent getting data from Clipboard if device is locked
+
+Clipboard should not return data if the device is locked. This CL checks
+for device locked state before returning values from get/has functions.
+
+Test: bit -t CtsContentTestCases:android.content.cts.ClipboardManagerTest
+
+Bug: 64934810
+Change-Id: Icefac226615fe22a7735dff4ba4c3b528fb2ac12
+---
+ .../java/com/android/server/ClipboardService.java  | 31 ++++++++++++++++------
+ 1 file changed, 23 insertions(+), 8 deletions(-)
+
+diff --git a/services/java/com/android/server/ClipboardService.java b/services/java/com/android/server/ClipboardService.java
+index 069ae23..07d5167 100644
+--- a/services/java/com/android/server/ClipboardService.java
++++ b/services/java/com/android/server/ClipboardService.java
+@@ -20,6 +20,8 @@ import android.app.ActivityManagerNative;
+ import android.app.AppGlobals;
+ import android.app.AppOpsManager;
+ import android.app.IActivityManager;
++import android.app.KeyguardManager;
++import android.os.PowerManager;
+ import android.content.BroadcastReceiver;
+ import android.content.ClipData;
+ import android.content.ClipDescription;
+@@ -191,8 +193,8 @@ public class ClipboardService extends IClipboard.Stub {
+     
+     public ClipData getPrimaryClip(String pkg) {
+         synchronized (this) {
+-            if (mAppOps.noteOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
+-                    pkg) != AppOpsManager.MODE_ALLOWED) {
++            if ((mAppOps.noteOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
++                    pkg) != AppOpsManager.MODE_ALLOWED) || isDeviceLocked()) {
+                 return null;
+             }
+             addActiveOwnerLocked(Binder.getCallingUid(), pkg);
+@@ -202,8 +204,8 @@ public class ClipboardService extends IClipboard.Stub {
+ 
+     public ClipDescription getPrimaryClipDescription(String callingPackage) {
+         synchronized (this) {
+-            if (mAppOps.checkOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
+-                    callingPackage) != AppOpsManager.MODE_ALLOWED) {
++            if ((mAppOps.checkOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
++                    callingPackage) != AppOpsManager.MODE_ALLOWED) || isDeviceLocked()) {
+                 return null;
+             }
+             PerUserClipboard clipboard = getClipboard();
+@@ -213,8 +215,8 @@ public class ClipboardService extends IClipboard.Stub {
+ 
+     public boolean hasPrimaryClip(String callingPackage) {
+         synchronized (this) {
+-            if (mAppOps.checkOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
+-                    callingPackage) != AppOpsManager.MODE_ALLOWED) {
++            if ((mAppOps.checkOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
++                    callingPackage) != AppOpsManager.MODE_ALLOWED) || isDeviceLocked()) {
+                 return false;
+             }
+             return getClipboard().primaryClip != null;
+@@ -237,8 +239,8 @@ public class ClipboardService extends IClipboard.Stub {
+ 
+     public boolean hasClipboardText(String callingPackage) {
+         synchronized (this) {
+-            if (mAppOps.checkOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
+-                    callingPackage) != AppOpsManager.MODE_ALLOWED) {
++            if ((mAppOps.checkOp(AppOpsManager.OP_READ_CLIPBOARD, Binder.getCallingUid(),
++                    callingPackage) != AppOpsManager.MODE_ALLOWED) || isDeviceLocked()) {
+                 return false;
+             }
+             PerUserClipboard clipboard = getClipboard();
+@@ -250,6 +252,19 @@ public class ClipboardService extends IClipboard.Stub {
+         }
+     }
+ 
++    private boolean isDeviceLocked() {
++        boolean isLocked = false;
++        KeyguardManager keyguardManager = (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
++        boolean inKeyguardRestrictedInputMode = keyguardManager.inKeyguardRestrictedInputMode();
++        if (inKeyguardRestrictedInputMode) {
++            isLocked = true;
++        } else {
++            PowerManager powerManager = (PowerManager)mContext.getSystemService(Context.POWER_SERVICE);
++            isLocked = !powerManager.isScreenOn();
++        }
++        return isLocked;
++    }
++
+     private final void checkUriOwnerLocked(Uri uri, int uid) {
+         if (!"content".equals(uri.getScheme())) {
+             return;
+-- 
+2.7.4
+
