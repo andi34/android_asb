@@ -1,0 +1,38 @@
+From 220ca7809ffaa54bd64fc95cb4954f7c6a828871 Mon Sep 17 00:00:00 2001
+From: Emilian Peev <epeev@google.com>
+Date: Mon, 6 Nov 2017 10:41:19 +0000
+Subject: [PATCH] Camera metadata: Check source metadata size
+
+Source size passed by client could be smaller than 'camera_metadata_t'.
+In this case the cast in 'allocate_copy_camera_metadata_checked()' will
+be incorrect and we will try to access invalid heap memory.
+
+Bug: 67782345
+Test: Camera CTS
+Change-Id: I9582c704f414493978d09ffb603b5e8368cda5ce
+(cherry picked from commit 489bbd13bf0add8029444b9d9505b3d118776ea3)
+CVE-2017-13210
+---
+ camera/src/camera_metadata.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/camera/src/camera_metadata.c b/camera/src/camera_metadata.c
+index 99277f7..0745e54 100644
+--- a/camera/src/camera_metadata.c
++++ b/camera/src/camera_metadata.c
+@@ -182,6 +182,12 @@ camera_metadata_t *allocate_copy_camera_metadata_checked(
+         return NULL;
+     }
+ 
++    if (src_size < sizeof(camera_metadata_t)) {
++        ALOGE("%s: Source size too small!", __FUNCTION__);
++        android_errorWriteLog(0x534e4554, "67782345");
++        return NULL;
++    }
++
+     void *buffer = malloc(src_size);
+     memcpy(buffer, src, src_size);
+ 
+-- 
+2.7.4
+

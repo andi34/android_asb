@@ -1,0 +1,55 @@
+From b3c3c08a50a3ed952ca01bbe55b11ec8cba72eed Mon Sep 17 00:00:00 2001
+From: Narayan Kamath <narayan@google.com>
+Date: Thu, 14 Sep 2017 10:41:28 +0100
+Subject: [PATCH 4/6] Fix full-eng build breakage due to dbacd826a100f2c.
+
+This wasn't caught by treehugger since it doesn't build this target.
+
+Test: make
+Test: zip_archive_test
+Bug: 64211847
+
+Change-Id: Iee6e133e236ed639f944e4b8c3c8102cf22e46bb
+(cherry picked from commit 6e39c88b1e4ea00e76e0d66e764a63b5d8c883fc)
+---
+ libziparchive/zip_archive_test.cc | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/libziparchive/zip_archive_test.cc b/libziparchive/zip_archive_test.cc
+index 89eb496..1cb4a8a 100644
+--- a/libziparchive/zip_archive_test.cc
++++ b/libziparchive/zip_archive_test.cc
+@@ -540,7 +540,7 @@ TEST(ziparchive, ExtractToFile) {
+ // Manual changes :
+ // [2] = 0xff  // Corrupt the LFH signature of entry 0.
+ // [3] = 0xff  // Corrupt the LFH signature of entry 0.
+-static const std::vector<uint8_t> kZipFileWithBrokenLfhSignature{
++static const uint8_t kZipFileWithBrokenLfhSignature[] = {
+     //[lfh-sig-----------], [lfh contents---------------------------------
+     0x50, 0x4b, 0xff, 0xff, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x77, 0x80,
+     //--------------------------------------------------------------------
+@@ -571,12 +571,16 @@ static const std::vector<uint8_t> kZipFileWithBrokenLfhSignature{
+     0x00, 0x00, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00};
+ 
+ TEST(ziparchive, BrokenLfhSignature) {
+-  TemporaryFile tmp_file;
+-  ASSERT_NE(-1, tmp_file.fd);
+-  ASSERT_TRUE(android::base::WriteFully(tmp_file.fd, &kZipFileWithBrokenLfhSignature[0],
+-                                        kZipFileWithBrokenLfhSignature.size()));
++  char kTempFilePattern[] = "zip_archive_input_XXXXXX";
++  int fd = make_temporary_file(kTempFilePattern);
++  ASSERT_NE(-1, fd);
++
++  ASSERT_EQ(static_cast<int32_t>(sizeof(kZipFileWithBrokenLfhSignature)),
++      TEMP_FAILURE_RETRY(write(fd, kZipFileWithBrokenLfhSignature,
++                               sizeof(kZipFileWithBrokenLfhSignature))));
+   ZipArchiveHandle handle;
+-  ASSERT_EQ(-1, OpenArchiveFd(tmp_file.fd, "LeadingNonZipBytes", &handle));
++  ASSERT_EQ(-1, OpenArchiveFd(fd, "LeadingNonZipBytes", &handle));
++  close(fd);
+ }
+ 
+ int main(int argc, char** argv) {
+-- 
+2.7.4
+

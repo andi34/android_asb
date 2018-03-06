@@ -1,0 +1,35 @@
+From 276aa64e2882f9eb612934255edc4a26c4b5d3b0 Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Thu, 5 Oct 2017 14:18:26 +0530
+Subject: [PATCH 10/18] SoftAVCDec: Handle zero length input without EOS
+
+When a zero length input buffer is sent to SoftAVC decoder
+without EOS set in nFlags, SoftAVC decoder plugin was
+entering an infinite loop. Fixed it by returning from
+onQueueFilled for such cases.
+
+Bug: 66969349
+Test: Tested using poc associated with the bug
+Change-Id: I79cebc8f5b40c51256aba83a08deb547b220c4d7
+(cherry picked from commit 21943c05f0ee2350647a6fa5ee17aa3c68859383)
+CVE-2017-13180
+---
+ media/libstagefright/codecs/avcdec/SoftAVCDec.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp b/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp
+index 9a748e5..84ce79a 100644
+--- a/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp
++++ b/media/libstagefright/codecs/avcdec/SoftAVCDec.cpp
+@@ -545,7 +545,7 @@ void SoftAVC::onQueueFilled(OMX_U32 portIndex) {
+                 notifyEmptyBufferDone(inHeader);
+ 
+                 if (!(inHeader->nFlags & OMX_BUFFERFLAG_EOS)) {
+-                    continue;
++                    return;
+                 }
+ 
+                 mReceivedEOS = true;
+-- 
+2.7.4
+

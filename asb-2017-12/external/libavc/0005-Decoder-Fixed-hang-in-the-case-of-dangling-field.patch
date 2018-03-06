@@ -1,0 +1,34 @@
+From 43d4bcdf0a87d7c7c1d9c4e06617ced23cfce892 Mon Sep 17 00:00:00 2001
+From: Hamsalekha S <hamsalekha.s@ittiam.com>
+Date: Tue, 1 Aug 2017 14:51:55 +0530
+Subject: [PATCH 05/10] Decoder: Fixed hang in the case of dangling field
+
+The u1_top_bottom_decoded  flag in the decoder context has been fixed
+to be updated correctly in the case of dangling field
+
+Bug: 63315932
+Test: ran POC after patching
+Change-Id: I8db4ebeb94fba735ba45f365c37e52a202ea84cd
+CVE-2017-0874
+---
+ decoder/ih264d_parse_slice.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/decoder/ih264d_parse_slice.c b/decoder/ih264d_parse_slice.c
+index 849b9c5..8a7f93a 100644
+--- a/decoder/ih264d_parse_slice.c
++++ b/decoder/ih264d_parse_slice.c
+@@ -1382,9 +1382,8 @@ WORD32 ih264d_parse_decode_slice(UWORD8 u1_is_idr_slice,
+         if(ps_dec->u1_dangling_field == 1)
+         {
+             ps_dec->u1_second_field = 1 - ps_dec->u1_second_field;
+-            ps_cur_slice->u1_bottom_field_flag = u1_bottom_field_flag;
+-            ps_dec->u2_prv_frame_num = u2_frame_num;
+             ps_dec->u1_first_slice_in_stream = 0;
++            ps_dec->u1_top_bottom_decoded = TOP_FIELD_ONLY | BOT_FIELD_ONLY;
+             return ERROR_DANGLING_FIELD_IN_PIC;
+         }
+ 
+-- 
+2.7.4
+

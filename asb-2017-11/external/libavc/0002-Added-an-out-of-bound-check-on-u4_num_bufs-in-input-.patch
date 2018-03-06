@@ -1,0 +1,32 @@
+From 3cb834552a06d92a44d63547e330ac0d0dc20074 Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Fri, 16 Jun 2017 15:37:48 +0530
+Subject: [PATCH 02/10] Added an out of bound check on u4_num_bufs in input
+ argument
+
+ps_dec_ip->s_out_buffer.u4_num_bufs was missing out of bound checks
+
+Bug: 62688399
+Change-Id: Ic5e5c002d29fcb18064550d5a5f9289bb68b448e
+CVE-2017-0849
+---
+ decoder/ih264d_api.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/decoder/ih264d_api.c b/decoder/ih264d_api.c
+index b34b6f5..f4d641f 100644
+--- a/decoder/ih264d_api.c
++++ b/decoder/ih264d_api.c
+@@ -1771,7 +1771,8 @@ WORD32 ih264d_video_decode(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
+                     && ps_dec->i4_decode_header == 0)
+     {
+         UWORD32 i;
+-        if(ps_dec->ps_out_buffer->u4_num_bufs == 0)
++        if((ps_dec->ps_out_buffer->u4_num_bufs == 0) ||
++           (ps_dec->ps_out_buffer->u4_num_bufs > IVD_VIDDEC_MAX_IO_BUFFERS))
+         {
+             ps_dec_op->u4_error_code |= 1 << IVD_UNSUPPORTEDPARAM;
+             ps_dec_op->u4_error_code |= IVD_DISP_FRM_ZERO_OP_BUFS;
+-- 
+2.7.4
+

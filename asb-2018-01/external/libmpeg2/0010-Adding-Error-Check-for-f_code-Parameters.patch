@@ -1,0 +1,52 @@
+From 6933398bf560d8509ba0f7e8bec3af5e14b6d6bf Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Wed, 9 Aug 2017 12:11:38 +0530
+Subject: [PATCH 10/10] Adding Error Check for f_code Parameters
+
+In MPEG1, the valid range for the forward and backward f_code parameters
+is [1, 7]. Adding a check to enforce this. Without the check, the value
+could be 0. We read (f_code - 1) bits from the stream and reading a
+negative number of bits from the stream is undefined.
+
+Bug: 64550583
+Test: monitored temp ALOGD() output
+Change-Id: Ia452cd43a28e9d566401f515947164635361782f
+(cherry picked from commit 71d734b83d72e8a59f73f1230982da97615d2689)
+CVE-2017-13205
+---
+ decoder/impeg2d_dec_hdr.c  | 5 +++++
+ decoder/impeg2d_pic_proc.c | 2 ++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/decoder/impeg2d_dec_hdr.c b/decoder/impeg2d_dec_hdr.c
+index 186f477..03323a4 100644
+--- a/decoder/impeg2d_dec_hdr.c
++++ b/decoder/impeg2d_dec_hdr.c
+@@ -703,6 +703,11 @@ IMPEG2D_ERROR_CODES_T impeg2d_dec_pic_hdr(dec_state_t *ps_dec)
+ 
+     if(ps_dec->u2_is_mpeg2 == 0)
+     {
++        if (ps_dec->u2_forw_f_code < 1 || ps_dec->u2_forw_f_code > 7 ||
++                        ps_dec->u2_back_f_code < 1 || ps_dec->u2_back_f_code > 7)
++        {
++            return IMPEG2D_UNKNOWN_ERROR;
++        }
+         ps_dec->au2_f_code[0][0] = ps_dec->au2_f_code[0][1] = ps_dec->u2_forw_f_code;
+         ps_dec->au2_f_code[1][0] = ps_dec->au2_f_code[1][1] = ps_dec->u2_back_f_code;
+     }
+diff --git a/decoder/impeg2d_pic_proc.c b/decoder/impeg2d_pic_proc.c
+index fbbbf79..6826def 100644
+--- a/decoder/impeg2d_pic_proc.c
++++ b/decoder/impeg2d_pic_proc.c
+@@ -271,6 +271,8 @@ IMPEG2D_ERROR_CODES_T impeg2d_init_video_state(dec_state_t *ps_dec, e_video_type
+         ps_dec->u2_progressive_frame            = 1;
+         ps_dec->u2_frame_rate_extension_n       = 0;
+         ps_dec->u2_frame_rate_extension_d       = 0;
++        ps_dec->u2_forw_f_code                  = 7;
++        ps_dec->u2_back_f_code                  = 7;
+ 
+         ps_dec->pf_vld_inv_quant                  = impeg2d_vld_inv_quant_mpeg1;
+         /*-------------------------------------------------------------------*/
+-- 
+2.7.4
+

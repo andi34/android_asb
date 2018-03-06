@@ -1,0 +1,33 @@
+From 8d5f5c7e7f3e571679f55a68abac79057052c0a0 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Mon, 10 Jul 2017 18:08:04 +0530
+Subject: [PATCH 08/16] Fix slice address zero for not first slice in pic
+
+The parameter slice address is parsed only slices that are not
+first slice in the pic and the value cannot be zero.
+
+Bug: 64380202
+Test: ran PoC on master
+Change-Id: Ic21c40cf67c916806113d2425790a27cb658b5d2
+(cherry picked from commit ed3f6bb877ae9e241afd6a6a13d5a6afd692ddc0)
+CVE-2017-13192
+---
+ decoder/ihevcd_parse_slice_header.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/decoder/ihevcd_parse_slice_header.c b/decoder/ihevcd_parse_slice_header.c
+index e1b50b7..ae19328 100644
+--- a/decoder/ihevcd_parse_slice_header.c
++++ b/decoder/ihevcd_parse_slice_header.c
+@@ -356,7 +356,7 @@ IHEVCD_ERROR_T ihevcd_parse_slice_header(codec_t *ps_codec,
+         slice_address = value;
+         /* If slice address is greater than the number of CTBs in a picture,
+          * ignore the slice */
+-        if(value >= ps_sps->i4_pic_size_in_ctb)
++        if(value >= ps_sps->i4_pic_size_in_ctb || value <= 0)
+             return IHEVCD_IGNORE_SLICE;
+     }
+     else
+-- 
+2.7.4
+

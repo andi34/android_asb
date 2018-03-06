@@ -1,0 +1,36 @@
+From 6b0ebf5a5d4bffa334d38eed3dd8e8771b605a81 Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Fri, 9 Jun 2017 12:12:03 +0530
+Subject: [PATCH 03/10] Propagating Error From impeg2d_pre_pic_dec_proc
+
+In case the function impeg2d_pre_pic_dec_proc returns an error,
+the decoder should not try to continue decode.
+
+Bug: 63316832
+Test: ran POC under ASAN on patched master
+Change-Id: Ib6eed075ac879fb944ca3da70b75d4d723ab93e6
+CVE-2017-0835
+---
+ decoder/impeg2d_dec_hdr.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/decoder/impeg2d_dec_hdr.c b/decoder/impeg2d_dec_hdr.c
+index 27903b7..215301c 100644
+--- a/decoder/impeg2d_dec_hdr.c
++++ b/decoder/impeg2d_dec_hdr.c
+@@ -1733,7 +1733,11 @@ IMPEG2D_ERROR_CODES_T impeg2d_process_video_bit_stream(dec_state_t *ps_dec)
+                 {
+                     return e_error;
+                 }
+-                impeg2d_pre_pic_dec_proc(ps_dec);
++                e_error = impeg2d_pre_pic_dec_proc(ps_dec);
++                if ((IMPEG2D_ERROR_CODES_T) IVD_ERROR_NONE != e_error)
++                {
++                    return e_error;
++                }
+                 impeg2d_dec_pic_data(ps_dec);
+                 impeg2d_post_pic_dec_proc(ps_dec);
+                 u4_start_code_found = 1;
+-- 
+2.7.4
+

@@ -1,0 +1,48 @@
+From 414e9ed51cae453954d2f9b1c205649b8802140e Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Mon, 2 Nov 2015 14:55:48 +0530
+Subject: [PATCH 04/16] Fixed stack pointer increment in
+ ihevc_itrans_recon_8x8.s
+
+Stack now points to top
+
+Change-Id: I8605b2cb16a6ed67bdfded9cca6eb8b03c657601
+---
+ common/arm/ihevc_itrans_recon_8x8.s | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/common/arm/ihevc_itrans_recon_8x8.s b/common/arm/ihevc_itrans_recon_8x8.s
+index 440512a..e9b53b4 100644
+--- a/common/arm/ihevc_itrans_recon_8x8.s
++++ b/common/arm/ihevc_itrans_recon_8x8.s
+@@ -151,12 +151,12 @@ ihevc_itrans_recon_8x8_a9q:
+     @// copy the input pointer to another register
+     @// step 1 : load all constants
+     stmfd       sp!,{r4-r12,lr}
+-    add         sp,sp,#40
+-    ldr         r8,[sp,#4]                  @ prediction stride
+-    ldr         r7,[sp,#8]                  @ destination stride
+-    ldr         r6,[sp]                     @ src stride
+-    ldr         r12,[sp,#12]
+-    ldr         r11,[sp,#16]
++
++    ldr         r8,[sp,#44]                  @ prediction stride
++    ldr         r7,[sp,#48]                  @ destination stride
++    ldr         r6,[sp, #40]                     @ src stride
++    ldr         r12,[sp,#52]
++    ldr         r11,[sp,#56]
+     mov         r6,r6,lsl #1                @ x sizeof(word16)
+     add         r9,r0,r6, lsl #1            @ 2 rows
+ 
+@@ -925,7 +925,7 @@ pred_buff_addition:
+ 
+ 
+ 
+-    sub         sp,sp,#40
++
+     ldmfd       sp!,{r4-r12,pc}
+ 
+ 
+-- 
+2.7.4
+

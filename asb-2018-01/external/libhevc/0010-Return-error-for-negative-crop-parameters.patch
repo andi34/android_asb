@@ -1,0 +1,54 @@
+From c83bf882121ffe13e1f7b995bb32f31143b724f3 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Thu, 12 Oct 2017 15:28:20 +0530
+Subject: [PATCH 10/16] Return error for negative crop parameters
+
+Bug: 65398821
+Change-Id: I18a94d40d77504bb9c9d5a5e7bf41207aed28712
+Signed-off-by: Sungtak Lee <taklee@google.com>
+(cherry picked from commit 978d3320ef3dc60f69f8c4ba215b869d11b03944)
+CVE-2017-13195
+---
+ decoder/ihevcd_parse_headers.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index 06f5ef1..c62fda9 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1283,28 +1283,28 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+     {
+ 
+         UEV_PARSE("pic_crop_left_offset", value, ps_bitstrm);
+-        if (value >= ps_sps->i2_pic_width_in_luma_samples)
++        if (value < 0 || value >= ps_sps->i2_pic_width_in_luma_samples)
+         {
+             return IHEVCD_INVALID_PARAMETER;
+         }
+         ps_sps->i2_pic_crop_left_offset = value;
+ 
+         UEV_PARSE("pic_crop_right_offset", value, ps_bitstrm);
+-        if (value >= ps_sps->i2_pic_width_in_luma_samples)
++        if (value < 0 || value >= ps_sps->i2_pic_width_in_luma_samples)
+         {
+             return IHEVCD_INVALID_PARAMETER;
+         }
+         ps_sps->i2_pic_crop_right_offset = value;
+ 
+         UEV_PARSE("pic_crop_top_offset", value, ps_bitstrm);
+-        if (value >= ps_sps->i2_pic_height_in_luma_samples)
++        if (value < 0 || value >= ps_sps->i2_pic_height_in_luma_samples)
+         {
+             return IHEVCD_INVALID_PARAMETER;
+         }
+         ps_sps->i2_pic_crop_top_offset = value;
+ 
+         UEV_PARSE("pic_crop_bottom_offset", value, ps_bitstrm);
+-        if (value >= ps_sps->i2_pic_height_in_luma_samples)
++        if (value < 0 || value >= ps_sps->i2_pic_height_in_luma_samples)
+         {
+             return IHEVCD_INVALID_PARAMETER;
+         }
+-- 
+2.7.4
+

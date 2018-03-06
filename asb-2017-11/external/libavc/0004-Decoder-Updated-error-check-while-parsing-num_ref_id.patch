@@ -1,0 +1,48 @@
+From 5884b285160d667b266d0037c37dd4bc370f228b Mon Sep 17 00:00:00 2001
+From: Hamsalekha S <hamsalekha.s@ittiam.com>
+Date: Fri, 8 Sep 2017 14:22:22 +0530
+Subject: [PATCH 04/10] Decoder: Updated error check while parsing
+ num_ref_idx_lx_active.
+
+Added an error check on the lower limit of u1_num_ref_idx_lx_active,
+while parsing slice header. The minimum possible value is 1.
+
+Bug: 64836894
+
+Change-Id: I57056851fc135ed00f7a10af5c81eb560e9e12de
+CVE-2017-0858
+---
+ decoder/ih264d_parse_bslice.c | 3 ++-
+ decoder/ih264d_parse_pslice.c | 2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/decoder/ih264d_parse_bslice.c b/decoder/ih264d_parse_bslice.c
+index d341287..120c594 100644
+--- a/decoder/ih264d_parse_bslice.c
++++ b/decoder/ih264d_parse_bslice.c
+@@ -1399,7 +1399,8 @@ WORD32 ih264d_parse_bslice(dec_struct_t * ps_dec, UWORD16 u2_first_mb_in_slice)
+         {
+             u1_max_ref_idx = MAX_FRAMES << 1;
+         }
+-        if((u4_temp > u1_max_ref_idx) || (ui_temp1 > u1_max_ref_idx))
++        if((u4_temp > u1_max_ref_idx) || (ui_temp1 > u1_max_ref_idx)
++                        || (u4_temp < 1) || (ui_temp1 < 1))
+         {
+             return ERROR_NUM_REF;
+         }
+diff --git a/decoder/ih264d_parse_pslice.c b/decoder/ih264d_parse_pslice.c
+index bcfbe05..40291cc 100644
+--- a/decoder/ih264d_parse_pslice.c
++++ b/decoder/ih264d_parse_pslice.c
+@@ -1963,7 +1963,7 @@ WORD32 ih264d_parse_pslice(dec_struct_t *ps_dec, UWORD16 u2_first_mb_in_slice)
+ 
+ 
+         UWORD8 u1_max_ref_idx = MAX_FRAMES << u1_field_pic_flag;
+-        if(u4_temp > u1_max_ref_idx)
++        if(u4_temp > u1_max_ref_idx || u4_temp < 1)
+         {
+             return ERROR_NUM_REF;
+         }
+-- 
+2.7.4
+

@@ -1,0 +1,76 @@
+From 6166e9f695658088648223e138e656a31dc44076 Mon Sep 17 00:00:00 2001
+From: Tony Mak <tonymak@google.com>
+Date: Thu, 10 Aug 2017 14:19:43 +0100
+Subject: [PATCH 1/4] DPC should not be allowed to grant development permission
+
+Test: cts-tradefed run cts-dev --module CtsDevicePolicyManagerTestCases --t  com.android.cts.devicepolicy.MixedDeviceOwnerTest#testPermissionGrant_developmentPermission
+Test: cts-tradefed run cts-dev --module CtsDevicePolicyManagerTestCases --t  com.android.cts.devicepolicy.MixedProfileOwnerTest#testPermissionGrant_developmentPermission
+Test: cts-tradefed run cts-dev --module CtsDevicePolicyManagerTestCases --t  com.android.cts.devicepolicy.MixedDeviceOwnerTest#testPermissionGrant
+Test: cts-tradefed run cts-dev --module CtsDevicePolicyManagerTestCases --t  com.android.cts.devicepolicy.MixedProfileOwnerTest#testPermissionGrant
+Test: Run "Permissions lockdown" test in CtsVerifier
+
+Bug: 62623498
+
+Merged-In: If83d8edd0eea99145421e967ae47fdc264a5cf7c
+
+Change-Id: I129bfe850981cf0b3646b7c1cf19c8a3ec69f512
+CVE-2017-0830
+---
+ .../server/devicepolicy/DevicePolicyManagerService.java   | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java b/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java
+index 5461018..4e596f2 100644
+--- a/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java
++++ b/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java
+@@ -57,6 +57,7 @@ import android.content.pm.ApplicationInfo;
+ import android.content.pm.IPackageManager;
+ import android.content.pm.PackageManager;
+ import android.content.pm.PackageManager.NameNotFoundException;
++import android.content.pm.PermissionInfo;
+ import android.content.pm.ResolveInfo;
+ import android.content.pm.ServiceInfo;
+ import android.content.pm.UserInfo;
+@@ -97,6 +98,7 @@ import android.security.KeyChain;
+ import android.security.KeyChain.KeyChainConnection;
+ import android.service.persistentdata.PersistentDataBlockManager;
+ import android.text.TextUtils;
++import android.util.EventLog;
+ import android.util.Log;
+ import android.util.PrintWriterPrinter;
+ import android.util.Printer;
+@@ -6448,6 +6450,10 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
+                 if (targetSdkVersion < android.os.Build.VERSION_CODES.M) {
+                     return false;
+                 }
++                if (!isRuntimePermission(permission)) {
++                    EventLog.writeEvent(0x534e4554, "62623498", user.getIdentifier(), "");
++                    return false;
++                }
+                 final PackageManager packageManager = mContext.getPackageManager();
+                 switch (grantState) {
+                     case DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED: {
+@@ -6473,6 +6479,8 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
+                 return true;
+             } catch (SecurityException se) {
+                 return false;
++            } catch (NameNotFoundException e) {
++                return false;
+             } finally {
+                 Binder.restoreCallingIdentity(ident);
+             }
+@@ -6507,4 +6515,11 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
+             }
+         }
+     }
++
++    public boolean isRuntimePermission(String permissionName) throws NameNotFoundException {
++        final PackageManager packageManager = mContext.getPackageManager();
++        PermissionInfo permissionInfo = packageManager.getPermissionInfo(permissionName, 0);
++        return (permissionInfo.protectionLevel & PermissionInfo.PROTECTION_MASK_BASE)
++                == PermissionInfo.PROTECTION_DANGEROUS;
++    }
+ }
+-- 
+2.7.4
+

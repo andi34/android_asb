@@ -1,0 +1,67 @@
+From 8bfa8fd79457cc8f5a352d0ef4bd8172a7f96dec Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Thu, 26 Oct 2017 16:13:50 +0530
+Subject: [PATCH 09/10] Decoder: Handle dec_hdl memory allocation failure
+ gracefully
+
+If memory allocation for dec_hdl fails, return gracefully
+with an error code. All other allocation failures are
+handled correctly.
+
+Bug: 68300072
+Test: ran poc before/after
+Change-Id: I118ae71f4aded658441f1932bd4ede3536f5028b
+(cherry picked from commit 7720b3fe3de04523da3a9ecec2b42a3748529bbd)
+CVE-2017-13189
+---
+ decoder/ih264d_api.c | 23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/decoder/ih264d_api.c b/decoder/ih264d_api.c
+index 56945a2..377801f 100644
+--- a/decoder/ih264d_api.c
++++ b/decoder/ih264d_api.c
+@@ -1457,20 +1457,37 @@ WORD32 ih264d_allocate_static_bufs(iv_obj_t **dec_hdl, void *pv_api_ip, void *pv
+ /*****************************************************************************/
+ WORD32 ih264d_create(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
+ {
++    ih264d_create_ip_t *ps_create_ip;
+     ih264d_create_op_t *ps_create_op;
+ 
+     WORD32 ret;
+ 
++    ps_create_ip = (ih264d_create_ip_t *)pv_api_ip;
+     ps_create_op = (ih264d_create_op_t *)pv_api_op;
+ 
+     ps_create_op->s_ivd_create_op_t.u4_error_code = 0;
+-
++    dec_hdl = NULL;
+     ret = ih264d_allocate_static_bufs(&dec_hdl, pv_api_ip, pv_api_op);
+ 
+     /* If allocation of some buffer fails, then free buffers allocated till then */
+-    if((IV_FAIL == ret) && (NULL != dec_hdl))
++    if(IV_FAIL == ret)
+     {
+-        ih264d_free_static_bufs(dec_hdl);
++        if(dec_hdl)
++        {
++            if(dec_hdl->pv_codec_handle)
++            {
++                ih264d_free_static_bufs(dec_hdl);
++            }
++            else
++            {
++                void (*pf_aligned_free)(void *pv_mem_ctxt, void *pv_buf);
++                void *pv_mem_ctxt;
++
++                pf_aligned_free = ps_create_ip->s_ivd_create_ip_t.pf_aligned_free;
++                pv_mem_ctxt  = ps_create_ip->s_ivd_create_ip_t.pv_mem_ctxt;
++                pf_aligned_free(pv_mem_ctxt, dec_hdl);
++            }
++        }
+         ps_create_op->s_ivd_create_op_t.u4_error_code = IVD_MEM_ALLOC_FAILED;
+         ps_create_op->s_ivd_create_op_t.u4_error_code = 1 << IVD_FATALERROR;
+ 
+-- 
+2.7.4
+

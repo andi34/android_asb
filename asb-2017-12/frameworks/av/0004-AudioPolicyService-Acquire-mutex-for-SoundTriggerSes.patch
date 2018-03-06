@@ -1,0 +1,37 @@
+From 4d18989ca2cedf179b744ed843424f49510f9d2a Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Tue, 15 Aug 2017 12:48:54 -0700
+Subject: [PATCH 04/18] AudioPolicyService: Acquire mutex for
+ SoundTriggerSession
+
+Test: Enable always on GSA
+Bug: 64340921
+Change-Id: I05d8c680be97ba4c92081425596addcc038f7dda
+CVE-2017-0837
+---
+ services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp b/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
+index 313d56e..8d75327 100644
+--- a/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
++++ b/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
+@@ -651,6 +651,7 @@ status_t AudioPolicyService::acquireSoundTriggerSession(audio_session_t *session
+                                        audio_io_handle_t *ioHandle,
+                                        audio_devices_t *device)
+ {
++    Mutex::Autolock _l(mLock);
+     if (mAudioPolicyManager == NULL) {
+         return NO_INIT;
+     }
+@@ -660,6 +661,7 @@ status_t AudioPolicyService::acquireSoundTriggerSession(audio_session_t *session
+ 
+ status_t AudioPolicyService::releaseSoundTriggerSession(audio_session_t session)
+ {
++    Mutex::Autolock _l(mLock);
+     if (mAudioPolicyManager == NULL) {
+         return NO_INIT;
+     }
+-- 
+2.7.4
+

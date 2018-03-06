@@ -1,0 +1,94 @@
+From a9aa1ff4372493f112bbb80d70169012a2279812 Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Thu, 31 Aug 2017 15:30:27 +0530
+Subject: [PATCH 07/10] Reject Multiple seq_hdr With Different Dimensions
+
+If the decoder gets multiple sequence headers and there is a change in
+resolution in the second header (after a reset call), the decoder will now
+return an error.
+
+Bug: 65717533
+Test: poc before/after on mnc-dev/hammerhead
+Change-Id: I4cb9a5f945fc1150f8ae0714bae4a87b07f0945f
+CVE-2017-13148
+---
+ decoder/impeg2d_api_main.c |  1 +
+ decoder/impeg2d_dec_hdr.c  | 14 +++++++++++++-
+ decoder/impeg2d_structs.h  |  3 +++
+ 3 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/decoder/impeg2d_api_main.c b/decoder/impeg2d_api_main.c
+index 44be558..b14762f 100644
+--- a/decoder/impeg2d_api_main.c
++++ b/decoder/impeg2d_api_main.c
+@@ -977,6 +977,7 @@ IV_API_CALL_STATUS_T impeg2d_api_reset(iv_obj_t *ps_dechdl,
+ 
+             ps_dec_state->u2_header_done    = 0;  /* Header decoding not done */
+             ps_dec_state->u4_frm_buf_stride = 0;
++            ps_dec_state->i4_pic_count      = 0;
+             ps_dec_state->u2_is_mpeg2       = 0;
+             ps_dec_state->aps_ref_pics[0] = NULL;
+             ps_dec_state->aps_ref_pics[1] = NULL;
+diff --git a/decoder/impeg2d_dec_hdr.c b/decoder/impeg2d_dec_hdr.c
+index ff42a32..0e36ba0 100644
+--- a/decoder/impeg2d_dec_hdr.c
++++ b/decoder/impeg2d_dec_hdr.c
+@@ -173,7 +173,16 @@ IMPEG2D_ERROR_CODES_T impeg2d_dec_seq_hdr(dec_state_t *ps_dec)
+         }
+         else
+         {
+-            if((u2_width > ps_dec->u2_create_max_width)
++            if (0 == ps_dec->i4_pic_count)
++            {
++                /* Decoder has not decoded a single frame since the last
++                 * reset/init. This implies that we have two headers in the
++                 * input stream. So, do not indicate a resolution change, since
++                 * this can take the decoder into an infinite loop.
++                 */
++                return (IMPEG2D_ERROR_CODES_T) IMPEG2D_FRM_HDR_DECODE_ERR;
++            }
++            else if((u2_width > ps_dec->u2_create_max_width)
+                             || (u2_height > ps_dec->u2_create_max_height))
+             {
+                 IMPEG2D_ERROR_CODES_T e_error = IMPEG2D_UNSUPPORTED_DIMENSIONS;
+@@ -1086,6 +1095,7 @@ static WORD32 impeg2d_init_thread_dec_ctxt(dec_state_t *ps_dec,
+     ps_dec_thd->u2_mb_x = 0;
+     ps_dec_thd->u2_mb_y = 0;
+     ps_dec_thd->u2_is_mpeg2 = ps_dec->u2_is_mpeg2;
++    ps_dec_thd->i4_pic_count = ps_dec->i4_pic_count;
+     ps_dec_thd->u2_frame_width = ps_dec->u2_frame_width;
+     ps_dec_thd->u2_frame_height = ps_dec->u2_frame_height;
+     ps_dec_thd->u2_picture_width = ps_dec->u2_picture_width;
+@@ -1738,6 +1748,7 @@ IMPEG2D_ERROR_CODES_T impeg2d_process_video_bit_stream(dec_state_t *ps_dec)
+             else if((ps_dec->s_bit_stream.u4_offset < ps_dec->s_bit_stream.u4_max_offset)
+                     && (u4_next_bits == PICTURE_START_CODE))
+             {
++                ps_dec->i4_pic_count++;
+ 
+                 e_error = impeg2d_dec_pic_hdr(ps_dec);
+                 if ((IMPEG2D_ERROR_CODES_T)IVD_ERROR_NONE != e_error)
+@@ -1830,6 +1841,7 @@ IMPEG2D_ERROR_CODES_T impeg2d_process_video_bit_stream(dec_state_t *ps_dec)
+             else if ((impeg2d_bit_stream_nxt(ps_stream,START_CODE_LEN) == PICTURE_START_CODE)
+                     && (ps_dec->s_bit_stream.u4_offset < ps_dec->s_bit_stream.u4_max_offset))
+             {
++                ps_dec->i4_pic_count++;
+ 
+                 e_error = impeg2d_dec_pic_hdr(ps_dec);
+                 if ((IMPEG2D_ERROR_CODES_T)IVD_ERROR_NONE != e_error)
+diff --git a/decoder/impeg2d_structs.h b/decoder/impeg2d_structs.h
+index 743b043..02aabf9 100644
+--- a/decoder/impeg2d_structs.h
++++ b/decoder/impeg2d_structs.h
+@@ -326,6 +326,9 @@ typedef struct dec_state_struct_t
+     UWORD8          *pu1_chroma_ref_buf[BUF_MGR_MAX_CNT];
+     ivd_out_bufdesc_t as_disp_buffers[BUF_MGR_MAX_CNT];
+ 
++    /* Count the number of pictures decoded after init/reset */
++    WORD32          i4_pic_count;
++
+     /* Flag to signal last coeff in a 8x8 block is one
+     after mismatch contol */
+     WORD32          i4_last_value_one;
+-- 
+2.7.4
+

@@ -1,0 +1,50 @@
+From cf06fc9035dcdf5871cc8a3d38a21458df66b05d Mon Sep 17 00:00:00 2001
+From: Jean-Michel Trivi <jmtrivi@google.com>
+Date: Tue, 24 Oct 2017 17:39:19 -0700
+Subject: [PATCH 1/2] DO NOT MERGE Prevent out of bound memory access in
+ GetInvInt
+
+In GetInvInt(int) function, malicious content can access memory
+ outside of the invCount array. Always bound access to valid
+ indices.
+
+Test: see bug for malicious content, decoded with "stagefright -s -a"
+Bug: 65025048
+Change-Id: I92d4a14519f45d5a329d7f69f21f2aef0a8c6daa
+(cherry picked from commit 9fb4261c43a2d15f3b77a7e56470ed6784f83d04)
+CVE-2017-13206
+---
+ libFDK/include/fixpoint_math.h | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/libFDK/include/fixpoint_math.h b/libFDK/include/fixpoint_math.h
+index df141d3..13cce2d 100644
+--- a/libFDK/include/fixpoint_math.h
++++ b/libFDK/include/fixpoint_math.h
+@@ -450,15 +450,19 @@ inline FIXP_DBL fAddSaturate(const FIXP_DBL a, const FIXP_DBL b)
+ 
+ /**
+  * \brief Calculate the value of 1/i where i is a integer value. It supports
+- *        input values from 1 upto 50.
++ *        input values from 0 upto 79.
+  * \param intValue Integer input value.
+  * \param FIXP_DBL representation of 1/intValue
+  */
+ inline FIXP_DBL GetInvInt(int intValue)
+ {
+-  FDK_ASSERT((intValue > 0) && (intValue < 50));
+-  FDK_ASSERT(intValue<50);
+-	return invCount[intValue];
++  FDK_ASSERT((intValue >= 0) && (intValue < 80));
++  if (intValue > 79)
++    return invCount[79];
++  else if (intValue < 0)
++    return invCount[0];
++  else
++    return invCount[intValue];
+ }
+ 
+ 
+-- 
+2.7.4
+

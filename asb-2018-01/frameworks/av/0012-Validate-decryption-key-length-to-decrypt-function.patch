@@ -1,0 +1,139 @@
+From 1d7a964e9803d534805779529a9ed0f8e7505df5 Mon Sep 17 00:00:00 2001
+From: Edwin Wong <edwinwong@google.com>
+Date: Fri, 6 Oct 2017 18:21:06 -0700
+Subject: [PATCH 12/18] Validate decryption key length to decrypt function.
+
+Cherry picked from http://go/ag/3038278.
+
+AesCtrDecryptor::decrypt() doesn't check whether the size of "key"
+is equal to 16 bytes,  which may lead to an OOB read problem in the
+context of mediadrmserver.
+
+Add DecryptsWithEmptyKey and DecryptsWithKeyTooLong unit tests.
+
+Test: ClearKeyDrmUnitTest
+  adb shell LD_LIBRARY_PATH="/vendor/lib/mediadrm"
+  /data/nativetest/ClearKeyDrmUnitTest/ClearKeyDrmUnitTest
+
+bug: 63982768
+Change-Id: I1f22c9df2b051972b2c532608b7f203e3ce77926
+(cherry picked from commit 379b672b189aa72ce0103b485019022f3e292c36)
+CVE-2017-13201
+---
+ drm/mediadrm/plugins/clearkey/AesCtrDecryptor.cpp  |  5 ++
+ drm/mediadrm/plugins/clearkey/AesCtrDecryptor.h    |  1 +
+ .../clearkey/tests/AesCtrDecryptorUnittest.cpp     | 63 +++++++++++++++++++++-
+ 3 files changed, 68 insertions(+), 1 deletion(-)
+
+diff --git a/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.cpp b/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.cpp
+index 01f8d65..f7106b2 100644
+--- a/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.cpp
++++ b/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.cpp
+@@ -36,6 +36,11 @@ android::status_t AesCtrDecryptor::decrypt(const android::Vector<uint8_t>& key,
+     uint8_t previousEncryptedCounter[kBlockSize];
+     memset(previousEncryptedCounter, 0, kBlockSize);
+ 
++    if (key.size() != kBlockSize || (sizeof(Iv) / sizeof(uint8_t)) != kBlockSize) {
++        android_errorWriteLog(0x534e4554, "63982768");
++        return android::ERROR_DRM_DECRYPT;
++    }
++
+     size_t offset = 0;
+     AES_KEY opensslKey;
+     AES_set_encrypt_key(key.array(), kBlockBitCount, &opensslKey);
+diff --git a/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.h b/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.h
+index b416266..edb8445 100644
+--- a/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.h
++++ b/drm/mediadrm/plugins/clearkey/AesCtrDecryptor.h
+@@ -18,6 +18,7 @@
+ #define CLEARKEY_AES_CTR_DECRYPTOR_H_
+ 
+ #include <media/stagefright/foundation/ABase.h>
++#include <media/stagefright/MediaErrors.h>
+ #include <Utils.h>
+ #include <utils/Errors.h>
+ #include <utils/Vector.h>
+diff --git a/drm/mediadrm/plugins/clearkey/tests/AesCtrDecryptorUnittest.cpp b/drm/mediadrm/plugins/clearkey/tests/AesCtrDecryptorUnittest.cpp
+index 039e402..5db8290 100644
+--- a/drm/mediadrm/plugins/clearkey/tests/AesCtrDecryptorUnittest.cpp
++++ b/drm/mediadrm/plugins/clearkey/tests/AesCtrDecryptorUnittest.cpp
+@@ -34,7 +34,7 @@ class AesCtrDecryptorTest : public ::testing::Test {
+                             uint8_t* destination, const SubSample* subSamples,
+                             size_t numSubSamples, size_t* bytesDecryptedOut) {
+         Vector<uint8_t> keyVector;
+-        keyVector.appendArray(key, kBlockSize);
++        keyVector.appendArray(key, sizeof(key) / sizeof(uint8_t));
+ 
+         AesCtrDecryptor decryptor;
+         return decryptor.decrypt(keyVector, iv, source, destination, subSamples,
+@@ -57,6 +57,67 @@ class AesCtrDecryptorTest : public ::testing::Test {
+     }
+ };
+ 
++TEST_F(AesCtrDecryptorTest, DecryptsWithEmptyKey) {
++    const size_t kTotalSize = 64;
++    const size_t kNumSubsamples = 1;
++
++    // Test vectors from NIST-800-38A
++    Iv iv = {
++        0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
++        0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
++    };
++
++    uint8_t source[kTotalSize] = { 0 };
++    uint8_t destination[kTotalSize] = { 0 };
++    SubSample subSamples[kNumSubsamples] = {
++        {0, 64}
++    };
++
++    size_t bytesDecrypted = 0;
++    Vector<uint8_t> keyVector;
++    keyVector.clear();
++
++    AesCtrDecryptor decryptor;
++    ASSERT_EQ(android::ERROR_DRM_DECRYPT, decryptor.decrypt(keyVector, iv,
++              &source[0], &destination[0],
++              &subSamples[0], kNumSubsamples, &bytesDecrypted));
++    ASSERT_EQ(0u, bytesDecrypted);
++}
++
++TEST_F(AesCtrDecryptorTest, DecryptsWithKeyTooLong) {
++    const size_t kTotalSize = 64;
++    const size_t kNumSubsamples = 1;
++
++    // Test vectors from NIST-800-38A
++    uint8_t key[kBlockSize * 2] = {
++        0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
++        0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c,
++        0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
++        0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
++    };
++
++    Iv iv = {
++        0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
++        0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
++    };
++
++    uint8_t source[kTotalSize] = { 0 };
++    uint8_t destination[kTotalSize] = { 0 };
++    SubSample subSamples[kNumSubsamples] = {
++        {0, 64}
++    };
++
++    size_t bytesDecrypted = 0;
++    Vector<uint8_t> keyVector;
++    keyVector.appendArray(key, sizeof(key) / sizeof(uint8_t));
++
++    AesCtrDecryptor decryptor;
++    ASSERT_EQ(android::ERROR_DRM_DECRYPT, decryptor.decrypt(keyVector, iv,
++              &source[0], &destination[0],
++              &subSamples[0], kNumSubsamples, &bytesDecrypted));
++    ASSERT_EQ(0u, bytesDecrypted);
++}
++
+ TEST_F(AesCtrDecryptorTest, DecryptsContiguousEncryptedBlock) {
+     const size_t kTotalSize = 64;
+     const size_t kNumSubsamples = 1;
+-- 
+2.7.4
+

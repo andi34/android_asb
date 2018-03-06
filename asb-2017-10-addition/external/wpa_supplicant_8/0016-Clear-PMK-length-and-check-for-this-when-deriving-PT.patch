@@ -1,0 +1,74 @@
+From 6c5c455a7841f62e1ab9e571e279350f6c8dc472 Mon Sep 17 00:00:00 2001
+From: Jouni Malinen <j@w1.fi>
+Date: Sun, 8 Oct 2017 13:18:02 +0300
+Subject: [PATCH 16/17] Clear PMK length and check for this when deriving PTK
+
+Instead of setting the default PMK length for the cleared PMK, set the
+length to 0 and explicitly check for this when deriving PTK to avoid
+unexpected key derivation with an all-zeroes key should it be possible
+to somehow trigger PTK derivation to happen before PMK derivation.
+
+Change-Id: Ifef3b2ca5ee19e6e89df75fef697e7215f926cb1
+Signed-off-by: Jouni Malinen <j@w1.fi>
+---
+ src/common/wpa_common.c | 5 +++++
+ src/common/wpa_common.h | 1 +
+ src/rsn_supp/wpa.c      | 7 ++++---
+ 3 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/src/common/wpa_common.c b/src/common/wpa_common.c
+index d86a5e7..aee6084 100644
+--- a/src/common/wpa_common.c
++++ b/src/common/wpa_common.c
+@@ -143,6 +143,11 @@ int wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
+ 	u8 tmp[WPA_KCK_MAX_LEN + WPA_KEK_MAX_LEN + WPA_TK_MAX_LEN];
+ 	size_t ptk_len;
+ 
++	if (pmk_len == 0) {
++		wpa_printf(MSG_ERROR, "WPA: No PMK set for PT derivation");
++		return -1;
++	}
++
+ 	if (os_memcmp(addr1, addr2, ETH_ALEN) < 0) {
+ 		os_memcpy(data, addr1, ETH_ALEN);
+ 		os_memcpy(data + ETH_ALEN, addr2, ETH_ALEN);
+diff --git a/src/common/wpa_common.h b/src/common/wpa_common.h
+index 9ea982e..41cf8e1 100644
+--- a/src/common/wpa_common.h
++++ b/src/common/wpa_common.h
+@@ -12,6 +12,7 @@
+ /* IEEE 802.11i */
+ #define PMKID_LEN 16
+ #define PMK_LEN 32
++#define PMK_LEN_MAX 48
+ #define WPA_REPLAY_COUNTER_LEN 8
+ #define WPA_NONCE_LEN 32
+ #define WPA_KEY_RSC_LEN 8
+diff --git a/src/rsn_supp/wpa.c b/src/rsn_supp/wpa.c
+index 0ff0abe..4b87db6 100644
+--- a/src/rsn_supp/wpa.c
++++ b/src/rsn_supp/wpa.c
+@@ -489,7 +489,8 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
+ 	/* Calculate PTK which will be stored as a temporary PTK until it has
+ 	 * been verified when processing message 3/4. */
+ 	ptk = &sm->tptk;
+-	wpa_derive_ptk(sm, src_addr, key, ptk);
++	if (wpa_derive_ptk(sm, src_addr, key, ptk) < 0)
++		goto failed;
+ 	if (sm->pairwise_cipher == WPA_CIPHER_TKIP) {
+ 		u8 buf[8];
+ 		/* Supplicant: swap tx/rx Mic keys */
+@@ -2399,8 +2400,8 @@ void wpa_sm_set_pmk_from_pmksa(struct wpa_sm *sm)
+ 		os_memcpy(sm->pmk, sm->cur_pmksa->pmk, sm->pmk_len);
+ 	} else {
+ 		wpa_printf(MSG_DEBUG, "WPA: No current PMKSA - clear PMK");
+-		sm->pmk_len = PMK_LEN;
+-		os_memset(sm->pmk, 0, PMK_LEN);
++		sm->pmk_len = 0;
++		os_memset(sm->pmk, 0, PMK_LEN_MAX);
+ 	}
+ }
+ 
+-- 
+2.7.4
+

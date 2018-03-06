@@ -1,0 +1,70 @@
+From ce470ef83c2e7e07a9156ea4ed82a3d5079f49a2 Mon Sep 17 00:00:00 2001
+From: Ivan Kutepov <its.kutepov@gmail.com>
+Date: Fri, 10 Nov 2017 18:22:13 +0300
+Subject: [PATCH 1/4] ASB November 2017, version string to 2017-11-01
+
+Implemented patches:
+===========================================
+Framework
+CVE-2017-0830 A-62623498     High
+
+Media framework
+CVE-2017-0832 A-62887820     Critical
+CVE-2017-0833 A-62896384     Critical
+CVE-2017-0834 A-63125953     Critical
+CVE-2017-0835 A-63316832     Critical
+CVE-2017-0836 A-64893226     Critical
+CVE-2017-0839 A-64478003     High
+CVE-2017-0840 A-62948670     High
+CVE-2017-0848 A-64477217     Moderate
+CVE-2017-0849 A-62688399     Moderate
+CVE-2017-0851 A-35430570     Moderate
+CVE-2017-0853 A-63121644     High
+CVE-2017-0854 A-63873837     High
+CVE-2017-0857 A-65122447     High
+CVE-2017-0858 A-64836894     High
+
+System
+CVE-2017-0841 A-37723026     Critical
+CVE-2017-0842 A-37502513     High
+CVE-2017-0860 A-31097064     Moderate
+
+NOT implemented, because not relevant:
+===========================================
+Framework
+CVE-2017-0831 A-37442941 [2] High     8.0
+CVE-2017-0845 A-35028827     Moderate not applicable
+
+Media framework
+CVE-2017-0838 A-63522818     High     7.0, 7.1.1, 7.1.2
+CVE-2017-0847 A-65540999     Moderate 8.0
+CVE-2017-0850 A-64836941     Moderate 7.0, 7.1.1, 7.1.2
+CVE-2017-0852 A-62815506     High     5.0.2, 5.1.1, 6.0
+CVE-2017-0859 A-36075131     High     not publicly available
+
+Runtime
+CVE-2016-2105 A-63710022     Moderate 5.0.2, 5.1.1
+CVE-2016-2106 A-63709511     Moderate 5.0.2, 5.1.1
+CVE-2017-3731 A-63710076     Moderate 5.0.2, 5.1.1
+
+Change-Id: I424ab81f147373c6d841f5ef10803489206625fc
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 9be355a..5081bda 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-10-01
++  PLATFORM_SECURITY_PATCH := 2017-11-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

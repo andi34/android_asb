@@ -1,0 +1,53 @@
+From 759b4ff45bb83338572ae1db05cd4fc9ed9ae213 Mon Sep 17 00:00:00 2001
+From: Chris Craik <ccraik@google.com>
+Date: Thu, 2 Nov 2017 13:33:03 -0700
+Subject: [PATCH] Skip composition of frames lacking a color map
+
+Bug:68399117
+
+Change-Id: I32f1d6856221b8a60130633edb69da2d2986c27c
+(cherry picked from commit 0dc887f70eeea8d707cb426b96c6756edd1c607d)
+CVE-2017-13198
+---
+ framesequence/jni/FrameSequence_gif.cpp | 25 ++++++++++++-------------
+ 1 file changed, 12 insertions(+), 13 deletions(-)
+
+diff --git a/framesequence/jni/FrameSequence_gif.cpp b/framesequence/jni/FrameSequence_gif.cpp
+index 853f70f..8f59dba 100644
+--- a/framesequence/jni/FrameSequence_gif.cpp
++++ b/framesequence/jni/FrameSequence_gif.cpp
+@@ -316,19 +316,18 @@ long FrameSequenceState_gif::drawFrame(int frameNr,
+                 cmap = frame.ImageDesc.ColorMap;
+             }
+ 
+-            if (cmap == NULL || cmap->ColorCount != (1 << cmap->BitsPerPixel)) {
+-                ALOGW("Warning: potentially corrupt color map");
+-            }
+-
+-            const unsigned char* src = (unsigned char*)frame.RasterBits;
+-            Color8888* dst = outputPtr + frame.ImageDesc.Left +
+-                    frame.ImageDesc.Top * outputPixelStride;
+-            GifWord copyWidth, copyHeight;
+-            getCopySize(frame.ImageDesc, width, height, copyWidth, copyHeight);
+-            for (; copyHeight > 0; copyHeight--) {
+-                copyLine(dst, src, cmap, gcb.TransparentColor, copyWidth);
+-                src += frame.ImageDesc.Width;
+-                dst += outputPixelStride;
++            // If a cmap is missing, the frame can't be decoded, so we skip it.
++            if (cmap) {
++                const unsigned char* src = (unsigned char*)frame.RasterBits;
++                Color8888* dst = outputPtr + frame.ImageDesc.Left +
++                        frame.ImageDesc.Top * outputPixelStride;
++                GifWord copyWidth, copyHeight;
++                getCopySize(frame.ImageDesc, width, height, copyWidth, copyHeight);
++                for (; copyHeight > 0; copyHeight--) {
++                    copyLine(dst, src, cmap, gcb.TransparentColor, copyWidth);
++                    src += frame.ImageDesc.Width;
++                    dst += outputPixelStride;
++                }
+             }
+         }
+     }
+-- 
+2.7.4
+

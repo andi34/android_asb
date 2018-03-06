@@ -1,0 +1,70 @@
+From 10f51964e2a94675efe51512d269c54364d5fcab Mon Sep 17 00:00:00 2001
+From: Seigo Nonaka <nona@google.com>
+Date: Tue, 5 Sep 2017 14:23:47 +0900
+Subject: [PATCH] Drop codepoints that are outside the Unicode range - DO NOT
+ MERGE
+
+Bug: 62134807
+Test: mmma cts/tests/tests/graphics &&
+      adb install -r $OUT/data/app/CtsGraphicsTestCases/CtsGraphicsTestCases.apk &&
+      adb shell am instrument -w -e class \
+      android.graphics.cts.TypefaceTest \
+      android.graphics.cts/android.support.test.runner.AndroidJUnitRunner
+
+Change-Id: Ic780357bde28e233a15709b5fe07cdb3c532f471
+(cherry picked from commit 0e441db0f7d36480fcabbacb9f443223063956a0)
+CVE-2017-0870
+---
+ libs/minikin/CmapCoverage.cpp  | 15 +++++++++++++++
+ libs/minikin/MinikinInternal.h |  2 ++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/libs/minikin/CmapCoverage.cpp b/libs/minikin/CmapCoverage.cpp
+index eb46c41..11ce64b 100644
+--- a/libs/minikin/CmapCoverage.cpp
++++ b/libs/minikin/CmapCoverage.cpp
+@@ -25,6 +25,8 @@ using std::vector;
+ #include <minikin/SparseBitSet.h>
+ #include <minikin/CmapCoverage.h>
+ 
++#include "MinikinInternal.h"
++
+ namespace android {
+ 
+ // These could perhaps be optimized to use __builtin_bswap16 and friends.
+@@ -142,6 +144,19 @@ static bool getCoverageFormat12(vector<uint32_t>& coverage, const uint8_t* data,
+             android_errorWriteLog(0x534e4554, "26413177");
+             return false;
+         }
++
++        // No need to read outside of Unicode code point range.
++        if (start > MAX_UNICODE_CODE_POINT) {
++            return true;
++        }
++        if (end > MAX_UNICODE_CODE_POINT) {
++            // file is inclusive, vector is exclusive
++            addRange(coverage, start, MAX_UNICODE_CODE_POINT + 1);
++            if (end == 0xFFFFFFFF) {
++                android_errorWriteLog(0x534e4554, "62134807");
++            }
++            return true;
++        }
+         if (!addRange(coverage, start, end + 1)) {  // file is inclusive, vector is exclusive
+             return false;
+         }
+diff --git a/libs/minikin/MinikinInternal.h b/libs/minikin/MinikinInternal.h
+index b8430df..7449141 100644
+--- a/libs/minikin/MinikinInternal.h
++++ b/libs/minikin/MinikinInternal.h
+@@ -29,6 +29,8 @@ namespace android {
+ 
+ extern Mutex gMinikinLock;
+ 
++constexpr uint32_t MAX_UNICODE_CODE_POINT = 0x10FFFF;
++
+ }
+ 
+ #endif  // MINIKIN_INTERNAL_H
+-- 
+2.7.4
+

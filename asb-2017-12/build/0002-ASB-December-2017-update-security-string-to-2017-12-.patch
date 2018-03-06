@@ -1,0 +1,66 @@
+From d64bca9ba1d27aa34ce518364ed3c8e66b3e0eb6 Mon Sep 17 00:00:00 2001
+From: Ivan Kutepov <its.kutepov@gmail.com>
+Date: Sat, 9 Dec 2017 19:34:54 +0300
+Subject: [PATCH 2/4] ASB December 2017, update security string to 2017-12-01
+
+Implemented patches:
+======================================
+Framework
+CVE-2017-0870  A-62134807     High
+
+Media framework
+CVE-2017-0837  A-64340921 [2] High
+CVE-2017-0873  A-63316255     High
+CVE-2017-0874  A-63315932     High
+CVE-2017-0879  A-65025028     High
+CVE-2017-13148 A-65717533     High
+CVE-2017-13149 A-65719872     High
+CVE-2017-13150 A-38328132     High
+CVE-2017-13151 A-63874456     Critical
+CVE-2017-13152 A-62872384     Moderate
+CVE-2017-13154 A-63666573     High
+
+System
+CVE-2017-13156 A-64211847     High
+CVE-2017-13157 A-32990341     High
+CVE-2017-13158 A-32879915     High
+CVE-2017-13159 A-32879772     High
+
+NOT implemented, because not relevant:
+======================================
+Framework
+CVE-2017-0807  A-35056974     High     not publicly available
+CVE-2017-0871  A-65281159     High     8.0
+
+Media framework
+CVE-2017-0872  A-65290323     Critical 7.0, 7.1.1, 7.1.2, 8.0
+CVE-2017-0876  A-64964675     Critical 6.0
+CVE-2017-0877  A-66372937     Critical 6.0
+CVE-2017-0878  A-65186291     Critical 8.0
+CVE-2017-0880  A-65646012 [2] High     7.0, 7.1.1, 7.1.2
+CVE-2017-13153 A-65280854     High     8.0
+
+System
+CVE-2017-13160 A-37160362     Critical 7.0, 7.1.1, 7.1.2, 8.0
+
+Change-Id: I48991cb1a22a620e150a2790965ea04fc577feb9
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 5081bda..be32cf2 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-11-01
++  PLATFORM_SECURITY_PATCH := 2017-12-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

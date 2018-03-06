@@ -1,0 +1,40 @@
+From acafa990c9a53e8fe647464ebe55beaaeb4606e9 Mon Sep 17 00:00:00 2001
+From: Jouni Malinen <j@w1.fi>
+Date: Sun, 5 Feb 2017 13:52:43 +0200
+Subject: [PATCH 01/17] Set EAPOL-Key Key Length field to 0 for group message
+ 1/2 in RSN
+
+P802.11i/D3.0 described the Key Length as having value 16 for the group
+key handshake. However, this was changed to 0 in the published IEEE Std
+802.11i-2004 amendment (and still remains 0 in the current standard IEEE
+Std 802.11-2016). We need to maintain the non-zero value for WPA (v1)
+cases, but the RSN case can be changed to 0 to be closer to the current
+standard.
+
+Change-Id: I96d654977f7e801a8993d017dad7465cc4aba758
+Signed-off-by: Jouni Malinen <j@w1.fi>
+---
+ src/ap/wpa_auth.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/ap/wpa_auth.c b/src/ap/wpa_auth.c
+index f23a57a..f9c7d4c 100644
+--- a/src/ap/wpa_auth.c
++++ b/src/ap/wpa_auth.c
+@@ -1479,9 +1479,11 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
+ 	WPA_PUT_BE16(key->key_info, key_info);
+ 
+ 	alg = pairwise ? sm->pairwise : wpa_auth->conf.wpa_group;
+-	WPA_PUT_BE16(key->key_length, wpa_cipher_key_len(alg));
+-	if (key_info & WPA_KEY_INFO_SMK_MESSAGE)
++	if ((key_info & WPA_KEY_INFO_SMK_MESSAGE) ||
++	    (sm->wpa == WPA_VERSION_WPA2 && !pairwise))
+ 		WPA_PUT_BE16(key->key_length, 0);
++	else
++		WPA_PUT_BE16(key->key_length, wpa_cipher_key_len(alg));
+ 
+ 	/* FIX: STSL: what to use as key_replay_counter? */
+ 	for (i = RSNA_MAX_EAPOL_RETRIES - 1; i > 0; i--) {
+-- 
+2.7.4
+

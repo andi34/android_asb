@@ -1,0 +1,30 @@
+From 5f809657ad012bf9cc6d23f0f3c4d89046c7903e Mon Sep 17 00:00:00 2001
+From: Andre Eisenbach <eisenbach@google.com>
+Date: Tue, 8 Aug 2017 15:41:21 -0700
+Subject: [PATCH] SDP: Bounds check 'id' parameter for free_sdp_slot()
+
+Test: manual
+Fixes: 37502513
+Change-Id: I34e8296ec7ec6b4ffbe1fa0452754f2a421e6ec7
+CVE-2017-0842
+---
+ btif/src/btif_sdp_server.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/btif/src/btif_sdp_server.c b/btif/src/btif_sdp_server.c
+index 5be23f0..88de19a 100644
+--- a/btif/src/btif_sdp_server.c
++++ b/btif/src/btif_sdp_server.c
+@@ -214,7 +214,8 @@ static int alloc_sdp_slot(bluetooth_sdp_record* in_record) {
+ static int free_sdp_slot(int id) {
+     int handle = -1;
+     bluetooth_sdp_record* record = NULL;
+-    if(id >= MAX_SDP_SLOTS) {
++    if (id < 0 || id >= MAX_SDP_SLOTS) {
++        android_errorWriteLog(0x534e4554, "37502513");
+         APPL_TRACE_ERROR("%s() failed - id %d is invalid", __func__, id);
+         return handle;
+     }
+-- 
+2.7.4
+

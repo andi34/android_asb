@@ -1,0 +1,41 @@
+From 9f7ce1bdf577e516dc1f6869dc648573c39642fe Mon Sep 17 00:00:00 2001
+From: Lajos Molnar <lajos@google.com>
+Date: Wed, 6 Sep 2017 19:41:19 -0700
+Subject: [PATCH 15/18] Backport: OMXNodeInstance: use a lock around
+ OMX::freeNode
+
+This is to avoid a concurrent use after free if other OMX commands
+are being executed before the node is marked as deleted.
+
+Bug: 63666573
+
+Backport:
+ Wrap into #ifndef/#endif statement to allow skipping this patch
+ for specific devices by adding the following directive into the
+ BoardConfig.mk or BoardConfigCommon.mk file of the device repo:
+  TARGET_RELEASE_CPPFLAGS += -DSKIP_CVE_2017_13154
+
+Change-Id: I7720dd900bfa252f8675e0c56191adbf52aa957e
+CVE-2017-13154
+---
+ media/libstagefright/omx/OMXNodeInstance.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index 2ab818e..8ecbcba 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -374,6 +374,10 @@ status_t OMXNodeInstance::freeNode(OMXMaster *master) {
+             break;
+     }
+ 
++#ifndef SKIP_CVE_2017_13154
++    Mutex::Autolock _l(mLock);
++#endif
++
+     ALOGV("[%x:%s] calling destroyComponentInstance", mNodeID, mName);
+     OMX_ERRORTYPE err = master->destroyComponentInstance(
+             static_cast<OMX_COMPONENTTYPE *>(mHandle));
+-- 
+2.7.4
+

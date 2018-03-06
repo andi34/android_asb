@@ -1,0 +1,68 @@
+From 380a81b68499ec777e73a166ac0ccd73d71d6f94 Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Thu, 26 Oct 2017 15:41:42 +0530
+Subject: [PATCH 14/16] Decoder: Handle ps_codec_obj memory allocation failure
+ gracefully
+
+If memory allocation for ps_codec_obj fails, return gracefully
+with an error code. All other allocation failures are
+handled correctly.
+
+Bug: 68299873
+Test: before/after with always-failing malloc
+Change-Id: I5e6c07b147b13df81e65476851662d4b55d33b83
+(cherry picked from commit a966e2a65dd901151ce7f4481d0084840c9a0f7e)
+CVE-2017-13190
+---
+ decoder/ihevcd_api.c | 24 ++++++++++++++++++++----
+ 1 file changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/decoder/ihevcd_api.c b/decoder/ihevcd_api.c
+index 3dac4f7..f1185a2 100644
+--- a/decoder/ihevcd_api.c
++++ b/decoder/ihevcd_api.c
+@@ -2047,21 +2047,37 @@ WORD32 ihevcd_create(iv_obj_t *ps_codec_obj,
+                            void *pv_api_ip,
+                            void *pv_api_op)
+ {
+-
++    ihevcd_cxa_create_ip_t *ps_create_ip;
+     ihevcd_cxa_create_op_t *ps_create_op;
+ 
+     WORD32 ret;
+     codec_t *ps_codec;
++    ps_create_ip = (ihevcd_cxa_create_ip_t *)pv_api_ip;
+     ps_create_op = (ihevcd_cxa_create_op_t *)pv_api_op;
+ 
+     ps_create_op->s_ivd_create_op_t.u4_error_code = 0;
+-
++    ps_codec_obj = NULL;
+     ret = ihevcd_allocate_static_bufs(&ps_codec_obj, pv_api_ip, pv_api_op);
+ 
+     /* If allocation of some buffer fails, then free buffers allocated till then */
+-    if((IV_FAIL == ret) && (NULL != ps_codec_obj))
++    if(IV_FAIL == ret)
+     {
+-        ihevcd_free_static_bufs(ps_codec_obj);
++        if(NULL != ps_codec_obj)
++        {
++            if(ps_codec_obj->pv_codec_handle)
++            {
++                ihevcd_free_static_bufs(ps_codec_obj);
++            }
++            else
++            {
++                void (*pf_aligned_free)(void *pv_mem_ctxt, void *pv_buf);
++                void *pv_mem_ctxt;
++
++                pf_aligned_free = ps_create_ip->s_ivd_create_ip_t.pf_aligned_free;
++                pv_mem_ctxt  = ps_create_ip->s_ivd_create_ip_t.pv_mem_ctxt;
++                pf_aligned_free(pv_mem_ctxt, ps_codec_obj);
++            }
++        }
+         ps_create_op->s_ivd_create_op_t.u4_error_code = IVD_MEM_ALLOC_FAILED;
+         ps_create_op->s_ivd_create_op_t.u4_error_code = 1 << IVD_FATALERROR;
+ 
+-- 
+2.7.4
+

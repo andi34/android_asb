@@ -1,0 +1,117 @@
+From de26cc19cb0d1646935e24fb4418616f1175c2d9 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Mon, 10 Jul 2017 10:33:13 +0530
+Subject: [PATCH 11/16] Fix first frame error return
+
+Remove the check that returns before joining the slave threads
+if there is an error in the first frame. And in slice error mode
+do not parse bitstream.
+
+Bug: 64784973
+Test: no longer hangs on POC
+Change-Id: I3c2e2d9f84304bcb34831d7d796da710154774fa
+(cherry picked from commit 8fff219facbecceee193e823d4faf7866524e92a)
+CVE-2017-13197
+---
+ decoder/ihevcd_decode.c      |  8 --------
+ decoder/ihevcd_parse_slice.c | 40 ++++++++++++++++++++++------------------
+ 2 files changed, 22 insertions(+), 26 deletions(-)
+
+diff --git a/decoder/ihevcd_decode.c b/decoder/ihevcd_decode.c
+index 45b25dd..9e01cc7 100644
+--- a/decoder/ihevcd_decode.c
++++ b/decoder/ihevcd_decode.c
+@@ -690,14 +690,6 @@ WORD32 ihevcd_decode(iv_obj_t *ps_codec_obj, void *pv_api_ip, void *pv_api_op)
+         BREAK_AFTER_SLICE_NAL();
+     }
+ 
+-    if((ps_codec->u4_pic_cnt == 0) && (ret != IHEVCD_SUCCESS))
+-    {
+-        ps_codec->i4_error_code = ret;
+-
+-        ihevcd_fill_outargs(ps_codec, ps_dec_ip, ps_dec_op);
+-        return IV_FAIL;
+-    }
+-
+     if(1 == ps_codec->i4_pic_present && 0 == ps_codec->s_parse.i4_end_of_frame)
+     {
+         slice_header_t *ps_slice_hdr_next;
+diff --git a/decoder/ihevcd_parse_slice.c b/decoder/ihevcd_parse_slice.c
+index acb6cd4..3ff5afa 100644
+--- a/decoder/ihevcd_parse_slice.c
++++ b/decoder/ihevcd_parse_slice.c
+@@ -2376,26 +2376,29 @@ IHEVCD_ERROR_T ihevcd_parse_slice_data(codec_t *ps_codec)
+ 
+     /*Cabac init at the beginning of a slice*/
+     //If the slice is a dependent slice, not present at the start of a tile
+-    if((1 == ps_slice_hdr->i1_dependent_slice_flag) && (!((ps_codec->s_parse.i4_ctb_tile_x == 0) && (ps_codec->s_parse.i4_ctb_tile_y == 0))))
++    if(0 == ps_codec->i4_slice_error)
+     {
+-        if((0 == ps_pps->i1_entropy_coding_sync_enabled_flag) || (ps_pps->i1_entropy_coding_sync_enabled_flag && (0 != ps_codec->s_parse.i4_ctb_x)))
++        if((1 == ps_slice_hdr->i1_dependent_slice_flag) && (!((ps_codec->s_parse.i4_ctb_tile_x == 0) && (ps_codec->s_parse.i4_ctb_tile_y == 0))))
+         {
+-            ihevcd_cabac_reset(&ps_codec->s_parse.s_cabac,
+-                               &ps_codec->s_parse.s_bitstrm);
++            if((0 == ps_pps->i1_entropy_coding_sync_enabled_flag) || (ps_pps->i1_entropy_coding_sync_enabled_flag && (0 != ps_codec->s_parse.i4_ctb_x)))
++            {
++                ihevcd_cabac_reset(&ps_codec->s_parse.s_cabac,
++                                   &ps_codec->s_parse.s_bitstrm);
++            }
+         }
+-    }
+-    else if((0 == ps_pps->i1_entropy_coding_sync_enabled_flag) || (ps_pps->i1_entropy_coding_sync_enabled_flag && (0 != ps_codec->s_parse.i4_ctb_x)))
+-    {
+-        ret = ihevcd_cabac_init(&ps_codec->s_parse.s_cabac,
+-                                &ps_codec->s_parse.s_bitstrm,
+-                                slice_qp,
+-                                cabac_init_idc,
+-                                &gau1_ihevc_cab_ctxts[cabac_init_idc][slice_qp][0]);
+-        if(ret != (IHEVCD_ERROR_T)IHEVCD_SUCCESS)
++        else if((0 == ps_pps->i1_entropy_coding_sync_enabled_flag) || (ps_pps->i1_entropy_coding_sync_enabled_flag && (0 != ps_codec->s_parse.i4_ctb_x)))
+         {
+-            ps_codec->i4_slice_error = 1;
+-            end_of_slice_flag = 1;
+-            ret = (IHEVCD_ERROR_T)IHEVCD_SUCCESS;
++            ret = ihevcd_cabac_init(&ps_codec->s_parse.s_cabac,
++                                    &ps_codec->s_parse.s_bitstrm,
++                                    slice_qp,
++                                    cabac_init_idc,
++                                    &gau1_ihevc_cab_ctxts[cabac_init_idc][slice_qp][0]);
++            if(ret != (IHEVCD_ERROR_T)IHEVCD_SUCCESS)
++            {
++                ps_codec->i4_slice_error = 1;
++                end_of_slice_flag = 1;
++                ret = (IHEVCD_ERROR_T)IHEVCD_SUCCESS;
++            }
+         }
+     }
+ 
+@@ -2479,6 +2482,7 @@ IHEVCD_ERROR_T ihevcd_parse_slice_data(codec_t *ps_codec)
+ 
+             /* Cabac init is done unconditionally at the start of the tile irrespective
+              * of whether it is a dependent or an independent slice */
++            if(0 == ps_codec->i4_slice_error)
+             {
+                 ret = ihevcd_cabac_init(&ps_codec->s_parse.s_cabac,
+                                         &ps_codec->s_parse.s_bitstrm,
+@@ -2542,7 +2546,7 @@ IHEVCD_ERROR_T ihevcd_parse_slice_data(codec_t *ps_codec)
+         if(ps_pps->i1_entropy_coding_sync_enabled_flag)
+         {
+             /*TODO Handle single CTB and top-right belonging to a different slice */
+-            if(0 == ps_codec->s_parse.i4_ctb_x)
++            if(0 == ps_codec->s_parse.i4_ctb_x && 0 == ps_codec->i4_slice_error)
+             {
+                 //WORD32 size = sizeof(ps_codec->s_parse.s_cabac.au1_ctxt_models);
+                 WORD32 default_ctxt = 0;
+@@ -2783,7 +2787,7 @@ IHEVCD_ERROR_T ihevcd_parse_slice_data(codec_t *ps_codec)
+                 if((ps_codec->s_parse.i4_ctb_tile_y + 1) == ps_tile->u2_ht)
+                     end_of_tile = 1;
+             }
+-            if((0 == end_of_slice_flag) &&
++            if((0 == end_of_slice_flag) && (0 == ps_codec->i4_slice_error) &&
+                             ((ps_pps->i1_tiles_enabled_flag && end_of_tile) ||
+                                             (ps_pps->i1_entropy_coding_sync_enabled_flag && end_of_tile_row)))
+             {
+-- 
+2.7.4
+

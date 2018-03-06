@@ -1,0 +1,60 @@
+From c701711f2aca02c9ac17d683a69063432d614c4f Mon Sep 17 00:00:00 2001
+From: Andreas Blaesius <skate4life@gmx.de>
+Date: Fri, 17 Nov 2017 21:35:23 +0100
+Subject: [PATCH 02/18] Revert "Don't allow using or allocating a buffer after
+ the first state transition"
+
+Got merged on commit 456ec64cb7b3da0ab23f9ec17381dcbce0a609a2 already
+This reverts commit bcb2f3927bcb9cc8b212e2d49f8ee296c2865dda.
+
+Change-Id: I6e92c2e208a6558fc579940c20dbe54e543ffeef
+---
+ media/libstagefright/omx/OMXNodeInstance.cpp | 18 ------------------
+ 1 file changed, 18 deletions(-)
+
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index f55a743..e8765c7 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -775,12 +775,6 @@ status_t OMXNodeInstance::useBuffer(
+         return BAD_VALUE;
+     }
+ 
+-    if (!mSailed) {
+-        ALOGE("b/35467458");
+-        android_errorWriteLog(0x534e4554, "35467458");
+-        return BAD_VALUE;
+-    }
+-
+     // metadata buffers are not connected cross process
+     BufferMeta *buffer_meta;
+     bool isMeta = mMetadataType[portIndex] != kMetadataBufferTypeInvalid;
+@@ -1130,12 +1124,6 @@ status_t OMXNodeInstance::allocateBuffer(
+         return BAD_VALUE;
+     }
+ 
+-    if (!mSailed) {
+-        ALOGE("b/35467458");
+-        android_errorWriteLog(0x534e4554, "35467458");
+-        return BAD_VALUE;
+-    }
+-
+     BufferMeta *buffer_meta = new BufferMeta(size, portIndex);
+ 
+     OMX_BUFFERHEADERTYPE *header;
+@@ -1183,12 +1171,6 @@ status_t OMXNodeInstance::allocateBufferWithBackup(
+         return BAD_VALUE;
+     }
+ 
+-    if (!mSailed) {
+-        ALOGE("b/35467458");
+-        android_errorWriteLog(0x534e4554, "35467458");
+-        return BAD_VALUE;
+-    }
+-
+     // metadata buffers are not connected cross process
+     bool isMeta = mMetadataType[portIndex] != kMetadataBufferTypeInvalid;
+     bool copy = !(crossProcess && isMeta);
+-- 
+2.7.4
+

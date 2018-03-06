@@ -1,0 +1,122 @@
+From 10822dc7bde475a68511529c17aa819342ddb35a Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Thu, 8 Jun 2017 14:07:29 +0530
+Subject: [PATCH 08/10] Fix Error When Input Buffer is Full
+
+In cases where the input buffer is exhausted and the picture has still
+not been decoded fully, the multi-thread decoder would read beyond the
+allocated size.
+
+Bug: 38328132
+Test: asan-enabled POC before/after patch on master.
+Change-Id: I8a73b819558407c130dcafeeab1a9bff77688dfc
+CVE-2017-13150
+---
+ decoder/impeg2d_bitstream.c | 20 ++++++++------------
+ decoder/impeg2d_dec_hdr.c   |  2 +-
+ decoder/impeg2d_decoder.c   | 12 ++++++++++--
+ decoder/impeg2d_structs.h   |  1 +
+ 4 files changed, 20 insertions(+), 15 deletions(-)
+
+diff --git a/decoder/impeg2d_bitstream.c b/decoder/impeg2d_bitstream.c
+index 36092e5..57a9e2f 100644
+--- a/decoder/impeg2d_bitstream.c
++++ b/decoder/impeg2d_bitstream.c
+@@ -191,21 +191,17 @@ INLINE UWORD8 impeg2d_bit_stream_get_bit(stream_t *ps_stream)
+ INLINE void impeg2d_bit_stream_flush(void* pv_ctxt, UWORD32 u4_no_of_bits)
+ {
+     stream_t *ps_stream = (stream_t *)pv_ctxt;
+-    if ((ps_stream->u4_offset + 64) < ps_stream->u4_max_offset)
++
++
++    if (ps_stream->u4_offset <= ps_stream->u4_max_offset)
+     {
++        /* We have to flush the bytes even if the offset is equal to the maximum
++         * offset. This will ensure that a stream with an error exactly at the
++         * offset will not get stuck in an infinite loop - If we do not flush
++         * these bytes, then we keep feeding the erroneous bits.
++         */
+         FLUSH_BITS(ps_stream->u4_offset,ps_stream->u4_buf,ps_stream->u4_buf_nxt,u4_no_of_bits,ps_stream->pu4_buf_aligned)
+     }
+-    else
+-    {
+-        UWORD32     u4_temp;
+-
+-        if (((ps_stream->u4_offset & 0x1f) + u4_no_of_bits) >= 32)
+-        {
+-            ps_stream->u4_buf              = ps_stream->u4_buf_nxt;
+-            ps_stream->u4_buf_nxt          = 0;
+-        }
+-        ps_stream->u4_offset += u4_no_of_bits;
+-    }
+     return;
+ }
+ /******************************************************************************
+diff --git a/decoder/impeg2d_dec_hdr.c b/decoder/impeg2d_dec_hdr.c
+index 0e36ba0..186f477 100644
+--- a/decoder/impeg2d_dec_hdr.c
++++ b/decoder/impeg2d_dec_hdr.c
+@@ -936,7 +936,7 @@ void impeg2d_dec_pic_data_thread(dec_state_t *ps_dec)
+                 {
+                     pu1_buf = ps_dec->pu1_inp_bits_buf + s_job.i4_bistream_ofst;
+                     impeg2d_bit_stream_init(&(ps_dec->s_bit_stream), pu1_buf,
+-                            (ps_dec->u4_num_inp_bytes - s_job.i4_bistream_ofst) + 8);
++                            (ps_dec->u4_num_inp_bytes - s_job.i4_bistream_ofst));
+                     i4_cur_row      = s_job.i2_start_mb_y;
+                     ps_dec->i4_start_mb_y = s_job.i2_start_mb_y;
+                     ps_dec->i4_end_mb_y = s_job.i2_end_mb_y;
+diff --git a/decoder/impeg2d_decoder.c b/decoder/impeg2d_decoder.c
+index fa88bb5..e4ff79c 100644
+--- a/decoder/impeg2d_decoder.c
++++ b/decoder/impeg2d_decoder.c
+@@ -98,12 +98,17 @@ void impeg2d_dec_hdr(void *pv_dec,impeg2d_video_decode_ip_t *ps_ip,
+ 
+     UWORD32 u4_bits_read;
+     dec_state_t *ps_dec;
++    UWORD32 u4_size = ps_ip->s_ivd_video_decode_ip_t.u4_num_Bytes;
+ 
+     ps_dec = (dec_state_t *)pv_dec;
+     ps_op->s_ivd_video_decode_op_t.u4_error_code = 0;
++    if (u4_size >= MAX_BITSTREAM_BUFFER_SIZE)
++    {
++        u4_size = MAX_BITSTREAM_BUFFER_SIZE - MIN_BUFFER_BYTES_AT_EOS;
++    }
+ 
+     impeg2d_bit_stream_init(&(ps_dec->s_bit_stream),ps_ip->s_ivd_video_decode_ip_t.pv_stream_buffer,
+-        ps_ip->s_ivd_video_decode_ip_t.u4_num_Bytes);
++        u4_size);
+ 
+     {
+         {
+@@ -189,12 +194,15 @@ void impeg2d_dec_frm(void *pv_dec,impeg2d_video_decode_ip_t *ps_ip,
+     ps_op->s_ivd_video_decode_op_t.u4_num_bytes_consumed = 0;
+ 
+     IMPEG2D_FRM_NUM_SET();
++    if (u4_size >= MAX_BITSTREAM_BUFFER_SIZE)
++    {
++        u4_size = MAX_BITSTREAM_BUFFER_SIZE - MIN_BUFFER_BYTES_AT_EOS;
++    }
+ 
+     ps_dec->pu1_inp_bits_buf = ps_ip->s_ivd_video_decode_ip_t.pv_stream_buffer;
+     ps_dec->u4_num_inp_bytes = u4_size;
+     ps_stream  = &ps_dec->s_bit_stream;
+ 
+-
+     impeg2d_bit_stream_init(ps_stream,ps_ip->s_ivd_video_decode_ip_t.pv_stream_buffer,u4_size);
+ 
+     /* @ */ /* Updating the bufferID */
+diff --git a/decoder/impeg2d_structs.h b/decoder/impeg2d_structs.h
+index 02aabf9..1c23b95 100644
+--- a/decoder/impeg2d_structs.h
++++ b/decoder/impeg2d_structs.h
+@@ -40,6 +40,7 @@ Because of temporal dependency in deinterlacer one additional buffer is also nee
+ #define DEC_ORDER               0
+ 
+ #define MAX_BITSTREAM_BUFFER_SIZE       2000 * 1024
++#define MIN_BUFFER_BYTES_AT_EOS 8
+ 
+ /* Flag to signal that buffer is held by deinterlacing */
+ #define MPEG2_BUF_MGR_DEINT (BUF_MGR_DISP << 1)
+-- 
+2.7.4
+

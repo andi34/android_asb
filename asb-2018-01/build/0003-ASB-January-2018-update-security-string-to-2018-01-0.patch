@@ -1,0 +1,86 @@
+From ff459854e1bb8a158319b7bf7df69bae02921480 Mon Sep 17 00:00:00 2001
+From: MSe <mse1969@posteo.de>
+Date: Fri, 12 Jan 2018 16:03:13 +0100
+Subject: [PATCH 3/4] ASB January 2018, update security string to 2018-01-01
+
+Implemented patches:
+======================================
+
+Android runtime
+CVE-2017-13176  A-68341964       High
+
+Framework
+CVE-2017-0846	A-64934810[2]    Moderate
+
+Media framework
+CVE-2017-13177	A-68320413     Critical
+CVE-2017-13178	A-66969281     Critical
+CVE-2017-13179	A-66969193     Critical
+CVE-2017-13180	A-66969349     High
+CVE-2017-0855   A-64452857     High
+CVE-2017-13191	A-64380403     High
+CVE-2017-13192	A-64380202     High
+CVE-2017-13193	A-65718319     High
+CVE-2017-13195	A-65398821     High
+CVE-2017-13196	A-63522067     High
+CVE-2017-13197	A-64784973     High
+CVE-2017-13201	A-63982768     Moderate
+CVE-2017-13202	A-67647856     Moderate
+CVE-2017-13206	A-65025048     Moderate
+CVE-2017-13185	A-65123471     High
+CVE-2017-13187	A-65034175     High
+CVE-2017-13188	A-65280786     High
+CVE-2017-13203	A-63122634     High
+CVE-2017-13204	A-64380237     High
+CVE-2017-13205	A-64550583     High
+CVE-2017-13200	A-63100526     Moderate
+CVE-2017-13186	A-65735716     High
+CVE-2017-13189	A-68300072     High
+CVE-2017-13190	A-68299873     High
+CVE-2017-13194	A-64710201     High
+CVE-2017-13198	A-68399117     High
+CVE-2017-13154  A-63666573     High
+
+System
+CVE-2017-13208	A-67474440     Critical
+CVE-2017-13210	A-67782345     High
+CVE-2017-13212	A-62187985     Moderate
+
+Qualcomm Components
+CVE-2017-9689	A-62828527     Moderate
+
+NOT Implemented, because not relevant
+=====================================
+
+Media framework
+CVE-2017-13181	A-67864232	High	  7.0 onwards
+CVE-2017-13182	A-67737022	High	  8.0 onwards
+CVE-2017-13184	A-65483324	High	  8.0 onwards
+CVE-2017-13199	A-33846679	High	  8.0 onwards
+CVE-2017-13207	A-37564426	Moderate  7.0 onwards
+
+System
+CVE-2017-13209	A-68217907[2][3] High	  8.0 onwards
+CVE-2017-13211	A-65174158	 High	  8.0 onwards
+
+Change-Id: Ie8c8368950e03f35b082765c2c1bab688eed4056
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index be32cf2..ba155e6 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-12-01
++  PLATFORM_SECURITY_PATCH := 2018-01-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

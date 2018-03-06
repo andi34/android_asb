@@ -1,0 +1,34 @@
+From 497e4f4cac4b3d692aefa188abcd13b9ce4215fb Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Mon, 12 Jun 2017 17:33:58 -0600
+Subject: [PATCH] DO NOT MERGE. ActivityPicker shouldn't grant permissions.
+
+This picker has no business granting any Uri permissions, so remove
+any grant flags that malicious apps may have tried sneaking in.
+
+Test: builds, boots
+Bug: 32879772
+Change-Id: I91c48c73287a271bd6c99e60e216dead22e68764
+(cherry picked from commit 3f218e8431cb5648bcb46131551c133ba53ef870)
+---
+ src/com/android/settings/ActivityPicker.java | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/com/android/settings/ActivityPicker.java b/src/com/android/settings/ActivityPicker.java
+index 7c26923..97996c8 100644
+--- a/src/com/android/settings/ActivityPicker.java
++++ b/src/com/android/settings/ActivityPicker.java
+@@ -78,6 +78,10 @@ public class ActivityPicker extends AlertActivity implements
+         Parcelable parcel = intent.getParcelableExtra(Intent.EXTRA_INTENT);
+         if (parcel instanceof Intent) {
+             mBaseIntent = (Intent) parcel;
++            mBaseIntent.setFlags(mBaseIntent.getFlags() & ~(Intent.FLAG_GRANT_READ_URI_PERMISSION
++                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
++                    | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
++                    | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION));
+         } else {
+             mBaseIntent = new Intent(Intent.ACTION_MAIN, null);
+             mBaseIntent.addCategory(Intent.CATEGORY_DEFAULT);
+-- 
+2.7.4
+

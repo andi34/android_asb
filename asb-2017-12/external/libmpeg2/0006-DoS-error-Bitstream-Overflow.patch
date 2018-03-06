@@ -1,0 +1,62 @@
+From 21d27be6622628ea42cea62b5eed50aaafe700bc Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Mon, 10 Jul 2017 16:24:33 +0530
+Subject: [PATCH 06/10] DoS error - Bitstream Overflow
+
+The decoder could go into an infinite loop if there was an error
+encountered after the bitstream buffer had been exhausted. Adding a check
+for the same.
+
+Bug: 63316255
+Test: re-ran POC after patching
+Change-Id: Iebef469ef663781b741889a055a70f261915b23a
+CVE-2017-0873
+---
+ decoder/impeg2d_dec_hdr.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/decoder/impeg2d_dec_hdr.c b/decoder/impeg2d_dec_hdr.c
+index e35a8bb..ff42a32 100644
+--- a/decoder/impeg2d_dec_hdr.c
++++ b/decoder/impeg2d_dec_hdr.c
+@@ -969,6 +969,11 @@ void impeg2d_dec_pic_data_thread(dec_state_t *ps_dec)
+             if ((IMPEG2D_ERROR_CODES_T)IVD_ERROR_NONE != e_error)
+             {
+                 impeg2d_next_start_code(ps_dec);
++                if(ps_dec->s_bit_stream.u4_offset >= ps_dec->s_bit_stream.u4_max_offset)
++                {
++                    ps_dec->u4_error_code = IMPEG2D_BITSTREAM_BUFF_EXCEEDED_ERR;
++                    return;
++                }
+             }
+         }
+ 
+@@ -1350,8 +1355,6 @@ void impeg2d_dec_pic_data(dec_state_t *ps_dec)
+     WORD32 i;
+     dec_state_multi_core_t *ps_dec_state_multi_core;
+ 
+-    UWORD32  u4_error_code;
+-
+     dec_state_t *ps_dec_thd;
+     WORD32 i4_status;
+     WORD32 i4_min_mb_y;
+@@ -1359,7 +1362,6 @@ void impeg2d_dec_pic_data(dec_state_t *ps_dec)
+ 
+     /* Resetting the MB address and MB coordinates at the start of the Frame */
+     ps_dec->u2_mb_x = ps_dec->u2_mb_y = 0;
+-    u4_error_code = 0;
+ 
+     ps_dec_state_multi_core = ps_dec->ps_dec_state_multi_core;
+     impeg2d_get_slice_pos(ps_dec_state_multi_core);
+@@ -1403,8 +1405,6 @@ void impeg2d_dec_pic_data(dec_state_t *ps_dec)
+         }
+     }
+ 
+-    ps_dec->u4_error_code = u4_error_code;
+-
+ }
+ /*******************************************************************************
+ *
+-- 
+2.7.4
+

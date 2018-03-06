@@ -1,0 +1,42 @@
+From 6dd38d4e342769f045636c8cad3a2880b5c40e2b Mon Sep 17 00:00:00 2001
+From: Siarhei Vishniakou <svv@google.com>
+Date: Fri, 4 Aug 2017 12:37:47 -0700
+Subject: [PATCH] DO NOT MERGE Remove window obscurement information.
+
+If ACTION_OUTSIDE_EVENTS contain information about whether the touch is
+obscured, then a pattern of invisible, untouchable, unfocusable
+SYSTEM_ALERT_WINDOWS can be placed across the screen to determine
+approximate locations of touch events without the user knowing.
+
+Bug: 31097064
+Test: cts-tradefed run cts --class android.security.cts.MotionEventTest
+Change-Id: Iebbb68231cbb76f87241201e7640a1fe3e188625
+CVE-2017-0860
+---
+ services/inputflinger/InputDispatcher.cpp | 9 +--------
+ 1 file changed, 1 insertion(+), 8 deletions(-)
+
+diff --git a/services/inputflinger/InputDispatcher.cpp b/services/inputflinger/InputDispatcher.cpp
+index c9e876f..ec3ec7b 100644
+--- a/services/inputflinger/InputDispatcher.cpp
++++ b/services/inputflinger/InputDispatcher.cpp
+@@ -1222,15 +1222,8 @@ int32_t InputDispatcher::findTouchedWindowTargetsLocked(nsecs_t currentTime,
+ 
+                 if (maskedAction == AMOTION_EVENT_ACTION_DOWN
+                         && (flags & InputWindowInfo::FLAG_WATCH_OUTSIDE_TOUCH)) {
+-                    int32_t outsideTargetFlags = InputTarget::FLAG_DISPATCH_AS_OUTSIDE;
+-                    if (isWindowObscuredAtPointLocked(windowHandle, x, y)) {
+-                        outsideTargetFlags |= InputTarget::FLAG_WINDOW_IS_OBSCURED;
+-                    } else if (isWindowObscuredLocked(windowHandle)) {
+-                        outsideTargetFlags |= InputTarget::FLAG_WINDOW_IS_PARTIALLY_OBSCURED;
+-                    }
+-
+                     mTempTouchState.addOrUpdateWindow(
+-                            windowHandle, outsideTargetFlags, BitSet32(0));
++                            windowHandle, InputTarget::FLAG_DISPATCH_AS_OUTSIDE, BitSet32(0));
+                 }
+             }
+         }
+-- 
+2.7.4
+

@@ -1,0 +1,82 @@
+From 19de4c1fa7c2d6dca6d1e9b465cbc6faf3d4c467 Mon Sep 17 00:00:00 2001
+From: Hamsalekha S <hamsalekha.s@ittiam.com>
+Date: Tue, 4 Jul 2017 17:06:50 +0530
+Subject: [PATCH 06/10] Decoder: Increased allocation and added checks in sei
+ parsing.
+
+This prevents heap overflow while parsing sei_message.
+
+Bug: 63122634
+Test: ran PoC on unpatched/patched
+Change-Id: I61c1ff4ac053a060be8c24da4671db985cac628c
+(cherry picked from commit f2b70d353768af8d4ead7f32497be05f197925ef)
+CVE-2017-13203
+---
+ decoder/ih264d_api.c  | 3 ++-
+ decoder/ih264d_defs.h | 3 +++
+ decoder/ih264d_sei.c  | 7 ++++---
+ 3 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/decoder/ih264d_api.c b/decoder/ih264d_api.c
+index f4d641f..56945a2 100644
+--- a/decoder/ih264d_api.c
++++ b/decoder/ih264d_api.c
+@@ -2011,7 +2011,8 @@ WORD32 ih264d_video_decode(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
+             void *pv_buf;
+             void *pv_mem_ctxt = ps_dec->pv_mem_ctxt;
+             size = MAX(256000, ps_dec->u2_pic_wd * ps_dec->u2_pic_ht * 3 / 2);
+-            pv_buf = ps_dec->pf_aligned_alloc(pv_mem_ctxt, 128, size);
++            pv_buf = ps_dec->pf_aligned_alloc(pv_mem_ctxt, 128,
++                                              size + EXTRA_BS_OFFSET);
+             RETURN_IF((NULL == pv_buf), IV_FAIL);
+             ps_dec->pu1_bits_buf_dynamic = pv_buf;
+             ps_dec->u4_dynamic_bits_buf_size = size;
+diff --git a/decoder/ih264d_defs.h b/decoder/ih264d_defs.h
+index 0682339..d6e3029 100644
+--- a/decoder/ih264d_defs.h
++++ b/decoder/ih264d_defs.h
+@@ -107,6 +107,9 @@
+ /* For 420SP */
+ #define YUV420SP_FACTOR 2
+ 
++/*To prevent buffer overflow access; in case the size of nal unit is
++ *  greater than the allocated buffer size*/
++#define EXTRA_BS_OFFSET 16*16*2
+ 
+ /**
+  ***************************************************************************
+diff --git a/decoder/ih264d_sei.c b/decoder/ih264d_sei.c
+index 800f2c9..098a1f3 100644
+--- a/decoder/ih264d_sei.c
++++ b/decoder/ih264d_sei.c
+@@ -336,7 +336,7 @@ WORD32 ih264d_parse_sei_message(dec_struct_t *ps_dec,
+         ui4_payload_type = 0;
+ 
+         u4_bits = ih264d_get_bits_h264(ps_bitstrm, 8);
+-        while(0xff == u4_bits)
++        while(0xff == u4_bits && !EXCEED_OFFSET(ps_bitstrm))
+         {
+             u4_bits = ih264d_get_bits_h264(ps_bitstrm, 8);
+             ui4_payload_type += 255;
+@@ -345,7 +345,7 @@ WORD32 ih264d_parse_sei_message(dec_struct_t *ps_dec,
+ 
+         ui4_payload_size = 0;
+         u4_bits = ih264d_get_bits_h264(ps_bitstrm, 8);
+-        while(0xff == u4_bits)
++        while(0xff == u4_bits && !EXCEED_OFFSET(ps_bitstrm))
+         {
+             u4_bits = ih264d_get_bits_h264(ps_bitstrm, 8);
+             ui4_payload_size += 255;
+@@ -370,7 +370,8 @@ WORD32 ih264d_parse_sei_message(dec_struct_t *ps_dec,
+             {
+                 H264_DEC_DEBUG_PRINT("\nError in parsing SEI message");
+             }
+-            while(0 == ih264d_check_byte_aligned(ps_bitstrm))
++            while(0 == ih264d_check_byte_aligned(ps_bitstrm)
++                            && !EXCEED_OFFSET(ps_bitstrm))
+             {
+                 u4_bits = ih264d_get_bit_h264(ps_bitstrm);
+                 if(u4_bits)
+-- 
+2.7.4
+

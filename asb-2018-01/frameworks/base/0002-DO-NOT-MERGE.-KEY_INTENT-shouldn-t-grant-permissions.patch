@@ -1,0 +1,49 @@
+From 618dc38f15e8210925ebd867bdade639ea3e1c4e Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Mon, 12 Jun 2017 17:33:07 -0600
+Subject: [PATCH 2/4] DO NOT MERGE. KEY_INTENT shouldn't grant permissions.
+
+KEY_INTENT has no business granting any Uri permissions, so remove
+any grant flags that malicious apps may have tried sneaking in.
+
+Also fix ordering bug in general-purpose security check that was
+allowing FLAG_GRANT_PERSISTABLE to bypass it.
+
+Test: builds, boots
+Bug: 32990341, 32879915
+Change-Id: I657455a770c81f045ccce6abbd2291407a1cfb42
+(cherry picked from commit d722e780bac7685e8a012b5f479eba8c348c3c53)
+CVE-2017-13157 / CVE-2017-13158
+---
+ .../java/com/android/server/accounts/AccountManagerService.java   | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/services/core/java/com/android/server/accounts/AccountManagerService.java b/services/core/java/com/android/server/accounts/AccountManagerService.java
+index 3c6de07..9aed230 100644
+--- a/services/core/java/com/android/server/accounts/AccountManagerService.java
++++ b/services/core/java/com/android/server/accounts/AccountManagerService.java
+@@ -2000,6 +2000,10 @@ public class AccountManagerService
+ 
+                         Intent intent = result.getParcelable(AccountManager.KEY_INTENT);
+                         if (intent != null && notifyOnAuthFailure && !customTokens) {
++                            intent.setFlags(intent.getFlags() & ~(Intent.FLAG_GRANT_READ_URI_PERMISSION
++                                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
++                                    | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
++                                    | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION));
+                             doNotification(mAccounts,
+                                     account, result.getString(AccountManager.KEY_AUTH_FAILED_MESSAGE),
+                                     intent, accounts.userId);
+@@ -3087,6 +3091,10 @@ public class AccountManagerService
+             }
+             if (result != null
+                     && (intent = result.getParcelable(AccountManager.KEY_INTENT)) != null) {
++                intent.setFlags(intent.getFlags() & ~(Intent.FLAG_GRANT_READ_URI_PERMISSION
++                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
++                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
++                        | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION));
+                 /*
+                  * The Authenticator API allows third party authenticators to
+                  * supply arbitrary intents to other apps that they can run,
+-- 
+2.7.4
+

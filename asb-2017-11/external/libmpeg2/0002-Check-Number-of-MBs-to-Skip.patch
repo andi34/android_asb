@@ -1,0 +1,37 @@
+From 164d1339db143feb7cb727f14cdf12e6c9a1ab41 Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Tue, 27 Jun 2017 11:55:32 +0530
+Subject: [PATCH 02/10] Check Number of MBs to Skip.
+
+The number of skip mbs was parsed as 0 and impeg2d_dec_skip_mbs was getting
+called with a large number because of underflow.
+Added a check for the same
+
+Bug: 63125953
+Test: run PoC on ASAN-enabled mpeg2dec before/after
+Change-Id: I07f43c1745e38e800751997e97d44d2bab0615a8
+CVE-2017-0834
+---
+ decoder/impeg2d_pnb_pic.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/decoder/impeg2d_pnb_pic.c b/decoder/impeg2d_pnb_pic.c
+index 69277e5..570f0d2 100644
+--- a/decoder/impeg2d_pnb_pic.c
++++ b/decoder/impeg2d_pnb_pic.c
+@@ -77,6 +77,12 @@ WORD32  impeg2d_dec_p_mb_params(dec_state_t *ps_dec)
+     else
+     {
+         u2_mb_addr_incr = impeg2d_get_mb_addr_incr(ps_stream);
++
++        if(!u2_mb_addr_incr)
++        {
++            return IV_FAIL;
++        }
++
+         if(0 == ps_dec->u2_first_mb)
+         {
+             /****************************************************************/
+-- 
+2.7.4
+

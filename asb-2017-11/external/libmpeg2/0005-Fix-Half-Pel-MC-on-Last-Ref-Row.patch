@@ -1,0 +1,37 @@
+From 099e98a5b1fb3498b5df333e46cf54e9c7a24a6e Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Wed, 19 Jul 2017 10:44:54 +0530
+Subject: [PATCH 05/10] Fix Half Pel MC on Last Ref Row
+
+If MC is referring to the last MB row, in case of field pictures,
+it could incorrectly read up to 8 extra rows in the reference
+buffer and 9 rows in case of half_y prediction.
+
+Bug: 63873837
+Test: ran POC on patched ASAN-enabled code
+Change-Id: I83af03b3c6b7e08a984f7b383bedf706422f6354
+CVE-2017-0854
+---
+ decoder/impeg2d_api_main.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/decoder/impeg2d_api_main.c b/decoder/impeg2d_api_main.c
+index 31d1357..44be558 100644
+--- a/decoder/impeg2d_api_main.c
++++ b/decoder/impeg2d_api_main.c
+@@ -379,7 +379,11 @@ void impeg2d_fill_mem_rec(impeg2d_fill_mem_rec_ip_t *ps_ip,
+     UWORD32 u4_deinterlace;
+     UNUSED(u4_deinterlace);
+     max_frm_width = ALIGN16(ps_ip->s_ivd_fill_mem_rec_ip_t.u4_max_frm_wd);
+-    max_frm_height = ALIGN16(ps_ip->s_ivd_fill_mem_rec_ip_t.u4_max_frm_ht);
++    /* In error clips with field prediction, the mv may incorrectly refer to
++    * the last MB row, causing an out of bounds read access. Allocating 8 extra
++    * rows to handle this. Adding another extra row to handle half_y prediction.
++    */
++    max_frm_height = ALIGN32(ps_ip->s_ivd_fill_mem_rec_ip_t.u4_max_frm_ht) + 9;
+ 
+     max_frm_size = (max_frm_width * max_frm_height * 3) >> 1;/* 420 P */
+ 
+-- 
+2.7.4
+

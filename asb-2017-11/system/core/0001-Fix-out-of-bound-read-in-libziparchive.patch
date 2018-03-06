@@ -1,0 +1,51 @@
+From f011398da5c70297c74b4120a8b14856ff4684d1 Mon Sep 17 00:00:00 2001
+From: Tianjie Xu <xunchang@google.com>
+Date: Wed, 5 Apr 2017 14:46:27 -0700
+Subject: [PATCH 1/6] Fix out of bound read in libziparchive
+
+We should check the boundary of central directory before checking its
+signature. Swap the order of these two checks.
+
+Bug: 36392138
+Test: libziparchive doesn't read the signature after boundary check fails.
+Change-Id: Ie89f709bb2d1ccb647116fb7ccb1e23c943e5ab8
+(cherry picked from commit 74464a1361562d4042a67c5d66bfcf396ee7e59c)
+(cherry picked from commit d9fd1863f46d5185eaaebc0803ee9c5da3ef110b)
+---
+ libziparchive/zip_archive.cc | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/libziparchive/zip_archive.cc b/libziparchive/zip_archive.cc
+index a17091f..8c2c559 100644
+--- a/libziparchive/zip_archive.cc
++++ b/libziparchive/zip_archive.cc
+@@ -580,6 +580,14 @@ static int32_t ParseZipArchive(ZipArchive* archive) {
+   const uint8_t* const cd_end = cd_ptr + cd_length;
+   const uint8_t* ptr = cd_ptr;
+   for (uint16_t i = 0; i < num_entries; i++) {
++    if (ptr > cd_end - sizeof(CentralDirectoryRecord)) {
++      ALOGW("Zip: ran off the end (at %" PRIu16 ")", i);
++#if defined(__ANDROID__)
++      android_errorWriteLog(0x534e4554, "36392138");
++#endif
++      return -1;
++    }
++
+     const CentralDirectoryRecord* cdr =
+         reinterpret_cast<const CentralDirectoryRecord*>(ptr);
+     if (cdr->record_signature != CentralDirectoryRecord::kSignature) {
+@@ -587,11 +595,6 @@ static int32_t ParseZipArchive(ZipArchive* archive) {
+       return -1;
+     }
+ 
+-    if (ptr + sizeof(CentralDirectoryRecord) > cd_end) {
+-      ALOGW("Zip: ran off the end (at %" PRIu16 ")", i);
+-      return -1;
+-    }
+-
+     const off64_t local_header_offset = cdr->local_file_header_offset;
+     if (local_header_offset >= archive->directory_offset) {
+       ALOGW("Zip: bad LFH offset %" PRId64 " at entry %" PRIu16,
+-- 
+2.7.4
+

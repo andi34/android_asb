@@ -1,0 +1,63 @@
+From fafcc9b9d6759bde9a6c2e4f0438d1611daf4f58 Mon Sep 17 00:00:00 2001
+From: Jean-Michel Trivi <jmtrivi@google.com>
+Date: Mon, 30 Oct 2017 11:31:03 -0700
+Subject: [PATCH 2/2] Fix out of bound memory access in lppTransposer
+
+In TRANSPOSER_SETTINGS, initialize the whole bwBorders array to a
+  reasonable value to guarantee correct termination in while loop
+  in lppTransposer function. This fixes the reported bug.
+For completeness:
+  - clear the whole bwIndex array instead of noOfPatches entries only.
+  - abort criterion in while loop to prevent potential
+    infinite loop, and limit bwIndex[patch] to a valid range.
+
+Test: see bug for malicious content, decoded with "stagefright -s -a"
+Bug: 65280786
+
+Change-Id: I16ed2e1c0f1601926239a652ca20a91284151843
+(cherry picked from commit 6d3dd40e204bf550abcfa589bd9615df8778e118)
+CVE-2017-13188
+---
+ libSBRdec/src/lpp_tran.cpp | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/libSBRdec/src/lpp_tran.cpp b/libSBRdec/src/lpp_tran.cpp
+index 117e739..e30dd1e 100644
+--- a/libSBRdec/src/lpp_tran.cpp
++++ b/libSBRdec/src/lpp_tran.cpp
+@@ -293,8 +293,7 @@ void lppTransposer (HANDLE_SBR_LPP_TRANS hLppTrans,    /*!< Handle of lpp transp
+   }
+ 
+   /* init bwIndex for each patch */
+-  FDKmemclear(bwIndex, pSettings->noOfPatches*sizeof(INT));
+-
++  FDKmemclear(bwIndex, MAX_NUM_PATCHES*sizeof(INT));
+   /*
+     Calc common low band scale factor
+   */
+@@ -621,9 +620,9 @@ void lppTransposer (HANDLE_SBR_LPP_TRANS hLppTrans,    /*!< Handle of lpp transp
+       FDK_ASSERT( hiBand < (64) );
+ 
+       /* bwIndex[patch] is already initialized with value from previous band inside this patch */
+-      while (hiBand >= pSettings->bwBorders[bwIndex[patch]])
++      while (hiBand >= pSettings->bwBorders[bwIndex[patch]] && bwIndex[patch] < MAX_NUM_PATCHES-1) {
+         bwIndex[patch]++;
+-
++      }
+ 
+       /*
+         Filter Step 2: add the left slope with the current filter to the buffer
+@@ -962,6 +961,10 @@ resetLppTransposer (HANDLE_SBR_LPP_TRANS hLppTrans,  /*!< Handle of lpp transpos
+   for(i = 0 ; i < noNoiseBands; i++){
+     pSettings->bwBorders[i] = noiseBandTable[i+1];
+   }
++  for (;i < MAX_NUM_NOISE_VALUES; i++) {
++    pSettings->bwBorders[i] = 255;
++  }
++
+ 
+   /*
+    * Choose whitening factors
+-- 
+2.7.4
+

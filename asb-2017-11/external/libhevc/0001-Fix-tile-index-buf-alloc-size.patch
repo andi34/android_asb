@@ -1,0 +1,34 @@
+From e6ec039374210b1f7c19e7311b6c6b833512a399 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Thu, 31 Aug 2017 14:25:53 +0530
+Subject: [PATCH 01/16] Fix tile index buf alloc size
+
+Bug: 64893226
+
+Change-Id: Iec02f6a7b65804cc3daadf6e29d57a7ad955d517
+CVE-2017-0836
+---
+ decoder/ihevcd_api.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/decoder/ihevcd_api.c b/decoder/ihevcd_api.c
+index e331337..1cd968e 100644
+--- a/decoder/ihevcd_api.c
++++ b/decoder/ihevcd_api.c
+@@ -1839,10 +1839,10 @@ WORD32 ihevcd_allocate_dynamic_bufs(codec_t *ps_codec)
+     }
+ 
+     /* Max CTBs in a row */
+-    size  = wd / MIN_CTB_SIZE + 2 /* Top row and bottom row extra. This ensures accessing left,top in first row
+-                                              and right in last row will not result in invalid access*/;
++    size  = wd / MIN_CTB_SIZE;
+     /* Max CTBs in a column */
+-    size *= ht / MIN_CTB_SIZE;
++    size *= (ht / MIN_CTB_SIZE + 2) /* Top row and bottom row extra. This ensures accessing left,top in first row
++                                              and right in last row will not result in invalid access*/;
+ 
+     size *= sizeof(UWORD16);
+     pv_buf = ps_codec->pf_aligned_alloc(pv_mem_ctxt, 128, size);
+-- 
+2.7.4
+

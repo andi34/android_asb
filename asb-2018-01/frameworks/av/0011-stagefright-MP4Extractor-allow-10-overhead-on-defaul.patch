@@ -1,0 +1,30 @@
+From c67c0be695730de81856f312a6911bbea400ff50 Mon Sep 17 00:00:00 2001
+From: Lajos Molnar <lajos@google.com>
+Date: Mon, 16 Oct 2017 14:47:31 -0700
+Subject: [PATCH 11/18] stagefright: MP4Extractor: allow 10% overhead on
+ default sample size
+
+Bug: 64528824
+Change-Id: Id19ec0d634d9337190d04abdbd97842b66502c01
+CVE-2017-0855
+---
+ media/libstagefright/MPEG4Extractor.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 217301d..2cee398 100755
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -1564,6 +1564,9 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+                     // ratio. Use compression ratio of 1.
+                     max_size = width * height * 3 / 2;
+                 }
++                // HACK: allow 10% overhead
++                // TODO: read sample size from traf atom for fragmented MPEG4.
++                max_size += max_size / 10;
+                 mLastTrack->meta->setInt32(kKeyMaxInputSize, max_size);
+             }
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,32 @@
+From 850a770c4826ff67bf7a6219a48e06c132063ac7 Mon Sep 17 00:00:00 2001
+From: Venkatarama Avadhani <venkatarama.avadhani@ittiam.com>
+Date: Fri, 9 Jun 2017 12:01:51 +0530
+Subject: [PATCH 01/10] Replace memcpy with memmove to Solve Memory Overlap
+ Error
+
+Replacing memcpy with memmove so there is no memcpy-param-overlap error.
+
+Bug: 62887820
+Test: vendor testing
+Change-Id: I8292659f4f490ce1eed16356a7caf16df6324283
+CVE-2017-0832
+---
+ decoder/impeg2d_mc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/decoder/impeg2d_mc.c b/decoder/impeg2d_mc.c
+index 79c5ef6..229579c 100644
+--- a/decoder/impeg2d_mc.c
++++ b/decoder/impeg2d_mc.c
+@@ -1260,7 +1260,7 @@ void impeg2d_mc_fullx_fully(void *pv_dec,
+ 
+         for(i = 0; i < u4_blk_height; i++)
+         {
+-            memcpy(pu1_out, pu1_ref, u4_blk_width);
++            memmove(pu1_out, pu1_ref, u4_blk_width);
+             pu1_ref += u4_ref_wid;
+             pu1_out += u4_out_wid;
+         }
+-- 
+2.7.4
+

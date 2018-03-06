@@ -1,0 +1,62 @@
+From 832618baf1696b7a7d3f7763d29ab7940e9fe412 Mon Sep 17 00:00:00 2001
+From: Jerome Jiang <jianj@google.com>
+Date: Thu, 26 Oct 2017 15:24:17 -0700
+Subject: [PATCH] DO NOT MERGE | libvpx: Fix OOB caused by odd frame width.
+
+Keep behaviors unchanged without external allocation.
+
+Bug: b/64710201
+Test: poc provided in the bug.
+
+Change-Id: I319a47b64c7cfa7bb47ad01c702be6f2acffe3a4
+(cherry picked from commit 51721c34847e6b4f935d5ecb1b44931c7716fd59)
+(cherry picked from commit 28a641201287106fbb73dfbad35dae2756cde265)
+CVE-2017-13194
+---
+ libvpx/vpx/src/vpx_image.c | 23 ++++++++++++++++-------
+ 1 file changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/libvpx/vpx/src/vpx_image.c b/libvpx/vpx/src/vpx_image.c
+index 9aae12c..a67e594 100644
+--- a/libvpx/vpx/src/vpx_image.c
++++ b/libvpx/vpx/src/vpx_image.c
+@@ -122,11 +122,10 @@ static vpx_image_t *img_alloc_helper(vpx_image_t *img,
+       break;
+   }
+ 
+-  /* Calculate storage sizes given the chroma subsampling */
+-  align = (1 << xcs) - 1;
+-  w = (d_w + align) & ~align;
+-  align = (1 << ycs) - 1;
+-  h = (d_h + align) & ~align;
++  /* Calculate storage sizes. If the buffer was allocated externally, the width
++   * and height shouldn't be adjusted. */
++  w = d_w;
++  h = d_h;
+   s = (fmt & VPX_IMG_FMT_PLANAR) ? w : bps * w / 8;
+   s = (s + stride_align - 1) & ~(stride_align - 1);
+   stride_in_bytes = (fmt & VPX_IMG_FMT_HIGHBITDEPTH) ? s * 2 : s;
+@@ -146,8 +145,18 @@ static vpx_image_t *img_alloc_helper(vpx_image_t *img,
+   img->img_data = img_data;
+ 
+   if (!img_data) {
+-    const uint64_t alloc_size = (fmt & VPX_IMG_FMT_PLANAR) ?
+-                                (uint64_t)h * s * bps / 8 : (uint64_t)h * s;
++    uint64_t alloc_size;
++    /* Calculate storage sizes given the chroma subsampling */
++    align = (1 << xcs) - 1;
++    w = (d_w + align) & ~align;
++    align = (1 << ycs) - 1;
++    h = (d_h + align) & ~align;
++
++    s = (fmt & VPX_IMG_FMT_PLANAR) ? w : bps * w / 8;
++    s = (s + stride_align - 1) & ~(stride_align - 1);
++    stride_in_bytes = (fmt & VPX_IMG_FMT_HIGHBITDEPTH) ? s * 2 : s;
++    alloc_size = (fmt & VPX_IMG_FMT_PLANAR) ? (uint64_t)h * s * bps / 8
++                                            : (uint64_t)h * s;
+ 
+     if (alloc_size != (size_t)alloc_size)
+       goto fail;
+-- 
+2.7.4
+

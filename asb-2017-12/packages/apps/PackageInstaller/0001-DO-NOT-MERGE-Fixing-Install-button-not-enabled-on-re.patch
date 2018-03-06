@@ -1,0 +1,37 @@
+From 5b423d3969afa55169f1839e7ce3ff2644e5fe4f Mon Sep 17 00:00:00 2001
+From: Suprabh Shukla <suprabh@google.com>
+Date: Wed, 20 Sep 2017 14:50:25 -0700
+Subject: [PATCH] DO NOT MERGE Fixing Install button not enabled on resume
+
+In cases where an app had a long list of permissions the Install button
+was not being enabled.
+
+Test: Manually clicked on an apk that required a long list of
+permissions. Checked that the install button is enabled. Switch out and
+back to the activity to force a pause/resume. The button gets disabled
+and enabled as expected. Also the existing test passes as before:
+gts-tradefed run gts-dev -m PackageInstallerTapjacking
+
+Bug: 35056974
+Change-Id: I2ef7d5ce4e137969c70d2929271620c2bcb723f2
+(cherry picked from commit 4c6afe94942c33e293d456be70ffa933d7d3e374)
+---
+ src/com/android/packageinstaller/PackageInstallerActivity.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/com/android/packageinstaller/PackageInstallerActivity.java b/src/com/android/packageinstaller/PackageInstallerActivity.java
+index 6887598..3153867 100644
+--- a/src/com/android/packageinstaller/PackageInstallerActivity.java
++++ b/src/com/android/packageinstaller/PackageInstallerActivity.java
+@@ -570,7 +570,7 @@ public class PackageInstallerActivity extends OverlayTouchActivity implements On
+         super.onResume();
+ 
+         if (mOk != null) {
+-            mOk.setEnabled(mOkCanInstall);
++            mOk.setEnabled(true);
+         }
+     }
+ 
+-- 
+2.7.4
+
