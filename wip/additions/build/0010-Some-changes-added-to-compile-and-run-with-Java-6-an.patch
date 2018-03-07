@@ -1,0 +1,111 @@
+From 43f238cb6bc5671d90a7dc7bcea7d90fd76ffede Mon Sep 17 00:00:00 2001
+From: Jerome Pilliet <pilliet@univ-mlv.fr>
+Date: Mon, 17 Dec 2012 11:12:50 +0100
+Subject: [PATCH 10/32] Some changes added to compile and run with Java 6 and
+ Java 7.
+
+  - correction of errors with Javac 6:
+    - target 1.5 and source empty.
+  - correction of errors with Javadoc 7:
+    - strange behavior when duplicate classes are given.
+
+Change-Id: Ib814ede143f7799ef18e0fb1b733547519b8b0e5
+
+Conflicts:
+	core/main.mk
+---
+ core/combo/javac.mk | 6 +++---
+ core/droiddoc.mk    | 6 ++++++
+ core/main.mk        | 8 ++++----
+ 3 files changed, 13 insertions(+), 7 deletions(-)
+
+diff --git a/core/combo/javac.mk b/core/combo/javac.mk
+index f8c99fb..273e778 100644
+--- a/core/combo/javac.mk
++++ b/core/combo/javac.mk
+@@ -10,9 +10,9 @@
+ # Whatever compiler is on this system.
+ ifeq ($(BUILD_OS), windows)
+     COMMON_JAVAC := development/host/windows/prebuilt/javawrap.exe -J-Xmx256m \
+-        -target 1.5 -Xmaxerrs 9999999
++        -target 1.5 -source 1.5 -Xmaxerrs 9999999
+ else
+-    COMMON_JAVAC := javac -J-Xmx512M -target 1.5 -Xmaxerrs 9999999
++    COMMON_JAVAC := javac -J-Xmx512M -target 1.5 -source 1.5 -Xmaxerrs 9999999
+ endif
+ 
+ # Eclipse.
+@@ -26,7 +26,7 @@ endif
+ ifeq ($(CUSTOM_JAVA_COMPILER), openjdk)
+     # We set the VM options (like -Xmx) in the javac script.
+     COMMON_JAVAC := prebuilt/common/openjdk/bin/javac -target 1.5 \
+-        -Xmaxerrs 9999999
++        -source 1.5 -Xmaxerrs 9999999
+     $(info CUSTOM_JAVA_COMPILER=openjdk)
+ endif
+    
+diff --git a/core/droiddoc.mk b/core/droiddoc.mk
+index 0d3094d..8b95558 100644
+--- a/core/droiddoc.mk
++++ b/core/droiddoc.mk
+@@ -161,6 +161,9 @@ $(full_target): $(full_src_files) $(droiddoc_templates) $(droiddoc) $(html_dir_f
+ 	$(call prepare-doc-source-list,$(PRIVATE_SRC_LIST_FILE),$(PRIVATE_JAVA_FILES), \
+ 			$(PRIVATE_SOURCE_INTERMEDIATES_DIR) $(PRIVATE_ADDITIONAL_JAVA_DIR))
+ 	$(hide) ( \
++		head -1 $(PRIVATE_SRC_LIST_FILE) | tr " " "\n" | sort | uniq | tr "\n" " " > $(PRIVATE_SRC_LIST_FILE)_temp; \
++		cat $(PRIVATE_SRC_LIST_FILE) | sed '1 d' >> $(PRIVATE_SRC_LIST_FILE)_temp; \
++		mv $(PRIVATE_SRC_LIST_FILE)_temp $(PRIVATE_SRC_LIST_FILE); \
+ 		javadoc \
+                 \@$(PRIVATE_SRC_LIST_FILE) \
+                 -J-Xmx1280m \
+@@ -194,6 +197,9 @@ $(full_target): $(full_src_files) $(full_java_lib_deps)
+ 	$(call prepare-doc-source-list,$(PRIVATE_SRC_LIST_FILE),$(PRIVATE_JAVA_FILES), \
+ 			$(PRIVATE_SOURCE_INTERMEDIATES_DIR) $(PRIVATE_ADDITIONAL_JAVA_DIR))
+ 	$(hide) ( \
++		head -1 $(PRIVATE_SRC_LIST_FILE) | tr " " "\n" | sort | uniq | tr "\n" " " > $(PRIVATE_SRC_LIST_FILE)_temp; \
++		cat $(PRIVATE_SRC_LIST_FILE) | sed '1 d' >> $(PRIVATE_SRC_LIST_FILE)_temp; \
++		mv $(PRIVATE_SRC_LIST_FILE)_temp $(PRIVATE_SRC_LIST_FILE); \
+ 		javadoc \
+                 $(PRIVATE_DROIDDOC_OPTIONS) \
+                 \@$(PRIVATE_SRC_LIST_FILE) \
+diff --git a/core/main.mk b/core/main.mk
+index d47ffba..fe5f6e9 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -156,14 +156,14 @@ $(info ************************************************************)
+ endif
+ 
+ # Check for the correct version of java
+-java_version := $(shell java -version 2>&1 | head -n 1 | grep '^java .*[ "]1\.6[\. "$$]')
++java_version := $(shell java -version 2>&1 | head -n 1 | grep '^java .*[ "]1\.[67][\. "$$]')
+ ifeq ($(strip $(java_version)),)
+ $(info ************************************************************)
+ $(info You are attempting to build with the incorrect version)
+ $(info of java.)
+ $(info $(space))
+ $(info Your version is: $(shell java -version 2>&1 | head -n 1).)
+-$(info The correct version is: Java SE 1.6.)
++$(info The correct version is: Java SE 1.6 or 1.7.)
+ $(info $(space))
+ $(info Please follow the machine setup instructions at)
+ $(info $(space)$(space)$(space)$(space)https://source.android.com/source/download.html)
+@@ -172,14 +172,14 @@ $(error stop)
+ endif
+ 
+ # Check for the correct version of javac
+-javac_version := $(shell javac -version 2>&1 | head -n 1 | grep '[ "]1\.6[\. "$$]')
++javac_version := $(shell javac -version 2>&1 | head -n 1 | grep '[ "]1\.[67][\. "$$]')
+ ifeq ($(strip $(javac_version)),)
+ $(info ************************************************************)
+ $(info You are attempting to build with the incorrect version)
+ $(info of javac.)
+ $(info $(space))
+ $(info Your version is: $(shell javac -version 2>&1 | head -n 1).)
+-$(info The correct version is: 1.6.)
++$(info The correct version is: 1.6 or 1.7.)
+ $(info $(space))
+ $(info Please follow the machine setup instructions at)
+ $(info $(space)$(space)$(space)$(space)https://source.android.com/source/download.html)
+-- 
+2.7.4
+

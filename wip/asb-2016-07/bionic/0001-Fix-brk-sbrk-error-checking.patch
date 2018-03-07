@@ -1,0 +1,235 @@
+From b457cb7d402c9c424badb06129a461d122de056a Mon Sep 17 00:00:00 2001
+From: Elliott Hughes <enh@google.com>
+Date: Fri, 25 Apr 2014 18:27:38 -0700
+Subject: [PATCH 1/4] Fix brk/sbrk error checking.
+
+Note that the kernel returns the current break on error or if the requested
+break is smaller than the minimum break, or the new break. I don't know where
+we got the idea that the kernel could return -1.
+
+Also optimizes the query case.
+
+Also hides an accidentally-exported symbol for LP64.
+
+Bug: 28740702
+
+(cherry picked from commit 533dde4dbf87d6615952be3654fc74e5ff2e1003)
+
+Change-Id: Ied16987756a501acf292368a14e3727ad631efa5
+---
+ libc/Android.mk       |  1 -
+ libc/bionic/brk.cpp   | 46 +++++++++++++++++++++++++++++++++++++-----
+ libc/bionic/sbrk.cpp  | 55 ---------------------------------------------------
+ tests/unistd_test.cpp | 50 +++++++++++++++++++++++++++++++++++++++++-----
+ 4 files changed, 86 insertions(+), 66 deletions(-)
+ delete mode 100644 libc/bionic/sbrk.cpp
+
+diff --git a/libc/Android.mk b/libc/Android.mk
+index 9610c14..f4faa50 100644
+--- a/libc/Android.mk
++++ b/libc/Android.mk
+@@ -228,7 +228,6 @@ libc_bionic_src_files := \
+     bionic/pthread_setschedparam.cpp \
+     bionic/pthread_sigmask.cpp \
+     bionic/raise.cpp \
+-    bionic/sbrk.cpp \
+     bionic/scandir.cpp \
+     bionic/sched_getaffinity.cpp \
+     bionic/__set_errno.cpp \
+diff --git a/libc/bionic/brk.cpp b/libc/bionic/brk.cpp
+index 633b914..050f36d 100644
+--- a/libc/bionic/brk.cpp
++++ b/libc/bionic/brk.cpp
+@@ -26,16 +26,52 @@
+  * SUCH DAMAGE.
+  */
+ 
++#define __STDINT_LIMITS
++
++#include <errno.h>
++#include <stdint.h>
+ #include <unistd.h>
+ 
+-/* Shared with sbrk.c. */
+-extern "C" void* __bionic_brk; // TODO: should be __LIBC_HIDDEN__ but accidentally exported by NDK :-(
++#if __LP64__
++static void* __bionic_brk;
++#else
++void* __bionic_brk; // Accidentally exported by the NDK.
++#endif
+ 
+ int brk(void* end_data) {
+-  void* new_brk = __brk(end_data);
+-  if (new_brk != end_data) {
++  __bionic_brk = __brk(end_data);
++  if (__bionic_brk < end_data) {
++    errno = ENOMEM;
+     return -1;
+   }
+-  __bionic_brk = new_brk;
+   return 0;
+ }
++
++void* sbrk(ptrdiff_t increment) {
++  // Initialize __bionic_brk if necessary.
++  if (__bionic_brk == NULL) {
++    __bionic_brk = __brk(NULL);
++  }
++
++  // Don't ask the kernel if we already know the answer.
++  if (increment == 0) {
++    return __bionic_brk;
++  }
++
++  // Avoid overflow.
++  intptr_t old_brk = reinterpret_cast<intptr_t>(__bionic_brk);
++  if ((increment > 0 && INTPTR_MAX - increment > old_brk) ||
++      (increment < 0 && (increment == PTRDIFF_MIN || old_brk < -increment))) {
++    errno = ENOMEM;
++    return reinterpret_cast<void*>(-1);
++  }
++
++  void* desired_brk = reinterpret_cast<void*>(old_brk + increment);
++  __bionic_brk = __brk(desired_brk);
++
++  if (__bionic_brk < desired_brk) {
++    errno = ENOMEM;
++    return reinterpret_cast<void*>(-1);
++  }
++  return reinterpret_cast<void*>(old_brk);
++}
+diff --git a/libc/bionic/sbrk.cpp b/libc/bionic/sbrk.cpp
+deleted file mode 100644
+index 6c9b534..0000000
+--- a/libc/bionic/sbrk.cpp
++++ /dev/null
+@@ -1,55 +0,0 @@
+-/*
+- * Copyright (C) 2008 The Android Open Source Project
+- * All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions
+- * are met:
+- *  * Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- *  * Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in
+- *    the documentation and/or other materials provided with the
+- *    distribution.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+- * SUCH DAMAGE.
+- */
+-
+-#include <unistd.h>
+-#include <errno.h>
+-
+-/* Shared with brk.c. */
+-extern "C" {
+-  void* __bionic_brk; // TODO: should be __LIBC_HIDDEN__ but accidentally exported by NDK :-(
+-}
+-
+-void* sbrk(ptrdiff_t increment) {
+-  if (__bionic_brk == NULL) {
+-    __bionic_brk = __brk(NULL);
+-  }
+-
+-  void* original_brk = __bionic_brk;
+-  void* desired_brk = (void*) ((uintptr_t) original_brk + increment);
+-
+-  void* new_brk = __brk(desired_brk);
+-  if (new_brk == (void*) -1) {
+-    return new_brk;
+-  } else if (new_brk < desired_brk) {
+-    errno = ENOMEM;
+-    return (void*) -1;
+-  }
+-
+-  __bionic_brk = new_brk;
+-  return original_brk;
+-}
+diff --git a/tests/unistd_test.cpp b/tests/unistd_test.cpp
+index 3ccaf3b..fa832ba 100644
+--- a/tests/unistd_test.cpp
++++ b/tests/unistd_test.cpp
+@@ -14,8 +14,11 @@
+  * limitations under the License.
+  */
+ 
++#define __STDINT_LIMITS
++
+ #include <gtest/gtest.h>
+ 
++#include <errno.h>
+ #include <stdint.h>
+ #include <unistd.h>
+ 
+@@ -23,12 +26,49 @@ TEST(unistd, sysconf_SC_MONOTONIC_CLOCK) {
+   ASSERT_GT(sysconf(_SC_MONOTONIC_CLOCK), 0);
+ }
+ 
+-TEST(unistd, sbrk) {
+-  void* initial_break = sbrk(0);
++static void* get_brk() {
++  return sbrk(0);
++}
++
++static void* page_align(uintptr_t addr) {
++  uintptr_t mask = sysconf(_SC_PAGE_SIZE) - 1;
++  return reinterpret_cast<void*>((addr + mask) & ~mask);
++}
++
++TEST(unistd, brk) {
++  void* initial_break = get_brk();
++
++  // The kernel aligns the break to a page.
++  void* new_break = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(initial_break) + 1);
++  ASSERT_EQ(0, brk(new_break));
++  ASSERT_GE(get_brk(), new_break);
+ 
+-  void* new_break = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(initial_break) + 2000);
++  new_break = page_align(reinterpret_cast<uintptr_t>(initial_break) + sysconf(_SC_PAGE_SIZE));
+   ASSERT_EQ(0, brk(new_break));
++  ASSERT_EQ(get_brk(), new_break);
++}
++
++TEST(unistd, brk_ENOMEM) {
++  ASSERT_EQ(-1, brk(reinterpret_cast<void*>(-1)));
++  ASSERT_EQ(ENOMEM, errno);
++}
++
++TEST(unistd, sbrk_ENOMEM) {
++  intptr_t current_brk = reinterpret_cast<intptr_t>(get_brk());
++
++#if !defined(__GLIBC__)
++  // Can't increase by so much that we'd overflow.
++  ASSERT_EQ(reinterpret_cast<void*>(-1), sbrk(PTRDIFF_MAX));
++  ASSERT_EQ(ENOMEM, errno);
++#endif
++
++  // Can't reduce by more than the current break.
++  ASSERT_EQ(reinterpret_cast<void*>(-1), sbrk(-(current_brk + 1)));
++  ASSERT_EQ(ENOMEM, errno);
+ 
+-  void* final_break = sbrk(0);
+-  ASSERT_EQ(final_break, new_break);
++#if !defined(__GLIBC__)
++  // The maximum negative value is an interesting special case that glibc gets wrong.
++  ASSERT_EQ(reinterpret_cast<void*>(-1), sbrk(PTRDIFF_MIN));
++  ASSERT_EQ(ENOMEM, errno);
++#endif
+ }
+-- 
+2.7.4
+

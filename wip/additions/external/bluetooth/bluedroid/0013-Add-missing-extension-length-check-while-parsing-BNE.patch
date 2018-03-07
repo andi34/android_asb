@@ -1,0 +1,32 @@
+From 2125cf60889f4f83f8f3f960873387a4a01f6d9f Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Mon, 17 Jul 2017 16:03:21 -0700
+Subject: [PATCH 13/15] Add missing extension length check while parsing BNEP
+ control packets
+
+Bug: 63146237
+Test: External script
+Change-Id: I4e519cec1c7dffb8bd42add00bd891e0969a3d9f
+(cherry picked from commit 9ab89b7dbe5735b796799f65144efa48595d0230)
+(cherry picked from commit dc7700a43189d2a8607b69ae19a6d646f11ddf51)
+CVE-2017-0782
+---
+ stack/bnep/bnep_utils.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/stack/bnep/bnep_utils.c b/stack/bnep/bnep_utils.c
+index f051274..5a9c352 100644
+--- a/stack/bnep/bnep_utils.c
++++ b/stack/bnep/bnep_utils.c
+@@ -913,7 +913,7 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+         BNEP_TRACE_ERROR2("%s: BNEP - bad ctl pkt type: %d", __func__,
+                          control_type);
+         bnep_send_command_not_understood (p_bcb, control_type);
+-        if (is_ext)
++        if (is_ext && (ext_len > 0))
+         {
+             if (*rem_len < (ext_len - 1))
+             {
+-- 
+2.7.4
+

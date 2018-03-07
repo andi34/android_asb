@@ -1,0 +1,76 @@
+From 52a228dba8736ebc6d71fcdee569866a7a883446 Mon Sep 17 00:00:00 2001
+From: Jack He <siyuanh@google.com>
+Date: Wed, 5 Apr 2017 17:59:58 -0700
+Subject: [PATCH 08/15] Check LE advertising data length before caching
+ advertising records
+
+Bug: 33899337
+Test: make, receive LE advertising
+Change-Id: I06b249ac5cabdef64528deda07b8bae749e1d2fd
+(cherry picked from commit d57adbc350fdee4f27b82c9e39a14bd745d92320)
+(cherry picked from commit 1bef3546a6cb6f05739c10825dab9eb3362892f6)
+---
+ stack/btm/btm_ble_gap.c | 17 +++++++++++++++--
+ 1 file changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/stack/btm/btm_ble_gap.c b/stack/btm/btm_ble_gap.c
+index 6e4ff9b..00d7451 100644
+--- a/stack/btm/btm_ble_gap.c
++++ b/stack/btm/btm_ble_gap.c
+@@ -26,6 +26,8 @@
+ #include <stdio.h>
+ #include <stddef.h>
+ 
++#include <log/log.h>
++
+ #include "bt_types.h"
+ #include "btu.h"
+ #include "btm_int.h"
+@@ -1407,7 +1409,7 @@ static void btm_ble_parse_adv_data(tBTM_INQ_INFO *p_info, UINT8 *p_data,
+ ** Returns          void
+ **
+ *******************************************************************************/
+-void btm_ble_cache_adv_data(tBTM_INQ_RESULTS *p_cur, UINT8 data_len, UINT8 *p, UINT8 evt_type)
++BOOLEAN btm_ble_cache_adv_data(tBTM_INQ_RESULTS *p_cur, UINT8 data_len, UINT8 *p, UINT8 evt_type)
+ {
+     tBTM_BLE_INQ_CB     *p_le_inq_cb = &btm_cb.ble_ctr_cb.inq_var;
+     UINT8 *p_cache;
+@@ -1426,8 +1428,16 @@ void btm_ble_cache_adv_data(tBTM_INQ_RESULTS *p_cur, UINT8 data_len, UINT8 *p, U
+         STREAM_TO_UINT8(length, p);
+         while ( length && ((p_le_inq_cb->adv_len + length + 1) <= BTM_BLE_CACHE_ADV_DATA_MAX))
+         {
++            /* adv record size must be smaller than the total adv data size */
++            if ((length + 1) > data_len) {
++                BTM_TRACE_ERROR0("BTM - got incorrect LE advertising data");
++                android_errorWriteLog(0x534e4554, "33899337");
++                return FALSE;
++            }
+             /* copy from the length byte & data into cache */
+             memcpy(p_cache, p-1, length+1);
++            /* reduce the total data size by size of data copied */
++            data_len -= length + 1;
+             /* advance the cache pointer past data */
+             p_cache += length+1;
+             /* increment cache length */
+@@ -1437,6 +1447,7 @@ void btm_ble_cache_adv_data(tBTM_INQ_RESULTS *p_cur, UINT8 data_len, UINT8 *p, U
+             STREAM_TO_UINT8(length, p);
+         }
+     }
++    return TRUE;
+ 
+     /* parse service UUID from adv packet and save it in inq db eir_uuid */
+     /* TODO */
+@@ -1547,7 +1558,9 @@ BOOLEAN btm_ble_update_inq_result(tINQ_DB_ENT *p_i, UINT8 addr_type, UINT8 evt_t
+         BTM_TRACE_WARNING1("EIR data too long %d. discard", data_len);
+         return FALSE;
+     }
+-    btm_ble_cache_adv_data(p_cur, data_len, p, evt_type);
++    if (!btm_ble_cache_adv_data(p_cur, data_len, p, evt_type)) {
++        return FALSE;
++    }
+ 
+     p1 = (p + data_len);
+     STREAM_TO_UINT8 (rssi, p1);
+-- 
+2.7.4
+

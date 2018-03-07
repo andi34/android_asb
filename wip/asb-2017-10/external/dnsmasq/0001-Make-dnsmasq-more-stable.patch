@@ -1,0 +1,43 @@
+From 2d3ba5d96100938fff0eb106a2c9a886e7d3e52e Mon Sep 17 00:00:00 2001
+From: Lorenzo Colitti <lorenzo@google.com>
+Date: Tue, 15 Aug 2017 14:44:49 +0900
+Subject: [PATCH] Make dnsmasq more stable.
+
+1. Fix the length check in extract_name.
+2. Add a size check to answer_request.
+
+Bug: 64575136
+Test: builds
+Test: wifi tethering works
+Change-Id: Ie38321ab02b7cfdc603958a884cd8f37724fedcc
+(cherry picked from commit f25df861463c07908f39d9b43fe8888a4b31e848)
+---
+ src/rfc1035.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/rfc1035.c b/src/rfc1035.c
+index ca5ceba..a12c3b0 100755
+--- a/src/rfc1035.c
++++ b/src/rfc1035.c
+@@ -48,7 +48,7 @@ static int extract_name(HEADER *header, size_t plen, unsigned char **pp,
+ 	/* end marker */
+ 	{
+ 	  /* check that there are the correct no of bytes after the name */
+-	  if (!CHECK_LEN(header, p, plen, extrabytes))
++	  if (!CHECK_LEN(header, p1 ? p1 : p, plen, extrabytes))
+ 	    return 0;
+ 	  
+ 	  if (isExtract)
+@@ -1140,6 +1140,9 @@ size_t answer_request(HEADER *header, char *limit, size_t qlen,
+   struct crec *crecp;
+   int nxdomain = 0, auth = 1, trunc = 0;
+   struct mx_srv_record *rec;
++
++  // Make sure we do not underflow here too.
++  if (qlen > (limit - ((char *)header))) return 0;
+  
+   /* If there is an RFC2671 pseudoheader then it will be overwritten by
+      partial replies, so we have to do a dry run to see if we can answer
+-- 
+2.7.4
+

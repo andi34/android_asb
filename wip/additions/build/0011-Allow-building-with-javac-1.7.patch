@@ -1,0 +1,26 @@
+From da03ce5102c5edf69cd3c0e9e0305315eb8b820f Mon Sep 17 00:00:00 2001
+From: LorD ClockaN <davor@losinj.com>
+Date: Tue, 26 Mar 2013 21:18:36 +0100
+Subject: [PATCH 11/32] Allow building with javac 1.7
+
+Change-Id: Id8d78558736482e10c52f2cc86a2b903b1fbdbe5
+---
+ core/main.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/main.mk b/core/main.mk
+index fe5f6e9..efcf6c8 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -184,7 +184,7 @@ $(info $(space))
+ $(info Please follow the machine setup instructions at)
+ $(info $(space)$(space)$(space)$(space)https://source.android.com/source/download.html)
+ $(info ************************************************************)
+-$(error stop)
++#$(error stop)
+ endif
+ 
+ ifndef BUILD_EMULATOR
+-- 
+2.7.4
+

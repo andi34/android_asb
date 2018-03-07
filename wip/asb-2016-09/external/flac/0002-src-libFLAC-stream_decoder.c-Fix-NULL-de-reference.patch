@@ -1,0 +1,34 @@
+From 186999fb06d197713322de5173c8c97ce15d5ffa Mon Sep 17 00:00:00 2001
+From: Erik de Castro Lopo <erikd@mega-nerd.com>
+Date: Wed, 17 Dec 2014 19:02:26 +1100
+Subject: [PATCH 2/2] src/libFLAC/stream_decoder.c : Fix NULL de-reference.
+
+NULL de-reference can really only happen on a malformed file.
+Found using afl (http://lcamtuf.coredump.cx/afl/).
+
+Bug: 27211885
+Change-Id: Iad7ced634d417df475050c8f379e0e95ec36b115
+(cherry picked from commit 83a817d2002b2b439ed85c002b18666b4dcb6cfd)
+---
+ libFLAC/stream_decoder.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/libFLAC/stream_decoder.c b/libFLAC/stream_decoder.c
+index a195f79..650a9bc 100644
+--- a/libFLAC/stream_decoder.c
++++ b/libFLAC/stream_decoder.c
+@@ -1749,8 +1749,10 @@ FLAC__bool read_metadata_vorbiscomment_(FLAC__StreamDecoder *decoder, FLAC__Stre
+ 		}
+ 		for(i = 0; i < obj->num_comments; i++) {
+ 			FLAC__ASSERT(FLAC__STREAM_METADATA_VORBIS_COMMENT_ENTRY_LENGTH_LEN == 32);
+-			if(!FLAC__bitreader_read_uint32_little_endian(decoder->private_->input, &obj->comments[i].length))
++			if( !FLAC__bitreader_read_uint32_little_endian(decoder->private_->input, &obj->comments[i].length)) {
++				obj->num_comments = i;
+ 				return false; /* read_callback_ sets the state for us */
++			}
+ 			if(obj->comments[i].length > 0) {
+ 				if(0 == (obj->comments[i].entry = (FLAC__byte*)safe_malloc_add_2op_(obj->comments[i].length, /*+*/1))) {
+ 					decoder->protected_->state = FLAC__STREAM_DECODER_MEMORY_ALLOCATION_ERROR;
+-- 
+2.7.4
+

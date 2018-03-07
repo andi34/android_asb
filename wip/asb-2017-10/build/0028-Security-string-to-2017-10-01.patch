@@ -1,0 +1,40 @@
+From 8a25c6a1536fa1695dd2c019c28db96346a2f520 Mon Sep 17 00:00:00 2001
+From: MSe1969 <mse1969@posteo.de>
+Date: Fri, 6 Oct 2017 00:39:20 +0200
+Subject: [PATCH 28/32] Security string to 2017-10-01
+
+Android Bulletin Oct. 2017:
+---------------------------
+CVE-2017-0809	A-62673128     Critical
+CVE-2017-0815	A-63526567     Moderate
+CVE-2017-0816	A-63662938     Moderate
+CVE-2017-14496  A-64575136 [2] High
+
+Pixel/Nexus Bulletin Oct. 2017:
+-------------------------------
+CVE-2017-0814	A-62800140     High
+CVE-2017-0817	A-63522430     Moderate
+CVE-2017-0820	A-62187433     High
+CVE-2017-0823	A-37896655     Moderate
+
+Change-Id: Ic010f63d6c934c75c091669096fb09d1847519f4
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 1ec13e2..26e8491 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-09-01
++  PLATFORM_SECURITY_PATCH := 2017-10-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

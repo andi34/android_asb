@@ -1,0 +1,42 @@
+From b2b22c027bb36096d443fcafaec0f58ec561062f Mon Sep 17 00:00:00 2001
+From: Dang Duy Son <xpduyson@gmail.com>
+Date: Mon, 12 Jun 2017 08:18:17 +0700
+Subject: [PATCH 24/32] Update Security String to 2017-06-01
+
+asb-2017.06 https://source.android.com/security/bulletin/2017-06-01
+Contains 12 CVE 4.4.4 relevant items:
+
+CVE-2017-0639 A-35310991 High:     Change 176668
+CVE-2017-0646 A-33899337 Moderate: Change 176522
+CVE-2016-5131 A-36554209 High:     Change 176523
+CVE-2016-4658 A-36554207 High:     Change 176557
+CVE-2017-0663 A-37104170 High:     Change 176558
+CVE-2017-7376 A-36555370 High:     Change 176669
+CVE-2017-5056 A-36809819 Moderate: Change 176559
+CVE-2017-7375 A-36556310 Moderate: Change 176560
+CVE-2016-1839 A-36553781 Moderate: Change 176561
+CVE-2017-0641 A-34360591 High:     Change 176565
+CVE-2017-0644 A-35472997 High:     N/A (not publicly available)
+CVE-2015-7995 A-36810065 Moderate: N/A (not publicly available)
+
+Change-Id: I246c755767e4c8e2ea9fd88b10d6d6261be0417b
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 4f48dce..774b448 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-05-01
++  PLATFORM_SECURITY_PATCH := 2017-06-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

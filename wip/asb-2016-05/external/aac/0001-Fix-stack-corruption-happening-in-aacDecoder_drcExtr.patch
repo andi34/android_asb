@@ -1,0 +1,62 @@
+From df09a709bc564587837c546943fbf40e37a0aa55 Mon Sep 17 00:00:00 2001
+From: Jean-Michel Trivi <jmtrivi@google.com>
+Date: Mon, 21 Mar 2016 14:12:19 -0700
+Subject: [PATCH 1/4] Fix stack corruption happening in
+ aacDecoder_drcExtractAndMap()
+
+In the aacDecoder_drcExtractAndMap() function, self->numThreads
+  can be used after having exceeded its intended max value,
+  MAX_DRC_THREADS, causing memory to be cleared after the
+  threadBs[MAX_DRC_THREADS] array.
+The crash is prevented by never using self->numThreads with
+  a value equal to or greater than MAX_DRC_THREADS.
+A proper fix will be required as there seems to be an issue as
+  to which entry in the threadBs array is meant to be initialized
+  and used.
+
+Bug 26751339
+
+Change-Id: I655cc40c35d4206ab72e83b2bdb751be2fe52b5a
+(cherry picked from commit a06d1c2b9af1621037b48557aac42b5ecbdb03b3)
+---
+ libAACdec/src/aacdec_drc.cpp | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/libAACdec/src/aacdec_drc.cpp b/libAACdec/src/aacdec_drc.cpp
+index 2666454..f939a1a 100644
+--- a/libAACdec/src/aacdec_drc.cpp
++++ b/libAACdec/src/aacdec_drc.cpp
+@@ -2,7 +2,7 @@
+ /* -----------------------------------------------------------------------------------------------------------
+ Software License for The Fraunhofer FDK AAC Codec Library for Android
+ 
+-© Copyright  1995 - 2013 Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
++Â© Copyright  1995 - 2013 Fraunhofer-Gesellschaft zur FÃ¶rderung der angewandten Forschung e.V.
+   All rights reserved.
+ 
+  1.    INTRODUCTION
+@@ -680,6 +680,10 @@ static int aacDecoder_drcExtractAndMap (
+   }
+   self->numPayloads = 0;
+ 
++  if (self->numThreads >= MAX_DRC_THREADS) {
++      self->numThreads = MAX_DRC_THREADS - 1;
++  }
++
+   if (self->dvbAncDataAvailable)
+   { /* Append a DVB heavy compression payload thread if available. */
+     int bitsParsed;
+@@ -706,6 +710,10 @@ static int aacDecoder_drcExtractAndMap (
+ 
+   /* coupling channels not supported */
+ 
++  if (self->numThreads >= MAX_DRC_THREADS) {
++      self->numThreads = MAX_DRC_THREADS - 1;
++  }
++
+   /* check for valid threads */
+   for (thread = 0; thread < self->numThreads; thread++) {
+     CDrcPayload *pThreadBs = &threadBs[thread];
+-- 
+2.7.4
+

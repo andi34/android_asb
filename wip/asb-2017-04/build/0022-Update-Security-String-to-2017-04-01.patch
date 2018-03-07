@@ -1,0 +1,26 @@
+From a6ac59d6915fc187022f6912449e12244cff0ce8 Mon Sep 17 00:00:00 2001
+From: xpduyson <xpduyson@gmail.com>
+Date: Sun, 9 Apr 2017 09:46:20 +0700
+Subject: [PATCH 22/32] Update Security String to 2017-04-01
+
+Change-Id: I1688a2ae31d1b45fa1ba0bf05edd7c06f3cbb8e5
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 3af632d..619fd80 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-03-01
++  PLATFORM_SECURITY_PATCH := 2017-04-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

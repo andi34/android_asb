@@ -1,0 +1,45 @@
+From 48502a3ebceca0be82bf22a4ca1a793852c6f406 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sat, 9 Dec 2017 18:20:22 +0100
+Subject: [PATCH 30/32] Bump Security Patch Level to 2017-12-01
+
+Android Bulletin Dec. 2017:
+---------------------------
+CVE-2017-0807	A-35056974*	High	 not yet public
+CVE-2017-0870	A-62134807	High	 no minikin
+CVE-2017-0837	A-64340921	High	 no audiopolicy service
+CVE-2017-13156	A-64211847	High
+CVE-2017-13157	A-32990341	High	 Change 198512
+CVE-2017-13158	A-32879915	High	 Change 198512
+CVE-2017-13159	A-32879772	High	 Change 198484
+
+Pixel/Nexus Bulletin Dec. 2017:
+-------------------------------
+CVE-2017-13154	A-63666573	High
+CVE-2017-0879	A-65025028	High	 Change 198578
+CVE-2017-13149	A-65719872	High	 no libhevc
+CVE-2017-13152	A-62872384	Moderate Change 198579
+
+Reference Version: 5.1.1
+
+Change-Id: I3141ffa72d5515e47d6da8ce70d7b3e5a9a28dad
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 01782a3..6ce6e11 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-11-01
++  PLATFORM_SECURITY_PATCH := 2017-12-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

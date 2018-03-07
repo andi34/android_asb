@@ -1,0 +1,37 @@
+From 6e3530961a2ee0b2a1fae85153abea973e05f0c8 Mon Sep 17 00:00:00 2001
+From: Brian Carlstrom <bdc@google.com>
+Date: Wed, 21 Sep 2016 10:34:18 -0700
+Subject: [PATCH 4/4] Fix cast from pointer to integer of different size
+
+Test: make
+Bug: 29149404
+Change-Id: I9be82ac4dfb430c8d7398aa69b100820957f6279
+(cherry picked from commit 8caa27c2601e69bc404ff28fc4c5c39860d8d5bf)
+---
+ lib/xmlparse.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/lib/xmlparse.c b/lib/xmlparse.c
+index e12853c..0655e08 100644
+--- a/lib/xmlparse.c
++++ b/lib/xmlparse.c
+@@ -3,6 +3,7 @@
+ */
+ 
+ #include <stddef.h>
++#include <stdint.h>
+ #include <string.h>                     /* memset(), memcpy() */
+ #include <assert.h>
+ #include <limits.h>                     /* UINT_MAX */
+@@ -722,7 +723,7 @@ generate_hash_secret_salt(XML_Parser parser)
+   /* Process ID is 0 bits entropy if attacker has local access
+    * XML_Parser address is few bits of entropy if attacker has local access */
+   const unsigned long entropy =
+-      gather_time_entropy() ^ getpid() ^ (unsigned long)parser;
++      gather_time_entropy() ^ getpid() ^ (uintptr_t)parser;
+ 
+   /* Factors are 2^31-1 and 2^61-1 (Mersenne primes M31 and M61) */
+   if (sizeof(unsigned long) == 4) {
+-- 
+2.7.4
+

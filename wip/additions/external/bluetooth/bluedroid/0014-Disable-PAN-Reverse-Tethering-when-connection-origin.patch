@@ -1,0 +1,71 @@
+From e92e8eb64d4bc31e491b961c2ee95fbe38ad6565 Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Fri, 7 Jul 2017 01:48:40 -0700
+Subject: [PATCH 14/15] Disable PAN Reverse Tethering when connection
+ originated by the Remote
+
+* Check for valid interactions between the three PAN profile roles per
+  Table 1 in PAN Profile v1.0 spec.
+* Explicitly disable connections to the local PANU if the remote is
+  not PANU.
+
+Bug: 63145701
+Test: External script
+Change-Id: I29a7e404ba7e4453b6a7c59148a2b3eb7395303a
+Merged-In: I29a7e404ba7e4453b6a7c59148a2b3eb7395303a
+(cherry picked from commit 9aea2c2f92dd5245f6b35d564ce8e471fec2b4ec)
+CVE-2017-0783
+---
+ stack/pan/pan_main.c | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/stack/pan/pan_main.c b/stack/pan/pan_main.c
+index 6cbe1ce..fb29438 100644
+--- a/stack/pan/pan_main.c
++++ b/stack/pan/pan_main.c
+@@ -223,6 +223,42 @@ void pan_conn_ind_cb (UINT16 handle,
+         return;
+     }
+ 
++    /* Check for valid interactions between the three PAN profile roles */
++    /*
++     * For reference, see Table 1 in PAN Profile v1.0 spec.
++     * Note: the remote is the initiator.
++     */
++    BOOLEAN is_valid_interaction = FALSE;
++    switch (remote_uuid->uu.uuid16)
++    {
++        case UUID_SERVCLASS_NAP:
++        case UUID_SERVCLASS_GN:
++            if (local_uuid->uu.uuid16 == UUID_SERVCLASS_PANU)
++                is_valid_interaction = TRUE;
++            break;
++        case UUID_SERVCLASS_PANU:
++            is_valid_interaction = TRUE;
++            break;
++    }
++    /*
++     * Explicitly disable connections to the local PANU if the remote is
++     * not PANU.
++     */
++    if ((local_uuid->uu.uuid16 == UUID_SERVCLASS_PANU) &&
++        (remote_uuid->uu.uuid16 != UUID_SERVCLASS_PANU))
++    {
++        is_valid_interaction = FALSE;
++    }
++    if (!is_valid_interaction)
++    {
++        PAN_TRACE_ERROR2(
++            "PAN Connection failed because of invalid PAN profile roles "
++            "interaction: Remote UUID 0x%x Local UUID 0x%x",
++            remote_uuid->uu.uuid16, local_uuid->uu.uuid16);
++        BNEP_ConnectResp(handle, BNEP_CONN_FAILED_SRC_UUID);
++        return;
++    }
++
+     /* Requested destination role is */
+     if (local_uuid->uu.uuid16 == UUID_SERVCLASS_PANU)
+         req_role = PAN_ROLE_CLIENT;
+-- 
+2.7.4
+

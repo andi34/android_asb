@@ -1,0 +1,26 @@
+From 17c98093fd073e87738b12151f842365851252a4 Mon Sep 17 00:00:00 2001
+From: Zach Jang <zachjang@google.com>
+Date: Thu, 22 Oct 2015 15:00:30 -0700
+Subject: [PATCH 02/32] Update security string to 2015-12-01 - DO NOT MERGE
+
+Change-Id: I155ec6c2b57c899f20bb85f5a5cf031499ba81b0
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 48f6af7..00806bf 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2015-11-01
++  PLATFORM_SECURITY_PATCH := 2015-12-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

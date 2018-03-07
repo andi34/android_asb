@@ -1,0 +1,82 @@
+From c113e5e461db5a55816bca51769575876598fcd9 Mon Sep 17 00:00:00 2001
+From: Narayan Kamath <narayan@google.com>
+Date: Mon, 7 Nov 2016 18:50:07 +0000
+Subject: [PATCH 3/4] Zygote : Block SIGCHLD during fork.
+
+We close the android logging related sockets prior as late as possible
+before every fork to avoid having to whitelist them. If one of the
+zygote's children dies after this point (but prior to the fork), we can
+end up reopening the logging sockets from the SIGCHLD signal handler.
+
+To prevent this from happening, block SIGCHLD during this critical
+section.
+
+Bug: 32693692
+Test: Manual
+
+(cherry picked from commit e9a525829a354c92983a35455ccab16d1b0d3892)
+
+Also contains a port of commit c7161f756e86b98f2244a04d9207b.
+
+Change-Id: I27dc83218df592ace8bff2942e8d94dcd5d61931
+---
+ vm/native/dalvik_system_Zygote.cpp | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/vm/native/dalvik_system_Zygote.cpp b/vm/native/dalvik_system_Zygote.cpp
+index 613452a..4b589d3 100644
+--- a/vm/native/dalvik_system_Zygote.cpp
++++ b/vm/native/dalvik_system_Zygote.cpp
+@@ -600,6 +600,23 @@ static pid_t forkAndSpecializeCommon(const u4* args, bool isSystemServer, bool l
+ 
+     dvmDumpLoaderStats("zygote");
+ 
++    sigset_t sigchld;
++    sigemptyset(&sigchld);
++    sigaddset(&sigchld, SIGCHLD);
++
++    // Temporarily block SIGCHLD during forks. The SIGCHLD handler might
++    // log, which would result in the logging FDs we close being
++    // reopened.
++    // This would cause failures because the FDs are not whitelisted.
++    //
++    // Note that the zygote process is single threaded at this
++    // point.
++    if (sigprocmask(SIG_BLOCK, &sigchld, NULL) == -1) {
++        ALOGE("sigprocmask(SIG_SETMASK, { SIGCHLD }) failed:  %s", strerror(errno));
++        dvmAbort();
++    }
++
++
+     // Close any logging related FDs before we start evaluating the list of
+     // file descriptors.
+     __android_log_close();
+@@ -665,6 +682,11 @@ static pid_t forkAndSpecializeCommon(const u4* args, bool isSystemServer, bool l
+             ALOGE("Unable to reopen whitelisted descriptors.");
+             dvmAbort();
+         }
++
++        if (sigprocmask(SIG_UNBLOCK, &sigchld, NULL) == -1) {
++            ALOGE("sigprocmask(SIG_SETMASK, { SIGCHLD }) failed: %s", strerror(errno));
++            dvmAbort();
++        }
+ #endif /* HAVE_ANDROID_OS */
+ 
+         if (mountMode != MOUNT_EXTERNAL_NONE) {
+@@ -759,6 +781,13 @@ static pid_t forkAndSpecializeCommon(const u4* args, bool isSystemServer, bool l
+         /* the parent process */
+         free(seInfo);
+         free(niceName);
++
++        // We blocked SIGCHLD prior to a fork, we unblock it here.
++        if (sigprocmask(SIG_UNBLOCK, &sigchld, NULL) == -1) {
++            ALOGE("sigprocmask(SIG_SETMASK, { SIGCHLD }) failed: %s", strerror(errno));
++            dvmAbort();
++        }
++
+     }
+ 
+     return pid;
+-- 
+2.7.4
+

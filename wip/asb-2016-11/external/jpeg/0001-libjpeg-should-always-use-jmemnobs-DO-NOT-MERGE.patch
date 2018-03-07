@@ -1,0 +1,483 @@
+From 19a6799932f7468f24c972f9acfc314ebbfc9ab2 Mon Sep 17 00:00:00 2001
+From: Matt Sarett <msarett@google.com>
+Date: Thu, 23 Apr 2015 13:11:46 -0400
+Subject: [PATCH] libjpeg should always use jmemnobs DO NOT MERGE
+
+BUG:30259087
+
+cherry-pick of Iae944ac8588769c3e24f25f64de847e58cc2ad2e
+(ag/678466) in master
+
+Conflicts:
+	Android.mk
+
+original message:
+
+libjpeg should always use jmemnobs
+
+When using jmem-android with libjpeg, the client has the option
+to provide a value for maximum memory usage (or use a default
+value) during the decode.  When this value for maximum memory usage
+would be exceeded, jmem-android backs data arrays with temp files
+to stay below the memory limit.  The CL that defines this memory
+limit is at:
+https://skia.googlesource.com/skia/+/2295c6332512833760060d803cf6ad19a28adc51
+However, it is unclear why the current limit was chosen.
+
+Unfortunately, these temp files are not guaranteed to have unique
+names, leading to bugs where multiple arrays are backed up to the
+same file.  The original purpose of this CL was to fix this bug.
+
+However, attempting to fix this bug has led to a variety of
+additional questions.
+
+The creation of temp files is tricky in this type of library.
+Concerns about the creation of temp files include security,
+performance of writing to disk, and difficulty of finding the
+right directory to use from a library that could be used by an
+arbitrary process.
+
+Additionally, there have already been complaints about jmem-android
+from the users of the Java API.  b/2791339 explains that writing
+to disk is extremely slow, and it causes users of the decoder to
+need WRITE_EXTERNAL_STORAGE permission in order to decode.
+
+This led to the creation of jmem-ashmem.c as the memory
+implementation for libjpeg to be used by apps.  This acts in the
+same way as jmem-android up until the arbitrary maximum memory
+usage value is reached.  At this point, jmem-ashmem uses ashmem
+to back up the data arrays instead of temp files.
+
+We first considered using jmem-ashmem all the time, since it was
+introduced as a faster alternative to jmem-android that does not
+require extra permissions and does not have known bugs.
+
+However, thinking further about jmem-ashmem, we feel that it is
+not a good alternative.  It is quite odd to solve the problem
+of being "out of memory" (having reached the memory limit) by
+choosing to allocate more memory.
+
+It seems more intuitive to simply allocate memory on the heap
+until we run out or the process is killed.
+
+Using jmemnobs.c follows exactly this approach.  It has no memory
+limit and will allocate memory until it runs out or is killed.
+
+Another alternative would be to modify jmem-android to simply
+error exit once we reach a maximum memory limit.  This would
+make behavior more predicatble, but may prevent us from decoding
+images that could possibly be decoded.  This would also bring up
+the question of how we choose this maximum memory limit.
+
+BUG:20541233
+Change-Id: I242eff3273e549f9094830d42eb400a8a7810bc9
+(cherry picked from commit c4c67ec5d3473d6bfe5b6dc3cfecd5c016f7d2cf)
+---
+ Android.mk     |  18 ++----
+ jmem-android.c | 186 ---------------------------------------------------------
+ jmem-ashmem.c  | 170 ----------------------------------------------------
+ 3 files changed, 4 insertions(+), 370 deletions(-)
+ delete mode 100644 jmem-android.c
+ delete mode 100644 jmem-ashmem.c
+
+diff --git a/Android.mk b/Android.mk
+index 6e78c74..0b8484e 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -11,21 +11,11 @@ LOCAL_SRC_FILES := \
+     jdinput.c jdmainct.c jdmarker.c jdmaster.c jdmerge.c jdphuff.c \
+     jdpostct.c jdsample.c jdtrans.c jerror.c jfdctflt.c jfdctfst.c \
+     jfdctint.c jidctflt.c jidctfst.c jidctint.c jidctred.c jquant1.c \
+-    jquant2.c jutils.c jmemmgr.c armv6_idct.S
++    jquant2.c jutils.c jmemmgr.c jmemnobs.c armv6_idct.S
+ 
+-ifeq (,$(TARGET_BUILD_APPS))
+-# building against master
+-# use ashmem as libjpeg decoder's backing store
+-LOCAL_CFLAGS += -DUSE_ANDROID_ASHMEM
+-LOCAL_SRC_FILES += \
+-    jmem-ashmem.c
+-else
+-# unbundled branch, built against NDK.
+-LOCAL_SDK_VERSION := 17
+-# the original android memory manager.
+-# use sdcard as libjpeg decoder's backing store
+-LOCAL_SRC_FILES += \
+-    jmem-android.c
++ifneq (,$(TARGET_BUILD_APPS))
++  # unbundled branch, built against NDK.
++  LOCAL_SDK_VERSION := 17
+ endif
+ 
+ LOCAL_CFLAGS += -DAVOID_TABLES
+diff --git a/jmem-android.c b/jmem-android.c
+deleted file mode 100644
+index 5da4d0a..0000000
+--- a/jmem-android.c
++++ /dev/null
+@@ -1,186 +0,0 @@
+-/*
+- * Copyright (C) 2007-2008 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#define JPEG_INTERNALS
+-#include "jinclude.h"
+-#include "jpeglib.h"
+-#include "jmemsys.h"		/* import the system-dependent declarations */
+-
+-#ifndef HAVE_STDLIB_H		/* <stdlib.h> should declare malloc(),free() */
+-extern void * malloc JPP((size_t size));
+-extern void free JPP((void *ptr));
+-#endif
+-
+-#ifndef SEEK_SET		/* pre-ANSI systems may not define this; */
+-#define SEEK_SET  0		/* if not, assume 0 is correct */
+-#endif
+-
+-
+-/*
+- * Memory allocation and freeing are controlled by the regular library
+- * routines malloc() and free().
+- */
+-
+-GLOBAL(void *)
+-jpeg_get_small (j_common_ptr cinfo, size_t sizeofobject)
+-{
+-  return (void *) malloc(sizeofobject);
+-}
+-
+-GLOBAL(void)
+-jpeg_free_small (j_common_ptr cinfo, void * object, size_t sizeofobject)
+-{
+-  free(object);
+-}
+-
+-
+-/*
+- * "Large" objects are treated the same as "small" ones.
+- * NB: although we include FAR keywords in the routine declarations,
+- * this file won't actually work in 80x86 small/medium model; at least,
+- * you probably won't be able to process useful-size images in only 64KB.
+- */
+-
+-GLOBAL(void FAR *)
+-jpeg_get_large (j_common_ptr cinfo, size_t sizeofobject)
+-{
+-  return (void FAR *) malloc(sizeofobject);
+-}
+-
+-GLOBAL(void)
+-jpeg_free_large (j_common_ptr cinfo, void FAR * object, size_t sizeofobject)
+-{
+-  free(object);
+-}
+-
+-
+-/*
+- * This routine computes the total memory space available for allocation.
+- * It's impossible to do this in a portable way; our current solution is
+- * to make the user tell us (with a default value set at compile time).
+- * If you can actually get the available space, it's a good idea to subtract
+- * a slop factor of 5% or so.
+- */
+-
+-#ifndef DEFAULT_MAX_MEM		/* so can override from makefile */
+-#define DEFAULT_MAX_MEM		10000000L /* default: ten megabyte */
+-#endif
+-
+-GLOBAL(long)
+-jpeg_mem_available (j_common_ptr cinfo, long min_bytes_needed,
+-		    long max_bytes_needed, long already_allocated)
+-{
+-  return cinfo->mem->max_memory_to_use - already_allocated;
+-}
+-
+-
+-/*
+- * Backing store (temporary file) management.
+- * Backing store objects are only used when the value returned by
+- * jpeg_mem_available is less than the total space needed.  You can dispense
+- * with these routines if you have plenty of virtual memory; see jmemnobs.c.
+- */
+-
+-
+-METHODDEF(void)
+-read_backing_store (j_common_ptr cinfo, backing_store_ptr info,
+-		    void FAR * buffer_address,
+-		    long file_offset, long byte_count)
+-{
+-  if (fseek(info->temp_file, file_offset, SEEK_SET))
+-    ERREXIT(cinfo, JERR_TFILE_SEEK);
+-  if (JFREAD(info->temp_file, buffer_address, byte_count)
+-      != (size_t) byte_count)
+-    ERREXIT(cinfo, JERR_TFILE_READ);
+-}
+-
+-
+-METHODDEF(void)
+-write_backing_store (j_common_ptr cinfo, backing_store_ptr info,
+-		     void FAR * buffer_address,
+-		     long file_offset, long byte_count)
+-{
+-  if (fseek(info->temp_file, file_offset, SEEK_SET))
+-    ERREXIT(cinfo, JERR_TFILE_SEEK);
+-  if (JFWRITE(info->temp_file, buffer_address, byte_count)
+-      != (size_t) byte_count)
+-    ERREXIT(cinfo, JERR_TFILE_WRITE);
+-}
+-
+-
+-METHODDEF(void)
+-close_backing_store (j_common_ptr cinfo, backing_store_ptr info)
+-{
+-  fclose(info->temp_file);
+-  /* Since this implementation uses tmpfile() to create the file,
+-   * no explicit file deletion is needed.
+-   */
+-}
+-
+-static FILE* getTempFileFromPath(const char * path) {
+-    FILE * fd = fopen(path, "w+");
+-    unlink(path);
+-    return fd;
+-}
+-
+-static FILE* getTempFile() {
+-    char path[1024];
+-    snprintf(path, 1023, "/sdcard/.%d.tmp", getpid());
+-    FILE * fd = getTempFileFromPath(path);
+-    if (fd == NULL) {
+-        // anywhere else we can create a temp file?
+-		//	    snprintf(path, 1023, "/data/data/.%d.tmp", getpid());
+-		//      fd = getTempFileFromPath(path);
+-    }
+-    return fd;
+-}
+-
+-/*
+- * Initial opening of a backing-store object.
+- *
+- * This version uses tmpfile(), which constructs a suitable file name
+- * behind the scenes.  We don't have to use info->temp_name[] at all;
+- * indeed, we can't even find out the actual name of the temp file.
+- */
+-
+-GLOBAL(void)
+-jpeg_open_backing_store (j_common_ptr cinfo, backing_store_ptr info,
+-			 long total_bytes_needed)
+-{
+-  if ((info->temp_file = getTempFile()) == NULL)
+-    ERREXITS(cinfo, JERR_TFILE_CREATE, "");
+-  info->read_backing_store = read_backing_store;
+-  info->write_backing_store = write_backing_store;
+-  info->close_backing_store = close_backing_store;
+-}
+-
+-
+-/*
+- * These routines take care of any system-dependent initialization and
+- * cleanup required.
+- */
+-
+-GLOBAL(long)
+-jpeg_mem_init (j_common_ptr cinfo)
+-{
+-  return DEFAULT_MAX_MEM;	/* default for max_memory_to_use */
+-}
+-
+-GLOBAL(void)
+-jpeg_mem_term (j_common_ptr cinfo)
+-{
+-  /* no work */
+-}
+diff --git a/jmem-ashmem.c b/jmem-ashmem.c
+deleted file mode 100644
+index 3a17b02..0000000
+--- a/jmem-ashmem.c
++++ /dev/null
+@@ -1,170 +0,0 @@
+-/*
+- * Copyright (C) 2007-2008 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#define JPEG_INTERNALS
+-#include "jinclude.h"
+-#include "jpeglib.h"
+-#include "jmemsys.h"		/* import the system-dependent declarations */
+-
+-#include <cutils/ashmem.h>
+-#include <unistd.h>
+-#include <sys/mman.h>
+-
+-#ifndef HAVE_STDLIB_H		/* <stdlib.h> should declare malloc(),free() */
+-extern void * malloc JPP((size_t size));
+-extern void free JPP((void *ptr));
+-#endif
+-
+-/*
+- * Memory allocation and freeing are controlled by the regular library
+- * routines malloc() and free().
+- */
+-
+-GLOBAL(void *)
+-jpeg_get_small (j_common_ptr cinfo, size_t sizeofobject)
+-{
+-  return (void *) malloc(sizeofobject);
+-}
+-
+-GLOBAL(void)
+-jpeg_free_small (j_common_ptr cinfo, void * object, size_t sizeofobject)
+-{
+-  free(object);
+-}
+-
+-
+-/*
+- * "Large" objects are treated the same as "small" ones.
+- * NB: although we include FAR keywords in the routine declarations,
+- * this file won't actually work in 80x86 small/medium model; at least,
+- * you probably won't be able to process useful-size images in only 64KB.
+- */
+-
+-GLOBAL(void FAR *)
+-jpeg_get_large (j_common_ptr cinfo, size_t sizeofobject)
+-{
+-  return (void FAR *) malloc(sizeofobject);
+-}
+-
+-GLOBAL(void)
+-jpeg_free_large (j_common_ptr cinfo, void FAR * object, size_t sizeofobject)
+-{
+-  free(object);
+-}
+-
+-/*
+- * This routine computes the total memory space available for allocation.
+- * It's impossible to do this in a portable way; our current solution is
+- * to make the user tell us (with a default value set at compile time).
+- * If you can actually get the available space, it's a good idea to subtract
+- * a slop factor of 5% or so.
+- */
+-
+-#ifndef DEFAULT_MAX_MEM		/* so can override from makefile */
+-#define DEFAULT_MAX_MEM		10000000L /* default: ten megabyte */
+-#endif
+-
+-GLOBAL(long)
+-jpeg_mem_available (j_common_ptr cinfo, long min_bytes_needed,
+-		    long max_bytes_needed, long already_allocated)
+-{
+-  return cinfo->mem->max_memory_to_use - already_allocated;
+-}
+-
+-
+-/*
+- * Backing store (temporary file) management.
+- * Backing store objects are only used when the value returned by
+- * jpeg_mem_available is less than the total space needed.  You can dispense
+- * with these routines if you have plenty of virtual memory; see jmemnobs.c.
+- */
+-
+-METHODDEF(void)
+-read_backing_store (j_common_ptr cinfo, backing_store_ptr info,
+-		    void FAR * buffer_address,
+-		    long file_offset, long byte_count)
+-{
+-  memmove(buffer_address, info->addr + file_offset, byte_count);
+-}
+-
+-
+-METHODDEF(void)
+-write_backing_store (j_common_ptr cinfo, backing_store_ptr info,
+-		     void FAR * buffer_address,
+-		     long file_offset, long byte_count)
+-{
+-  memmove(info->addr + file_offset, buffer_address, byte_count);
+-}
+-
+-
+-METHODDEF(void)
+-close_backing_store (j_common_ptr cinfo, backing_store_ptr info)
+-{
+-  munmap(info->addr, info->size);
+-  close(info->temp_file);
+-}
+-
+-LOCAL(int)
+-get_ashmem(backing_store_ptr info, long total_bytes_needed)
+-{
+-  char path[1024];
+-  snprintf(path, 1023, "%d.tmp.ashmem", getpid());
+-  int fd = ashmem_create_region(path, total_bytes_needed);
+-  if (fd == -1) {
+-      return -1;
+-  }
+-  int err = ashmem_set_prot_region(fd, PROT_READ | PROT_WRITE);
+-  if (err) {
+-      return -1;
+-  }
+-  info->addr = mmap(NULL, total_bytes_needed, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+-  info->size = total_bytes_needed;
+-  info->temp_file = fd;
+-  return fd;
+-}
+-
+-/*
+- * Initial opening of a backing-store object.
+- * This version uses ashmem to get a shared memory of total-bytes_needed.
+- */
+-
+-GLOBAL(void)
+-jpeg_open_backing_store (j_common_ptr cinfo, backing_store_ptr info,
+-			 long total_bytes_needed)
+-{
+-  if (get_ashmem(info, total_bytes_needed) == -1)
+-    ERREXITS(cinfo, JERR_TFILE_CREATE, "");
+-  info->read_backing_store = read_backing_store;
+-  info->write_backing_store = write_backing_store;
+-  info->close_backing_store = close_backing_store;
+-}
+-
+-/*
+- * These routines take care of any system-dependent initialization and
+- * cleanup required.
+- */
+-
+-GLOBAL(long)
+-jpeg_mem_init (j_common_ptr cinfo)
+-{
+-  return DEFAULT_MAX_MEM;	/* default for max_memory_to_use */
+-}
+-
+-GLOBAL(void)
+-jpeg_mem_term (j_common_ptr cinfo)
+-{
+-  /* no work */
+-}
+-- 
+2.7.4
+

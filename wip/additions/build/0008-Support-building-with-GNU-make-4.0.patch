@@ -1,0 +1,41 @@
+From c2af00f683bf22d3aeb914b87667a02a078713ee Mon Sep 17 00:00:00 2001
+From: Chirayu Desai <cdesai@cyanogenmod.org>
+Date: Fri, 8 Nov 2013 20:16:14 +0530
+Subject: [PATCH 08/32] Support building with GNU make 4.0
+
+* It works just fine, no need for the warning.
+
+Change-Id: Ifa2ab17454edfcd8b7840a7534f70576286f2864
+
+Conflicts:
+	core/main.mk
+---
+ core/main.mk | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/core/main.mk b/core/main.mk
+index d424b25..96fd4dd 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -42,15 +42,17 @@ endif
+ ifeq (,$(findstring CYGWIN,$(shell uname -sm)))
+ ifeq (0,$(shell expr $$(echo $(MAKE_VERSION) | sed "s/[^0-9\.].*//") = 3.81))
+ ifeq (0,$(shell expr $$(echo $(MAKE_VERSION) | sed "s/[^0-9\.].*//") = 3.82))
++ifeq (0,$(shell expr $$(echo $(MAKE_VERSION) | sed "s/[^0-9\.].*//") = 4.0))
+ $(warning ********************************************************************************)
+ $(warning *  You are using version $(MAKE_VERSION) of make.)
+-$(warning *  Android can only be built by versions 3.81 and 3.82.)
++$(warning *  Android can only be built by versions 3.81, 3.82 and 4.0.)
+ $(warning *  see https://source.android.com/source/download.html)
+ $(warning ********************************************************************************)
+ $(error stopping)
+ endif
+ endif
+ endif
++endif
+ 
+ # Absolute path of the present working direcotry.
+ # This overrides the shell variable $PWD, which does not necessarily points to
+-- 
+2.7.4
+

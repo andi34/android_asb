@@ -1,0 +1,51 @@
+From 5157f835d54835a71b8f878a4293d9dc61044e5c Mon Sep 17 00:00:00 2001
+From: Jean-Michel Trivi <jmtrivi@google.com>
+Date: Tue, 5 Apr 2016 12:38:32 -0700
+Subject: [PATCH 2/4] Fix aacDecoder_drcExtractAndMap()
+
+Parse DVB DRC data only when numThreads is below
+ MAX_DRC_THREADS. The post-increment is necessary as
+ it is used in fill element DRC data section.
+This solution parses as many DRC payloads as allowed by
+ MAX_DRC_THREADS and skips all remaining DRC elements in the stream.
+
+Bug 27792766
+Bug 26751339
+
+Change-Id: Ie1641888bac1757c4d1491119f977fc5d436eaea
+(cherry picked from commit 97a1b8140d410ed3942006aa22b40ccb322f747b)
+---
+ libAACdec/src/aacdec_drc.cpp | 10 +---------
+ 1 file changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/libAACdec/src/aacdec_drc.cpp b/libAACdec/src/aacdec_drc.cpp
+index f939a1a..b836746 100644
+--- a/libAACdec/src/aacdec_drc.cpp
++++ b/libAACdec/src/aacdec_drc.cpp
+@@ -680,11 +680,7 @@ static int aacDecoder_drcExtractAndMap (
+   }
+   self->numPayloads = 0;
+ 
+-  if (self->numThreads >= MAX_DRC_THREADS) {
+-      self->numThreads = MAX_DRC_THREADS - 1;
+-  }
+-
+-  if (self->dvbAncDataAvailable)
++  if (self->dvbAncDataAvailable && self->numThreads < MAX_DRC_THREADS)
+   { /* Append a DVB heavy compression payload thread if available. */
+     int bitsParsed;
+ 
+@@ -710,10 +706,6 @@ static int aacDecoder_drcExtractAndMap (
+ 
+   /* coupling channels not supported */
+ 
+-  if (self->numThreads >= MAX_DRC_THREADS) {
+-      self->numThreads = MAX_DRC_THREADS - 1;
+-  }
+-
+   /* check for valid threads */
+   for (thread = 0; thread < self->numThreads; thread++) {
+     CDrcPayload *pThreadBs = &threadBs[thread];
+-- 
+2.7.4
+

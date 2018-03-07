@@ -1,0 +1,52 @@
+From 7cbee047430acb20f77f03a0afa695e00e2367dd Mon Sep 17 00:00:00 2001
+From: Kenny Root <kroot@google.com>
+Date: Fri, 30 Sep 2016 13:16:44 -0700
+Subject: [PATCH] Remove SSLv3 fallback logic
+
+This SSLv3 fallback logic is faulty in that it treats all network
+failures as a TLS intolerant server. It also places the servers on the
+TLS intolerant list without first making sure an SSLv3 connection
+succeeds. This means that more and more servers migrate into the TLS
+intolerant list without hope to exit.
+
+SSLv3 is deprecated now, so just remove the fallback logic altogether
+which fixes the problem.
+
+Bug: 31833604
+Change-Id: I71e4ac436adb0e898164d3a246a3ee1b62762e35
+(cherry picked from commit 0b7122b120607d479d65a134b34a751196f5e5fb)
+---
+ net/http/http_network_transaction.cc | 17 -----------------
+ 1 file changed, 17 deletions(-)
+
+diff --git a/net/http/http_network_transaction.cc b/net/http/http_network_transaction.cc
+index 7f0ac4f..369385d 100644
+--- a/net/http/http_network_transaction.cc
++++ b/net/http/http_network_transaction.cc
+@@ -1158,23 +1158,6 @@ int HttpNetworkTransaction::HandleSSLHandshakeError(int error) {
+     session_->ssl_client_auth_cache()->Remove(
+         GetHostAndPort(request_->url));
+   }
+-
+-  switch (error) {
+-    case ERR_SSL_PROTOCOL_ERROR:
+-    case ERR_SSL_VERSION_OR_CIPHER_MISMATCH:
+-    case ERR_SSL_DECOMPRESSION_FAILURE_ALERT:
+-    case ERR_SSL_BAD_RECORD_MAC_ALERT:
+-      if (ssl_config_.tls1_enabled) {
+-        // This could be a TLS-intolerant server, an SSL 3.0 server that
+-        // chose a TLS-only cipher suite or a server with buggy DEFLATE
+-        // support. Turn off TLS 1.0, DEFLATE support and retry.
+-        session_->http_stream_factory()->AddTLSIntolerantServer(
+-            HostPortPair::FromURL(request_->url));
+-        ResetConnectionAndRequestForResend();
+-        error = OK;
+-      }
+-      break;
+-  }
+   return error;
+ }
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,52 @@
+From 98e6ecdb0a9297a7c5b8d9fe86490e85654a955d Mon Sep 17 00:00:00 2001
+From: Aart Bik <ajcbik@google.com>
+Date: Thu, 21 Apr 2016 15:51:41 -0700
+Subject: [PATCH 1/4] Fix potential buffer overrun.
+
+BUG=27840771
+
+Change-Id: I240f188b2e8f4b45d90138cfb3b14869cf506452
+(cherry picked from commit 38025bc7fa31b231ae7b1575e0faf62a7f0953cf)
+---
+ libdex/OptInvocation.cpp | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/libdex/OptInvocation.cpp b/libdex/OptInvocation.cpp
+index bac2f24..6b87718 100644
+--- a/libdex/OptInvocation.cpp
++++ b/libdex/OptInvocation.cpp
+@@ -66,9 +66,9 @@ char* dexOptGenerateCacheFileName(const char* fileName, const char* subFileName)
+             ALOGE("Can't get CWD while opening jar file");
+             return NULL;
+         }
+-        strncat(absoluteFile, "/", kBufLen);
++        strncat(absoluteFile, "/", kBufLen - strlen(absoluteFile));
+     }
+-    strncat(absoluteFile, fileName, kBufLen);
++    strncat(absoluteFile, fileName, kBufLen - strlen(absoluteFile));
+ 
+     /*
+      * Append the name of the Jar file entry, if any.  This is not currently
+@@ -76,8 +76,8 @@ char* dexOptGenerateCacheFileName(const char* fileName, const char* subFileName)
+      * in a Jar.
+      */
+     if (subFileName != NULL) {
+-        strncat(absoluteFile, "/", kBufLen);
+-        strncat(absoluteFile, subFileName, kBufLen);
++        strncat(absoluteFile, "/", kBufLen - strlen(absoluteFile));
++        strncat(absoluteFile, subFileName, kBufLen - strlen(absoluteFile));
+     }
+ 
+     /* Turn the path into a flat filename by replacing
+@@ -100,7 +100,7 @@ char* dexOptGenerateCacheFileName(const char* fileName, const char* subFileName)
+ 
+     /* Tack on the file name for the actual cache file path.
+      */
+-    strncat(nameBuf, absoluteFile, kBufLen);
++    strncat(nameBuf, absoluteFile, kBufLen - strlen(nameBuf));
+ 
+     ALOGV("Cache file for '%s' '%s' is '%s'", fileName, subFileName, nameBuf);
+     return strdup(nameBuf);
+-- 
+2.7.4
+

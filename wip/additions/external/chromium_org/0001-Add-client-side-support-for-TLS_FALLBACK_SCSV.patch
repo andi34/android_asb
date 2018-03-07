@@ -1,0 +1,40 @@
+From af8709f23b3b4adb9de5c7a30a6e6bb4436a0fe5 Mon Sep 17 00:00:00 2001
+From: Ben Murdoch <benm@google.com>
+Date: Tue, 7 Oct 2014 10:35:43 +0100
+Subject: [PATCH 1/2] Add client-side support for TLS_FALLBACK_SCSV
+
+Change-Id: Iec479de2549fbbc1e1587663cbe1ff4795176ff2
+---
+ net/socket/ssl_client_socket_openssl.cc | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/net/socket/ssl_client_socket_openssl.cc b/net/socket/ssl_client_socket_openssl.cc
+index 49bdc8e..e5dce23 100644
+--- a/net/socket/ssl_client_socket_openssl.cc
++++ b/net/socket/ssl_client_socket_openssl.cc
+@@ -181,6 +181,8 @@ int MapOpenSSLErrorSSL() {
+     case SSL_R_TLSV1_ALERT_RECORD_OVERFLOW:
+     case SSL_R_TLSV1_ALERT_USER_CANCELLED:
+       return ERR_SSL_PROTOCOL_ERROR;
++    case SSL_R_TLSV1_ALERT_INAPPROPRIATE_FALLBACK:
++      return ERR_SSL_INAPPROPRIATE_FALLBACK;
+     default:
+       LOG(WARNING) << "Unmapped error reason: " << ERR_GET_REASON(error_code);
+       return ERR_FAILED;
+@@ -754,6 +756,13 @@ bool SSLClientSocketOpenSSL::Init() {
+   // handshake at which point the appropriate error is bubbled up to the client.
+   LOG_IF(WARNING, rv != 1) << "SSL_set_cipher_list('" << command << "') "
+                               "returned " << rv;
++  if (ssl_config_.version_fallback) {
++#ifdef SSL_MODE_SEND_FALLBACK_SCSV
++        SSL_set_mode(ssl_, SSL_MODE_SEND_FALLBACK_SCSV);
++#else
++        SSL_enable_fallback_scsv(ssl_);
++#endif
++  }
+ 
+   // TLS channel ids.
+   if (IsChannelIDEnabled(ssl_config_, server_bound_cert_service_)) {
+-- 
+2.7.4
+

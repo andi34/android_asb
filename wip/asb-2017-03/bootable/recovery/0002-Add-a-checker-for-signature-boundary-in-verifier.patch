@@ -1,0 +1,42 @@
+From 2dd650e1cbaf1ed308ef659737732adf73aaee84 Mon Sep 17 00:00:00 2001
+From: Tianjie Xu <xunchang@google.com>
+Date: Fri, 16 Dec 2016 16:24:09 -0800
+Subject: [PATCH 2/2] Add a checker for signature boundary in verifier
+
+The 'signature_start' variable marks the location of the signature
+from the end of a zip archive. And a boundary check is missing where
+'signature_start' should be within the EOCD comment field. This causes
+problems when sideloading a malicious package. Also add a corresponding
+test.
+
+Bug: 31914369
+Test: Verification fails correctly when sideloading recovery_test.zip on
+angler.
+
+Change-Id: I6ea96bf04dac5d8d4d6719e678d504f957b4d5c1
+(cherry-picked from f69e6a9475983b2ad46729e44ab58d2b22cd74d0)
+(cherry picked from commit 54ea136fded56810bf475885eb4bd7bf1b11f09c)
+---
+ verifier.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/verifier.cpp b/verifier.cpp
+index 782a838..2f7a5a9 100644
+--- a/verifier.cpp
++++ b/verifier.cpp
+@@ -79,6 +79,12 @@ int verify_file(const char* path, const Certificate* pKeys, unsigned int numKeys
+     LOGI("comment is %d bytes; signature %d bytes from end\n",
+          comment_size, signature_start);
+ 
++    if (signature_start > comment_size) {
++        LOGE("signature start: %zu is larger than comment size: %zu\n", signature_start,
++             comment_size);
++        return VERIFY_FAILURE;
++    }
++
+     if (signature_start - FOOTER_SIZE < RSANUMBYTES) {
+         // "signature" block isn't big enough to contain an RSA block.
+         LOGE("signature is too short\n");
+-- 
+2.7.4
+

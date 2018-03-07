@@ -1,0 +1,78 @@
+From 91a06f073ae138980e2a1da2a41901dc894d60d1 Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Thu, 6 Jul 2017 13:39:02 -0700
+Subject: [PATCH 09/15] Allocate buffers of the right size when BT_HDR is
+ included
+
+Bug: 63146105
+Test: External script
+Change-Id: I1f2c871e3fcf57aabdad9d07905e6dae643bd496
+Merged-In: I1f2c871e3fcf57aabdad9d07905e6dae643bd496
+(cherry picked from commit 8810ffba990f8f53172c445ebde8707525bb7813)
+CVE-2017-0781
+---
+ stack/avdt/avdt_api.c  | 2 +-
+ stack/bnep/bnep_main.c | 2 +-
+ stack/mcap/mca_cact.c  | 6 +++---
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/stack/avdt/avdt_api.c b/stack/avdt/avdt_api.c
+index 855f17e..d57cfe5 100644
+--- a/stack/avdt/avdt_api.c
++++ b/stack/avdt/avdt_api.c
+@@ -1309,7 +1309,7 @@ UINT16 AVDT_SendReport(UINT8 handle, AVDT_REPORT_TYPE type,
+         /* build SR - assume fit in one packet */
+         p_tbl = avdt_ad_tc_tbl_by_type(AVDT_CHAN_REPORT, p_scb->p_ccb, p_scb);
+         if((p_tbl->state == AVDT_AD_ST_OPEN) &&
+-            (p_pkt = (BT_HDR *)GKI_getbuf(p_tbl->peer_mtu)) != NULL)
++            (p_pkt = (BT_HDR *)GKI_getbuf(p_tbl->peer_mtu + sizeof(BT_HDR))) != NULL)
+         {
+             p_pkt->offset = L2CAP_MIN_OFFSET;
+             p = (UINT8 *)(p_pkt + 1) + p_pkt->offset;
+diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
+index 120f4c9..b1904fe 100644
+--- a/stack/bnep/bnep_main.c
++++ b/stack/bnep/bnep_main.c
+@@ -564,7 +564,7 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+             p_bcb->con_state != BNEP_STATE_CONNECTED &&
+             extension_present && p && rem_len)
+         {
+-            p_bcb->p_pending_data = (BT_HDR *)GKI_getbuf (rem_len);
++            p_bcb->p_pending_data = (BT_HDR *)GKI_getbuf (rem_len + sizeof(BT_HDR));
+             if (p_bcb->p_pending_data)
+             {
+                 memcpy ((UINT8 *)(p_bcb->p_pending_data + 1), p, rem_len);
+diff --git a/stack/mcap/mca_cact.c b/stack/mcap/mca_cact.c
+index 85f19f4..e3fba0b 100644
+--- a/stack/mcap/mca_cact.c
++++ b/stack/mcap/mca_cact.c
+@@ -116,7 +116,7 @@ void mca_ccb_snd_req(tMCA_CCB *p_ccb, tMCA_CCB_EVT *p_data)
+         p_ccb->p_tx_req = p_msg;
+         if (!p_ccb->cong)
+         {
+-            p_pkt = (BT_HDR *)GKI_getbuf (MCA_CTRL_MTU);
++            p_pkt = (BT_HDR *)GKI_getbuf (MCA_CTRL_MTU + sizeof(BT_HDR));
+             if (p_pkt)
+             {
+                 p_pkt->offset = L2CAP_MIN_OFFSET;
+@@ -164,7 +164,7 @@ void mca_ccb_snd_rsp(tMCA_CCB *p_ccb, tMCA_CCB_EVT *p_data)
+ 
+     MCA_TRACE_DEBUG2 ("mca_ccb_snd_rsp cong=%d req=%d", p_ccb->cong, p_msg->op_code);
+     /* assume that API functions verified the parameters */
+-    p_pkt = (BT_HDR *)GKI_getbuf (MCA_CTRL_MTU);
++    p_pkt = (BT_HDR *)GKI_getbuf (MCA_CTRL_MTU + sizeof(BT_HDR));
+     if (p_pkt)
+     {
+         p_pkt->offset = L2CAP_MIN_OFFSET;
+@@ -403,7 +403,7 @@ void mca_ccb_hdl_req(tMCA_CCB *p_ccb, tMCA_CCB_EVT *p_data)
+     if (((reject_code != MCA_RSP_SUCCESS) && (evt_data.hdr.op_code != MCA_OP_SYNC_INFO_IND))
+         || send_rsp)
+     {
+-        p_buf = (BT_HDR *)GKI_getbuf (MCA_CTRL_MTU);
++        p_buf = (BT_HDR *)GKI_getbuf (MCA_CTRL_MTU + sizeof(BT_HDR));
+         if (p_buf)
+         {
+             p_buf->offset = L2CAP_MIN_OFFSET;
+-- 
+2.7.4
+

@@ -1,0 +1,42 @@
+From 567e401784ffb72172f1bcb8509fd3d0ce26152b Mon Sep 17 00:00:00 2001
+From: WolfEnders <grzwolf1@gmail.com>
+Date: Thu, 18 May 2017 22:09:42 +0200
+Subject: [PATCH 23/32] Update Security String to 2017-05-01
+
+ASB 201705 https://source.android.com/security/bulletin/2017-05-01 contains 13x CVE 4.4.4 relevant items.
+Final status of implementation:
+CVE-2017-0588 Change 171820: ok
+CVE-2017-0592 Change 172701: 6x chunk ok, 11x chunk not applicable (missing methods)
+CVE-2017-0594 Change 172678: ok
+CVE-2017-0595 Change 172708: 12x chunk ok, 1x chunk not applicable (missing method)
+CVE-2017-0596 double to Change 172708
+CVE-2017-0597 not applicable (missing methods)
+CVE-2017-0598 Change 172674: ok
+CVE-2017-0600 Change 172214: ok
+CVE-2017-0602 not applicable (files not existing)
+CVE-2016-7056 not applicable (files not existing)
+CVE-2017-0603 Change 172213: ok
+CVE-2015-7555 not applicable (files not existing)
+CVE-2016-5131 not applicable (no link provided)
+
+Change-Id: I8bc8beb841e21bbc8a6fcb82da8a91aa2d1d150f
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 619fd80..4f48dce 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-04-01
++  PLATFORM_SECURITY_PATCH := 2017-05-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

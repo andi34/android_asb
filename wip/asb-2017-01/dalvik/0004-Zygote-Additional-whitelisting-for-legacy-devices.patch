@@ -1,0 +1,60 @@
+From 9d90ae2f9c6f3684d45dffe6000c83a5cfcc9e03 Mon Sep 17 00:00:00 2001
+From: Narayan Kamath <narayan@google.com>
+Date: Tue, 8 Nov 2016 09:49:34 +0000
+Subject: [PATCH 4/4] Zygote: Additional whitelisting for legacy devices.
+
+On M and below, we provide a blanket whitelist for all files under
+"/vendor/zygote_whitelist". This path is whitelisted purely to allow
+this patch to be applied easily on legacy devices and configurations.
+
+Note that this does not amount to a loosening of our security policy
+because whitelisted files are reopened anyway.
+
+Bug: 32691930
+Test: manual
+
+(cherry-picked from commit 5e2f7c6229d7191183888d685b57a7d0a2835fce)
+
+Change-Id: I12a3f0d84e3b7454e77f917b71960cd81e2309e3
+---
+ vm/native/fd_utils-inl.h | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/vm/native/fd_utils-inl.h b/vm/native/fd_utils-inl.h
+index 895008f..f9235b1 100644
+--- a/vm/native/fd_utils-inl.h
++++ b/vm/native/fd_utils-inl.h
+@@ -244,6 +244,10 @@ class FileDescriptorInfo {
+     is_sock(false) {
+   }
+ 
++  static bool StartsWith(const std::string& str, const std::string& prefix) {
++    return str.compare(0, prefix.size(), prefix) == 0;
++  }
++
+   // Returns true iff. a given path is whitelisted. A path is whitelisted
+   // if it belongs to the whitelist (see kPathWhitelist) or if it's a path
+   // under /system/framework that ends with ".jar".
+@@ -256,10 +260,18 @@ class FileDescriptorInfo {
+ 
+     static const std::string kFrameworksPrefix = "/system/framework/";
+     static const std::string kJarSuffix = ".jar";
+-    if (path.compare(0, kFrameworksPrefix.size(), kFrameworksPrefix) == 0 &&
++    if (StartsWith(path, kFrameworksPrefix) &&
+         path.compare(path.size() - kJarSuffix.size(), kJarSuffix.size(), kJarSuffix) == 0) {
+       return true;
+     }
++
++    // All regular files that are placed under this path are whitelisted
++    // automatically.
++    static const std::string kZygoteWhitelistPath = "/vendor/zygote_whitelist/";
++    if (StartsWith(path, kZygoteWhitelistPath) && path.find("/../") == std::string::npos) {
++      return true;
++    }
++
+     return false;
+   }
+ 
+-- 
+2.7.4
+

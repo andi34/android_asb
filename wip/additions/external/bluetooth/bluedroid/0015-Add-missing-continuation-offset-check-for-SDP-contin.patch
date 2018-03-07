@@ -1,0 +1,32 @@
+From 9f4830a5591ad07b04b49de3be4e5457c5c0dce0 Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Fri, 7 Jul 2017 17:17:31 -0700
+Subject: [PATCH 15/15] Add missing continuation offset check for SDP
+ continuation requests
+
+Bug: 63146698
+Test: External script
+Change-Id: Iea52f1689dc12bfe0d4b57996f17db4bc3bd5983
+Merged-In: Iea52f1689dc12bfe0d4b57996f17db4bc3bd5983
+(cherry picked from commit e776c834768bedd043ace7e5714390b61c96a248)
+CVE-2017-0785
+---
+ stack/sdp/sdp_server.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/stack/sdp/sdp_server.c b/stack/sdp/sdp_server.c
+index 342d93e..1d2f5dc 100644
+--- a/stack/sdp/sdp_server.c
++++ b/stack/sdp/sdp_server.c
+@@ -214,7 +214,7 @@ static void process_service_search (tCONN_CB *p_ccb, UINT16 trans_num,
+         }
+         BE_STREAM_TO_UINT16 (cont_offset, p_req);
+ 
+-        if (cont_offset != p_ccb->cont_offset)
++        if (cont_offset != p_ccb->cont_offset || num_rsp_handles < cont_offset)
+         {
+             sdpu_build_n_send_error (p_ccb, trans_num, SDP_INVALID_CONT_STATE,
+                                      SDP_TEXT_BAD_CONT_INX);
+-- 
+2.7.4
+

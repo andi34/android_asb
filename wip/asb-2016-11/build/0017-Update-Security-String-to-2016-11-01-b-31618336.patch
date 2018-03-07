@@ -1,0 +1,26 @@
+From 78751511f7ed95845f26efe38813e6c18c949245 Mon Sep 17 00:00:00 2001
+From: Adam Seaton <aseaton@google.com>
+Date: Tue, 20 Sep 2016 09:34:22 -0700
+Subject: [PATCH 17/32] Update Security String to 2016-11-01 b/31618336
+
+Change-Id: Ib31ba11912f144ff34edb66dc693b92f6fc0c24b
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index c08c358..57e27d2 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2016-10-01
++  PLATFORM_SECURITY_PATCH := 2016-11-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

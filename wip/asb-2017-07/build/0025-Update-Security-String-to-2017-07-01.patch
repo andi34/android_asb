@@ -1,0 +1,46 @@
+From dc745e328740d6f8f79610ec7b48deeb638b6641 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi2@arcor.de>
+Date: Sun, 9 Jul 2017 04:06:59 +0200
+Subject: [PATCH 25/32] Update Security String to 2017-07-01
+
+Applied
+=================
+
+CVE-2016-2109 A-35443725 High:     Change 180446/180447
+CVE-2017-0665 A-36991414 High:     Change 180409
+CVE-2017-0666 A-37285689 High:     Change 180410
+CVE-2017-0681 A-37208566 Critical: Change 180407
+CVE-2017-0690 A-36592202 High:     Change 180411
+CVE-2017-0692 A-36725407 High:     Change 180408
+CVE-2017-0694 A-37093318 High:     Change 180413
+CVE-2017-0697 A-37239013 High:     Change 180412
+CVE-2017-0703 A-33123882 High:     Change 180498
+
+Not applied
+=================
+
+CVE-2017-0668 A-22011579 Moderate: N/A (Not applicable)
+CVE-2017-0671 A-34514762 High:     N/A (Not publicly available)
+CVE-2017-3544 A-35784677 Moderate: N/A (Not applicable)
+
+Change-Id: I5e422126510ddb772e34f0677bc7e5f1c0f6ab8a
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 774b448..b19d7ca 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-06-01
++  PLATFORM_SECURITY_PATCH := 2017-07-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

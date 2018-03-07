@@ -1,0 +1,69 @@
+From a232f4d26c1c2129ca4abf08c807c4f27ff9629a Mon Sep 17 00:00:00 2001
+From: Zach Jang <zachjang@google.com>
+Date: Wed, 4 Nov 2015 01:45:26 +0200
+Subject: [PATCH 01/32] DO NOT MERGE - Backport of ag/748221 - Security Patch
+ Level in Settings CL#2/3
+
+b/23946860
+
+Change-Id: I42a2aaf26cf458d1775b11029789330cdd85b3a3
+---
+ core/Makefile            | 1 +
+ core/version_defaults.mk | 9 +++++++++
+ tools/buildinfo.sh       | 1 +
+ 3 files changed, 11 insertions(+)
+
+diff --git a/core/Makefile b/core/Makefile
+index 27f22a9..b27ae93 100644
+--- a/core/Makefile
++++ b/core/Makefile
+@@ -181,6 +181,7 @@ $(INSTALLED_BUILD_PROP_TARGET): $(BUILDINFO_SH) $(INTERNAL_BUILD_ID_MAKEFILE) $(
+ 			BUILD_DISPLAY_ID="$(BUILD_DISPLAY_ID)" \
+ 			BUILD_NUMBER="$(BUILD_NUMBER)" \
+ 			PLATFORM_VERSION="$(PLATFORM_VERSION)" \
++			PLATFORM_SECURITY_PATCH="$(PLATFORM_SECURITY_PATCH)" \
+ 			PLATFORM_SDK_VERSION="$(PLATFORM_SDK_VERSION)" \
+ 			PLATFORM_VERSION_CODENAME="$(PLATFORM_VERSION_CODENAME)" \
+ 			BUILD_VERSION_TAGS="$(BUILD_VERSION_TAGS)" \
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 51a8382..48f6af7 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -24,6 +24,7 @@
+ #     DEFAULT_APP_TARGET_SDK
+ #     BUILD_ID
+ #     BUILD_NUMBER
++#     SECURITY_PATCH
+ #
+ 
+ # Look for an optional file containing overrides of the defaults,
+@@ -75,6 +76,14 @@ ifeq "" "$(DEFAULT_APP_TARGET_SDK)"
+   endif
+ endif
+ 
++ifeq "" "$(PLATFORM_SECURITY_PATCH)"
++  # Used to indicate the security patch that has been applied to the device.
++  # Can be an arbitrary string, but must be a single word.
++  #
++  # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
++  PLATFORM_SECURITY_PATCH := 2015-11-01
++endif
++
+ ifeq "" "$(BUILD_ID)"
+   # Used to signify special builds.  E.g., branches and/or releases,
+   # like "M5-RC7".  Can be an arbitrary string, but must be a single
+diff --git a/tools/buildinfo.sh b/tools/buildinfo.sh
+index e3fe99c..c4afc9e 100755
+--- a/tools/buildinfo.sh
++++ b/tools/buildinfo.sh
+@@ -9,6 +9,7 @@ echo "ro.build.version.incremental=$BUILD_NUMBER"
+ echo "ro.build.version.sdk=$PLATFORM_SDK_VERSION"
+ echo "ro.build.version.codename=$PLATFORM_VERSION_CODENAME"
+ echo "ro.build.version.release=$PLATFORM_VERSION"
++echo "ro.build.version.security_patch=$PLATFORM_SECURITY_PATCH"
+ echo "ro.build.date=`date`"
+ echo "ro.build.date.utc=`date +%s`"
+ echo "ro.build.type=$TARGET_BUILD_TYPE"
+-- 
+2.7.4
+

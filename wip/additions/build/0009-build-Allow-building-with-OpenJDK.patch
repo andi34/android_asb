@@ -1,0 +1,28 @@
+From e746334391170b7a83e2ece42a050f71788db8b7 Mon Sep 17 00:00:00 2001
+From: Steve Kondik <shade@chemlab.org>
+Date: Thu, 25 Jul 2013 21:32:08 -0700
+Subject: [PATCH 09/32] build: Allow building with OpenJDK
+
+Change-Id: I6348bc1187240729f75f50d7ef91802c68e7788b
+---
+ core/main.mk | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/core/main.mk b/core/main.mk
+index 96fd4dd..d47ffba 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -150,8 +150,9 @@ $(info $(space))
+ $(info You use OpenJDK but only Sun/Oracle JDK is supported.)
+ $(info Please follow the machine setup instructions at)
+ $(info $(space)$(space)$(space)$(space)https://source.android.com/source/download.html)
++$(info $(space))
++$(info Continue at your own peril!)
+ $(info ************************************************************)
+-$(error stop)
+ endif
+ 
+ # Check for the correct version of java
+-- 
+2.7.4
+

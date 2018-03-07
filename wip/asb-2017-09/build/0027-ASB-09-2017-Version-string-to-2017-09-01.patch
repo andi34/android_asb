@@ -1,0 +1,73 @@
+From 329c5c928e56213aa6d8f10aa73d0d43a1531fe0 Mon Sep 17 00:00:00 2001
+From: MSe1969 <mse1969@posteo.de>
+Date: Thu, 28 Sep 2017 10:59:52 +0200
+Subject: [PATCH 27/32] ASB 09/2017 - Version string to 2017-09-01
+
+Implemented patches:
+--------------------
+CVE-2017-0752	A-62196835 [2]     High
+CVE-2017-6983	A-63852675         High
+CVE-2017-0756	A-34621073         Critical
+CVE-2017-0764	A-62872015         Critical
+CVE-2017-0767	A-37536407         High
+CVE-2017-0768	A-62019992         High
+CVE-2017-0770	A-38234812         High
+CVE-2017-0774	A-62673844 [2]     High
+CVE-2017-0775	A-62673179         High
+CVE-2017-0777	A-38342499         High
+CVE-2017-0779	A-38340117 [2]     Moderate
+CVE-2017-0781	A-63146105 [2]     Critical
+CVE-2017-0782	A-63146237 [2][3]  Critical
+CVE-2017-0783	A-63145701         High
+CVE-2017-0785	A-63146698         Moderate
+
+Not implemented for specific reasons:
+-------------------------------------
+CVE-2017-0766	A-37776688  High
+>> jhead still needed
+
+CVE-2017-0767	A-37536407  High
+>> Part 2: file in qcom/audio does not exist
+
+Not relevant for 4.4.4:
+-----------------------
+CVE-2017-0753	A-62218744	High
+CVE-2017-0755	A-32178311	High
+CVE-2017-0757	A-36006815	Critical
+CVE-2017-0758	A-36492741	Critical
+CVE-2017-0759	A-36715268	Critical
+CVE-2017-0760	A-37237396	Critical
+CVE-2017-0761	A-38448381	Critical
+CVE-2017-0762	A-62214264	Critical
+CVE-2017-0763	A-62534693	Critical
+CVE-2017-0765	A-62872863	Critical
+CVE-2017-0769	A-37662122	High
+CVE-2017-0771	A-37624243	High
+CVE-2017-0772	A-38115076	High
+CVE-2017-0773	A-37615911	High
+CVE-2017-0776	A-38496660      High/Moderate
+CVE-2017-0778	A-62133227	High/Moderate
+CVE-2017-0780	A-37742976	High
+CVE-2017-0784	A-37287958	Moderate
+
+Change-Id: Ibe5558cc9e79a0ad4726c6fc3db77b2b418b1ce8
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 06c4072..1ec13e2 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-08-01
++  PLATFORM_SECURITY_PATCH := 2017-09-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

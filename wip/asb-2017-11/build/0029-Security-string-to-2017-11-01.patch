@@ -1,0 +1,44 @@
+From 1a9fea8acd2393d6318777707675da9bbb4e7c29 Mon Sep 17 00:00:00 2001
+From: MSe1969 <mse1969@posteo.de>
+Date: Tue, 28 Nov 2017 20:29:30 +0100
+Subject: [PATCH 29/32] Security string to 2017-11-01
+
+Android Bulletin Nov. 2017:
+---------------------------
+CVE-2017-0836	A-64893226    Critical  (Unaffected)(No libhevc)
+CVE-2017-0839	A-64478003    High      Change 197378
+CVE-2017-0840	A-62948670    High
+CVE-2017-0841	A-37723026    Critical  Change 196439
+
+Pixel/Nexus Bulletin Nov. 2017:
+-------------------------------
+CVE-2017-0845	A-35028827    Moderate
+CVE-2017-0852	A-62815506    High      (Unaffected)(No libhevc)
+CVE-2017-0848	A-64477217    Moderate  Change 197378
+CVE-2017-0851	A-35430570    Moderate  (Unaffected)(No libhevc)
+CVE-2017-0860	A-31097064    Moderate  (Unaffected)(No InputDispatcher)
+CVE-2016-2105	A-63710022*   Moderate  Change 197379/197657
+CVE-2016-2106	A-63709511*   Moderate  Change 197380/197658
+CVE-2017-3731	A-63710076*   Moderate  Change 197381/197659
+
+Change-Id: I4037e9fbb39dda8ca0e11a7cce86853396827669
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 26e8491..01782a3 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2017-10-01
++  PLATFORM_SECURITY_PATCH := 2017-11-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

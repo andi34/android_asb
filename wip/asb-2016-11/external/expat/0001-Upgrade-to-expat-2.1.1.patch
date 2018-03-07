@@ -1,0 +1,653 @@
+From b9822920820d7d1f4ac660bb8005e293a8a2048d Mon Sep 17 00:00:00 2001
+From: Paul Duffin <paulduffin@google.com>
+Date: Wed, 4 May 2016 10:42:31 +0100
+Subject: [PATCH 1/4] Upgrade to expat 2.1.1
+
+Modified the import_expat.sh script as the archive is now
+compressed using bzip2 instead of gzip and uses configure.ac
+instead of configure.in.
+
+Modified README.android to make the example command up to date
+with respect to the new archive format and also to ensure that
+it builds dependencies.
+
+All the remaining changes are straight from upstream.
+
+Bug: 27818751
+
+(cherry picked from commit cee23496d017f13eccc125e2ab7044de53dec8da)
+
+Change-Id: Ic75a6c455dbcc34aaa7c30c109dc1565c5c52b04
+(cherry picked from commit c05e032be5350e70e721727a96d5d4309f74af01)
+---
+ Changes                    |  17 +++-
+ README                     |   2 +-
+ README.android             |   2 +-
+ doc/expat.png              | Bin 1027 -> 1029 bytes
+ doc/reference.html         |   8 +-
+ doc/valid-xhtml10.png      | Bin 2368 -> 2370 bytes
+ doc/xmlwf.1                | 209 ++++++++++++++++++++++-----------------------
+ doc/xmlwf.sgml             |   7 +-
+ examples/elements.c        |   2 +-
+ import_expat.sh            |   6 +-
+ lib/expat.h                |   2 +-
+ lib/xmlparse.c             |  21 ++++-
+ tests/benchmark/README.txt |   2 +-
+ tests/chardata.c           |   4 -
+ 14 files changed, 153 insertions(+), 129 deletions(-)
+
+diff --git a/Changes b/Changes
+index 08897b9..db5f7f3 100644
+--- a/Changes
++++ b/Changes
+@@ -1,3 +1,18 @@
++Release 2.1.1 Sat March 12 2016
++        Security fixes:
++            #582: CVE-2015-1283 - Multiple integer overflows in XML_GetBuffer
++
++        Bug fixes:
++            #502: Fix potential null pointer dereference
++            #520: Symbol XML_SetHashSalt was not exported
++            Output of "xmlwf -h" was incomplete
++
++        Other changes
++            #503: Document behavior of calling XML_SetHashSalt with salt 0
++            Minor improvements to man page xmlwf(1)
++            Improvements to the experimental CMake build system
++            libtool now invoked with --verbose
++
+ Release 2.1.0 Sat March 24 2012
+         - Bug Fixes:
+           #1742315: Harmful XML_ParserCreateNS suggestion.
+@@ -23,7 +38,7 @@ Release 2.1.0 Sat March 24 2012
+           #3312568: CMake support.
+           #3446384: Report byte offsets for attr names and values.
+         - New Features / API changes:
+-          Added new API member XML_SetHashSalt() that allows setting an intial
++          Added new API member XML_SetHashSalt() that allows setting an initial
+                 value (salt) for hash calculations. This is part of the fix for
+                 bug #3496608 to randomize hash parameters.
+           When compiled with XML_ATTR_INFO defined, adds new API member
+diff --git a/README b/README
+index 1f88467..9ec8d0c 100644
+--- a/README
++++ b/README
+@@ -1,5 +1,5 @@
+ 
+-                        Expat, Release 2.1.0
++                        Expat, Release 2.1.1
+ 
+ This is Expat, a C library for parsing XML, written by James Clark.
+ Expat is a stream-oriented XML parser.  This means that you register
+diff --git a/README.android b/README.android
+index 1112614..4f8abcb 100644
+--- a/README.android
++++ b/README.android
+@@ -1,6 +1,6 @@
+ Please use ./import_expat.sh to update. For example to import from a tar and rebuild:
+ 
+-    (croot && cd external/expat && ./import_expat.sh ~/Downloads/expat-2.1.0.tar.gz && mm -j32 -B)
++    (croot && cd external/expat && ./import_expat.sh ~/Downloads/expat-2.1.1.tar.bz2 && mma -j32 -B)
+ 
+ When updating to new versions, please remove any unnecessary build
+ files to make the diff of what we are using clearer. It is reasonable
+diff --git a/doc/expat.png b/doc/expat.png
+index 5bc0726cfd8508d0aa53cf53486b0330780b5f21..3d88eac4a1339b2453d6d7be388ae61f658da0f7 100644
+GIT binary patch
+delta 10
+RcmZqXXyw?z%);cr1pp480vrGU
+
+delta 7
+OcmZqWXy(|!%mM%iqXEzW
+
+diff --git a/doc/reference.html b/doc/reference.html
+index 8811a33..a4ab405 100644
+--- a/doc/reference.html
++++ b/doc/reference.html
+@@ -2151,8 +2151,12 @@ Helps in preventing DoS attacks based on predicting hash
+ function behavior. In order to have an effect this must be called
+ before parsing has started. Returns 1 if successful, 0 when called
+ after <code>XML_Parse</code> or <code>XML_ParseBuffer</code>.
+-<p><b>Note:</b> This call is optional, as the parser will auto-generate a new
+-random salt value if no value has been set at the start of parsing.</p>
++<p><b>Note:</b>This call is optional, as the parser will auto-generate 
++a new random salt value if no value has been set at the start of parsing.
++<p><b>Note:</b>One should not call <code>XML_SetHashSalt</code> with a
++hash salt value of 0, as this value is used as sentinel value to indicate
++that <code>XML_SetHashSalt</code> has <b>not</b> been called. Consequently
++such a call will have no effect, even if it returns 1.</p>
+ </div>
+ 
+ <pre class="fcndec" id="XML_UseForeignDTD">
+diff --git a/doc/valid-xhtml10.png b/doc/valid-xhtml10.png
+index 4c23f48fe02a58fbb3d1088e6a7d372568830b53..2f755c62b526e1c2ee8f14db7bf6a8c52d431ced 100644
+GIT binary patch
+delta 10
+RcmX>gbVz7}11FOM7XTE_0_*?)
+
+delta 7
+OcmX>kbU<i>11A6sVgjH5
+
+diff --git a/doc/xmlwf.1 b/doc/xmlwf.1
+index 174719a..f45aea9 100644
+--- a/doc/xmlwf.1
++++ b/doc/xmlwf.1
+@@ -1,33 +1,40 @@
+-.\" This manpage has been automatically generated by docbook2man 
+-.\" from a DocBook document.  This tool can be found at:
+-.\" <http://shell.ipoline.com/~elmert/comp/docbook2X/> 
+-.\" Please send any bug reports, improvements, comments, patches, 
+-.\" etc. to Steve Cheng <steve@ggi-project.org>.
+-.TH "XMLWF" "1" "24 January 2003" "" ""
++'\" -*- coding: us-ascii -*-
++.if \n(.g .ds T< \\FC
++.if \n(.g .ds T> \\F[\n[.fam]]
++.de URL
++\\$2 \(la\\$1\(ra\\$3
++..
++.if \n(.g .mso www.tmac
++.TH XMLWF 1 "March 11, 2016" "" ""
+ .SH NAME
+ xmlwf \- Determines if an XML document is well-formed
+ .SH SYNOPSIS
+-
+-\fBxmlwf\fR [ \fB-s\fR]  [ \fB-n\fR]  [ \fB-p\fR]  [ \fB-x\fR]  [ \fB-e \fIencoding\fB\fR]  [ \fB-w\fR]  [ \fB-d \fIoutput-dir\fB\fR]  [ \fB-c\fR]  [ \fB-m\fR]  [ \fB-r\fR]  [ \fB-t\fR]  [ \fB-v\fR]  [ \fBfile ...\fR] 
+-
+-.SH "DESCRIPTION"
+-.PP
++'nh
++.fi
++.ad l
++\fBxmlwf\fR \kx
++.if (\nx>(\n(.l/2)) .nr x (\n(.l/5)
++'in \n(.iu+\nxu
++[\fB-s\fR] [\fB-n\fR] [\fB-p\fR] [\fB-x\fR] [\fB-e \fIencoding\fB\fR] [\fB-w\fR] [\fB-d \fIoutput-dir\fB\fR] [\fB-c\fR] [\fB-m\fR] [\fB-r\fR] [\fB-t\fR] [\fB-v\fR] [file ...]
++'in \n(.iu-\nxu
++.ad b
++'hy
++.SH DESCRIPTION
+ \fBxmlwf\fR uses the Expat library to
+-determine if an XML document is well-formed.  It is
++determine if an XML document is well-formed. It is
+ non-validating.
+ .PP
+ If you do not specify any files on the command-line, and you
+ have a recent version of \fBxmlwf\fR, the
+ input file will be read from standard input.
+ .SH "WELL-FORMED DOCUMENTS"
+-.PP
+ A well-formed document must adhere to the
+ following rules:
+ .TP 0.2i
+ \(bu
+-The file begins with an XML declaration.  For instance,
+-<?xml version="1.0" standalone="yes"?>.
+-\fBNOTE:\fR
++The file begins with an XML declaration. For instance,
++\*(T<<?xml version="1.0" standalone="yes"?>\*(T>.
++\fINOTE:\fR
+ \fBxmlwf\fR does not currently
+ check for a valid XML declaration.
+ .TP 0.2i
+@@ -36,8 +43,8 @@ Every start tag is either empty (<tag/>)
+ or has a corresponding end tag.
+ .TP 0.2i
+ \(bu
+-There is exactly one root element.  This element must contain
+-all other elements in the document.  Only comments, white
++There is exactly one root element. This element must contain
++all other elements in the document. Only comments, white
+ space, and processing instructions may come after the close
+ of the root element.
+ .TP 0.2i
+@@ -49,39 +56,38 @@ All attribute values are enclosed in quotes (either single
+ or double).
+ .PP
+ If the document has a DTD, and it strictly complies with that
+-DTD, then the document is also considered \fBvalid\fR.
++DTD, then the document is also considered \fIvalid\fR.
+ \fBxmlwf\fR is a non-validating parser --
+-it does not check the DTD.  However, it does support
+-external entities (see the \fB-x\fR option).
+-.SH "OPTIONS"
+-.PP
++it does not check the DTD. However, it does support
++external entities (see the \*(T<\fB\-x\fR\*(T> option).
++.SH OPTIONS
+ When an option includes an argument, you may specify the argument either
+-separately ("\fB-d\fR output") or concatenated with the
+-option ("\fB-d\fRoutput").  \fBxmlwf\fR
++separately ("\*(T<\fB\-d\fR\*(T> output") or concatenated with the
++option ("\*(T<\fB\-d\fR\*(T>output"). \fBxmlwf\fR
+ supports both.
+-.TP
+-\fB-c\fR
++.TP 
++\*(T<\fB\-c\fR\*(T>
+ If the input file is well-formed and \fBxmlwf\fR
+ doesn't encounter any errors, the input file is simply copied to
+ the output directory unchanged.
+-This implies no namespaces (turns off \fB-n\fR) and
+-requires \fB-d\fR to specify an output file.
+-.TP
+-\fB-d output-dir\fR
++This implies no namespaces (turns off \*(T<\fB\-n\fR\*(T>) and
++requires \*(T<\fB\-d\fR\*(T> to specify an output file.
++.TP 
++\*(T<\fB\-d output\-dir\fR\*(T>
+ Specifies a directory to contain transformed
+ representations of the input files.
+-By default, \fB-d\fR outputs a canonical representation
++By default, \*(T<\fB\-d\fR\*(T> outputs a canonical representation
+ (described below).
+-You can select different output formats using \fB-c\fR
+-and \fB-m\fR.
++You can select different output formats using \*(T<\fB\-c\fR\*(T>
++and \*(T<\fB\-m\fR\*(T>.
+ 
+ The output filenames will
+ be exactly the same as the input filenames or "STDIN" if the input is
+-coming from standard input.  Therefore, you must be careful that the
++coming from standard input. Therefore, you must be careful that the
+ output file does not go into the same directory as the input
+-file.  Otherwise, \fBxmlwf\fR will delete the
++file. Otherwise, \fBxmlwf\fR will delete the
+ input file before it generates the output file (just like running
+-cat < file > file in most shells).
++\*(T<cat < file > file\*(T> in most shells).
+ 
+ Two structurally equivalent XML documents have a byte-for-byte
+ identical canonical XML representation.
+@@ -89,39 +95,39 @@ Note that ignorable white space is considered significant and
+ is treated equivalently to data.
+ More on canonical XML can be found at
+ http://www.jclark.com/xml/canonxml.html .
+-.TP
+-\fB-e encoding\fR
++.TP 
++\*(T<\fB\-e encoding\fR\*(T>
+ Specifies the character encoding for the document, overriding
+-any document encoding declaration.  \fBxmlwf\fR
++any document encoding declaration. \fBxmlwf\fR
+ supports four built-in encodings:
+-US-ASCII,
+-UTF-8,
+-UTF-16, and
+-ISO-8859-1.
+-Also see the \fB-w\fR option.
+-.TP
+-\fB-m\fR
++\*(T<US\-ASCII\*(T>,
++\*(T<UTF\-8\*(T>,
++\*(T<UTF\-16\*(T>, and
++\*(T<ISO\-8859\-1\*(T>.
++Also see the \*(T<\fB\-w\fR\*(T> option.
++.TP 
++\*(T<\fB\-m\fR\*(T>
+ Outputs some strange sort of XML file that completely
+ describes the input file, including character positions.
+-Requires \fB-d\fR to specify an output file.
+-.TP
+-\fB-n\fR
+-Turns on namespace processing.  (describe namespaces)
+-\fB-c\fR disables namespaces.
+-.TP
+-\fB-p\fR
++Requires \*(T<\fB\-d\fR\*(T> to specify an output file.
++.TP 
++\*(T<\fB\-n\fR\*(T>
++Turns on namespace processing. (describe namespaces)
++\*(T<\fB\-c\fR\*(T> disables namespaces.
++.TP 
++\*(T<\fB\-p\fR\*(T>
+ Tells xmlwf to process external DTDs and parameter
+ entities.
+ 
+ Normally \fBxmlwf\fR never parses parameter
+-entities.  \fB-p\fR tells it to always parse them.
+-\fB-p\fR implies \fB-x\fR.
+-.TP
+-\fB-r\fR
++entities. \*(T<\fB\-p\fR\*(T> tells it to always parse them.
++\*(T<\fB\-p\fR\*(T> implies \*(T<\fB\-x\fR\*(T>.
++.TP 
++\*(T<\fB\-r\fR\*(T>
+ Normally \fBxmlwf\fR memory-maps the XML file
+ before parsing; this can result in faster parsing on many
+ platforms.
+-\fB-r\fR turns off memory-mapping and uses normal file
++\*(T<\fB\-r\fR\*(T> turns off memory-mapping and uses normal file
+ IO calls instead.
+ Of course, memory-mapping is automatically turned off
+ when reading from standard input.
+@@ -131,34 +137,33 @@ substantially higher memory usage for
+ \fBxmlwf\fR, but this appears to be a matter of
+ the operating system reporting memory in a strange way; there is
+ not a leak in \fBxmlwf\fR.
+-.TP
+-\fB-s\fR
++.TP 
++\*(T<\fB\-s\fR\*(T>
+ Prints an error if the document is not standalone. 
+ A document is standalone if it has no external subset and no
+ references to parameter entities.
+-.TP
+-\fB-t\fR
+-Turns on timings.  This tells Expat to parse the entire file,
++.TP 
++\*(T<\fB\-t\fR\*(T>
++Turns on timings. This tells Expat to parse the entire file,
+ but not perform any processing.
+ This gives a fairly accurate idea of the raw speed of Expat itself
+ without client overhead.
+-\fB-t\fR turns off most of the output options
+-(\fB-d\fR, \fB-m\fR, \fB-c\fR,
+-\&...).
+-.TP
+-\fB-v\fR
++\*(T<\fB\-t\fR\*(T> turns off most of the output options
++(\*(T<\fB\-d\fR\*(T>, \*(T<\fB\-m\fR\*(T>, \*(T<\fB\-c\fR\*(T>, ...).
++.TP 
++\*(T<\fB\-v\fR\*(T>
+ Prints the version of the Expat library being used, including some
+ information on the compile-time configuration of the library, and
+ then exits.
+-.TP
+-\fB-w\fR
++.TP 
++\*(T<\fB\-w\fR\*(T>
+ Enables support for Windows code pages.
+ Normally, \fBxmlwf\fR will throw an error if it
+-runs across an encoding that it is not equipped to handle itself.  With
+-\fB-w\fR, xmlwf will try to use a Windows code
+-page.  See also \fB-e\fR.
+-.TP
+-\fB-x\fR
++runs across an encoding that it is not equipped to handle itself. With
++\*(T<\fB\-w\fR\*(T>, xmlwf will try to use a Windows code
++page. See also \*(T<\fB\-e\fR\*(T>.
++.TP 
++\*(T<\fB\-x\fR\*(T>
+ Turns on parsing external entities.
+ 
+ Non-validating parsers are not required to resolve external
+@@ -178,74 +183,64 @@ This is an example of an internal entity:
+ And here are some examples of external entities:
+ 
+ .nf
+-<!ENTITY header SYSTEM "header-&vers;.xml">  (parsed)
++<!ENTITY header SYSTEM "header\-&vers;.xml">  (parsed)
+ <!ENTITY logo SYSTEM "logo.png" PNG>         (unparsed)
+ .fi
+-.TP
+-\fB--\fR
++.TP 
++\*(T<\fB\-\-\fR\*(T>
+ (Two hyphens.)
+-Terminates the list of options.  This is only needed if a filename
+-starts with a hyphen.  For example:
++Terminates the list of options. This is only needed if a filename
++starts with a hyphen. For example:
+ 
+ .nf
+-xmlwf -- -myfile.xml
++xmlwf \-\- \-myfile.xml
+ .fi
+ 
+ will run \fBxmlwf\fR on the file
+-\fI-myfile.xml\fR.
++\*(T<\fI\-myfile.xml\fR\*(T>.
+ .PP
+ Older versions of \fBxmlwf\fR do not support
+ reading from standard input.
+-.SH "OUTPUT"
+-.PP
++.SH OUTPUT
+ If an input file is not well-formed,
+ \fBxmlwf\fR prints a single line describing
+-the problem to standard output.  If a file is well formed,
++the problem to standard output. If a file is well formed,
+ \fBxmlwf\fR outputs nothing.
+-Note that the result code is \fBnot\fR set.
+-.SH "BUGS"
+-.PP
+-According to the W3C standard, an XML file without a
+-declaration at the beginning is not considered well-formed.
+-However, \fBxmlwf\fR allows this to pass.
+-.PP
++Note that the result code is \fInot\fR set.
++.SH BUGS
+ \fBxmlwf\fR returns a 0 - noerr result,
+-even if the file is not well-formed.  There is no good way for
++even if the file is not well-formed. There is no good way for
+ a program to use \fBxmlwf\fR to quickly
+ check a file -- it must parse \fBxmlwf\fR's
+ standard output.
+ .PP
+ The errors should go to standard error, not standard output.
+ .PP
+-There should be a way to get \fB-d\fR to send its
++There should be a way to get \*(T<\fB\-d\fR\*(T> to send its
+ output to standard output rather than forcing the user to send
+ it to a file.
+ .PP
+ I have no idea why anyone would want to use the
+-\fB-d\fR, \fB-c\fR, and
+-\fB-m\fR options.  If someone could explain it to
++\*(T<\fB\-d\fR\*(T>, \*(T<\fB\-c\fR\*(T>, and
++\*(T<\fB\-m\fR\*(T> options. If someone could explain it to
+ me, I'd like to add this information to this manpage.
+-.SH "ALTERNATIVES"
+-.PP
++.SH ALTERNATIVES
+ Here are some XML validators on the web:
+ 
+ .nf
+-http://www.hcrc.ed.ac.uk/~richard/xml-check.html
++http://www.hcrc.ed.ac.uk/~richard/xml\-check.html
+ http://www.stg.brown.edu/service/xmlvalid/
+ http://www.scripting.com/frontier5/xml/code/xmlValidator.html
+ http://www.xml.com/pub/a/tools/ruwf/check.html
+ .fi
+ .SH "SEE ALSO"
+-.PP
+-
+ .nf
+ The Expat home page:        http://www.libexpat.org/
+-The W3 XML specification:   http://www.w3.org/TR/REC-xml
++The W3 XML specification:   http://www.w3.org/TR/REC\-xml
+ .fi
+-.SH "AUTHOR"
+-.PP
+-This manual page was written by Scott Bronson <bronson@rinspin.com> for
+-the Debian GNU/Linux system (but may be used by others).  Permission is
++.SH AUTHOR
++This manual page was written by Scott Bronson <\*(T<bronson@rinspin.com\*(T>> for
++the Debian GNU/Linux system (but may be used by others). Permission is
+ granted to copy, distribute and/or modify this document under
+ the terms of the GNU Free Documentation
+ License, Version 1.1.
+diff --git a/doc/xmlwf.sgml b/doc/xmlwf.sgml
+index 313cfbc..e1f779e 100644
+--- a/doc/xmlwf.sgml
++++ b/doc/xmlwf.sgml
+@@ -13,7 +13,7 @@ manpage.1: manpage.sgml
+   <!ENTITY dhfirstname "<firstname>Scott</firstname>">
+   <!ENTITY dhsurname   "<surname>Bronson</surname>">
+   <!-- Please adjust the date whenever revising the manpage. -->
+-  <!ENTITY dhdate      "<date>December  5, 2001</date>">
++  <!ENTITY dhdate      "<date>March 11, 2016</date>">
+   <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
+        allowed: see man(7), man(1). -->
+   <!ENTITY dhsection   "<manvolnum>1</manvolnum>">
+@@ -213,7 +213,7 @@ supports both.
+         <listitem>
+ 		<para>
+   Outputs some strange sort of XML file that completely
+-  describes the the input file, including character postitions.
++  describes the input file, including character positions.
+   Requires <option>-d</option> to specify an output file.
+ 	   </para>
+         </listitem>
+@@ -286,8 +286,7 @@ supports both.
+   This gives a fairly accurate idea of the raw speed of Expat itself
+   without client overhead.
+   <option>-t</option> turns off most of the output options
+-  (<option>-d</option>, <option>-m</option>, <option>-c</option>,
+-  ...).
++  (<option>-d</option>, <option>-m</option>, <option>-c</option>, ...).
+ 	   </para>
+         </listitem>
+       </varlistentry>
+diff --git a/examples/elements.c b/examples/elements.c
+index 6b8f855..bc04b6b 100644
+--- a/examples/elements.c
++++ b/examples/elements.c
+@@ -50,7 +50,7 @@ main(int argc, char *argv[])
+   XML_SetUserData(parser, &depth);
+   XML_SetElementHandler(parser, startElement, endElement);
+   do {
+-    int len = (int)fread(buf, 1, sizeof(buf), stdin);
++    size_t len = fread(buf, 1, sizeof(buf), stdin);
+     done = len < sizeof(buf);
+     if (XML_Parse(parser, buf, len, done) == XML_STATUS_ERROR) {
+       fprintf(stderr,
+diff --git a/import_expat.sh b/import_expat.sh
+index ef3837b..17eaf9e 100755
+--- a/import_expat.sh
++++ b/import_expat.sh
+@@ -3,12 +3,12 @@
+ set -e
+ 
+ if [ "$1" = "" ]; then
+-   echo "usage: $0 expat.tar.gz"
++   echo "usage: $0 expat.tar.bz2"
+    exit 1
+ fi
+ 
+ echo "Extracting $1"
+-tar --extract --ungzip --strip-components=1 --file $1
++tar --extract --bzip2 --strip-components=1 --file $1
+ 
+ echo "Saving COPYING to NOTICE"
+ touch MODULE_LICENSE_BSD_LIKE
+@@ -22,7 +22,7 @@ rm MANIFEST
+ rm Makefile.in
+ rm aclocal.m4
+ rm configure
+-rm configure.in
++rm configure.ac
+ rm examples/elements.dsp
+ rm examples/outline.dsp
+ rm expat.dsw
+diff --git a/lib/expat.h b/lib/expat.h
+index 9a21680..ec62f14 100644
+--- a/lib/expat.h
++++ b/lib/expat.h
+@@ -1038,7 +1038,7 @@ XML_GetFeatureList(void);
+ */
+ #define XML_MAJOR_VERSION 2
+ #define XML_MINOR_VERSION 1
+-#define XML_MICRO_VERSION 0
++#define XML_MICRO_VERSION 1
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/lib/xmlparse.c b/lib/xmlparse.c
+index f35aa36..e308c79 100644
+--- a/lib/xmlparse.c
++++ b/lib/xmlparse.c
+@@ -1550,7 +1550,7 @@ XML_Parse(XML_Parser parser, const char *s, int len, int isFinal)
+   else if (bufferPtr == bufferEnd) {
+     const char *end;
+     int nLeftOver;
+-    enum XML_Error result;
++    enum XML_Status result;
+     parseEndByteIndex += len;
+     positionPtr = s;
+     ps_finalBuffer = (XML_Bool)isFinal;
+@@ -1678,6 +1678,10 @@ XML_ParseBuffer(XML_Parser parser, int len, int isFinal)
+ void * XMLCALL
+ XML_GetBuffer(XML_Parser parser, int len)
+ {
++  if (len < 0) {
++    errorCode = XML_ERROR_NO_MEMORY;
++    return NULL;
++  }
+   switch (ps_parsing) {
+   case XML_SUSPENDED:
+     errorCode = XML_ERROR_SUSPENDED;
+@@ -1689,8 +1693,11 @@ XML_GetBuffer(XML_Parser parser, int len)
+   }
+ 
+   if (len > bufferLim - bufferEnd) {
+-    /* FIXME avoid integer overflow */
+     int neededSize = len + (int)(bufferEnd - bufferPtr);
++    if (neededSize < 0) {
++      errorCode = XML_ERROR_NO_MEMORY;
++      return NULL;
++    }
+ #ifdef XML_CONTEXT_BYTES
+     int keep = (int)(bufferPtr - buffer);
+ 
+@@ -1719,7 +1726,11 @@ XML_GetBuffer(XML_Parser parser, int len)
+         bufferSize = INIT_BUFFER_SIZE;
+       do {
+         bufferSize *= 2;
+-      } while (bufferSize < neededSize);
++      } while (bufferSize < neededSize && bufferSize > 0);
++      if (bufferSize <= 0) {
++        errorCode = XML_ERROR_NO_MEMORY;
++        return NULL;
++      }
+       newBuf = (char *)MALLOC(bufferSize);
+       if (newBuf == 0) {
+         errorCode = XML_ERROR_NO_MEMORY;
+@@ -2911,6 +2922,8 @@ storeAtts(XML_Parser parser, const ENCODING *enc,
+         unsigned long uriHash = hash_secret_salt;
+         ((XML_Char *)s)[-1] = 0;  /* clear flag */
+         id = (ATTRIBUTE_ID *)lookup(parser, &dtd->attributeIds, s, 0);
++        if (!id || !id->prefix)
++          return XML_ERROR_NO_MEMORY;
+         b = id->prefix->binding;
+         if (!b)
+           return XML_ERROR_UNBOUND_PREFIX;
+@@ -5475,6 +5488,8 @@ getAttributeId(XML_Parser parser, const ENCODING *enc,
+             return NULL;
+           id->prefix = (PREFIX *)lookup(parser, &dtd->prefixes, poolStart(&dtd->pool),
+                                         sizeof(PREFIX));
++          if (!id->prefix)
++            return NULL;
+           if (id->prefix->name == poolStart(&dtd->pool))
+             poolFinish(&dtd->pool);
+           else
+diff --git a/tests/benchmark/README.txt b/tests/benchmark/README.txt
+index 7f9cca0..86414d5 100644
+--- a/tests/benchmark/README.txt
++++ b/tests/benchmark/README.txt
+@@ -13,4 +13,4 @@ The command line arguments are:
+ Returns:
+ 
+   The time (in seconds) it takes to parse the test file,
+-  averaged over the number of iterations.
+\ No newline at end of file
++  averaged over the number of iterations.@
+diff --git a/tests/chardata.c b/tests/chardata.c
+index 5fb0299..02243e0 100644
+--- a/tests/chardata.c
++++ b/tests/chardata.c
+@@ -7,11 +7,7 @@
+ #ifdef HAVE_EXPAT_CONFIG_H
+ #include <expat_config.h>
+ #endif
+-#ifdef HAVE_CHECK_H
+-#include <check.h>
+-#else
+ #include "minicheck.h"
+-#endif
+ 
+ #include <assert.h>
+ #include <stdio.h>
+-- 
+2.7.4
+

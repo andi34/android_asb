@@ -1,0 +1,29 @@
+From 9dcdc2e8e076fc556a98f3d6fbf2b6825323b6b7 Mon Sep 17 00:00:00 2001
+From: Zach Jang <zachjang@google.com>
+Date: Mon, 23 May 2016 13:26:32 -0700
+Subject: [PATCH 13/32] Updating security string to 2016-07-01
+
+b/28912173
+
+Change-Id: Ib40892d3185285cf4e95abb655a96c76258e17b1
+(cherry picked from commit 45ff24a04bd5d3af706ae3aa6266106560070a3d)
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index ec48ef5..c6c7a5a 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2016-06-01
++  PLATFORM_SECURITY_PATCH := 2016-07-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

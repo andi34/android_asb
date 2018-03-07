@@ -1,0 +1,1107 @@
+From 905a778a6f5583acd6715054ee14e56eae82d07f Mon Sep 17 00:00:00 2001
+From: Sharvil Nanavati <sharvil@google.com>
+Date: Thu, 16 Jun 2016 15:37:04 -0700
+Subject: [PATCH 07/15] DO NOT MERGE Fix potential DoS caused by delivering
+ signal to BT process
+
+Bug: 28885210
+Change-Id: Iad7233aa62f79ad05d86c6f566673393bb683a3a
+(cherry picked from commit 8f01de7ca236d5c2a78670e9618129df4356aa13)
+---
+ audio_a2dp_hw/audio_a2dp_hw.c | 16 +++++-----
+ btif/co/bta_fs_co.c           |  6 ++--
+ btif/co/bta_hh_co.c           | 10 +++---
+ btif/co/bta_hl_co.c           |  2 +-
+ btif/src/btif_config_util.cpp |  2 +-
+ btif/src/btif_core.c          |  4 +--
+ btif/src/btif_dm.c            |  2 +-
+ btif/src/btif_hh.c            |  4 +--
+ btif/src/btif_hl.c            | 12 +++----
+ btif/src/btif_media_task.c    |  2 +-
+ btif/src/btif_pan.c           | 16 +++++-----
+ btif/src/btif_rc.c            | 20 ++++++------
+ btif/src/btif_sock_rfc.c      | 10 +++---
+ btif/src/btif_sock_thread.c   | 18 +++++------
+ btif/src/btif_sock_util.c     |  6 ++--
+ gki/ulinux/gki_ulinux.c       | 10 +++---
+ hci/src/btsnoop.c             | 74 +++++++++++++++++++++----------------------
+ hci/src/userial.c             | 10 +++---
+ hci/src/userial_mct.c         | 10 +++---
+ hci/src/utils.c               |  3 +-
+ main/bte_logmsg.c             |  8 ++---
+ stack/btu/btu_hcif.c          |  2 +-
+ udrv/ulinux/uipc.c            | 20 ++++++------
+ 23 files changed, 134 insertions(+), 133 deletions(-)
+
+diff --git a/audio_a2dp_hw/audio_a2dp_hw.c b/audio_a2dp_hw/audio_a2dp_hw.c
+index 42e416e..2cb4062 100644
+--- a/audio_a2dp_hw/audio_a2dp_hw.c
++++ b/audio_a2dp_hw/audio_a2dp_hw.c
+@@ -200,7 +200,7 @@ static int skt_connect(struct a2dp_stream_out *out, char *path)
+             ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM) < 0)
+     {
+         ERROR("failed to connect (%s)", strerror(errno));
+-        close(skt_fd);
++        TEMP_FAILURE_RETRY(close(skt_fd));
+         return -1;
+     }
+ 
+@@ -229,12 +229,12 @@ static int skt_write(int fd, const void *p, size_t len)
+     /* poll for 500 ms */
+ 
+     /* send time out */
+-    if (poll(&pfd, 1, 500) == 0)
++    if (TEMP_FAILURE_RETRY(poll(&pfd, 1, 500)) == 0)
+         return 0;
+ 
+     ts_log("skt_write", len, NULL);
+ 
+-    if ((sent = send(fd, p, len, MSG_NOSIGNAL)) == -1)
++    if ((sent = TEMP_FAILURE_RETRY(send(fd, p, len, MSG_NOSIGNAL))) == -1)
+     {
+         ERROR("write failed with errno=%d\n", errno);
+         return -1;
+@@ -270,7 +270,7 @@ static int a2dp_command(struct a2dp_stream_out *out, char cmd)
+     DEBUG("A2DP COMMAND %s", dump_a2dp_ctrl_event(cmd));
+ 
+     /* send command */
+-    if (send(out->ctrl_fd, &cmd, 1, MSG_NOSIGNAL) == -1)
++    if (TEMP_FAILURE_RETRY(send(out->ctrl_fd, &cmd, 1, MSG_NOSIGNAL)) == -1)
+     {
+         ERROR("cmd failed (%s)", strerror(errno));
+         skt_disconnect(out->ctrl_fd);
+@@ -279,7 +279,7 @@ static int a2dp_command(struct a2dp_stream_out *out, char cmd)
+     }
+ 
+     /* wait for ack byte */
+-    if (recv(out->ctrl_fd, &ack, 1, MSG_NOSIGNAL) < 0)
++    if (TEMP_FAILURE_RETRY(recv(out->ctrl_fd, &ack, 1, MSG_NOSIGNAL)) < 0)
+     {
+         ERROR("ack failed (%s)", strerror(errno));
+         skt_disconnect(out->ctrl_fd);
+@@ -463,7 +463,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
+ 
+             DEBUG("emulate a2dp write delay (%d us)", us_delay);
+ 
+-            usleep(us_delay);
++            TEMP_FAILURE_RETRY(usleep(us_delay));
+             pthread_mutex_unlock(&out->lock);
+             return -1;
+         }
+@@ -845,12 +845,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
+                 break;
+ 
+             ERROR("error : a2dp not ready, wait 250 ms and retry");
+-            usleep(250000);
++            TEMP_FAILURE_RETRY(usleep(250000));
+             skt_disconnect(out->ctrl_fd);
+         }
+ 
+         /* ctrl channel not ready, wait a bit */
+-        usleep(250000);
++        TEMP_FAILURE_RETRY(usleep(250000));
+     }
+ 
+     if (out->ctrl_fd == AUDIO_SKT_DISCONNECTED)
+diff --git a/btif/co/bta_fs_co.c b/btif/co/bta_fs_co.c
+index ffc146b..dd07de6 100644
+--- a/btif/co/bta_fs_co.c
++++ b/btif/co/bta_fs_co.c
+@@ -344,7 +344,7 @@ void bta_fs_co_open(const char *p_path, int oflags, UINT32 size, UINT16 evt,
+ 
+     if ( 0==err )
+     {
+-        if ((fd = open(p_path, oflags | O_NONBLOCK, 0666)) >= 0)
++        if ((fd = TEMP_FAILURE_RETRY(open(p_path, oflags | O_NONBLOCK, 0666))) >= 0)
+         {
+             if (fstat(fd, &file_stat) == 0)
+             {
+@@ -456,7 +456,7 @@ void bta_fs_co_read(int fd, UINT8 *p_buf, UINT16 nbytes, UINT16 evt, UINT8 ssn,
+     INT32   num_read;
+     int     err;
+ 
+-    if ((num_read = read (fd, p_buf, nbytes)) < 0)
++    if ((num_read = TEMP_FAILURE_RETRY(read (fd, p_buf, nbytes))) < 0)
+     {
+         err = errno;
+         status = BTA_FS_CO_FAIL;
+@@ -501,7 +501,7 @@ void bta_fs_co_write(int fd, const UINT8 *p_buf, UINT16 nbytes, UINT16 evt,
+     INT32   num_written;
+     int     err=0;
+ 
+-    if ((num_written = write (fd, p_buf, nbytes)) < 0)
++    if ((num_written = TEMP_FAILURE_RETRY(write (fd, p_buf, nbytes))) < 0)
+     {
+         err = errno;
+         status = BTA_FS_CO_FAIL;
+diff --git a/btif/co/bta_hh_co.c b/btif/co/bta_hh_co.c
+index 51edcd4..3fbe72b 100644
+--- a/btif/co/bta_hh_co.c
++++ b/btif/co/bta_hh_co.c
+@@ -40,7 +40,7 @@ const char *dev_path = "/dev/uhid";
+ static int uhid_write(int fd, const struct uhid_event *ev)
+ {
+     ssize_t ret;
+-    ret = write(fd, ev, sizeof(*ev));
++    ret = TEMP_FAILURE_RETRY(write(fd, ev, sizeof(*ev)));
+     if (ret < 0){
+         int rtn = -errno;
+         APPL_TRACE_ERROR2("%s: Cannot write to uhid:%s", __FUNCTION__, strerror(errno));
+@@ -65,7 +65,7 @@ static int uhid_event(btif_hh_device_t *p_dev)
+         APPL_TRACE_ERROR1("%s: Device not found",__FUNCTION__)
+         return -1;
+     }
+-    ret = read(p_dev->fd, &ev, sizeof(ev));
++    ret = TEMP_FAILURE_RETRY(read(p_dev->fd, &ev, sizeof(ev)));
+     if (ret == 0) {
+         APPL_TRACE_ERROR2("%s: Read HUP on uhid-cdev %s", __FUNCTION__,
+                                                  strerror(errno));
+@@ -166,7 +166,7 @@ static void *btif_hh_poll_event_thread(void *arg)
+     pfds[0].events = POLLIN;
+ 
+     while(p_dev->hh_keep_polling){
+-        ret = poll(pfds, 1, 500);
++        ret = TEMP_FAILURE_RETRY(poll(pfds, 1, 500));
+         if (ret < 0) {
+             APPL_TRACE_ERROR2("%s: Cannot poll for fds: %s\n", __FUNCTION__, strerror(errno));
+             break;
+@@ -254,7 +254,7 @@ void bta_hh_co_open(UINT8 dev_handle, UINT8 sub_class, tBTA_HH_ATTR_MASK attr_ma
+                                   __FUNCTION__, p_dev->attr_mask, p_dev->sub_class, p_dev->app_id);
+ 
+             if(p_dev->fd<0) {
+-                p_dev->fd = open(dev_path, O_RDWR | O_CLOEXEC);
++                p_dev->fd = TEMP_FAILURE_RETRY(open(dev_path, O_RDWR | O_CLOEXEC));
+                 if (p_dev->fd < 0){
+                     APPL_TRACE_ERROR2("%s: Error: failed to open uhid, err:%s",
+                                                                     __FUNCTION__,strerror(errno));
+@@ -281,7 +281,7 @@ void bta_hh_co_open(UINT8 dev_handle, UINT8 sub_class, tBTA_HH_ATTR_MASK attr_ma
+ 
+                 btif_hh_cb.device_num++;
+                 // This is a new device,open the uhid driver now.
+-                p_dev->fd = open(dev_path, O_RDWR | O_CLOEXEC);
++                p_dev->fd = TEMP_FAILURE_RETRY(open(dev_path, O_RDWR | O_CLOEXEC));
+                 if (p_dev->fd < 0){
+                     APPL_TRACE_ERROR2("%s: Error: failed to open uhid, err:%s",
+                                                                     __FUNCTION__,strerror(errno));
+diff --git a/btif/co/bta_hl_co.c b/btif/co/bta_hl_co.c
+index 2713da1..8b94fe6 100644
+--- a/btif/co/bta_hl_co.c
++++ b/btif/co/bta_hl_co.c
+@@ -385,7 +385,7 @@ void bta_hl_co_put_rx_data (UINT8 app_id, tBTA_HL_MDL_HANDLE mdl_handle,
+             {
+                 BTIF_TRACE_DEBUG4("app_idx=%d mcl_idx=0x%x mdl_idx=0x%x data_size=%d",
+                                   app_idx, mcl_idx, mdl_idx, data_size);
+-                r = send(p_dcb->p_scb->socket_id[1], p_dcb->p_rx_pkt, data_size, 0);
++                r = TEMP_FAILURE_RETRY(send(p_dcb->p_scb->socket_id[1], p_dcb->p_rx_pkt, data_size, 0));
+ 
+                 if (r == data_size)
+                 {
+diff --git a/btif/src/btif_config_util.cpp b/btif/src/btif_config_util.cpp
+index 885f5c2..056f38a 100644
+--- a/btif/src/btif_config_util.cpp
++++ b/btif/src/btif_config_util.cpp
+@@ -361,7 +361,7 @@ static int open_file_map(const char *pathname, const char**map, int* size)
+     st.st_size = 0;
+     int fd;
+     //debug("in");
+-    if((fd = open(pathname, O_RDONLY)) >= 0)
++    if((fd = TEMP_FAILURE_RETRY(open(pathname, O_RDONLY))) >= 0)
+     {
+         //debug("fd:%d", fd);
+         if(fstat(fd, &st) == 0 && st.st_size)
+diff --git a/btif/src/btif_core.c b/btif/src/btif_core.c
+index 9504c3c..e701968 100644
+--- a/btif/src/btif_core.c
++++ b/btif/src/btif_core.c
+@@ -374,10 +374,10 @@ static void btif_fetch_local_bdaddr(bt_bdaddr_t *local_addr)
+ 
+         BTIF_TRACE_DEBUG1("local bdaddr is stored in %s", val);
+ 
+-        if ((addr_fd = open(val, O_RDONLY)) != -1)
++        if ((addr_fd = TEMP_FAILURE_RETRY(open(val, O_RDONLY))) != -1)
+         {
+             memset(val, 0, sizeof(val));
+-            read(addr_fd, val, FACTORY_BT_BDADDR_STORAGE_LEN);
++            TEMP_FAILURE_RETRY(read(addr_fd, val, FACTORY_BT_BDADDR_STORAGE_LEN));
+             str2bd(val, local_addr);
+             /* If this is not a reserved/special bda, then use it */
+             if (memcmp(local_addr->address, null_bdaddr, BD_ADDR_LEN) != 0)
+diff --git a/btif/src/btif_dm.c b/btif/src/btif_dm.c
+index 5215533..9acdfce 100644
+--- a/btif/src/btif_dm.c
++++ b/btif/src/btif_dm.c
+@@ -1445,7 +1445,7 @@ static void btif_dm_upstreams_evt(UINT16 event, char* p_param)
+             BTIF_TRACE_ERROR0("Received H/W Error. ");
+             /* Flush storage data */
+             btif_config_flush();
+-            usleep(100000); /* 100milliseconds */
++            TEMP_FAILURE_RETRY(usleep(100000)); /* 100milliseconds */
+             /* Killing the process to force a restart as part of fault tolerance */
+             kill(getpid(), SIGKILL);
+             break;
+diff --git a/btif/src/btif_hh.c b/btif/src/btif_hh.c
+index b78eede..0616e10 100644
+--- a/btif/src/btif_hh.c
++++ b/btif/src/btif_hh.c
+@@ -235,7 +235,7 @@ static void toggle_os_keylockstates(int fd, int changedlockstates)
+     BTIF_TRACE_DEBUG4("%s:  %x %x %x", __FUNCTION__,
+          hidreport[6], hidreport[7], hidreport[8]);
+     bta_hh_co_write(fd , hidreport, sizeof(hidreport));
+-    usleep(200000);
++    TEMP_FAILURE_RETRY(usleep(200000));
+     memset(hidreport,0,9);
+     hidreport[0]=1;
+     BTIF_TRACE_DEBUG4("Writing hidreport #2 to os: "\
+@@ -328,7 +328,7 @@ static void sync_lockstate_on_connect(btif_hh_device_t *p_dev)
+         BTIF_TRACE_DEBUG2("%s: Sending hid report to kernel "\
+             "indicating lock key state 0x%x",__FUNCTION__,
+             keylockstates);
+-        usleep(200000);
++        TEMP_FAILURE_RETRY(usleep(200000));
+         toggle_os_keylockstates(p_dev->fd, keylockstates);
+     }
+     else
+diff --git a/btif/src/btif_hl.c b/btif/src/btif_hl.c
+index 28a1461..c657fbf 100644
+--- a/btif/src/btif_hl.c
++++ b/btif/src/btif_hl.c
+@@ -4958,7 +4958,7 @@ void btif_hl_select_monitor_callback( fd_set *p_cur_set , fd_set *p_org_set){
+                         //     r = recv(p_scb->socket_id[1], p_dcb->p_tx_pkt, p_dcb->mtu , MSG_DONTWAIT));
+                         // } while (r == SOCKET_ERROR && errno == EINTR);
+ 
+-                        if ((r = (int)recv(p_scb->socket_id[1], p_dcb->p_tx_pkt, p_dcb->mtu , MSG_DONTWAIT)) > 0)
++                        if ((r = (int)TEMP_FAILURE_RETRY(recv(p_scb->socket_id[1], p_dcb->p_tx_pkt, p_dcb->mtu , MSG_DONTWAIT))) > 0)
+                         {
+                             BTIF_TRACE_DEBUG1("btif_hl_select_monitor_callback send data r =%d", r);
+                             p_dcb->tx_size = r;
+@@ -5018,7 +5018,7 @@ static inline int btif_hl_select_wakeup_init(fd_set* set){
+ static inline int btif_hl_select_wakeup(void){
+     char sig_on = btif_hl_signal_select_wakeup;
+     BTIF_TRACE_DEBUG0("btif_hl_select_wakeup");
+-    return send(signal_fds[1], &sig_on, sizeof(sig_on), 0);
++    return TEMP_FAILURE_RETRY(send(signal_fds[1], &sig_on, sizeof(sig_on), 0));
+ }
+ 
+ /*******************************************************************************
+@@ -5033,7 +5033,7 @@ static inline int btif_hl_select_wakeup(void){
+ static inline int btif_hl_select_close_connected(void){
+     char sig_on = btif_hl_signal_select_close_connected;
+     BTIF_TRACE_DEBUG0("btif_hl_select_close_connected");
+-    return send(signal_fds[1], &sig_on, sizeof(sig_on), 0);
++    return TEMP_FAILURE_RETRY(send(signal_fds[1], &sig_on, sizeof(sig_on), 0));
+ }
+ 
+ /*******************************************************************************
+@@ -5050,7 +5050,7 @@ static inline int btif_hl_close_select_thread(void)
+     int result = 0;
+     char sig_on = btif_hl_signal_select_exit;
+     BTIF_TRACE_DEBUG0("btif_hl_signal_select_exit");
+-    result = send(signal_fds[1], &sig_on, sizeof(sig_on), 0);
++    result = TEMP_FAILURE_RETRY(send(signal_fds[1], &sig_on, sizeof(sig_on), 0));
+     /* Wait for the select_thread_id to exit */
+     if (select_thread_id != -1) {
+         pthread_join(select_thread_id, NULL);
+@@ -5083,7 +5083,7 @@ static inline int btif_hl_select_wake_reset(void){
+     char sig_recv = 0;
+ 
+     BTIF_TRACE_DEBUG0("btif_hl_select_wake_reset");
+-    recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL);
++    TEMP_FAILURE_RETRY(recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL));
+     return(int)sig_recv;
+ }
+ /*******************************************************************************
+@@ -5143,7 +5143,7 @@ static void *btif_hl_select_thread(void *arg){
+         BTIF_TRACE_DEBUG0("set curr_set = org_set ");
+         curr_set = org_set;
+         max_curr_s = max_org_s;
+-        int ret = select((max_curr_s + 1), &curr_set, NULL, NULL, NULL);
++        int ret = TEMP_FAILURE_RETRY(select((max_curr_s + 1), &curr_set, NULL, NULL, NULL));
+         BTIF_TRACE_DEBUG1("select unblocked ret=%d", ret);
+         if (ret == -1)
+         {
+diff --git a/btif/src/btif_media_task.c b/btif/src/btif_media_task.c
+index ff9f92c..1a901ef 100755
+--- a/btif/src/btif_media_task.c
++++ b/btif/src/btif_media_task.c
+@@ -714,7 +714,7 @@ int btif_a2dp_start_media_task(void)
+ 
+     /* wait for task to come up to sure we are able to send messages to it */
+     while (media_task_running == MEDIA_TASK_STATE_OFF)
+-        usleep(10);
++        TEMP_FAILURE_RETRY(usleep(10));
+ 
+     APPL_TRACE_EVENT0("## A2DP MEDIA TASK STARTED ##");
+ 
+diff --git a/btif/src/btif_pan.c b/btif/src/btif_pan.c
+index 41cc17d..0a7dfec 100644
+--- a/btif/src/btif_pan.c
++++ b/btif/src/btif_pan.c
+@@ -288,7 +288,7 @@ static int tap_if_up(const char *devname, BD_ADDR addr)
+     //set mac addr
+     memset(&ifr, 0, sizeof(ifr));
+     strncpy(ifr.ifr_name, devname, IFNAMSIZ - 1);
+-    err = ioctl(sk, SIOCGIFHWADDR, &ifr);
++    err = TEMP_FAILURE_RETRY(ioctl(sk, SIOCGIFHWADDR, &ifr));
+     if(err < 0)
+     {
+         BTIF_TRACE_ERROR2("Could not get network hardware for interface:%s, errno:%s", devname, strerror(errno));
+@@ -304,7 +304,7 @@ static int tap_if_up(const char *devname, BD_ADDR addr)
+     /*         ifr.ifr_hwaddr.sa_data[0], ifr.ifr_hwaddr.sa_data[1], ifr.ifr_hwaddr.sa_data[2], */
+     /*         ifr.ifr_hwaddr.sa_data[3], ifr.ifr_hwaddr.sa_data[4], ifr.ifr_hwaddr.sa_data[5]); */
+ 
+-    err = ioctl(sk, SIOCSIFHWADDR, (caddr_t)&ifr);
++    err = TEMP_FAILURE_RETRY(ioctl(sk, SIOCSIFHWADDR, (caddr_t)&ifr));
+ 
+     if (err < 0) {
+         BTIF_TRACE_ERROR2("Could not set bt address for interface:%s, errno:%s", devname, strerror(errno));
+@@ -319,7 +319,7 @@ static int tap_if_up(const char *devname, BD_ADDR addr)
+     ifr.ifr_flags |= IFF_UP;
+     ifr.ifr_flags |= IFF_MULTICAST;
+ 
+-    err = ioctl(sk, SIOCSIFFLAGS, (caddr_t) &ifr);
++    err = TEMP_FAILURE_RETRY(ioctl(sk, SIOCSIFFLAGS, (caddr_t) &ifr));
+ 
+ 
+     if (err < 0) {
+@@ -344,7 +344,7 @@ static int tap_if_down(const char *devname)
+ 
+     ifr.ifr_flags &= ~IFF_UP;
+ 
+-    err = ioctl(sk, SIOCSIFFLAGS, (caddr_t) &ifr);
++    err = TEMP_FAILURE_RETRY(ioctl(sk, SIOCSIFFLAGS, (caddr_t) &ifr));
+ 
+     close(sk);
+ 
+@@ -359,7 +359,7 @@ int btpan_tap_open()
+     /* open the clone device */
+ 
+     //system("insmod /system/lib/modules/tun.ko");
+-    if( (fd = open(clonedev, O_RDWR)) < 0 ) {
++    if( (fd = TEMP_FAILURE_RETRY(open(clonedev, O_RDWR))) < 0 ) {
+ 
+         BTIF_TRACE_DEBUG2("could not open %s, err:%d", clonedev, errno);
+         return fd;
+@@ -371,7 +371,7 @@ int btpan_tap_open()
+     strncpy(ifr.ifr_name, TAP_IF_NAME, IFNAMSIZ);
+ 
+     /* try to create the device */
+-    if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 )//|| tap_setup_ip(TAP_IF_NAME) == FALSE)
++    if( (err = TEMP_FAILURE_RETRY(ioctl(fd, TUNSETIFF, (void *) &ifr))) < 0 )//|| tap_setup_ip(TAP_IF_NAME) == FALSE)
+     {
+         BTIF_TRACE_DEBUG2("ioctl error:%d, errno:%s", err, strerror(errno));
+         close(fd);
+@@ -410,7 +410,7 @@ int btpan_tap_send(int tap_fd, const BD_ADDR src, const BD_ADDR dst, UINT16 prot
+         /* Send data to network interface */
+         //btnet_send(btpan_cb.conn[i].sock.sock, &buffer, (len + sizeof(tETH_HDR)));
+         //dump_bin("packet to network", packet, len + sizeof(tETH_HDR));
+-        int ret = write(tap_fd, packet, len + sizeof(tETH_HDR));
++        int ret = TEMP_FAILURE_RETRY(write(tap_fd, packet, len + sizeof(tETH_HDR)));
+         BTIF_TRACE_DEBUG1("ret:%d", ret);
+         return ret;
+     }
+@@ -613,7 +613,7 @@ static void btpan_tap_fd_signaled(int fd, int type, int flags, uint32_t user_id)
+     else if(flags & SOCK_THREAD_FD_RD)
+     {
+         /* debug("tab fd read trigged,  data"); */
+-        int size = read(fd, packet, MAX_PACKET_SIZE);
++        int size = TEMP_FAILURE_RETRY(read(fd, packet, MAX_PACKET_SIZE));
+         /* debug("tap fd read trigged, read size:%d", size); */
+         memcpy(&eth_hdr, &packet, sizeof(tETH_HDR));
+         /* debug("eth src = %02x:%02x:%02x:%02x:%02x:%02x", */
+diff --git a/btif/src/btif_rc.c b/btif/src/btif_rc.c
+index d4ac0f1..ba8abfc 100755
+--- a/btif/src/btif_rc.c
++++ b/btif/src/btif_rc.c
+@@ -233,7 +233,7 @@ int send_event (int fd, uint16_t type, uint16_t code, int32_t value)
+     event.code  = code;
+     event.value = value;
+ 
+-    return write(fd, &event, sizeof(event));
++    return TEMP_FAILURE_RETRY(write(fd, &event, sizeof(event)));
+ }
+ 
+ void send_key (int fd, uint16_t key, int pressed)
+@@ -272,7 +272,7 @@ int uinput_create(char *name)
+ 
+     for(x=0; x < MAX_UINPUT_PATHS; x++)
+     {
+-        fd = open(uinput_dev_path[x], O_RDWR);
++        fd = TEMP_FAILURE_RETRY(open(uinput_dev_path[x], O_RDWR));
+         if (fd < 0)
+             continue;
+         break;
+@@ -290,23 +290,23 @@ int uinput_create(char *name)
+     dev.id.product = 0x0000;
+     dev.id.version = 0x0000;
+ 
+-    if (write(fd, &dev, sizeof(dev)) < 0) {
++    if (TEMP_FAILURE_RETRY(write(fd, &dev, sizeof(dev))) < 0) {
+         BTIF_TRACE_ERROR1("%s Unable to write device information", __FUNCTION__);
+         close(fd);
+         return -1;
+     }
+ 
+-    ioctl(fd, UI_SET_EVBIT, EV_KEY);
+-    ioctl(fd, UI_SET_EVBIT, EV_REL);
+-    ioctl(fd, UI_SET_EVBIT, EV_SYN);
++    TEMP_FAILURE_RETRY(ioctl(fd, UI_SET_EVBIT, EV_KEY));
++    TEMP_FAILURE_RETRY(ioctl(fd, UI_SET_EVBIT, EV_REL));
++    TEMP_FAILURE_RETRY(ioctl(fd, UI_SET_EVBIT, EV_SYN));
+ 
+     for (x = 0; key_map[x].name != NULL; x++)
+-        ioctl(fd, UI_SET_KEYBIT, key_map[x].mapped_id);
++        TEMP_FAILURE_RETRY(ioctl(fd, UI_SET_KEYBIT, key_map[x].mapped_id));
+ 
+     for(x = 0; x < KEY_MAX; x++)
+-        ioctl(fd, UI_SET_KEYBIT, x);
++        TEMP_FAILURE_RETRY(ioctl(fd, UI_SET_KEYBIT, x));
+ 
+-    if (ioctl(fd, UI_DEV_CREATE, NULL) < 0) {
++    if (TEMP_FAILURE_RETRY(ioctl(fd, UI_DEV_CREATE, NULL)) < 0) {
+         BTIF_TRACE_ERROR1("%s Unable to create uinput device", __FUNCTION__);
+         close(fd);
+         return -1;
+@@ -334,7 +334,7 @@ void close_uinput (void)
+ {
+     BTIF_TRACE_DEBUG1("%s", __FUNCTION__);
+     if (uinput_fd > 0) {
+-        ioctl(uinput_fd, UI_DEV_DESTROY);
++        TEMP_FAILURE_RETRY(ioctl(uinput_fd, UI_DEV_DESTROY));
+ 
+         close(uinput_fd);
+         uinput_fd = -1;
+diff --git a/btif/src/btif_sock_rfc.c b/btif/src/btif_sock_rfc.c
+index cdc51a9..d25f244 100644
+--- a/btif/src/btif_sock_rfc.c
++++ b/btif/src/btif_sock_rfc.c
+@@ -819,7 +819,7 @@ static int send_data_to_app(int fd, BT_HDR *p_buf)
+ {
+     if(p_buf->len == 0)
+         return SENT_ALL;
+-    int sent = send(fd, (UINT8 *)(p_buf + 1) + p_buf->offset,  p_buf->len, MSG_DONTWAIT);
++    int sent = TEMP_FAILURE_RETRY(send(fd, (UINT8 *)(p_buf + 1) + p_buf->offset,  p_buf->len, MSG_DONTWAIT));
+     if(sent == p_buf->len)
+         return SENT_ALL;
+ 
+@@ -891,7 +891,7 @@ void btsock_rfc_signaled(int fd, int flags, uint32_t user_id)
+                     int size = 0;
+                     //make sure there's data pending in case the peer closed the socket
+                     if(!(flags & SOCK_THREAD_FD_EXCEPTION) ||
+-                                (ioctl(rs->fd, FIONREAD, &size) == 0 && size))
++                                (TEMP_FAILURE_RETRY(ioctl(rs->fd, FIONREAD, &size)) == 0 && size))
+                         BTA_JvRfcommWrite(rs->rfc_handle, (UINT32)rs->id);
+                 }
+                 else
+@@ -916,7 +916,7 @@ void btsock_rfc_signaled(int fd, int flags, uint32_t user_id)
+         if(need_close || (flags & SOCK_THREAD_FD_EXCEPTION))
+         {
+             int size = 0;
+-            if(need_close || ioctl(rs->fd, FIONREAD, &size) != 0 || size == 0 )
++            if(need_close || TEMP_FAILURE_RETRY(ioctl(rs->fd, FIONREAD, &size)) != 0 || size == 0 )
+             {
+                 //cleanup when no data pending
+                 APPL_TRACE_DEBUG3("SOCK_THREAD_FD_EXCEPTION, cleanup, flags:%x, need_close:%d, pending size:%d",
+@@ -976,7 +976,7 @@ int bta_co_rfc_data_outgoing_size(void *user_data, int *size)
+     rfc_slot_t* rs = find_rfc_slot_by_id(id);
+     if(rs)
+     {
+-        if(ioctl(rs->fd, FIONREAD, size) == 0)
++        if(TEMP_FAILURE_RETRY(ioctl(rs->fd, FIONREAD, size)) == 0)
+         {
+             APPL_TRACE_DEBUG2("ioctl read avaiable size:%d, fd:%d", *size, rs->fd);
+             ret = TRUE;
+@@ -999,7 +999,7 @@ int bta_co_rfc_data_outgoing(void *user_data, UINT8* buf, UINT16 size)
+     rfc_slot_t* rs = find_rfc_slot_by_id(id);
+     if(rs)
+     {
+-        int received = recv(rs->fd, buf, size, 0);
++        int received = TEMP_FAILURE_RETRY(recv(rs->fd, buf, size, 0));
+         if(received == size)
+             ret = TRUE;
+         else
+diff --git a/btif/src/btif_sock_thread.c b/btif/src/btif_sock_thread.c
+index 475b8de..22fe1ec 100644
+--- a/btif/src/btif_sock_thread.c
++++ b/btif/src/btif_sock_thread.c
+@@ -115,12 +115,12 @@ static pthread_mutex_t thread_slot_lock;
+ static inline void set_socket_blocking(int s, int blocking)
+ {
+     int opts;
+-    opts = fcntl(s, F_GETFL);
++    opts = TEMP_FAILURE_RETRY(fcntl(s, F_GETFL));
+     if (opts<0) APPL_TRACE_ERROR1("set blocking (%s)", strerror(errno));
+     if(blocking)
+         opts &= ~O_NONBLOCK;
+     else opts |= O_NONBLOCK;
+-    fcntl(s, F_SETFL, opts);
++    TEMP_FAILURE_RETRY(fcntl(s, F_SETFL, opts));
+ }
+ 
+ static inline int create_server_socket(const char* name)
+@@ -157,7 +157,7 @@ static inline int accept_server_socket(int s)
+ {
+     struct sockaddr_un client_address;
+     socklen_t clen;
+-    int fd = accept(s, (struct sockaddr*)&client_address, &clen);
++    int fd = TEMP_FAILURE_RETRY(accept(s, (struct sockaddr*)&client_address, &clen));
+     APPL_TRACE_DEBUG2("accepted fd:%d for server fd:%d", fd, s);
+     return fd;
+ }
+@@ -307,7 +307,7 @@ int btsock_thread_add_fd(int h, int fd, int type, int flags, uint32_t user_id)
+     }
+     sock_cmd_t cmd = {CMD_ADD_FD, fd, type, flags, user_id};
+     APPL_TRACE_DEBUG2("adding fd:%d, flags:0x%x", fd, flags);
+-    return send(ts[h].cmd_fdw, &cmd, sizeof(cmd), 0) == sizeof(cmd);
++    return TEMP_FAILURE_RETRY(send(ts[h].cmd_fdw, &cmd, sizeof(cmd), 0)) == sizeof(cmd);
+ }
+ int btsock_thread_post_cmd(int h, int type, const unsigned char* data, int size, uint32_t user_id)
+ {
+@@ -340,7 +340,7 @@ int btsock_thread_post_cmd(int h, int type, const unsigned char* data, int size,
+             return FALSE;
+         }
+     }
+-    return send(ts[h].cmd_fdw, cmd_send, size_send, 0) == size_send;
++    return TEMP_FAILURE_RETRY(send(ts[h].cmd_fdw, cmd_send, size_send, 0)) == size_send;
+ }
+ int btsock_thread_wakeup(int h)
+ {
+@@ -355,7 +355,7 @@ int btsock_thread_wakeup(int h)
+         return FALSE;
+     }
+     sock_cmd_t cmd = {CMD_WAKEUP, 0, 0, 0, 0};
+-    return send(ts[h].cmd_fdw, &cmd, sizeof(cmd), 0) == sizeof(cmd);
++    return TEMP_FAILURE_RETRY(send(ts[h].cmd_fdw, &cmd, sizeof(cmd), 0)) == sizeof(cmd);
+ }
+ int btsock_thread_exit(int h)
+ {
+@@ -370,7 +370,7 @@ int btsock_thread_exit(int h)
+         return FALSE;
+     }
+     sock_cmd_t cmd = {CMD_EXIT, 0, 0, 0, 0};
+-    if(send(ts[h].cmd_fdw, &cmd, sizeof(cmd), 0) == sizeof(cmd))
++    if(TEMP_FAILURE_RETRY(send(ts[h].cmd_fdw, &cmd, sizeof(cmd), 0)) == sizeof(cmd))
+     {
+         pthread_join(ts[h].thread_id, 0);
+         lock_slot(&thread_slot_lock);
+@@ -465,7 +465,7 @@ static int process_cmd_sock(int h)
+ {
+     sock_cmd_t cmd = {-1, 0, 0, 0, 0};
+     int fd = ts[h].cmd_fdr;
+-    if(recv(fd, &cmd, sizeof(cmd), MSG_WAITALL) != sizeof(cmd))
++    if(TEMP_FAILURE_RETRY(recv(fd, &cmd, sizeof(cmd), MSG_WAITALL)) != sizeof(cmd))
+     {
+         APPL_TRACE_ERROR1("recv cmd errno:%d", errno);
+         return FALSE;
+@@ -560,7 +560,7 @@ static void *sock_poll_thread(void *arg)
+     for(;;)
+     {
+         prepare_poll_fds(h, pfds);
+-        int ret = poll(pfds, ts[h].poll_count, -1);
++        int ret = TEMP_FAILURE_RETRY(poll(pfds, ts[h].poll_count, -1));
+         if(ret == -1)
+         {
+             APPL_TRACE_ERROR2("poll ret -1, exit the thread, errno:%d, err:%s", errno, strerror(errno));
+diff --git a/btif/src/btif_sock_util.c b/btif/src/btif_sock_util.c
+index 5b5de69..f9872b6 100644
+--- a/btif/src/btif_sock_util.c
++++ b/btif/src/btif_sock_util.c
+@@ -75,7 +75,7 @@ int sock_send_all(int sock_fd, const uint8_t* buf, int len)
+     int ret;
+     while(s)
+     {
+-        do ret = send(sock_fd, buf, s, 0);
++        do ret = TEMP_FAILURE_RETRY(send(sock_fd, buf, s, 0));
+         while(ret < 0 && errno == EINTR);
+         if(ret <= 0)
+         {
+@@ -93,7 +93,7 @@ int sock_recv_all(int sock_fd, uint8_t* buf, int len)
+     int ret = -1;
+     while(r)
+     {
+-        do ret = recv(sock_fd, buf, r, MSG_WAITALL);
++        do ret = TEMP_FAILURE_RETRY(recv(sock_fd, buf, r, MSG_WAITALL));
+         while(ret < 0 && errno == EINTR);
+         if(ret <= 0)
+         {
+@@ -141,7 +141,7 @@ int sock_send_fd(int sock_fd, const uint8_t* buf, int len, int send_fd)
+         msg.msg_iovlen = 1;
+ 
+         do {
+-            ret = sendmsg(sock_fd, &msg, MSG_NOSIGNAL);
++            ret = TEMP_FAILURE_RETRY(sendmsg(sock_fd, &msg, MSG_NOSIGNAL));
+         } while (ret < 0 && errno == EINTR);
+ 
+         if (ret < 0) {
+diff --git a/gki/ulinux/gki_ulinux.c b/gki/ulinux/gki_ulinux.c
+index 57ff7bb..6816aff 100755
+--- a/gki/ulinux/gki_ulinux.c
++++ b/gki/ulinux/gki_ulinux.c
+@@ -370,7 +370,7 @@ void GKI_destroy_task(UINT8 task_id)
+         i = 0;
+ 
+         while ((gki_cb.com.OSWaitEvt[task_id] != 0) && (++i < 10))
+-            usleep(100 * 1000);
++            TEMP_FAILURE_RETRY(usleep(100 * 1000));
+ #else
+         result = pthread_join( gki_cb.os.thread_id[task_id], NULL );
+         if ( result < 0 )
+@@ -491,7 +491,7 @@ void GKI_shutdown(void)
+             i = 0;
+ 
+             while ((gki_cb.com.OSWaitEvt[task_id - 1] != 0) && (++i < 10))
+-                usleep(100 * 1000);
++                TEMP_FAILURE_RETRY(usleep(100 * 1000));
+ #else
+             result = pthread_join( gki_cb.os.thread_id[task_id-1], NULL );
+ 
+@@ -701,7 +701,7 @@ void* timer_thread(void *arg)
+         do
+         {
+             /* [u]sleep can't be used because it uses SIGALRM */
+-            err = nanosleep(&timeout, &timeout);
++            err = TEMP_FAILURE_RETRY(nanosleep(&timeout, &timeout));
+         } while (err < 0 && errno == EINTR);
+ 
+         /* Increment the GKI time value by one tick and update internal timers */
+@@ -826,7 +826,7 @@ void GKI_run (void *p_task_id)
+             /* [u]sleep can't be used because it uses SIGALRM */
+             do
+             {
+-                err = nanosleep(&delay, &delay);
++                err = TEMP_FAILURE_RETRY(nanosleep(&delay, &delay));
+             } while (err < 0 && errno == EINTR);
+ 
+             /* the unit should be alsways 1 (1 tick). only if you vary for some reason heart beat tick
+@@ -1017,7 +1017,7 @@ void GKI_delay (UINT32 timeout)
+     /* [u]sleep can't be used because it uses SIGALRM */
+ 
+     do {
+-        err = nanosleep(&delay, &delay);
++        err = TEMP_FAILURE_RETRY(nanosleep(&delay, &delay));
+     } while (err < 0 && errno ==EINTR);
+ 
+     /* Check if task was killed while sleeping */
+diff --git a/hci/src/btsnoop.c b/hci/src/btsnoop.c
+index 4807df8..e8a5f67 100755
+--- a/hci/src/btsnoop.c
++++ b/hci/src/btsnoop.c
+@@ -209,9 +209,9 @@ static int btsnoop_log_open(char *btsnoop_logfile)
+     /* write the BT snoop header */
+     if ((btsnoop_logfile != NULL) && (strlen(btsnoop_logfile) != 0))
+     {
+-        hci_btsnoop_fd = open(btsnoop_logfile, \
++        hci_btsnoop_fd = TEMP_FAILURE_RETRY(open(btsnoop_logfile, \
+                               O_WRONLY|O_CREAT|O_TRUNC, \
+-                              S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
++                              S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH));
+         if (hci_btsnoop_fd == -1)
+         {
+             perror("open");
+@@ -219,7 +219,7 @@ static int btsnoop_log_open(char *btsnoop_logfile)
+             hci_btsnoop_fd = -1;
+             return 0;
+         }
+-        write(hci_btsnoop_fd, "btsnoop\0\0\0\0\1\0\0\x3\xea", 16);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, "btsnoop\0\0\0\0\1\0\0\x3\xea", 16));
+         return 1;
+     }
+ #endif
+@@ -273,24 +273,24 @@ void btsnoop_hci_cmd(uint8_t *p)
+ 
+         /* store the length in both original and included fields */
+         value = l_to_be(p[2] + 4);
+-        write(hci_btsnoop_fd, &value, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* flags: command sent from the host */
+         value = l_to_be(2);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* drops: none */
+         value = 0;
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* time */
+         gettimeofday(&tv, NULL);
+         tv_to_btsnoop_ts(&value, &value_hi, &tv);
+         value_hi = l_to_be(value_hi);
+         value = l_to_be(value);
+-        write(hci_btsnoop_fd, &value_hi, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value_hi, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* data */
+-        write(hci_btsnoop_fd, "\x1", 1);
+-        write(hci_btsnoop_fd, p, p[2] + 3);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, "\x1", 1));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, p, p[2] + 3));
+ 
+         /* since these display functions are called from different contexts */
+         utils_unlock();
+@@ -319,24 +319,24 @@ void btsnoop_hci_evt(uint8_t *p)
+ 
+         /* store the length in both original and included fields */
+         value = l_to_be(p[1] + 3);
+-        write(hci_btsnoop_fd, &value, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* flags: event received in the host */
+         value = l_to_be(3);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* drops: none */
+         value = 0;
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* time */
+         gettimeofday(&tv, NULL);
+         tv_to_btsnoop_ts(&value, &value_hi, &tv);
+         value_hi = l_to_be(value_hi);
+         value = l_to_be(value);
+-        write(hci_btsnoop_fd, &value_hi, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value_hi, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* data */
+-        write(hci_btsnoop_fd, "\x4", 1);
+-        write(hci_btsnoop_fd, p, p[1] + 2);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, "\x4", 1));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, p, p[1] + 2));
+ 
+         /* since these display functions are called from different contexts */
+         utils_unlock();
+@@ -365,24 +365,24 @@ void btsnoop_sco_data(uint8_t *p, uint8_t is_rcvd)
+ 
+         /* store the length in both original and included fields */
+         value = l_to_be(p[2] + 4);
+-        write(hci_btsnoop_fd, &value, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* flags: data can be sent or received */
+         value = l_to_be(is_rcvd?1:0);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* drops: none */
+         value = 0;
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* time */
+         gettimeofday(&tv, NULL);
+         tv_to_btsnoop_ts(&value, &value_hi, &tv);
+         value_hi = l_to_be(value_hi);
+         value = l_to_be(value);
+-        write(hci_btsnoop_fd, &value_hi, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value_hi, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* data */
+-        write(hci_btsnoop_fd, "\x3", 1);
+-        write(hci_btsnoop_fd, p, p[2] + 3);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, "\x3", 1));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, p, p[2] + 3));
+ 
+         /* since these display functions are called from different contexts */
+         utils_unlock();
+@@ -410,24 +410,24 @@ void btsnoop_acl_data(uint8_t *p, uint8_t is_rcvd)
+ 
+         /* store the length in both original and included fields */
+         value = l_to_be((p[3]<<8) + p[2] + 5);
+-        write(hci_btsnoop_fd, &value, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* flags: data can be sent or received */
+         value = l_to_be(is_rcvd?1:0);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* drops: none */
+         value = 0;
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* time */
+         gettimeofday(&tv, NULL);
+         tv_to_btsnoop_ts(&value, &value_hi, &tv);
+         value_hi = l_to_be(value_hi);
+         value = l_to_be(value);
+-        write(hci_btsnoop_fd, &value_hi, 4);
+-        write(hci_btsnoop_fd, &value, 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value_hi, 4));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, &value, 4));
+         /* data */
+-        write(hci_btsnoop_fd, "\x2", 1);
+-        write(hci_btsnoop_fd, p, (p[3]<<8) + p[2] + 4);
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, "\x2", 1));
++        TEMP_FAILURE_RETRY(write(hci_btsnoop_fd, p, (p[3]<<8) + p[2] + 4));
+ 
+         /* since these display functions are called from different contexts */
+         utils_unlock();
+@@ -493,7 +493,7 @@ static int ext_parser_accept(int port)
+ 
+     clilen = sizeof(struct sockaddr_in);
+ 
+-    s = accept(s_listen, (struct sockaddr *) &cliaddr, &clilen);
++    s = TEMP_FAILURE_RETRY(accept(s_listen, (struct sockaddr *) &cliaddr, &clilen));
+ 
+     if (s < 0)
+ {
+@@ -516,7 +516,7 @@ static int send_ext_parser(char *p, int len)
+ 
+     SNOOPDBG("write %d to snoop socket\n", len);
+ 
+-    n = write(ext_parser_fd, p, len);
++    n = TEMP_FAILURE_RETRY(write(ext_parser_fd, p, len));
+ 
+     if (n<=0)
+     {
+diff --git a/hci/src/userial.c b/hci/src/userial.c
+index 8e5bf6c..7488dd7 100644
+--- a/hci/src/userial.c
++++ b/hci/src/userial.c
+@@ -140,12 +140,12 @@ static inline int create_signal_fds(fd_set* set)
+ }
+ static inline int send_wakeup_signal(char sig_cmd)
+ {
+-    return send(signal_fds[1], &sig_cmd, sizeof(sig_cmd), 0);
++    return TEMP_FAILURE_RETRY(send(signal_fds[1], &sig_cmd, sizeof(sig_cmd), 0));
+ }
+ static inline char reset_signal()
+ {
+     char sig_recv = -1;
+-    recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL);
++    TEMP_FAILURE_RETRY(recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL));
+     return sig_recv;
+ }
+ static inline int is_signaled(fd_set* set)
+@@ -184,7 +184,7 @@ static int select_read(int fd, uint8_t *pbuf, int len)
+         fd_max = fd_max > fd ? fd_max : fd;
+ 
+         /* Do the select */
+-        n = select(fd_max+1, &input, NULL, NULL, NULL);
++        n = TEMP_FAILURE_RETRY(select(fd_max+1, &input, NULL, NULL, NULL));
+         if(is_signaled(&input))
+         {
+             reason = reset_signal();
+@@ -210,7 +210,7 @@ static int select_read(int fd, uint8_t *pbuf, int len)
+             /* We might have input */
+             if (FD_ISSET(fd, &input))
+             {
+-                ret = read(fd, pbuf, (size_t)len);
++                ret = TEMP_FAILURE_RETRY(read(fd, pbuf, (size_t)len));
+                 if (0 == ret)
+                     ALOGW( "read() returned 0!" );
+ 
+@@ -488,7 +488,7 @@ uint16_t userial_write(uint16_t msg_id, uint8_t *p_data, uint16_t len)
+ #if defined(ENABLE_USERIAL_TIMING_LOGS) && (ENABLE_USERIAL_TIMING_LOGS==TRUE)
+         log_userial_tx_timing(len);
+ #endif
+-        ret = write(userial_cb.fd, p_data+total, len);
++        ret = TEMP_FAILURE_RETRY(write(userial_cb.fd, p_data+total, len));
+         total += ret;
+         len -= ret;
+     }
+diff --git a/hci/src/userial_mct.c b/hci/src/userial_mct.c
+index 3c59384..04e5efe 100644
+--- a/hci/src/userial_mct.c
++++ b/hci/src/userial_mct.c
+@@ -116,12 +116,12 @@ static inline int create_signal_fds(fd_set* set)
+ }
+ static inline int send_wakeup_signal(char sig_cmd)
+ {
+-    return send(signal_fds[1], &sig_cmd, sizeof(sig_cmd), 0);
++    return TEMP_FAILURE_RETRY(send(signal_fds[1], &sig_cmd, sizeof(sig_cmd), 0));
+ }
+ static inline char reset_signal()
+ {
+     char sig_recv = -1;
+-    recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL);
++    TEMP_FAILURE_RETRY(recv(signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL));
+     return sig_recv;
+ }
+ static inline int is_signaled(fd_set* set)
+@@ -167,7 +167,7 @@ static void *userial_read_thread(void *arg)
+ 
+         /* Do the select */
+         n = 0;
+-        n = select(fd_max+1, &input, NULL, NULL, NULL);
++        n = TEMP_FAILURE_RETRY(select(fd_max+1, &input, NULL, NULL, NULL));
+         if(is_signaled(&input))
+         {
+             reason = reset_signal();
+@@ -350,7 +350,7 @@ uint16_t  userial_read(uint16_t msg_id, uint8_t *p_buffer, uint16_t len)
+     int ret = -1;
+     int ch_idx = (msg_id == MSG_HC_TO_STACK_HCI_EVT) ? CH_EVT : CH_ACL_IN;
+ 
+-    ret = read(userial_cb.fd[ch_idx], p_buffer, (size_t)len);
++    ret = TEMP_FAILURE_RETRY(read(userial_cb.fd[ch_idx], p_buffer, (size_t)len));
+     if (ret <= 0)
+         ALOGW( "userial_read: read() returned %d!", ret);
+ 
+@@ -374,7 +374,7 @@ uint16_t userial_write(uint16_t msg_id, uint8_t *p_data, uint16_t len)
+ 
+     while(len != 0)
+     {
+-        ret = write(userial_cb.fd[ch_idx], p_data+total, len);
++        ret = TEMP_FAILURE_RETRY(write(userial_cb.fd[ch_idx], p_data+total, len));
+         total += ret;
+         len -= ret;
+     }
+diff --git a/hci/src/utils.c b/hci/src/utils.c
+index bfcf724..b803b90 100644
+--- a/hci/src/utils.c
++++ b/hci/src/utils.c
+@@ -27,6 +27,7 @@
+ #include <errno.h>
+ #include <pthread.h>
+ #include <time.h>
++#include <unistd.h>
+ #include "bt_hci_bdroid.h"
+ #include "utils.h"
+ 
+@@ -272,7 +273,7 @@ void utils_delay (uint32_t timeout)
+ 
+     /* [u]sleep can't be used because it uses SIGALRM */
+     do {
+-        err = nanosleep(&delay, &delay);
++        err = TEMP_FAILURE_RETRY(nanosleep(&delay, &delay));
+     } while (err < 0 && errno ==EINTR);
+ }
+ 
+diff --git a/main/bte_logmsg.c b/main/bte_logmsg.c
+index 6c9a5eb..e432800 100644
+--- a/main/bte_logmsg.c
++++ b/main/bte_logmsg.c
+@@ -265,8 +265,8 @@ LogMsg(UINT32 trace_set_mask, const char *fmt_str, ...)
+     LOGI0(bt_layer_tags[trace_layer], buffer);
+ #endif
+ #else
+-	write(2, buffer, strlen(buffer));
+-	write(2, "\n", 1);
++	TEMP_FAILURE_RETRY(write(2, buffer, strlen(buffer)));
++	TEMP_FAILURE_RETRY(write(2, "\n", 1));
+ #endif
+ }
+ 
+@@ -297,8 +297,8 @@ ScrLog(UINT32 trace_set_mask, const char *fmt_str, ...)
+ #if (defined(ANDROID_USE_LOGCAT) && (ANDROID_USE_LOGCAT==TRUE))
+     LOGI0(bt_layer_tags[trace_layer], buffer);
+ #else
+-	write(2, buffer, strlen(buffer));
+-	write(2, "\n", 1);
++	TEMP_FAILURE_RETRY(write(2, buffer, strlen(buffer)));
++	TEMP_FAILURE_RETRY(write(2, "\n", 1));
+ #endif
+ }
+ 
+diff --git a/stack/btu/btu_hcif.c b/stack/btu/btu_hcif.c
+index bd7c9ff..ed395fc 100644
+--- a/stack/btu/btu_hcif.c
++++ b/stack/btu/btu_hcif.c
+@@ -1658,7 +1658,7 @@ void btu_hcif_cmd_timeout (UINT8 controller_id)
+         BT_TRACE_1(TRACE_LAYER_HCI, TRACE_TYPE_ERROR,
+                   "Num consecutive HCI Cmd tout =%d Restarting BT process",num_hci_cmds_timed_out);
+ 
+-        usleep(10000); /* 10 milliseconds */
++        TEMP_FAILURE_RETRY(usleep(10000)); /* 10 milliseconds */
+         /* Killing the process to force a restart as part of fault tolerance */
+         kill(getpid(), SIGKILL);
+     }
+diff --git a/udrv/ulinux/uipc.c b/udrv/ulinux/uipc.c
+index 4e8a273..2f2d5d0 100644
+--- a/udrv/ulinux/uipc.c
++++ b/udrv/ulinux/uipc.c
+@@ -219,7 +219,7 @@ static int accept_server_socket(int sfd)
+     pfd.fd = sfd;
+     pfd.events = POLLIN;
+ 
+-    if (poll(&pfd, 1, 0) == 0)
++    if (TEMP_FAILURE_RETRY(poll(&pfd, 1, 0)) == 0)
+     {
+         BTIF_TRACE_EVENT0("accept poll timeout");
+         return -1;
+@@ -227,7 +227,7 @@ static int accept_server_socket(int sfd)
+ 
+     //BTIF_TRACE_EVENT1("poll revents 0x%x", pfd.revents);
+ 
+-    if ((fd = accept(sfd, (struct sockaddr *)&remote, &len)) == -1)
++    if ((fd = TEMP_FAILURE_RETRY(accept(sfd, (struct sockaddr *)&remote, &len))) == -1)
+     {
+          BTIF_TRACE_ERROR1("sock accept failed (%s)", strerror(errno));
+          return -1;
+@@ -363,7 +363,7 @@ static void uipc_check_interrupt_locked(void)
+     {
+         char sig_recv = 0;
+         //BTIF_TRACE_EVENT0("UIPC INTERRUPT");
+-        recv(uipc_main.signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL);
++        TEMP_FAILURE_RETRY(recv(uipc_main.signal_fds[0], &sig_recv, sizeof(sig_recv), MSG_WAITALL));
+     }
+ }
+ 
+@@ -371,7 +371,7 @@ static inline void uipc_wakeup_locked(void)
+ {
+     char sig_on = 1;
+     BTIF_TRACE_EVENT0("UIPC SEND WAKE UP");
+-    send(uipc_main.signal_fds[1], &sig_on, sizeof(sig_on), 0);
++    TEMP_FAILURE_RETRY(send(uipc_main.signal_fds[1], &sig_on, sizeof(sig_on), 0));
+ }
+ 
+ static int uipc_setup_server_locked(tUIPC_CH_ID ch_id, char *name, tUIPC_RCV_CBACK *cback)
+@@ -424,7 +424,7 @@ static void uipc_flush_ch_locked(tUIPC_CH_ID ch_id)
+ 
+     while (1)
+     {
+-        ret = poll(&pfd, 1, 1);
++        ret = TEMP_FAILURE_RETRY(poll(&pfd, 1, 1));
+         BTIF_TRACE_EVENT3("uipc_flush_ch_locked polling : fd %d, rxev %x, ret %d", pfd.fd, pfd.revents, ret);
+ 
+         if (pfd.revents | (POLLERR|POLLHUP))
+@@ -435,7 +435,7 @@ static void uipc_flush_ch_locked(tUIPC_CH_ID ch_id)
+             BTIF_TRACE_EVENT1("uipc_flush_ch_locked : error (%d)", ret);
+             return;
+         }
+-        read(pfd.fd, &buf, 1);
++        TEMP_FAILURE_RETRY(read(pfd.fd, &buf, 1));
+     }
+ }
+ 
+@@ -522,7 +522,7 @@ static void uipc_read_task(void *arg)
+     {
+         uipc_main.read_set = uipc_main.active_set;
+ 
+-        result = select(uipc_main.max_fd+1, &uipc_main.read_set, NULL, NULL, NULL);
++        result = TEMP_FAILURE_RETRY(select(uipc_main.max_fd+1, &uipc_main.read_set, NULL, NULL, NULL));
+ 
+         if (result == 0)
+         {
+@@ -728,7 +728,7 @@ UDRV_API BOOLEAN UIPC_Send(tUIPC_CH_ID ch_id, UINT16 msg_evt, UINT8 *p_buf,
+ 
+     UIPC_LOCK();
+ 
+-    if (write(uipc_main.ch[ch_id].fd, p_buf, msglen) < 0)
++    if (TEMP_FAILURE_RETRY(write(uipc_main.ch[ch_id].fd, p_buf, msglen)) < 0)
+     {
+         BTIF_TRACE_ERROR1("failed to write (%s)", strerror(errno));
+     }
+@@ -794,7 +794,7 @@ UDRV_API UINT32 UIPC_Read(tUIPC_CH_ID ch_id, UINT16 *p_msg_evt, UINT8 *p_buf, UI
+ 
+         /* make sure there is data prior to attempting read to avoid blocking
+            a read for more than poll timeout */
+-        if (poll(&pfd, 1, uipc_main.ch[ch_id].read_poll_tmo_ms) == 0)
++        if (TEMP_FAILURE_RETRY(poll(&pfd, 1, uipc_main.ch[ch_id].read_poll_tmo_ms)) == 0)
+         {
+             BTIF_TRACE_EVENT1("poll timeout (%d ms)", uipc_main.ch[ch_id].read_poll_tmo_ms);
+             return 0;
+@@ -811,7 +811,7 @@ UDRV_API UINT32 UIPC_Read(tUIPC_CH_ID ch_id, UINT16 *p_msg_evt, UINT8 *p_buf, UI
+             return 0;
+         }
+ 
+-        n = recv(fd, p_buf+n_read, len-n_read, 0);
++        n = TEMP_FAILURE_RETRY(recv(fd, p_buf+n_read, len-n_read, 0));
+ 
+         //BTIF_TRACE_EVENT1("read %d bytes", n);
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,179 @@
+From 39a045689e19380ebbacd89f69d82bf6675fe839 Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Thu, 6 Jul 2017 16:51:35 -0700
+Subject: [PATCH 12/15] Add missing packet length checks while parsing BNEP
+ control packets
+
+Bug: 63146237
+Test: External script
+Change-Id: Ie778f3c99df81c85ed988f3af89b4edbcc2eeb99
+Merged-In: Ie778f3c99df81c85ed988f3af89b4edbcc2eeb99
+(cherry picked from commit 7feaeb006941a1494d7cdc0a2ffc4bb1004b38b4)
+(cherry picked from commit 6d415839da570b94b0763f6ab444f0dd1321fc33)
+CVE-2017-0782
+---
+ stack/bnep/bnep_utils.c | 82 +++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 62 insertions(+), 20 deletions(-)
+
+diff --git a/stack/bnep/bnep_utils.c b/stack/bnep/bnep_utils.c
+index e06ebb8..f051274 100644
+--- a/stack/bnep/bnep_utils.c
++++ b/stack/bnep/bnep_utils.c
+@@ -790,24 +790,45 @@ void bnep_process_setup_conn_responce (tBNEP_CONN *p_bcb, UINT8 *p_setup)
+ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len, BOOLEAN is_ext)
+ {
+     UINT8       control_type;
+-    BOOLEAN     bad_pkt = FALSE;
+     UINT16      len, ext_len = 0;
+ 
++    if (p == NULL || rem_len == NULL)
++    {
++        if (rem_len != NULL) *rem_len = 0;
++        BNEP_TRACE_DEBUG3("%s: invalid packet: p = %p rem_len = %p", __func__, p,
++                         rem_len);
++        return NULL;
++    }
++    uint16_t rem_len_orig = *rem_len;
++
+     if (is_ext)
+     {
++        if (*rem_len < 1) goto bad_packet_length;
+         ext_len = *p++;
+         *rem_len = *rem_len - 1;
+     }
+ 
++    if (*rem_len < 1) goto bad_packet_length;
+     control_type = *p++;
+     *rem_len = *rem_len - 1;
+ 
+-    BNEP_TRACE_EVENT3 ("BNEP processing control packet rem_len %d, is_ext %d, ctrl_type %d", *rem_len, is_ext, control_type);
++    BNEP_TRACE_EVENT4(
++        "%s: BNEP processing control packet rem_len %d, is_ext %d, ctrl_type %d",
++        __func__, *rem_len, is_ext, control_type);
+ 
+     switch (control_type)
+     {
+     case BNEP_CONTROL_COMMAND_NOT_UNDERSTOOD:
+-        BNEP_TRACE_ERROR1 ("BNEP Received Cmd not understood for ctl pkt type: %d", *p);
++        if (*rem_len < 1)
++        {
++            BNEP_TRACE_ERROR1(
++                "%s: Received BNEP_CONTROL_COMMAND_NOT_UNDERSTOOD with bad length",
++                __func__);
++            goto bad_packet_length;
++        }
++        BNEP_TRACE_ERROR2(
++              "%s: Received BNEP_CONTROL_COMMAND_NOT_UNDERSTOOD for pkt type: %d",
++              __func__, *p);
+         p++;
+         *rem_len = *rem_len - 1;
+         break;
+@@ -816,9 +837,10 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+         len = *p++;
+         if (*rem_len < ((2 * len) + 1))
+         {
+-            bad_pkt = TRUE;
+-            BNEP_TRACE_ERROR0 ("BNEP Received Setup message with bad length");
+-            break;
++            BNEP_TRACE_ERROR1(
++                "%s: Received BNEP_SETUP_CONNECTION_REQUEST_MSG with bad length",
++                __func__);
++            goto bad_packet_length;
+         }
+         if (!is_ext)
+             bnep_process_setup_conn_req (p_bcb, p, (UINT8)len);
+@@ -837,9 +859,10 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+         BE_STREAM_TO_UINT16 (len, p);
+         if (*rem_len < (len + 2))
+         {
+-            bad_pkt = TRUE;
+-            BNEP_TRACE_ERROR0 ("BNEP Received Filter set message with bad length");
+-            break;
++            BNEP_TRACE_ERROR1(
++                "%s: Received BNEP_FILTER_NET_TYPE_SET_MSG with bad length",
++                __func__);
++            goto bad_packet_length;
+         }
+         bnepu_process_peer_filter_set (p_bcb, p, len);
+         p += len;
+@@ -847,6 +870,13 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+         break;
+ 
+     case BNEP_FILTER_NET_TYPE_RESPONSE_MSG:
++        if (*rem_len < 2)
++        {
++            BNEP_TRACE_ERROR1(
++                "%s: Received BNEP_FILTER_NET_TYPE_RESPONSE_MSG with bad length",
++                __func__);
++            goto bad_packet_length;
++        }
+         bnepu_process_peer_filter_rsp (p_bcb, p);
+         p += 2;
+         *rem_len = *rem_len - 2;
+@@ -856,9 +886,10 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+         BE_STREAM_TO_UINT16 (len, p);
+         if (*rem_len < (len + 2))
+         {
+-            bad_pkt = TRUE;
+-            BNEP_TRACE_ERROR0 ("BNEP Received Multicast Filter Set message with bad length");
+-            break;
++            BNEP_TRACE_ERROR1(
++                "%s: Received BNEP_FILTER_MULTI_ADDR_SET_MSG with bad length",
++                __func__);
++            goto bad_packet_length;
+         }
+         bnepu_process_peer_multicast_filter_set (p_bcb, p, len);
+         p += len;
+@@ -866,30 +897,41 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+         break;
+ 
+     case BNEP_FILTER_MULTI_ADDR_RESPONSE_MSG:
++        if (*rem_len < 2)
++        {
++            BNEP_TRACE_ERROR1(
++                "%s: Received BNEP_FILTER_MULTI_ADDR_RESPONSE_MSG with bad length",
++                __func__);
++            goto bad_packet_length;
++        }
+         bnepu_process_multicast_filter_rsp (p_bcb, p);
+         p += 2;
+         *rem_len = *rem_len - 2;
+         break;
+ 
+     default :
+-        BNEP_TRACE_ERROR1 ("BNEP - bad ctl pkt type: %d", control_type);
++        BNEP_TRACE_ERROR2("%s: BNEP - bad ctl pkt type: %d", __func__,
++                         control_type);
+         bnep_send_command_not_understood (p_bcb, control_type);
+         if (is_ext)
+         {
++            if (*rem_len < (ext_len - 1))
++            {
++                goto bad_packet_length;
++            }
+             p += (ext_len - 1);
+             *rem_len -= (ext_len - 1);
+         }
+         break;
+     }
+ 
+-    if (bad_pkt)
+-    {
+-        BNEP_TRACE_ERROR1 ("BNEP - bad ctl pkt length: %d", *rem_len);
+-        *rem_len = 0;
+-        return NULL;
+-    }
+-
+     return p;
++
++bad_packet_length:
++    BNEP_TRACE_ERROR3("%s: bad control packet length: original=%d remaining=%d",
++                     __func__, rem_len_orig, *rem_len);
++    *rem_len = 0;
++    return NULL;
+ }
+ 
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,140 @@
+From bb50d033abdb2eccf8e68c00a7d983e0a7f7385a Mon Sep 17 00:00:00 2001
+From: Andre Eisenbach <eisenbach@google.com>
+Date: Tue, 23 Feb 2016 01:38:10 -0800
+Subject: [PATCH 03/15] DO NOT MERGE Remove Porsche car-kit pairing workaround
+
+Bug: 26551752
+Change-Id: I14c5e3fcda0849874c8a94e48aeb7d09585617e1
+(cherry picked from commit 7c883543a607241ecbec960e904741a9840dc5cb)
+---
+ include/bt_target.h |  4 ----
+ stack/btm/btm_int.h |  5 -----
+ stack/btm/btm_sec.c | 45 ++-------------------------------------------
+ 3 files changed, 2 insertions(+), 52 deletions(-)
+
+diff --git a/include/bt_target.h b/include/bt_target.h
+index a106773..c70290c 100644
+--- a/include/bt_target.h
++++ b/include/bt_target.h
+@@ -339,10 +339,6 @@
+ #define BTA_AV_RET_TOUT 15
+ #endif
+ 
+-#ifndef PORCHE_PAIRING_CONFLICT
+-#define PORCHE_PAIRING_CONFLICT  TRUE
+-#endif
+-
+ #ifndef BTA_AV_CO_CP_SCMS_T
+ #define BTA_AV_CO_CP_SCMS_T  FALSE
+ #endif
+diff --git a/stack/btm/btm_int.h b/stack/btm/btm_int.h
+index e449d48..c0f28df 100644
+--- a/stack/btm/btm_int.h
++++ b/stack/btm/btm_int.h
+@@ -862,11 +862,6 @@ typedef struct
+     BOOLEAN                  security_mode_changed;  /* mode changed during bonding */
+     BOOLEAN                  pin_type_changed;       /* pin type changed during bonding */
+     BOOLEAN                  sec_req_pending;       /*   TRUE if a request is pending */
+-// btla-specific ++
+-#ifdef PORCHE_PAIRING_CONFLICT
+-    UINT8                    pin_code_len_saved;     /* for legacy devices */
+-#endif
+-// btla-specific --
+ 
+     UINT8                    pin_code_len;  /* for legacy devices */
+     PIN_CODE                 pin_code;      /* for legacy devices */
+diff --git a/stack/btm/btm_sec.c b/stack/btm/btm_sec.c
+index 1e15d78..c630b4f 100644
+--- a/stack/btm/btm_sec.c
++++ b/stack/btm/btm_sec.c
+@@ -958,13 +958,6 @@ void BTM_PINCodeReply (BD_ADDR bd_addr, UINT8 res, UINT8 pin_len, UINT8 *p_pin,
+     btm_sec_change_pairing_state (BTM_PAIR_STATE_WAIT_AUTH_COMPLETE);
+     btm_cb.acl_disc_reason = HCI_SUCCESS;
+ 
+-#ifdef PORCHE_PAIRING_CONFLICT
+-    BTM_TRACE_EVENT2("BTM_PINCodeReply(): Saving pin_len: %d btm_cb.pin_code_len: %d", pin_len, btm_cb.pin_code_len);
+-    /* if this was not pre-fetched, save the PIN */
+-    if (btm_cb.pin_code_len == 0)
+-        memcpy (btm_cb.pin_code, p_pin, pin_len);
+-    btm_cb.pin_code_len_saved = pin_len;
+-#endif
+     btsnd_hcic_pin_code_req_reply (bd_addr, pin_len, p_pin);
+ }
+ 
+@@ -4774,10 +4767,6 @@ void btm_sec_pin_code_request (UINT8 *p_bda)
+     tBTM_SEC_DEV_REC *p_dev_rec;
+     tBTM_CB          *p_cb = &btm_cb;
+ 
+-#ifdef PORCHE_PAIRING_CONFLICT
+-    UINT8 default_pin_code_len = 4;
+-    PIN_CODE default_pin_code = {0x30, 0x30, 0x30, 0x30};
+-#endif
+     BTM_TRACE_EVENT3 ("btm_sec_pin_code_request()  State: %s, BDA:%04x%08x",
+                       btm_pair_state_descr(btm_cb.pairing_state),
+                       (p_bda[0]<<8)+p_bda[1], (p_bda[2]<<24)+(p_bda[3]<<16)+(p_bda[4]<<8)+p_bda[5] );
+@@ -4787,18 +4776,8 @@ void btm_sec_pin_code_request (UINT8 *p_bda)
+         if ( (memcmp (p_bda, btm_cb.pairing_bda, BD_ADDR_LEN) == 0)  &&
+              (btm_cb.pairing_state == BTM_PAIR_STATE_WAIT_AUTH_COMPLETE) )
+         {
+-             /* fake this out - porshe carkit issue - */
+-//            btm_cb.pairing_state = BTM_PAIR_STATE_IDLE;
+-             if(! btm_cb.pin_code_len_saved)
+-             {
+-                 btsnd_hcic_pin_code_neg_reply (p_bda);
+-                 return;
+-             }
+-             else
+-             {
+-                 btsnd_hcic_pin_code_req_reply (p_bda, btm_cb.pin_code_len_saved, p_cb->pin_code);
+-      	         return;
+-             }
++             btsnd_hcic_pin_code_neg_reply (p_bda);
++             return;
+         }
+         else if ((btm_cb.pairing_state != BTM_PAIR_STATE_WAIT_PIN_REQ)
+                  || memcmp (p_bda, btm_cb.pairing_bda, BD_ADDR_LEN) != 0)
+@@ -4806,22 +4785,7 @@ void btm_sec_pin_code_request (UINT8 *p_bda)
+             BTM_TRACE_WARNING1 ("btm_sec_pin_code_request() rejected - state: %s",
+                                 btm_pair_state_descr(btm_cb.pairing_state));
+ 
+-#ifdef PORCHE_PAIRING_CONFLICT
+-            /* reply pin code again due to counter in_rand when local initiates pairing */
+-            BTM_TRACE_EVENT0 ("btm_sec_pin_code_request from remote dev. for local initiated pairing");
+-            if(! btm_cb.pin_code_len_saved)
+-            {
+-                btm_sec_change_pairing_state (BTM_PAIR_STATE_WAIT_AUTH_COMPLETE);
+-                btsnd_hcic_pin_code_req_reply (p_bda, default_pin_code_len, default_pin_code);
+-            }
+-            else
+-            {
+-                btm_sec_change_pairing_state (BTM_PAIR_STATE_WAIT_AUTH_COMPLETE);
+-                btsnd_hcic_pin_code_req_reply (p_bda, btm_cb.pin_code_len_saved, p_cb->pin_code);
+-            }
+-#else
+             btsnd_hcic_pin_code_neg_reply (p_bda);
+-#endif
+             return;
+         }
+     }
+@@ -4858,10 +4822,6 @@ void btm_sec_pin_code_request (UINT8 *p_bda)
+         BTM_TRACE_EVENT0 ("btm_sec_pin_code_request bonding sending reply");
+         btsnd_hcic_pin_code_req_reply (p_bda, btm_cb.pin_code_len, p_cb->pin_code);
+ 
+-#ifdef PORCHE_PAIRING_CONFLICT
+-        btm_cb.pin_code_len_saved = btm_cb.pin_code_len;
+-#endif
+-
+         /* Mark that we forwarded received from the user PIN code */
+         btm_cb.pin_code_len = 0;
+ 
+@@ -4892,7 +4852,6 @@ void btm_sec_pin_code_request (UINT8 *p_bda)
+     /* Notify upper layer of PIN request and start expiration timer */
+     else
+     {
+-        btm_cb.pin_code_len_saved = 0;
+         btm_sec_change_pairing_state (BTM_PAIR_STATE_WAIT_LOCAL_PIN);
+         /* Pin code request can not come at the same time as connection request */
+         memcpy (p_cb->connecting_bda, p_bda, BD_ADDR_LEN);
+-- 
+2.7.4
+

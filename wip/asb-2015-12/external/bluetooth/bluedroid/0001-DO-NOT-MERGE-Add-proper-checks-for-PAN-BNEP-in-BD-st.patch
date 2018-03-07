@@ -1,0 +1,167 @@
+From a61bd4176c7d29751cc479be35ef2106b8484f7a Mon Sep 17 00:00:00 2001
+From: Hemant Gupta <hemantg@codeaurora.org>
+Date: Wed, 15 Oct 2014 19:59:23 +0530
+Subject: [PATCH 01/15] DO NOT MERGE - Add proper checks for PAN & BNEP in BD
+ stack
+
+This patch fixes issues for PAN & BNEP in BD stack identified
+by static analysis tool.
+
+Bug: 24595992
+
+Change-Id: I29417dae982abb5cef11379f8d03baad11ffde8b
+---
+ btif/co/bta_pan_co.c             | 31 +++++++++++++++++++------------
+ btif/include/btif_pan_internal.h |  1 +
+ btif/src/btif_pan.c              |  4 ++--
+ stack/bnep/bnep_main.c           |  4 ++--
+ stack/bnep/bnep_utils.c          | 12 +++++++++---
+ 5 files changed, 33 insertions(+), 19 deletions(-)
+
+diff --git a/btif/co/bta_pan_co.c b/btif/co/bta_pan_co.c
+index c6310d4..f2a9e5f 100644
+--- a/btif/co/bta_pan_co.c
++++ b/btif/co/bta_pan_co.c
+@@ -35,6 +35,7 @@
+ #include "btif_pan_internal.h"
+ #include "bd.h"
+ #include <string.h>
++#include "btif_util.h"
+ 
+ 
+ /*******************************************************************************
+@@ -168,31 +169,37 @@ void bta_pan_co_tx_path(UINT16 handle, UINT8 app_id)
+     BOOLEAN            ext;
+     BOOLEAN         forward;
+ 
+-    BTIF_TRACE_API2("bta_pan_co_tx_path, handle:%d, app_id:%d", handle, app_id);
++    BTIF_TRACE_API3("%s, handle:%d, app_id:%d", __func__, handle, app_id);
+ 
+     btpan_conn_t* conn = btpan_find_conn_handle(handle);
+-    if(conn && conn->state != PAN_STATE_OPEN)
++    if (!conn)
+     {
+-        BTIF_TRACE_ERROR2("bta_pan_co_tx_path: cannot find pan connction or conn"
+-            "is not opened, conn:%p, conn->state:%d", conn, conn->state);
++        BTIF_TRACE_ERROR1("%s: cannot find pan connection", __func__);
+         return;
+     }
++    else if(conn->state != PAN_STATE_OPEN)
++    {
++        BTIF_TRACE_ERROR3("%s: conn is not opened, conn:%p, conn->state:%d",
++            __func__, conn, conn->state);
++        return;
++    }
++
+     do
+     {
+         /* read next data buffer from pan */
+         if ((p_buf = bta_pan_ci_readbuf(handle, src, dst, &protocol,
+                                  &ext, &forward)))
+         {
+-            BTIF_TRACE_DEBUG2("bta_pan_co_tx_path, calling btapp_tap_send, "
+-                "p_buf->len:%d, offset:%d", p_buf->len, p_buf->offset);
++            bdstr_t bdstr;
++            BTIF_TRACE_DEBUG3("%s, calling btapp_tap_send, "
++                "p_buf->len:%d, offset:%d", __func__, p_buf->len, p_buf->offset);
+             if(is_empty_eth_addr(conn->eth_addr) && is_valid_bt_eth_addr(src))
+             {
+-                BTIF_TRACE_DEBUG6("pan bt peer addr: %02x:%02x:%02x:%02x:%02x:%02x",
+-                    conn->peer[0], conn->peer[1], conn->peer[2],
+-                    conn->peer[3],conn->peer[4], conn->peer[5]);
+-                BTIF_TRACE_DEBUG6("     update its ethernet addr: "
+-                    "%02x:%02x:%02x:%02x:%02x:%02x", src[0], src[1], src[2],
+-                    src[3],src[4], src[5]);
++                BTIF_TRACE_DEBUG2("%s pan bt peer addr: %s", __func__,
++                    bd2str((bt_bdaddr_t *)conn->peer, &bdstr));
++                bd2str((bt_bdaddr_t *)src, &bdstr);
++                BTIF_TRACE_DEBUG2("%s:     update its ethernet addr: %s", __func__,
++                    bd2str((bt_bdaddr_t *)src, &bdstr));
+                 memcpy(conn->eth_addr, src, sizeof(conn->eth_addr));
+ 
+             }
+diff --git a/btif/include/btif_pan_internal.h b/btif/include/btif_pan_internal.h
+index d697ac8..a8e4b91 100644
+--- a/btif/include/btif_pan_internal.h
++++ b/btif/include/btif_pan_internal.h
+@@ -38,6 +38,7 @@
+ #define PANU_SERVICE_NAME "Android Network User"
+ #define TAP_IF_NAME "bt-pan"
+ #define ETH_ADDR_LEN        6
++#define TAP_MAX_PKT_WRITE_LEN 2000
+ #ifndef PAN_SECURITY
+ #define PAN_SECURITY (BTM_SEC_IN_AUTHENTICATE | BTM_SEC_OUT_AUTHENTICATE | BTM_SEC_IN_ENCRYPT | BTM_SEC_OUT_ENCRYPT)
+ #endif
+diff --git a/btif/src/btif_pan.c b/btif/src/btif_pan.c
+index 633f6ef..41cc17d 100644
+--- a/btif/src/btif_pan.c
++++ b/btif/src/btif_pan.c
+@@ -398,9 +398,9 @@ int btpan_tap_send(int tap_fd, const BD_ADDR src, const BD_ADDR dst, UINT16 prot
+         memcpy(&eth_hdr.h_dest, dst, ETH_ADDR_LEN);
+         memcpy(&eth_hdr.h_src, src, ETH_ADDR_LEN);
+         eth_hdr.h_proto = htons(proto);
+-        char packet[2000];
++        char packet[TAP_MAX_PKT_WRITE_LEN + sizeof(tETH_HDR)];
+         memcpy(packet, &eth_hdr, sizeof(tETH_HDR));
+-        if(len > 2000)
++        if (len > TAP_MAX_PKT_WRITE_LEN)
+         {
+             ALOGE("btpan_tap_send eth packet size:%d is exceeded limit!", len);
+             return -1;
+diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
+index 12c9da0..120f4c9 100644
+--- a/stack/bnep/bnep_main.c
++++ b/stack/bnep/bnep_main.c
+@@ -368,8 +368,8 @@ static void bnep_disconnect_ind (UINT16 l2cap_cid, BOOLEAN ack_needed)
+     }
+     else
+     {
+-        if (((p_bcb->con_flags & BNEP_FLAGS_IS_ORIG) && (bnep_cb.p_conn_state_cb)) ||
+-            p_bcb->con_flags & BNEP_FLAGS_CONN_COMPLETED)
++        if ((bnep_cb.p_conn_state_cb) && ((p_bcb->con_flags & BNEP_FLAGS_IS_ORIG) ||
++            (p_bcb->con_flags & BNEP_FLAGS_CONN_COMPLETED)))
+             (*bnep_cb.p_conn_state_cb) (p_bcb->handle, p_bcb->rem_bda, BNEP_CONN_FAILED, FALSE);
+     }
+ 
+diff --git a/stack/bnep/bnep_utils.c b/stack/bnep/bnep_utils.c
+index 205eeeb..59a0387 100644
+--- a/stack/bnep/bnep_utils.c
++++ b/stack/bnep/bnep_utils.c
+@@ -172,10 +172,11 @@ void bnep_send_conn_req (tBNEP_CONN *p_bcb)
+     BT_HDR  *p_buf;
+     UINT8   *p, *p_start;
+ 
+-    BNEP_TRACE_DEBUG1 ("BNEP sending setup req with dst uuid %x", p_bcb->dst_uuid.uu.uuid16);
++    BNEP_TRACE_DEBUG2 ("%s: sending setup req with dst uuid %x",
++        __func__, p_bcb->dst_uuid.uu.uuid16);
+     if ((p_buf = (BT_HDR *)GKI_getpoolbuf (BNEP_POOL_ID)) == NULL)
+     {
+-        BNEP_TRACE_ERROR0 ("BNEP - not able to send connection request");
++        BNEP_TRACE_ERROR1 ("%s: not able to send connection request", __func__);
+         return;
+     }
+ 
+@@ -201,7 +202,7 @@ void bnep_send_conn_req (tBNEP_CONN *p_bcb)
+         UINT32_TO_BE_STREAM (p, p_bcb->dst_uuid.uu.uuid32);
+         UINT32_TO_BE_STREAM (p, p_bcb->src_uuid.uu.uuid32);
+     }
+-    else
++    else if (p_bcb->dst_uuid.len == 16)
+     {
+         memcpy (p, p_bcb->dst_uuid.uu.uuid128, p_bcb->dst_uuid.len);
+         p += p_bcb->dst_uuid.len;
+@@ -209,6 +210,11 @@ void bnep_send_conn_req (tBNEP_CONN *p_bcb)
+         p += p_bcb->dst_uuid.len;
+     }
+ #endif
++    else
++    {
++        BNEP_TRACE_ERROR3 ("%s: uuid: %x, invalid length: %x",
++            __func__, p_bcb->dst_uuid.uu.uuid16, p_bcb->dst_uuid.len);
++    }
+ 
+     p_buf->len = (UINT16)(p - p_start);
+ 
+-- 
+2.7.4
+

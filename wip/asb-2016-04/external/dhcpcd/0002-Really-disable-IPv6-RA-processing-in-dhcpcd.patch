@@ -1,0 +1,41 @@
+From 6f91ba0c3659a222364523525e53d1c2dc886305 Mon Sep 17 00:00:00 2001
+From: Pierre Imai <imaipi@google.com>
+Date: Wed, 10 Feb 2016 18:23:19 +0900
+Subject: [PATCH 2/3] Really disable IPv6 RA processing in dhcpcd.
+
+IPv6 RA processing in dhcpcd causes crashes, so we disabled it in
+dhcpcd.conf. Unfortunately devices sometimes don't have the
+config file, because one is not required for dhcpcd to work. So
+disable IPv6 RA processing in the code too.
+
+(cherry picked from commit 69eb1982f233676775ccb8718fc62e78c137e33d)
+
+Bug: 15268738
+Bug: 15779617
+Change-Id: I67bce5fb27f6b7c4e3189285baeda639256c9079
+(cherry picked from commit e0eb380913f6f24b011322d00aff261999bc465b)
+---
+ if-options.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/if-options.c b/if-options.c
+index 3f52bfe..4fbdf13 100644
+--- a/if-options.c
++++ b/if-options.c
+@@ -796,7 +796,13 @@ read_config(const char *file,
+ 	ifo = xzalloc(sizeof(*ifo));
+ 	ifo->options |= DHCPCD_GATEWAY | DHCPCD_DAEMONISE | DHCPCD_LINK;
+ 	ifo->options |= DHCPCD_ARP | DHCPCD_IPV4LL;
++#ifndef ANDROID
++	/* On Android, don't enable IPv6 RS processing. This is because we
++	 * already process RAs in the kernel and netd and because we've seen
++	 * dhcpcd crashes when parsing certain RA options.
++	 * See http://b/15268738 and http://b/15779617 . */
+ 	ifo->options |= DHCPCD_IPV6RS | DHCPCD_IPV6RA_REQRDNSS;
++#endif
+ 	ifo->timeout = DEFAULT_TIMEOUT;
+ 	ifo->reboot = DEFAULT_REBOOT;
+ 	ifo->metric = -1;
+-- 
+2.7.4
+

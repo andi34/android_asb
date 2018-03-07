@@ -1,0 +1,42 @@
+From 797ceca9e01a052ed40a939abf1369766b83562c Mon Sep 17 00:00:00 2001
+From: Selim Gurun <sgurun@google.com>
+Date: Wed, 6 Aug 2014 16:36:51 -0700
+Subject: [PATCH 2/2] Disable SPDY pooling
+
+Bug: 16799113
+
+The original patch is
+https://codereview.chromium.org/417013005
+We only take the SPDY part since Quic is not enabled.
+
+Change-Id: Ie25ab23b1984d1e87e6019df0224fe8d7f388828
+---
+ net/spdy/spdy_session.cc | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/net/spdy/spdy_session.cc b/net/spdy/spdy_session.cc
+index 9508f0e..0129368 100644
+--- a/net/spdy/spdy_session.cc
++++ b/net/spdy/spdy_session.cc
+@@ -549,6 +549,10 @@ bool SpdySession::VerifyDomainAuthentication(const std::string& domain) {
+   if (!GetSSLInfo(&ssl_info, &was_npn_negotiated, &protocol_negotiated))
+     return true;   // This is not a secure session, so all domains are okay.
+ 
++  // Disable pooling for secure sessions.
++  // TODO(rch): re-enable this.
++  return false;
++#if 0
+   bool unused = false;
+   return
+       !ssl_info.client_cert_sent &&
+@@ -556,6 +560,7 @@ bool SpdySession::VerifyDomainAuthentication(const std::string& domain) {
+        (ServerBoundCertService::GetDomainForHost(domain) ==
+         ServerBoundCertService::GetDomainForHost(host_port_pair().host()))) &&
+       ssl_info.cert->VerifyNameMatch(domain, &unused);
++#endif
+ }
+ 
+ int SpdySession::GetPushStream(
+-- 
+2.7.4
+

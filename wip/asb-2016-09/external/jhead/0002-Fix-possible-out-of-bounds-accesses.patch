@@ -1,0 +1,43 @@
+From 9a1a535dcb41fe94fc6b06cf880c33d69cc43f18 Mon Sep 17 00:00:00 2001
+From: Sungsoo Lim <sungsoo@google.com>
+Date: Wed, 20 Jul 2016 10:37:20 +0900
+Subject: [PATCH 2/2] Fix possible out of bounds accesses
+
+Bug: 30074856
+Change-Id: I1a1387ed29d2e0d010b0d5d4bb3d29453a3a7666
+(cherry picked from commit ee54e6ceb66e16b3c10c4a9fc8fbe5fff9110b62)
+(cherry picked from commit 78cc5b2401047d8c8ca77f633d8fa32c94e8e8f5)
+---
+ gpsinfo.c   | 2 +-
+ makernote.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/gpsinfo.c b/gpsinfo.c
+index cbf261e..0377300 100644
+--- a/gpsinfo.c
++++ b/gpsinfo.c
+@@ -174,7 +174,7 @@ void ProcessGpsInfo(unsigned char * DirStart, int ByteCountUnused, unsigned char
+             unsigned OffsetVal;
+             OffsetVal = Get32u(DirEntry+8);
+             // If its bigger than 4 bytes, the dir entry contains an offset.
+-            if (OffsetVal+ByteCount > ExifLength){
++            if (OffsetVal > UINT32_MAX - ByteCount || OffsetVal+ByteCount > ExifLength){
+                 // Bogus pointer offset and / or bytecount value
+                 ErrNonfatal("Illegal value pointer for tag %04x", Tag,0);
+                 continue;
+diff --git a/makernote.c b/makernote.c
+index 0be4df5..ae108ce 100644
+--- a/makernote.c
++++ b/makernote.c
+@@ -62,7 +62,7 @@ void ProcessCanonMakerNoteDir(unsigned char * DirStart, unsigned char * OffsetBa
+             unsigned OffsetVal;
+             OffsetVal = Get32u(DirEntry+8);
+             // If its bigger than 4 bytes, the dir entry contains an offset.
+-            if (OffsetVal+ByteCount > ExifLength){
++            if (OffsetVal > UINT32_MAX - ByteCount || OffsetVal+ByteCount > ExifLength){
+                 // Bogus pointer offset and / or bytecount value
+                 ErrNonfatal("Illegal value pointer for tag %04x", Tag,0);
+                 continue;
+-- 
+2.7.4
+
