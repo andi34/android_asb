@@ -1,0 +1,37 @@
+From 59a533a2dccb37936e3819a2df134dac66daec80 Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Fri, 7 Apr 2017 10:46:45 -0700
+Subject: [PATCH 2/2] Merge commit 'bbc9221' into master
+
+This merges the history from upstream without making any changes to
+the code.
+
+Bug: 33280507
+Change-Id: I303a906c2cb361cdc2b9a6c99da2b09782467254
+(cherry picked from commit 5e48fb0cc42f4c09080930e5c5ded1ef4bc89eed)
+(cherry picked from commit d4aea7c865084a140a965d4c413c6c38f9a2743a)
+---
+ README.android | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/README.android b/README.android
+index e99dcf1..4447b27 100644
+--- a/README.android
++++ b/README.android
+@@ -1,2 +1,11 @@
+-Current version:
+-svn checkout http://sfntly.googlecode.com/svn/trunk/cpp/src@134 cpp/src
++This project contains only the cpp/src files from upstream.  To update:
++git merge aosp/upstream-master
++If upstream has changes outside the cpp/src directory (likely), it will get
++conflicts on the modified files.  To drop the changes to the unmerged
++directories:
++git rm -rf data
++git rm -rf java
++git rm -rf cpp/data
++git rm -rf cpp/ext
++git rm -rf cpp/tools
++git commit
+-- 
+2.7.4
+

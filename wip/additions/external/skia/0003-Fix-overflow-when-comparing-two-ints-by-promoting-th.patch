@@ -1,0 +1,35 @@
+From 968454f69b9c5705ff12ede43328aa50fe825c19 Mon Sep 17 00:00:00 2001
+From: djsollen <djsollen@google.com>
+Date: Tue, 26 Aug 2014 08:31:24 -0700
+Subject: [PATCH 3/9] Fix overflow when comparing two ints by promoting the sum
+ to 64-bits.
+
+R=reed@google.com, scroggo@google.com
+
+Author: djsollen@google.com
+
+Review URL: https://codereview.chromium.org/505153003
+
+bug: 17265206
+Change-Id: Id74fc6d165b55258dbd980d9d36afe1377e7a162
+---
+ src/images/SkImageDecoder_libico.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/images/SkImageDecoder_libico.cpp b/src/images/SkImageDecoder_libico.cpp
+index bff08c0..542f53d 100644
+--- a/src/images/SkImageDecoder_libico.cpp
++++ b/src/images/SkImageDecoder_libico.cpp
+@@ -150,7 +150,8 @@ bool SkICOImageDecoder::onDecode(SkStream* stream, SkBitmap* bm, Mode mode)
+     //int fakeBitCount = read2Bytes(buf, 12 + choice*16); //should be real - usually 0
+     const size_t size = read4Bytes(buf, 14 + choice*16);           //matters?
+     const size_t offset = read4Bytes(buf, 18 + choice*16);
+-    if ((offset + size) > length) {
++    // promote the sum to 64-bits to avoid overflow
++    if (((uint64_t)offset + size) > length) {
+         return false;
+     }
+ 
+-- 
+2.7.4
+

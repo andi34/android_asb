@@ -1,0 +1,678 @@
+From b99ad5341b00a2d83da86b23a094b1ef7b7631f7 Mon Sep 17 00:00:00 2001
+From: Neil Fuller <nfuller@google.com>
+Date: Tue, 7 Oct 2014 11:43:00 +0100
+Subject: [PATCH 01/18] Add support for TLS_FALLBACK_SCSV
+
+Backport of commits:
+
+external/conscrypt: 8d7e23e117da591a8d48e6bcda9ed6f58ff1a375
+libcore: e6a6e935e98f426c7000b2bf4086f87101f4441c
+libcore: 957ec8b09833e1c2f2c21380e53c13c9962e6b3e
+
+Plus additional changes to:
+luni/src/main/java/org/apache/harmony/xnet/provider/jsse/OpenSSLServerSocketImpl.java
+luni/src/main/java/org/apache/harmony/xnet/provider/jsse/OpenSSLSocketImpl.java
+luni/src/test/java/libcore/java/net/URLConnectionTest.java
+luni/src/test/java/org/apache/harmony/xnet/provider/jsse/CipherSuiteTest.java
+support/src/test/java/libcore/java/security/StandardNames.java
+
+to account for KitKat differences.
+
+Bug: 17750026
+Change-Id: Ic6e9474275bc3ffec3b5c2d6df1f8d6ffe77bff8
+---
+ .../src/main/java/org/conscrypt/NativeCrypto.java  |  22 +-
+ .../org/conscrypt/OpenSSLServerSocketImpl.java     |   3 +-
+ .../main/java/org/conscrypt/OpenSSLSocketImpl.java |   3 +-
+ .../test/java/org/conscrypt/CipherSuiteTest.java   |   3 +-
+ .../java/libcore/java/net/URLConnectionTest.java   | 291 ++++++++++++++++-----
+ .../java/libcore/javax/net/ssl/SSLEngineTest.java  |   3 +-
+ .../java/libcore/javax/net/ssl/SSLSocketTest.java  |  92 +++++++
+ .../java/libcore/java/security/StandardNames.java  |  16 +-
+ 8 files changed, 355 insertions(+), 78 deletions(-)
+
+diff --git a/crypto/src/main/java/org/conscrypt/NativeCrypto.java b/crypto/src/main/java/org/conscrypt/NativeCrypto.java
+index 86c99d8..f60e286 100644
+--- a/crypto/src/main/java/org/conscrypt/NativeCrypto.java
++++ b/crypto/src/main/java/org/conscrypt/NativeCrypto.java
+@@ -596,6 +596,14 @@ public final class NativeCrypto {
+     public static final String TLS_EMPTY_RENEGOTIATION_INFO_SCSV
+             = "TLS_EMPTY_RENEGOTIATION_INFO_SCSV";
+ 
++    /**
++     * TLS_FALLBACK_SCSV is from
++     * https://tools.ietf.org/html/draft-ietf-tls-downgrade-scsv-00
++     * to indicate to the server that this is a fallback protocol
++     * request.
++     */
++    public static final String TLS_FALLBACK_SCSV = "TLS_FALLBACK_SCSV";
++
+     static {
+         // Note these are added in priority order
+         add("SSL_RSA_WITH_RC4_128_MD5",              "RC4-MD5");
+@@ -685,14 +693,18 @@ public final class NativeCrypto {
+ 
+         // Signaling Cipher Suite Value for secure renegotiation handled as special case.
+         // add("TLS_EMPTY_RENEGOTIATION_INFO_SCSV", null);
++
++        // Similarly, the fallback SCSV is handled as a special case.
++        // add("TLS_FALLBACK_SCSV", null);
+     }
+ 
+     private static final String[] SUPPORTED_CIPHER_SUITES;
+     static {
+         int size = STANDARD_TO_OPENSSL_CIPHER_SUITES.size();
+-        SUPPORTED_CIPHER_SUITES = new String[size + 1];
++        SUPPORTED_CIPHER_SUITES = new String[size + 2];
+         STANDARD_TO_OPENSSL_CIPHER_SUITES.keySet().toArray(SUPPORTED_CIPHER_SUITES);
+         SUPPORTED_CIPHER_SUITES[size] = TLS_EMPTY_RENEGOTIATION_INFO_SCSV;
++        SUPPORTED_CIPHER_SUITES[size + 1] = TLS_FALLBACK_SCSV;
+     }
+ 
+     // EVP_PKEY types from evp.h and objects.h
+@@ -709,6 +721,7 @@ public final class NativeCrypto {
+ 
+     // SSL mode from ssl.h
+     public static final long SSL_MODE_HANDSHAKE_CUTTHROUGH = 0x00000020L;
++    public static final long SSL_MODE_SEND_FALLBACK_SCSV   = 0x00000200L;
+ 
+     // SSL options from ssl.h
+     public static final long SSL_OP_NO_TICKET                              = 0x00004000L;
+@@ -880,6 +893,10 @@ public final class NativeCrypto {
+             if (cipherSuite.equals(TLS_EMPTY_RENEGOTIATION_INFO_SCSV)) {
+                 continue;
+             }
++            if (cipherSuite.equals(TLS_FALLBACK_SCSV)) {
++                SSL_set_mode(ssl, SSL_MODE_SEND_FALLBACK_SCSV);
++                continue;
++            }
+             String openssl = STANDARD_TO_OPENSSL_CIPHER_SUITES.get(cipherSuite);
+             String cs = (openssl == null) ? cipherSuite : openssl;
+             opensslSuites.add(cs);
+@@ -897,7 +914,8 @@ public final class NativeCrypto {
+             if (cipherSuite == null) {
+                 throw new IllegalArgumentException("cipherSuites[" + i + "] == null");
+             }
+-            if (cipherSuite.equals(TLS_EMPTY_RENEGOTIATION_INFO_SCSV)) {
++            if (cipherSuite.equals(TLS_EMPTY_RENEGOTIATION_INFO_SCSV) ||
++                    cipherSuite.equals(TLS_FALLBACK_SCSV)) {
+                 continue;
+             }
+             if (STANDARD_TO_OPENSSL_CIPHER_SUITES.containsKey(cipherSuite)) {
+diff --git a/crypto/src/main/java/org/conscrypt/OpenSSLServerSocketImpl.java b/crypto/src/main/java/org/conscrypt/OpenSSLServerSocketImpl.java
+index 4c1f709..adcfa1d 100644
+--- a/crypto/src/main/java/org/conscrypt/OpenSSLServerSocketImpl.java
++++ b/crypto/src/main/java/org/conscrypt/OpenSSLServerSocketImpl.java
+@@ -197,7 +197,8 @@ public class OpenSSLServerSocketImpl extends javax.net.ssl.SSLServerSocket {
+          * an anonymous cipher is picked.
+          */
+         for (String enabledCipherSuite : enabledCipherSuites) {
+-            if (enabledCipherSuite.equals(NativeCrypto.TLS_EMPTY_RENEGOTIATION_INFO_SCSV)) {
++            if (enabledCipherSuite.equals(NativeCrypto.TLS_EMPTY_RENEGOTIATION_INFO_SCSV)
++                || enabledCipherSuite.equals(NativeCrypto.TLS_FALLBACK_SCSV)) {
+                 continue;
+             }
+             String keyType = CipherSuite.getByName(enabledCipherSuite).getServerKeyType();
+diff --git a/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java b/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java
+index 0caeff3..4b705d7 100644
+--- a/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java
++++ b/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java
+@@ -290,7 +290,8 @@ public class OpenSSLSocketImpl
+             if (!client) {
+                 Set<String> keyTypes = new HashSet<String>();
+                 for (String enabledCipherSuite : enabledCipherSuites) {
+-                    if (enabledCipherSuite.equals(NativeCrypto.TLS_EMPTY_RENEGOTIATION_INFO_SCSV)) {
++                    if (enabledCipherSuite.equals(NativeCrypto.TLS_EMPTY_RENEGOTIATION_INFO_SCSV)
++                        || enabledCipherSuite.equals(NativeCrypto.TLS_FALLBACK_SCSV)) {
+                         continue;
+                     }
+                     String keyType = CipherSuite.getByName(enabledCipherSuite).getServerKeyType();
+diff --git a/crypto/src/test/java/org/conscrypt/CipherSuiteTest.java b/crypto/src/test/java/org/conscrypt/CipherSuiteTest.java
+index 970ad34..3255de8 100644
+--- a/crypto/src/test/java/org/conscrypt/CipherSuiteTest.java
++++ b/crypto/src/test/java/org/conscrypt/CipherSuiteTest.java
+@@ -28,7 +28,8 @@ import libcore.java.security.StandardNames;
+ public class CipherSuiteTest extends TestCase {
+     public void test_getByName() throws Exception {
+         for (String name : StandardNames.CIPHER_SUITES) {
+-            if (name.equals(StandardNames.CIPHER_SUITE_SECURE_RENEGOTIATION)) {
++            if (name.equals(StandardNames.CIPHER_SUITE_SECURE_RENEGOTIATION)
++                    || name.equals(StandardNames.CIPHER_SUITE_FALLBACK)) {
+                 assertNull(CipherSuite.getByName(name));
+             } else {
+                 test_CipherSuite(name);
+diff --git a/luni/src/test/java/libcore/java/net/URLConnectionTest.java b/luni/src/test/java/libcore/java/net/URLConnectionTest.java
+index 7ecdc59..4ed7f0e 100644
+--- a/luni/src/test/java/libcore/java/net/URLConnectionTest.java
++++ b/luni/src/test/java/libcore/java/net/URLConnectionTest.java
+@@ -39,6 +39,7 @@ import java.net.PasswordAuthentication;
+ import java.net.ProtocolException;
+ import java.net.Proxy;
+ import java.net.ResponseCache;
++import java.net.Socket;
+ import java.net.SocketTimeoutException;
+ import java.net.URI;
+ import java.net.URL;
+@@ -59,17 +60,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
+ import java.util.concurrent.atomic.AtomicReference;
+ import java.util.zip.GZIPInputStream;
+ import java.util.zip.GZIPOutputStream;
++import javax.net.SocketFactory;
+ import javax.net.ssl.HostnameVerifier;
+ import javax.net.ssl.HttpsURLConnection;
+ import javax.net.ssl.SSLContext;
+ import javax.net.ssl.SSLException;
+ import javax.net.ssl.SSLHandshakeException;
+ import javax.net.ssl.SSLSession;
++import javax.net.ssl.SSLSocket;
+ import javax.net.ssl.SSLSocketFactory;
+ import javax.net.ssl.TrustManager;
+ import javax.net.ssl.X509TrustManager;
+ import junit.framework.TestCase;
+ import libcore.java.lang.ref.FinalizationTester;
++import libcore.java.security.StandardNames;
+ import libcore.java.security.TestKeyStore;
+ import libcore.javax.net.ssl.TestSSLContext;
+ import tests.net.StuckServer;
+@@ -335,49 +339,6 @@ public final class URLConnectionTest extends TestCase {
+         assertEquals(0, server.takeRequest().getSequenceNumber());
+     }
+ 
+-    public void testRetryableRequestBodyAfterBrokenConnection() throws Exception {
+-        // Use SSL to make an alternate route available.
+-        TestSSLContext testSSLContext = TestSSLContext.create();
+-        server.useHttps(testSSLContext.serverContext.getSocketFactory(), false);
+-
+-        server.enqueue(new MockResponse().setBody("abc").setSocketPolicy(
+-            DISCONNECT_AFTER_READING_REQUEST));
+-        server.enqueue(new MockResponse().setBody("abc"));
+-        server.play();
+-
+-        HttpsURLConnection connection = (HttpsURLConnection) server.getUrl("").openConnection();
+-        connection.setSSLSocketFactory(testSSLContext.clientContext.getSocketFactory());
+-        connection.setDoOutput(true);
+-        OutputStream out = connection.getOutputStream();
+-        out.write(new byte[] {1, 2, 3});
+-        out.close();
+-        assertContent("abc", connection);
+-
+-        assertEquals(0, server.takeRequest().getSequenceNumber());
+-        assertEquals(0, server.takeRequest().getSequenceNumber());
+-    }
+-
+-    public void testNonRetryableRequestBodyAfterBrokenConnection() throws Exception {
+-        TestSSLContext testSSLContext = TestSSLContext.create();
+-        server.useHttps(testSSLContext.serverContext.getSocketFactory(), false);
+-        server.enqueue(new MockResponse().setBody("abc")
+-            .setSocketPolicy(DISCONNECT_AFTER_READING_REQUEST));
+-        server.play();
+-
+-        HttpsURLConnection connection = (HttpsURLConnection) server.getUrl("/a").openConnection();
+-        connection.setSSLSocketFactory(testSSLContext.clientContext.getSocketFactory());
+-        connection.setDoOutput(true);
+-        connection.setFixedLengthStreamingMode(3);
+-        OutputStream out = connection.getOutputStream();
+-        out.write(new byte[] {1, 2, 3});
+-        out.close();
+-        try {
+-            connection.getInputStream();
+-            fail();
+-        } catch (IOException expected) {
+-        }
+-    }
+-
+     enum WriteKind { BYTE_BY_BYTE, SMALL_BUFFERS, LARGE_BUFFERS }
+ 
+     public void test_chunkedUpload_byteByByte() throws Exception {
+@@ -518,28 +479,6 @@ public final class URLConnectionTest extends TestCase {
+         }
+     }
+ 
+-    public void testConnectViaHttpsWithSSLFallback() throws IOException, InterruptedException {
+-        TestSSLContext testSSLContext = TestSSLContext.create();
+-
+-        server.useHttps(testSSLContext.serverContext.getSocketFactory(), false);
+-        server.enqueue(new MockResponse().setSocketPolicy(DISCONNECT_AT_START));
+-        server.enqueue(new MockResponse().setBody("this response comes via SSL"));
+-        server.play();
+-
+-        HttpsURLConnection connection = (HttpsURLConnection) server.getUrl("/foo").openConnection();
+-        connection.setSSLSocketFactory(testSSLContext.clientContext.getSocketFactory());
+-
+-        assertContent("this response comes via SSL", connection);
+-
+-        // The first request will be an incomplete (bookkeeping) request
+-        // that the server disconnected from at start.
+-        server.takeRequest();
+-
+-        // The request will be retried.
+-        RecordedRequest request = server.takeRequest();
+-        assertEquals("GET /foo HTTP/1.1", request.getRequestLine());
+-    }
+-
+     /**
+      * Verify that we don't retry connections on certificate verification errors.
+      *
+@@ -2265,13 +2204,24 @@ public final class URLConnectionTest extends TestCase {
+ 
+     public void testSslFallback() throws Exception {
+         TestSSLContext testSSLContext = TestSSLContext.create();
+-        server.useHttps(testSSLContext.serverContext.getSocketFactory(), false);
++
++        // This server socket factory only supports SSLv3. This is to avoid issues due to SCSV
++        // checks. See https://tools.ietf.org/html/draft-ietf-tls-downgrade-scsv-00
++        SSLSocketFactory serverSocketFactory =
++                new LimitedProtocolsSocketFactory(
++                        testSSLContext.serverContext.getSocketFactory(),
++                        "SSLv3");
++
++        server.useHttps(serverSocketFactory, false);
+         server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.FAIL_HANDSHAKE));
+         server.enqueue(new MockResponse().setBody("This required a 2nd handshake"));
+         server.play();
+ 
+         HttpsURLConnection connection = (HttpsURLConnection) server.getUrl("/").openConnection();
+-        connection.setSSLSocketFactory(testSSLContext.clientContext.getSocketFactory());
++        // Keep track of the client sockets created so that we can interrogate them.
++        RecordingSocketFactory clientSocketFactory =
++                new RecordingSocketFactory(testSSLContext.clientContext.getSocketFactory());
++        connection.setSSLSocketFactory(clientSocketFactory);
+         assertEquals("This required a 2nd handshake",
+                 readAscii(connection.getInputStream(), Integer.MAX_VALUE));
+ 
+@@ -2280,6 +2230,26 @@ public final class URLConnectionTest extends TestCase {
+         RecordedRequest retry = server.takeRequest();
+         assertEquals(0, retry.getSequenceNumber());
+         assertEquals("SSLv3", retry.getSslProtocol());
++
++        // Confirm the client fallback looks ok.
++        List<SSLSocket> createdSockets = clientSocketFactory.getCreatedSockets();
++        assertEquals(2, createdSockets.size());
++        SSLSocket clientSocket1 = createdSockets.get(0);
++        List<String> clientSocket1EnabledProtocols = Arrays.asList(
++                clientSocket1.getEnabledProtocols());
++        assertContains(clientSocket1EnabledProtocols, "TLSv1");
++        List<String> clientSocket1EnabledCiphers =
++                Arrays.asList(clientSocket1.getEnabledCipherSuites());
++        assertContainsNoneMatching(
++                clientSocket1EnabledCiphers, StandardNames.CIPHER_SUITE_FALLBACK);
++
++        SSLSocket clientSocket2 = createdSockets.get(1);
++        List<String> clientSocket2EnabledProtocols =
++                Arrays.asList(clientSocket2.getEnabledProtocols());
++        assertContainsNoneMatching(clientSocket2EnabledProtocols, "TLSv1");
++        List<String> clientSocket2EnabledCiphers =
++                Arrays.asList(clientSocket2.getEnabledCipherSuites());
++        assertContains(clientSocket2EnabledCiphers, StandardNames.CIPHER_SUITE_FALLBACK);
+     }
+ 
+     public void testInspectSslBeforeConnect() throws Exception {
+@@ -2359,12 +2329,12 @@ public final class URLConnectionTest extends TestCase {
+         assertContent(expected, connection, Integer.MAX_VALUE);
+     }
+ 
+-    private void assertContains(List<String> headers, String header) {
+-        assertTrue(headers.toString(), headers.contains(header));
++    private void assertContains(List<String> list, String value) {
++        assertTrue(list.toString(), list.contains(value));
+     }
+ 
+-    private void assertContainsNoneMatching(List<String> headers, String pattern) {
+-        for (String header : headers) {
++    private void assertContainsNoneMatching(List<String> list, String pattern) {
++        for (String header : list) {
+             if (header.matches(pattern)) {
+                 fail("Header " + header + " matches " + pattern);
+             }
+@@ -2513,4 +2483,183 @@ public final class URLConnectionTest extends TestCase {
+                     : null;
+         }
+     }
++
++    /**
++     * An SSLSocketFactory that delegates all calls.
++     */
++    private static class DelegatingSSLSocketFactory extends SSLSocketFactory {
++
++        protected final SSLSocketFactory delegate;
++
++        public DelegatingSSLSocketFactory(SSLSocketFactory delegate) {
++            this.delegate = delegate;
++        }
++
++        @Override
++        public String[] getDefaultCipherSuites() {
++            return delegate.getDefaultCipherSuites();
++        }
++
++        @Override
++        public String[] getSupportedCipherSuites() {
++            return delegate.getSupportedCipherSuites();
++        }
++
++        @Override
++        public Socket createSocket(Socket s, String host, int port, boolean autoClose)
++                throws IOException {
++            return delegate.createSocket(s, host, port, autoClose);
++        }
++
++        @Override
++        public Socket createSocket() throws IOException {
++            return delegate.createSocket();
++        }
++
++        @Override
++        public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
++            return delegate.createSocket(host, port);
++        }
++
++        @Override
++        public Socket createSocket(String host, int port, InetAddress localHost,
++                int localPort) throws IOException, UnknownHostException {
++            return delegate.createSocket(host, port, localHost, localPort);
++        }
++
++        @Override
++        public Socket createSocket(InetAddress host, int port) throws IOException {
++            return delegate.createSocket(host, port);
++        }
++
++        @Override
++        public Socket createSocket(InetAddress address, int port,
++                InetAddress localAddress, int localPort) throws IOException {
++            return delegate.createSocket(address, port, localAddress, localPort);
++        }
++
++    }
++
++    /**
++     * An SSLSocketFactory that delegates calls but limits the enabled protocols for any created
++     * sockets.
++     */
++    private static class LimitedProtocolsSocketFactory extends DelegatingSSLSocketFactory {
++
++        private final String[] protocols;
++
++        private LimitedProtocolsSocketFactory(SSLSocketFactory delegate, String... protocols) {
++            super(delegate);
++            this.protocols = protocols;
++        }
++
++        @Override
++        public Socket createSocket(Socket s, String host, int port, boolean autoClose)
++                throws IOException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(s, host, port, autoClose);
++            socket.setEnabledProtocols(protocols);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket() throws IOException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket();
++            socket.setEnabledProtocols(protocols);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(host, port);
++            socket.setEnabledProtocols(protocols);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(String host, int port, InetAddress localHost,
++                int localPort) throws IOException, UnknownHostException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(host, port, localHost, localPort);
++            socket.setEnabledProtocols(protocols);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(InetAddress host, int port) throws IOException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(host, port);
++            socket.setEnabledProtocols(protocols);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(InetAddress address, int port,
++                InetAddress localAddress, int localPort) throws IOException {
++            SSLSocket socket =
++                    (SSLSocket) delegate.createSocket(address, port, localAddress, localPort);
++            socket.setEnabledProtocols(protocols);
++            return socket;
++        }
++    }
++
++    /**
++     * An SSLSocketFactory that delegates calls and keeps a record of any sockets created.
++     */
++    private static class RecordingSocketFactory extends DelegatingSSLSocketFactory {
++
++        private final List<SSLSocket> createdSockets = new ArrayList<SSLSocket>();
++
++        private RecordingSocketFactory(SSLSocketFactory delegate) {
++            super(delegate);
++        }
++
++        @Override
++        public Socket createSocket(Socket s, String host, int port, boolean autoClose)
++                throws IOException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(s, host, port, autoClose);
++            createdSockets.add(socket);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket() throws IOException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket();
++            createdSockets.add(socket);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(host, port);
++            createdSockets.add(socket);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(String host, int port, InetAddress localHost,
++                int localPort) throws IOException, UnknownHostException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(host, port, localHost, localPort);
++            createdSockets.add(socket);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(InetAddress host, int port) throws IOException {
++            SSLSocket socket = (SSLSocket) delegate.createSocket(host, port);
++            createdSockets.add(socket);
++            return socket;
++        }
++
++        @Override
++        public Socket createSocket(InetAddress address, int port,
++                InetAddress localAddress, int localPort) throws IOException {
++            SSLSocket socket =
++                    (SSLSocket) delegate.createSocket(address, port, localAddress, localPort);
++            createdSockets.add(socket);
++            return socket;
++        }
++
++        public List<SSLSocket> getCreatedSockets() {
++            return createdSockets;
++        }
++    }
++
+ }
+diff --git a/luni/src/test/java/libcore/javax/net/ssl/SSLEngineTest.java b/luni/src/test/java/libcore/javax/net/ssl/SSLEngineTest.java
+index a015d19..33a8923 100644
+--- a/luni/src/test/java/libcore/javax/net/ssl/SSLEngineTest.java
++++ b/luni/src/test/java/libcore/javax/net/ssl/SSLEngineTest.java
+@@ -108,7 +108,8 @@ public class SSLEngineTest extends TestCase {
+                  * its own, but instead in conjunction with other
+                  * cipher suites.
+                  */
+-                if (cipherSuite.equals(StandardNames.CIPHER_SUITE_SECURE_RENEGOTIATION)) {
++                if (cipherSuite.equals(StandardNames.CIPHER_SUITE_SECURE_RENEGOTIATION)
++                        || cipherSuite.equals(StandardNames.CIPHER_SUITE_FALLBACK)) {
+                     continue;
+                 }
+                 /*
+diff --git a/luni/src/test/java/libcore/javax/net/ssl/SSLSocketTest.java b/luni/src/test/java/libcore/javax/net/ssl/SSLSocketTest.java
+index 0ac3bcd..8e009bd 100644
+--- a/luni/src/test/java/libcore/javax/net/ssl/SSLSocketTest.java
++++ b/luni/src/test/java/libcore/javax/net/ssl/SSLSocketTest.java
+@@ -155,6 +155,14 @@ public class SSLSocketTest extends TestCase {
+                     continue;
+                 }
+                 /*
++                 * Similarly with the TLS_FALLBACK_SCSV suite, it is not
++                 * a selectable suite, but is used in conjunction with
++                 * other cipher suites.
++                 */
++                if (cipherSuite.equals(StandardNames.CIPHER_SUITE_FALLBACK)) {
++                    continue;
++                }
++                /*
+                  * Kerberos cipher suites require external setup. See "Kerberos Requirements" in
+                  * https://java.sun.com/j2se/1.5.0/docs/guide/security/jsse/JSSERefGuide.html
+                  * #KRBRequire
+@@ -1415,6 +1423,90 @@ public class SSLSocketTest extends TestCase {
+         test.close();
+     }
+ 
++    public void test_SSLSocket_sendsTlsFallbackScsv_Fallback_Success() throws Exception {
++        TestSSLContext context = TestSSLContext.create();
++
++        final SSLSocket client = (SSLSocket)
++            context.clientContext.getSocketFactory().createSocket(context.host, context.port);
++        final SSLSocket server = (SSLSocket) context.serverSocket.accept();
++
++        final String[] serverCipherSuites = server.getEnabledCipherSuites();
++        final String[] clientCipherSuites = new String[serverCipherSuites.length + 1];
++        System.arraycopy(serverCipherSuites, 0, clientCipherSuites, 0, serverCipherSuites.length);
++        clientCipherSuites[serverCipherSuites.length] = StandardNames.CIPHER_SUITE_FALLBACK;
++
++        ExecutorService executor = Executors.newFixedThreadPool(2);
++        Future<Void> s = executor.submit(new Callable<Void>() {
++                public Void call() throws Exception {
++                    server.setEnabledProtocols(new String[] { "TLSv1.2" });
++                    server.setEnabledCipherSuites(serverCipherSuites);
++                    server.startHandshake();
++                    return null;
++                }
++            });
++        Future<Void> c = executor.submit(new Callable<Void>() {
++                public Void call() throws Exception {
++                    client.setEnabledProtocols(new String[] { "TLSv1.2" });
++                    client.setEnabledCipherSuites(clientCipherSuites);
++                    client.startHandshake();
++                    return null;
++                }
++            });
++        executor.shutdown();
++
++        s.get();
++        c.get();
++        client.close();
++        server.close();
++        context.close();
++    }
++
++    public void test_SSLSocket_sendsTlsFallbackScsv_InappropriateFallback_Failure() throws Exception {
++        TestSSLContext context = TestSSLContext.create();
++
++        final SSLSocket client = (SSLSocket)
++            context.clientContext.getSocketFactory().createSocket(context.host, context.port);
++        final SSLSocket server = (SSLSocket) context.serverSocket.accept();
++
++        final String[] serverCipherSuites = server.getEnabledCipherSuites();
++        final String[] clientCipherSuites = new String[serverCipherSuites.length + 1];
++        System.arraycopy(serverCipherSuites, 0, clientCipherSuites, 0, serverCipherSuites.length);
++        clientCipherSuites[serverCipherSuites.length] = StandardNames.CIPHER_SUITE_FALLBACK;
++
++        ExecutorService executor = Executors.newFixedThreadPool(2);
++        Future<Void> s = executor.submit(new Callable<Void>() {
++                public Void call() throws Exception {
++                    server.setEnabledProtocols(new String[] { "TLSv1", "SSLv3" });
++                    server.setEnabledCipherSuites(serverCipherSuites);
++                    try {
++                        server.startHandshake();
++                        fail("Should result in inappropriate fallback");
++                    } catch (SSLHandshakeException expected) {
++                    }
++                    return null;
++                }
++            });
++        Future<Void> c = executor.submit(new Callable<Void>() {
++                public Void call() throws Exception {
++                    client.setEnabledProtocols(new String[] { "SSLv3" });
++                    client.setEnabledCipherSuites(clientCipherSuites);
++                    try {
++                        client.startHandshake();
++                        fail("Should receive TLS alert inappropriate fallback");
++                    } catch (SSLHandshakeException expected) {
++                    }
++                    return null;
++                }
++            });
++        executor.shutdown();
++
++        s.get();
++        c.get();
++        client.close();
++        server.close();
++        context.close();
++    }
++
+     /**
+      * Not run by default by JUnit, but can be run by Vogar by
+      * specifying it explicitly (or with main method below)
+diff --git a/support/src/test/java/libcore/java/security/StandardNames.java b/support/src/test/java/libcore/java/security/StandardNames.java
+index bb9aeda..78e9ae8 100644
+--- a/support/src/test/java/libcore/java/security/StandardNames.java
++++ b/support/src/test/java/libcore/java/security/StandardNames.java
+@@ -82,6 +82,14 @@ public final class StandardNames extends Assert {
+             = "TLS_EMPTY_RENEGOTIATION_INFO_SCSV";
+ 
+     /**
++     * From https://tools.ietf.org/html/draft-ietf-tls-downgrade-scsv-00 it is a
++     * signaling cipher suite value (SCSV) to indicate that this request is a
++     * protocol fallback (e.g., TLS 1.0 -> SSL 3.0) because the server didn't respond
++     * to the first request.
++     */
++    public static final String CIPHER_SUITE_FALLBACK = "TLS_FALLBACK_SCSV";
++
++    /**
+      * A map from algorithm type (e.g. Cipher) to a set of algorithms (e.g. AES, DES, ...)
+      */
+     public static final Map<String,Set<String>> PROVIDER_ALGORITHMS
+@@ -656,6 +664,10 @@ public final class StandardNames extends Assert {
+         // RFC 5746's Signaling Cipher Suite Value to indicate a request for secure renegotiation
+         addBoth(CIPHER_SUITE_SECURE_RENEGOTIATION);
+ 
++        // From https://tools.ietf.org/html/draft-ietf-tls-downgrade-scsv-00 to indicate
++        // TLS fallback request
++        addOpenSsl(CIPHER_SUITE_FALLBACK);
++
+         // non-defaultCipherSuites
+         addNeither("TLS_DH_anon_WITH_AES_256_CBC_SHA256");
+         addOpenSsl("TLS_ECDH_anon_WITH_AES_256_CBC_SHA");
+@@ -779,7 +791,9 @@ public final class StandardNames extends Assert {
+             Iterator<String> i = CIPHER_SUITES_SSLENGINE.iterator();
+             while (i.hasNext()) {
+                 String cs = i.next();
+-                if (cs.startsWith("TLS_EC") || cs.equals(CIPHER_SUITE_SECURE_RENEGOTIATION)) {
++                if (cs.startsWith("TLS_EC")
++                        || cs.equals(CIPHER_SUITE_SECURE_RENEGOTIATION)
++                        || cs.equals(CIPHER_SUITE_FALLBACK)) {
+                     i.remove();
+                 }
+             }
+-- 
+2.7.4
+

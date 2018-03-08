@@ -1,0 +1,33 @@
+From ba00921492cdfd0b9b295dae7d468f11bf0d09c0 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Fri, 21 Aug 2015 08:54:54 -0700
+Subject: [PATCH 08/15] Fix NULL pointer dereference
+
+Bug: 29770686
+Bug: 23304983
+Change-Id: I1648aab90bc281702a00744bf884ae8bb8009412
+(cherry picked from commit 6e988ba8325243acbf1a5b60d2ab2f36a9d61199)
+---
+ arm-wt-22k/lib_src/eas_mdls.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arm-wt-22k/lib_src/eas_mdls.c b/arm-wt-22k/lib_src/eas_mdls.c
+index b08e24e..e2cb688 100644
+--- a/arm-wt-22k/lib_src/eas_mdls.c
++++ b/arm-wt-22k/lib_src/eas_mdls.c
+@@ -683,8 +683,10 @@ EAS_RESULT DLSParser (EAS_HW_DATA_HANDLE hwInstData, EAS_FILE_HANDLE fileHandle,
+     }
+ 
+     /* create the default articulation */
+-    Convert_art(&dls, &defaultArt, 0);
+-    dls.artCount = 1;
++    if (dls.pDLS) {
++        Convert_art(&dls, &defaultArt, 0);
++        dls.artCount = 1;
++    }
+ 
+     /* parse the lins chunk and load instruments */
+     dls.regionCount = dls.instCount = 0;
+-- 
+2.7.4
+

@@ -1,0 +1,96 @@
+From 8f43a5c72c13865c269929aef44d2ef24aabc809 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 12 Jan 2016 10:37:30 -0800
+Subject: [PATCH 07/15] Sonivox: add SafetyNet log.
+
+Bug: 26366256
+Change-Id: Ief72e01b7cc6d87a015105af847a99d3d9b03cb0
+(cherry picked from commit 24d7c408c52143bce7b49de82f3913fd8d1219cf)
+---
+ arm-wt-22k/lib_src/eas_wtengine.c | 7 +++++++
+ arm-wt-22k/lib_src/eas_wtsynth.c  | 2 ++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/eas_wtengine.c b/arm-wt-22k/lib_src/eas_wtengine.c
+index e7263fd..854d4b4 100644
+--- a/arm-wt-22k/lib_src/eas_wtengine.c
++++ b/arm-wt-22k/lib_src/eas_wtengine.c
+@@ -33,6 +33,7 @@
+  *------------------------------------
+ */
+ #include "log/log.h"
++#include <cutils/log.h>
+ 
+ #include "eas_types.h"
+ #include "eas_math.h"
+@@ -92,6 +93,7 @@ void WT_VoiceGain (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+     numSamples = pWTIntFrame->numSamples;
+     if (numSamples <= 0) {
+         ALOGE("b/26366256");
++        android_errorWriteLog(0x534e4554, "26366256");
+         return;
+     }
+     pMixBuffer = pWTIntFrame->pMixBuffer;
+@@ -190,6 +192,7 @@ void WT_Interpolate (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+     numSamples = pWTIntFrame->numSamples;
+     if (numSamples <= 0) {
+         ALOGE("b/26366256");
++        android_errorWriteLog(0x534e4554, "26366256");
+         return;
+     }
+     pOutputBuffer = pWTIntFrame->pAudioBuffer;
+@@ -287,6 +290,7 @@ void WT_InterpolateNoLoop (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+     numSamples = pWTIntFrame->numSamples;
+     if (numSamples <= 0) {
+         ALOGE("b/26366256");
++        android_errorWriteLog(0x534e4554, "26366256");
+         return;
+     }
+     pOutputBuffer = pWTIntFrame->pAudioBuffer;
+@@ -379,6 +383,7 @@ void WT_VoiceFilter (S_FILTER_CONTROL *pFilter, S_WT_INT_FRAME *pWTIntFrame)
+     numSamples = pWTIntFrame->numSamples;
+     if (numSamples <= 0) {
+         ALOGE("b/26366256");
++        android_errorWriteLog(0x534e4554, "26366256");
+         return;
+     }
+     pAudioBuffer = pWTIntFrame->pAudioBuffer;
+@@ -446,6 +451,7 @@ void WT_VoiceFilter (S_FILTER_CONTROL *pFilter, S_WT_INT_FRAME *pWTIntFrame)
+     numSamples = pWTIntFrame->numSamples;
+     if (numSamples <= 0) {
+         ALOGE("b/26366256");
++        android_errorWriteLog(0x534e4554, "26366256");
+         return;
+     }
+     pOutputBuffer = pWTIntFrame->pAudioBuffer;
+@@ -593,6 +599,7 @@ void WT_InterpolateMono (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+     numSamples = pWTIntFrame->numSamples;
+     if (numSamples <= 0) {
+         ALOGE("b/26366256");
++        android_errorWriteLog(0x534e4554, "26366256");
+         return;
+     }
+     pMixBuffer = pWTIntFrame->pMixBuffer;
+diff --git a/arm-wt-22k/lib_src/eas_wtsynth.c b/arm-wt-22k/lib_src/eas_wtsynth.c
+index 25a70db..9257951 100644
+--- a/arm-wt-22k/lib_src/eas_wtsynth.c
++++ b/arm-wt-22k/lib_src/eas_wtsynth.c
+@@ -29,6 +29,7 @@
+ 
+ // includes
+ #include "log/log.h"
++#include <cutils/log.h>
+ 
+ #include "eas_data.h"
+ #include "eas_report.h"
+@@ -471,6 +472,7 @@ EAS_BOOL WT_CheckSampleEnd (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame, E
+         }
+         if (pWTIntFrame->numSamples < 0) {
+             ALOGE("b/26366256");
++            android_errorWriteLog(0x534e4554, "26366256");
+             pWTIntFrame->numSamples = 0;
+         }
+ 
+-- 
+2.7.4
+

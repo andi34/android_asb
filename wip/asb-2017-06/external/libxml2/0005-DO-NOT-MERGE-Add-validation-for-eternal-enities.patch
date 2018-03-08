@@ -1,0 +1,36 @@
+From feeb1ee2b2df7951f6a461d0117fe220ba6bc73d Mon Sep 17 00:00:00 2001
+From: "Brian C. Young" <bcyoung@google.com>
+Date: Wed, 5 Apr 2017 09:47:34 -0700
+Subject: [PATCH 5/7] DO NOT MERGE: Add validation for eternal enities
+
+https://bugzilla.gnome.org/show_bug.cgi?id=780691
+
+Bug: 36556310
+Change-Id: I9450743e167c3c73af5e4071f3fc85e81d061648
+(cherry picked from commit bef9af3d89d241bcb518c20cba6da2a2fd9ba049)
+---
+ parser.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/parser.c b/parser.c
+index 72a467c..f4ae9df 100644
+--- a/parser.c
++++ b/parser.c
+@@ -7699,6 +7699,14 @@ xmlParsePEReference(xmlParserCtxtPtr ctxt)
+ 	    if (xmlPushInput(ctxt, input) < 0)
+ 		return;
+ 	} else {
++	    if ((entity->etype == XML_EXTERNAL_PARAMETER_ENTITY) &&
++	        ((ctxt->options & XML_PARSE_NOENT) == 0) &&
++	        ((ctxt->options & XML_PARSE_DTDVALID) == 0) &&
++	        ((ctxt->options & XML_PARSE_DTDLOAD) == 0) &&
++	        ((ctxt->options & XML_PARSE_DTDATTR) == 0) &&
++	        (ctxt->replaceEntities == 0) &&
++	        (ctxt->validate == 0))
++	        return;
+ 	    /*
+ 	     * TODO !!!
+ 	     * handle the extra spaces added before and after
+-- 
+2.7.4
+

@@ -1,0 +1,38 @@
+From 172db198736acbeba2c7e8373e6eb9c84da3c67d Mon Sep 17 00:00:00 2001
+From: Leon Scroggins III <scroggo@google.com>
+Date: Fri, 3 Feb 2017 09:31:04 -0500
+Subject: [PATCH 9/9] Fix out of bounds memory read in GIFMovie.cpp
+
+Test: TODO (to be separately uploaded to CTS)
+
+When decoding a GIF image, do not attempt to copy an index if it is out
+of range.
+
+BUG:33897722
+AOSP-Change-Id: I8c8ca69b00bf1f655e62bbe1798b9a47bf6699be
+
+CVE-2017-0559
+
+Change-Id: I9e89a4869b49b0d51fa0de1a5fa31f6d5e459fbf
+(cherry picked from commit 16882f721279a82a1c860ac689ce570b16fe26a0)
+(cherry picked from commit 859ee482b0e586405295e5ad4d250e35b7a59340)
+---
+ src/images/SkMovie_gif.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/images/SkMovie_gif.cpp b/src/images/SkMovie_gif.cpp
+index b6d068a..2bb6523 100644
+--- a/src/images/SkMovie_gif.cpp
++++ b/src/images/SkMovie_gif.cpp
+@@ -116,7 +116,7 @@ static void copyLine(uint32_t* dst, const unsigned char* src, const ColorMapObje
+                      int transparent, int width)
+ {
+     for (; width > 0; width--, src++, dst++) {
+-        if (*src != transparent) {
++        if (*src != transparent && *src < cmap->ColorCount) {
+             const GifColorType& col = cmap->Colors[*src];
+             *dst = SkPackARGB32(0xFF, col.Red, col.Green, col.Blue);
+         }
+-- 
+2.7.4
+

@@ -1,0 +1,50 @@
+From b6b72da37db72fc0a947c155513c34ecfac76d52 Mon Sep 17 00:00:00 2001
+From: Neil Fuller <nfuller@google.com>
+Date: Tue, 7 Oct 2014 16:30:38 +0100
+Subject: [PATCH 1/2] SCSV support
+
+This adds the TLS fallback SCSV token.
+
+Bug: 17750026
+(cherry-picked from commit e256f2c51cf406843a7ed0364399f79a63a085f6)
+
+Change-Id: I9ca3e12a8a430e647bd5421fb6fee32dba360a8c
+---
+ .../java/com/squareup/okhttp/internal/Platform.java | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/android/main/java/com/squareup/okhttp/internal/Platform.java b/android/main/java/com/squareup/okhttp/internal/Platform.java
+index 0a95f07..0fb5f26 100644
+--- a/android/main/java/com/squareup/okhttp/internal/Platform.java
++++ b/android/main/java/com/squareup/okhttp/internal/Platform.java
+@@ -72,6 +72,27 @@ public final class Platform {
+     }
+ 
+     public void supportTlsIntolerantServer(SSLSocket socket) {
++        // In accordance with https://tools.ietf.org/html/draft-ietf-tls-downgrade-scsv-00
++        // the SCSV cipher is added to signal that a protocol fallback has taken place.
++        final String fallbackScsv = "TLS_FALLBACK_SCSV";
++        boolean socketSupportsFallbackScsv = false;
++        String[] supportedCipherSuites = socket.getSupportedCipherSuites();
++        for (int i = supportedCipherSuites.length - 1; i >= 0; i--) {
++            String supportedCipherSuite = supportedCipherSuites[i];
++            if (fallbackScsv.equals(supportedCipherSuite)) {
++                socketSupportsFallbackScsv = true;
++                break;
++            }
++        }
++        if (socketSupportsFallbackScsv) {
++            // Add the SCSV cipher to the set of enabled ciphers.
++            String[] enabledCipherSuites = socket.getEnabledCipherSuites();
++            String[] newEnabledCipherSuites = new String[enabledCipherSuites.length + 1];
++            System.arraycopy(enabledCipherSuites, 0,
++                    newEnabledCipherSuites, 0, enabledCipherSuites.length);
++            newEnabledCipherSuites[newEnabledCipherSuites.length - 1] = fallbackScsv;
++            socket.setEnabledCipherSuites(newEnabledCipherSuites);
++        }
+         socket.setEnabledProtocols(new String[]{"SSLv3"});
+     }
+ 
+-- 
+2.7.4
+

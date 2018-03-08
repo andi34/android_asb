@@ -1,0 +1,2891 @@
+From 833e901a99e74c719b7373f92bf7f3526ed4da6f Mon Sep 17 00:00:00 2001
+From: Narayan Kamath <narayan@google.com>
+Date: Fri, 10 Jan 2014 14:54:31 +0000
+Subject: [PATCH 12/18] java7: Implement new Locale APIs.
+
+Most validation and sanity checking is performed entirely
+in java. We use ICU only for converting back and forth
+between Locale objects and BCP-47 language tags
+(toLanguageTag & forLanguageTag).
+
+The new APIs also add support for script subtags and
+manipulation of unicode locale extensions.
+
+Note that we do not implement
+IllformedLocaleException.getErrorIndex. If anyone complains
+or if it proves useful somehow, we could plumb the information
+through from ICU if required.
+
+bug: 8992787
+Change-Id: I9b2d7f8d17f970d1b57111dcfe92c16e68b0fa67
+---
+ .../java/java/util/IllformedLocaleException.java   |   58 +
+ luni/src/main/java/java/util/Locale.java           | 1177 +++++++++++++++++++-
+ luni/src/main/java/libcore/icu/ICU.java            |  267 ++++-
+ luni/src/main/native/libcore_icu_ICU.cpp           |   88 ++
+ luni/src/test/java/libcore/icu/ICUTest.java        |   18 +-
+ .../test/java/libcore/java/util/LocaleTest.java    |  960 +++++++++++++++-
+ 6 files changed, 2498 insertions(+), 70 deletions(-)
+ create mode 100644 luni/src/main/java/java/util/IllformedLocaleException.java
+
+diff --git a/luni/src/main/java/java/util/IllformedLocaleException.java b/luni/src/main/java/java/util/IllformedLocaleException.java
+new file mode 100644
+index 0000000..db1754e
+--- /dev/null
++++ b/luni/src/main/java/java/util/IllformedLocaleException.java
+@@ -0,0 +1,58 @@
++/*
++ * Copyright (C) 2014 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package java.util;
++
++/**
++ * Thrown when a locale subtag or field is not well formed.
++ *
++ * See {@link Locale} and {@link Locale.Builder}.
++ *
++ * @hide
++ * @since 1.7
++ */
++public class IllformedLocaleException extends RuntimeException {
++
++    private final int errorIndex;
++
++    /**
++     * Constructs a new instance with no detail message and an error index
++     * of {@code -1}.
++     */
++    public IllformedLocaleException() {
++        this(null, -1);
++    }
++
++    /**
++     * Constructs a new instance with the specified error message.
++     */
++    public IllformedLocaleException(String message) {
++        this(message, -1);
++    }
++
++    /**
++     * Constructs a new instance with the specified error message and
++     * error index.
++     */
++    public IllformedLocaleException(String message, int errorIndex) {
++        super(message);
++        this.errorIndex = errorIndex;
++    }
++
++    public int getErrorIndex() {
++        return errorIndex;
++    }
++}
+diff --git a/luni/src/main/java/java/util/Locale.java b/luni/src/main/java/java/util/Locale.java
+index fc8f7c6..885d150 100644
+--- a/luni/src/main/java/java/util/Locale.java
++++ b/luni/src/main/java/java/util/Locale.java
+@@ -22,6 +22,7 @@ import java.io.ObjectInputStream;
+ import java.io.ObjectOutputStream;
+ import java.io.ObjectStreamField;
+ import java.io.Serializable;
++import java.nio.charset.StandardCharsets;
+ import libcore.icu.ICU;
+ 
+ /**
+@@ -243,6 +244,28 @@ public final class Locale implements Cloneable, Serializable {
+     public static final Locale US = new Locale(true, "en", "US");
+ 
+     /**
++     * BCP-47 extension identifier (or "singleton") for the private
++     * use extension.
++     *
++     * See {@link #getExtension(char)} and {@link Builder#setExtension(char, String)}.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public static final char PRIVATE_USE_EXTENSION = 'x';
++
++    /**
++     * BCP-47 extension identifier (or "singleton") for the unicode locale extension.
++     *
++     *
++     * See {@link #getExtension(char)} and {@link Builder#setExtension(char, String)}.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public static final char UNICODE_LOCALE_EXTENSION = 'u';
++
++    /**
+      * The current default locale. It is temporarily assigned to US because we
+      * need a default locale to lookup the real default locale.
+      */
+@@ -255,10 +278,527 @@ public final class Locale implements Cloneable, Serializable {
+         defaultLocale = new Locale(language, region, variant);
+     }
+ 
++    /**
++     * A class that helps construct {@link Locale} instances.
++     *
++     * Unlike the public {@code Locale} constructors, the methods of this class
++     * perform much stricter checks on their input.
++     *
++     * Validity checks on the {@code language}, {@code country}, {@code variant}
++     * and {@code extension} values are carried out as per the
++     * <a href="https://tools.ietf.org/html/bcp47">BCP-47</a> specification.
++     *
++     * In addition, we treat the <a href="http://www.unicode.org/reports/tr35/">
++     * Unicode locale extension</a> specially and provide methods to manipulate
++     * the structured state (keywords and attributes) specified therein.
++     *
++     * @since 1.7
++     * @hide
++     */
++    public static final class Builder {
++        private String language;
++        private String region;
++        private String variant;
++        private String script;
++
++        private final Set<String> attributes;
++        private final Map<String, String> keywords;
++        private final Map<Character, String> extensions;
++
++        public Builder() {
++            language = region = variant = script = "";
++
++            // NOTE: We use sorted maps in the builder & the locale class itself
++            // because serialized forms of the unicode locale extension (and
++            // of the extension map itself) are specified to be in alphabetic
++            // order of keys.
++            attributes = new TreeSet<String>();
++            keywords = new TreeMap<String, String>();
++            extensions = new TreeMap<Character, String>();
++        }
++
++        /**
++         * Sets the locale language. If {@code language} is {@code null} or empty, the
++         * previous value is cleared.
++         *
++         * As per BCP-47, the language must be between 2 and 3 ASCII characters
++         * in length and must only contain characters in the range {@code [a-zA-Z]}.
++         *
++         * This value is usually an <a href="http://www.loc.gov/standards/iso639-2/">
++         * ISO-639-2</a> alpha-2 or alpha-3 code, though no explicit checks are
++         * carried out that it's a valid code in that namespace.
++         *
++         * Values are normalized to lower case.
++         *
++         * Note that we don't support BCP-47 "extlang" languages because they were
++         * only ever used to substitute for a lack of 3 letter language codes.
++         *
++         * @throws IllformedLocaleException if the language was invalid.
++         */
++        public Builder setLanguage(String language) {
++            if (language == null || language.isEmpty()) {
++                this.language = "";
++                return this;
++            }
++
++            final String lowercaseLanguage = language.toLowerCase(Locale.ROOT);
++            if (!isValidBcp47Alpha(lowercaseLanguage, 2, 3)) {
++                throw new IllformedLocaleException("Invalid language: " + language);
++            }
++
++            this.language = lowercaseLanguage;
++            return this;
++        }
++
++        /**
++         * Set the state of this builder to the parsed contents of the BCP-47 language
++         * tag {@code languageTag}.
++         *
++         * This method is equivalent to a call to {@link #clear} if {@code languageTag}
++         * is {@code null} or empty.
++         *
++         * <b>NOTE:</b> In contrast to {@link Locale#forLanguageTag(String)}, which
++         * simply ignores malformed input, this method will throw an exception if
++         * its input is malformed.
++         *
++         * @throws IllformedLocaleException if {@code languageTag} is not a well formed
++         *         BCP-47 tag.
++         */
++        public Builder setLanguageTag(String languageTag) {
++            if (languageTag == null || languageTag.isEmpty()) {
++                clear();
++                return this;
++            }
++
++            final Locale fromIcu = ICU.forLanguageTag(languageTag, true /* strict */);
++            // When we ask ICU for strict parsing, it might return a null locale
++            // if the language tag is malformed.
++            if (fromIcu == null) {
++                throw new IllformedLocaleException("Invalid languageTag: " + languageTag);
++            }
++
++            setLocale(fromIcu);
++            return this;
++        }
++
++        /**
++         * Sets the locale region. If {@code region} is {@code null} or empty, the
++         * previous value is cleared.
++         *
++         * As per BCP-47, the region must either be a 2 character ISO-3166-1 code
++         * (each character in the range [a-zA-Z]) OR a 3 digit UN M.49 code.
++         *
++         * Values are normalized to upper case.
++         *
++         * @throws IllformedLocaleException if {@code} region is invalid.
++         */
++        public Builder setRegion(String region) {
++            if (region == null || region.isEmpty()) {
++                this.region = "";
++                return this;
++            }
++
++            final String uppercaseRegion = region.toUpperCase(Locale.ROOT);
++            if (!isValidBcp47Alpha(uppercaseRegion, 2, 2) &&
++                    !isUnM49AreaCode(uppercaseRegion)) {
++                throw new IllformedLocaleException("Invalid region: " + region);
++            }
++
++            this.region = uppercaseRegion;
++            return this;
++        }
++
++        /**
++         * Sets the locale variant. If {@code variant} is {@code null} or empty,
++         * the previous value is cleared.
++         *
++         * The input string my consist of one or more variants separated by
++         * valid separators ('-' or '_').
++         *
++         * As per BCP-47, each variant must be between 5 and 8 alphanumeric characters
++         * in length (each character in the range {@code [a-zA-Z0-9]}) but
++         * can be exactly 4 characters in length if the first character is a digit.
++         *
++         * Note that this is a much stricter interpretation of {@code variant}
++         * than the public {@code Locale} constructors. The latter allowed free form
++         * variants.
++         *
++         * Variants are case sensitive and all separators are normalized to {@code '_'}.
++         *
++         * @throws IllformedLocaleException if {@code} variant is invalid.
++         */
++        public Builder setVariant(String variant) {
++            if (variant == null || variant.isEmpty()) {
++                this.variant = "";
++                return this;
++            }
++
++            // Note that unlike extensions, we canonicalize to lower case alphabets
++            // and underscores instead of hyphens.
++            final String normalizedVariant = variant.replace('-', '_');
++            String[] subTags = normalizedVariant.split("_");
++
++            for (String subTag : subTags) {
++                // The BCP-47 spec states that :
++                // - Subtags can be between [5, 8] alphanumeric chars in length.
++                // - Subtags that start with a number are allowed to be 4 chars in length.
++                if (subTag.length() >= 5 && subTag.length() <= 8) {
++                    if (!isAsciiAlphaNum(subTag)) {
++                        throw new IllformedLocaleException("Invalid variant: " + variant);
++                    }
++                } else if (subTag.length() == 4) {
++                    final char firstChar = subTag.charAt(0);
++                    if (!(firstChar >= '0' && firstChar <= '9') || !isAsciiAlphaNum(subTag)) {
++                        throw new IllformedLocaleException("Invalid variant: " + variant);
++                    }
++                } else {
++                    throw new IllformedLocaleException("Invalid variant: " + variant);
++                }
++            }
++
++
++            this.variant = normalizedVariant;
++            return this;
++        }
++
++        /**
++         * Sets the locale script. If {@code script} is {@code null} or empty,
++         * the previous value is cleared.
++         *
++         * As per BCP-47, the script must be 4 characters in length, and
++         * each character in the range {@code [a-zA-Z]}.
++         *
++         * A script usually represents a valid ISO 15924 script code, though no
++         * other registry or validity checks are performed.
++         *
++         * Scripts are normalized to title cased values.
++         *
++         * @throws IllformedLocaleException if {@code script} is invalid.
++         */
++        public Builder setScript(String script) {
++            if (script == null || script.isEmpty()) {
++                this.script = "";
++                return this;
++            }
++
++            if (!isValidBcp47Alpha(script, 4, 4)) {
++                throw new IllformedLocaleException("Invalid script: " + script);
++            }
++
++            this.script = titleCaseAsciiWord(script);
++            return this;
++        }
++
++        /**
++         * Sets the state of the builder to the {@link Locale} represented by
++         * {@code locale}.
++         *
++         * Note that the locale's language, region and variant are validated as per
++         * the rules specified in {@link #setLanguage}, {@link #setRegion} and
++         * {@link #setVariant}.
++         *
++         * All existing builder state is discarded.
++         *
++         * @throws IllformedLocaleException if {@code locale} is invalid.
++         * @throws NullPointerException if {@code locale} is null.
++         */
++        public Builder setLocale(Locale locale) {
++            if (locale == null) {
++                throw new NullPointerException("locale == null");
++            }
++
++            // Make copies of the existing values so that we don't partially
++            // update the state if we encounter an error.
++            final String backupLanguage = language;
++            final String backupRegion = region;
++            final String backupVariant = variant;
++
++            try {
++                setLanguage(locale.getLanguage());
++                setRegion(locale.getCountry());
++                setVariant(locale.getVariant());
++            } catch (IllformedLocaleException ifle) {
++                language = backupLanguage;
++                region = backupRegion;
++                variant = backupVariant;
++
++                throw ifle;
++            }
++
++            // The following values can be set only via the builder class, so
++            // there's no need to normalize them or check their validity.
++
++            this.script = locale.getScript();
++
++            extensions.clear();
++            extensions.putAll(locale.extensions);
++
++            keywords.clear();
++            keywords.putAll(locale.unicodeKeywords);
++
++            attributes.clear();
++            attributes.addAll(locale.unicodeAttributes);
++
++            return this;
++        }
++
++        /**
++         * Adds the specified attribute to the list of attributes in the unicode
++         * locale extension.
++         *
++         * Attributes must be between 3 and 8 characters in length, and each character
++         * must be in the range {@code [a-zA-Z0-9]}.
++         *
++         * Attributes are normalized to lower case values. All added attributes and
++         * keywords are combined to form a complete unicode locale extension on
++         * {@link Locale} objects built by this builder, and accessible via
++         * {@link Locale#getExtension(char)} with the {@link Locale#UNICODE_LOCALE_EXTENSION}
++         * key.
++         *
++         * @throws IllformedLocaleException if {@code attribute} is invalid.
++         * @throws NullPointerException if {@code attribute} is null.
++         */
++        public Builder addUnicodeLocaleAttribute(String attribute) {
++            if (attribute == null) {
++                throw new NullPointerException("attribute == null");
++            }
++
++            final String lowercaseAttribute = attribute.toLowerCase(Locale.ROOT);
++            if (!isValidBcp47Alphanum(lowercaseAttribute, 3, 8)) {
++                throw new IllformedLocaleException("Invalid locale attribute: " + attribute);
++            }
++
++            attributes.add(lowercaseAttribute);
++
++            return this;
++        }
++
++        /**
++         * Removes an attribute from the list of attributes in the unicode locale
++         * extension.
++         *
++         * {@code attribute} must be valid as per the rules specified in
++         * {@link #addUnicodeLocaleAttribute}.
++         *
++         * This method has no effect if {@code attribute} hasn't already been
++         * added.
++         *
++         * @throws IllformedLocaleException if {@code attribute} is invalid.
++         * @throws NullPointerException if {@code attribute} is null.
++         */
++        public Builder removeUnicodeLocaleAttribute(String attribute) {
++            if (attribute == null) {
++                throw new NullPointerException("attribute == null");
++            }
++
++            // Weirdly, remove is specified to check whether the attribute
++            // is valid, so we have to perform the full alphanumeric check here.
++            final String lowercaseAttribute = attribute.toLowerCase(Locale.ROOT);
++            if (!isValidBcp47Alphanum(lowercaseAttribute, 3, 8)) {
++                throw new IllformedLocaleException("Invalid locale attribute: " + attribute);
++            }
++
++            attributes.remove(attribute);
++            return this;
++        }
++
++        /**
++         * Sets the extension identified by {@code key} to {@code value}.
++         *
++         * {@code key} must be in the range {@code [a-zA-Z0-9]}.
++         *
++         * If {@code value} is {@code null} or empty, the extension is removed.
++         *
++         * In the general case, {@code value} must be a series of subtags separated
++         * by ({@code "-"} or {@code "_"}). Each subtag must be between
++         * 2 and 8 characters in length, and each character in the subtag must be in
++         * the range {@code [a-zA-Z0-9]}.
++         *
++         * <p>
++         * There are two special cases :
++         * <li>
++         *     <ul>
++         *         The unicode locale extension
++         *         ({@code key == 'u'}, {@link Locale#UNICODE_LOCALE_EXTENSION}) : Setting
++         *         the unicode locale extension results in all existing keyword and attribute
++         *         state being replaced by the parsed result of {@code value}. For example,
++         *         {@code  builder.setExtension('u', "baaaz-baaar-fo-baar-ba-baaz")}
++         *         is equivalent to:
++         *         <pre>
++         *             builder.addUnicodeLocaleAttribute("baaaz");
++         *             builder.addUnicodeLocaleAttribute("baaar");
++         *             builder.setUnicodeLocaleKeyword("fo", "baar");
++         *             builder.setUnicodeLocaleKeyword("ba", "baaa");
++         *         </pre>
++         *     </ul>
++         *     <ul>
++         *         The private use extension
++         *         ({@code key == 'x'}, {@link Locale#PRIVATE_USE_EXTENSION}) : Each subtag in a
++         *         private use extension can be between 1 and 8 characters in length (in contrast
++         *         to a minimum length of 2 for all other extensions).
++         *     </ul>
++         * </li>
++         *
++         * @throws IllformedLocaleException if {@code value} is invalid.
++         */
++        public Builder setExtension(char key, String value) {
++            if (value == null || value.isEmpty()) {
++                extensions.remove(key);
++                return this;
++            }
++
++            final String normalizedValue = value.toLowerCase(Locale.ROOT).replace('_', '-');
++            final String[] subtags = normalizedValue.split("-");
++
++            // Lengths for subtags in the private use extension should be [1, 8] chars.
++            // For all other extensions, they should be [2, 8] chars.
++            //
++            // http://www.rfc-editor.org/rfc/bcp/bcp47.txt
++            final int minimumLength = (key == PRIVATE_USE_EXTENSION) ? 1 : 2;
++            for (String subtag : subtags) {
++                if (!isValidBcp47Alphanum(subtag, minimumLength, 8)) {
++                    throw new IllformedLocaleException(
++                            "Invalid private use extension : " + value);
++                }
++            }
++
++            // We need to take special action in the case of unicode extensions,
++            // since we claim to understand their keywords and attributes.
++            if (key == UNICODE_LOCALE_EXTENSION) {
++                // First clear existing attributes and keywords.
++                extensions.clear();
++                attributes.clear();
++
++                parseUnicodeExtension(subtags, keywords, attributes);
++            } else {
++                extensions.put(key, normalizedValue);
++            }
++
++            return this;
++        }
++
++        /**
++         * Clears all extensions from this builder. Note that this also implicitly
++         * clears all state related to the unicode locale extension; all attributes
++         * and keywords set by {@link #addUnicodeLocaleAttribute} and
++         * {@link #setUnicodeLocaleKeyword} are cleared.
++         */
++        public Builder clearExtensions() {
++            extensions.clear();
++            attributes.clear();
++            keywords.clear();
++            return this;
++        }
++
++        /**
++         * Adds a key / type pair to the list of unicode locale extension keys.
++         *
++         * {@code key} must be 2 characters in length, and each character must be
++         * in the range {@code [a-zA-Z0-9]}.
++         *
++         * {#code type} can either be empty, or a series of one or more subtags
++         * separated by a separator ({@code "-"} or {@code "_"}). Each subtag must
++         * be between 3 and 8 characters in length and each character in the subtag
++         * must be in the range {@code [a-zA-Z0-9]}.
++         *
++         * Note that the type is normalized to lower case, and all separators
++         * are normalized to {@code "-"}. All added attributes and
++         * keywords are combined to form a complete unicode locale extension on
++         * {@link Locale} objects built by this builder, and accessible via
++         * {@link Locale#getExtension(char)} with the {@link Locale#UNICODE_LOCALE_EXTENSION}
++         * key.
++         *
++         * @throws IllformedLocaleException if {@code key} or {@code value} are
++         *         invalid.
++         */
++        public Builder setUnicodeLocaleKeyword(String key, String type) {
++            if (key == null) {
++                throw new NullPointerException("key == null");
++            }
++
++            if (type == null && keywords != null) {
++                keywords.remove(key);
++                return this;
++            }
++
++            final String lowerCaseKey = key.toLowerCase(Locale.ROOT);
++            // The key must be exactly two alphanumeric characters.
++            if (lowerCaseKey.length() != 2 || !isAsciiAlphaNum(lowerCaseKey)) {
++                throw new IllformedLocaleException("Invalid unicode locale keyword: " + key);
++            }
++
++            // The type can be one or more alphanumeric strings of length [3, 8] characters,
++            // separated by a separator char, which is one of "_" or "-". Though the spec
++            // doesn't require it, we normalize all "_" to "-" to make the rest of our
++            // processing easier.
++            final String lowerCaseType = type.toLowerCase(Locale.ROOT).replace("_", "-");
++            if (!isValidTypeList(lowerCaseType)) {
++                throw new IllformedLocaleException("Invalid unicode locale type: " + type);
++            }
++
++            // Everything checks out fine, add the <key, type> mapping to the list.
++            keywords.put(lowerCaseKey, lowerCaseType);
++
++            return this;
++        }
++
++        /**
++         * Clears all existing state from this builder.
++         */
++        public Builder clear() {
++            clearExtensions();
++            language = region = variant = script = "";
++
++            return this;
++        }
++
++        /**
++         * Constructs a locale from the existing state of the builder. Note that this
++         * method is guaranteed to succeed since field validity checks are performed
++         * at the point of setting them.
++         */
++        public Locale build() {
++            // NOTE: We need to make a copy of attributes, keywords and extensions
++            // because the RI allows this builder to reused.
++            return new Locale(language, region, variant, script,
++                    attributes, keywords, extensions,
++                    false /* from public constructor */);
++        }
++    }
++
++    /**
++     * Returns a locale for a given BCP-47 language tag. This method is more
++     * lenient than {@link Builder#setLanguageTag}. For a given language tag, parsing
++     * will proceed upto the first malformed subtag. All subsequent tags are discarded.
++     *
++     * @throws NullPointerException if {@code languageTag} is {@code null}.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public static Locale forLanguageTag(String languageTag) {
++        if (languageTag == null) {
++            throw new NullPointerException("languageTag == null");
++        }
++
++        return ICU.forLanguageTag(languageTag, false /* strict */);
++    }
++
+     private transient String countryCode;
+     private transient String languageCode;
+     private transient String variantCode;
++    private transient String scriptCode;
++
+     private transient String cachedToStringResult;
++    private transient String cachedLanguageTag;
++    private transient String cachedIcuLocaleId;
++
++    /* Sorted, Unmodifiable */
++    private transient Set<String> unicodeAttributes;
++    /* Sorted, Unmodifiable */
++    private transient Map<String, String> unicodeKeywords;
++    /* Sorted, Unmodifiable */
++    private transient Map<Character, String> extensions;
+ 
+     /**
+      * There's a circular dependency between toLowerCase/toUpperCase and
+@@ -271,54 +811,95 @@ public final class Locale implements Cloneable, Serializable {
+         this.languageCode = lowerCaseLanguageCode;
+         this.countryCode = upperCaseCountryCode;
+         this.variantCode = "";
++        this.scriptCode = "";
++
++        this.unicodeAttributes = Collections.EMPTY_SET;
++        this.unicodeKeywords = Collections.EMPTY_MAP;
++        this.extensions = Collections.EMPTY_MAP;
+     }
+ 
+     /**
+      * Constructs a new {@code Locale} using the specified language.
+      */
+     public Locale(String language) {
+-        this(language, "", "");
++        this(language, "", "", "", Collections.EMPTY_SET, Collections.EMPTY_MAP,
++                Collections.EMPTY_MAP, true /* from public constructor */);
+     }
+ 
+     /**
+      * Constructs a new {@code Locale} using the specified language and country codes.
+      */
+     public Locale(String language, String country) {
+-        this(language, country, "");
++        this(language, country, "", "", Collections.EMPTY_SET, Collections.EMPTY_MAP,
++                Collections.EMPTY_MAP, true /* from public constructor */);
+     }
+ 
+     /**
+-     * Constructs a new {@code Locale} using the specified language, country,
+-     * and variant codes.
++     * Required by libcore.icu.ICU.
++     *
++     * @hide
+      */
+-    public Locale(String language, String country, String variant) {
++    public Locale(String language, String country, String variant, String scriptCode,
++            /* nonnull */ Set<String> unicodeAttributes,
++            /* nonnull */ Map<String, String> unicodeKeywords,
++            /* nonnull */ Map<Character, String> extensions,
++            boolean fromPublicConstructor) {
+         if (language == null || country == null || variant == null) {
+             throw new NullPointerException("language=" + language +
+-                                           ",country=" + country +
+-                                           ",variant=" + variant);
+-        }
+-        if (language.isEmpty() && country.isEmpty()) {
+-            languageCode = "";
+-            countryCode = "";
+-            variantCode = variant;
+-            return;
++                    ",country=" + country +
++                    ",variant=" + variant);
+         }
+ 
+-        languageCode = language.toLowerCase(Locale.US);
+-        // Map new language codes to the obsolete language
+-        // codes so the correct resource bundles will be used.
+-        if (languageCode.equals("he")) {
+-            languageCode = "iw";
+-        } else if (languageCode.equals("id")) {
+-            languageCode = "in";
+-        } else if (languageCode.equals("yi")) {
+-            languageCode = "ji";
++        if (fromPublicConstructor) {
++            if (language.isEmpty() && country.isEmpty()) {
++                languageCode = "";
++                countryCode = "";
++                variantCode = variant;
++            } else {
++                languageCode = adjustLanguageCode(language);
++                countryCode = country.toUpperCase(Locale.US);
++                variantCode = variant;
++            }
++        } else {
++            this.languageCode = adjustLanguageCode(language);
++            this.countryCode = country;
++            this.variantCode = variant;
+         }
+ 
+-        countryCode = country.toUpperCase(Locale.US);
++        this.scriptCode = scriptCode;
++
++        if (fromPublicConstructor) {
++            this.unicodeAttributes = unicodeAttributes;
++            this.unicodeKeywords = unicodeKeywords;
++            this.extensions = extensions;
++        } else {
++            Set<String> attribsCopy = new TreeSet<String>(unicodeAttributes);
++            Map<String, String> keywordsCopy = new TreeMap<String, String>(
++                    unicodeKeywords);
++            Map<Character, String> extensionsCopy = new TreeMap<Character, String>(
++                    extensions);
++
++            // We need to transform the list of attributes & keywords set on the
++            // builder to a unicode locale extension. i.e, if we have any keywords
++            // or attributes set, Locale#getExtension('u') should return a well
++            // formed extension.
++            addUnicodeExtensionToExtensionsMap(attribsCopy, keywordsCopy,
++                    extensionsCopy);
++
++            this.unicodeAttributes = Collections.unmodifiableSet(attribsCopy);
++            this.unicodeKeywords = Collections.unmodifiableMap(keywordsCopy);
++            this.extensions = Collections.unmodifiableMap(extensionsCopy);
++        }
++    }
+ 
+-        // Work around for be compatible with RI
+-        variantCode = variant;
++    /**
++     * Constructs a new {@code Locale} using the specified language, country,
++     * and variant codes.
++     */
++    public Locale(String language, String country, String variant) {
++        this(language, country, variant, "", Collections.EMPTY_SET,
++                Collections.EMPTY_MAP, Collections.EMPTY_MAP,
++                true /* from public constructor */);
+     }
+ 
+     @Override public Object clone() {
+@@ -341,7 +922,10 @@ public final class Locale implements Cloneable, Serializable {
+             Locale o = (Locale) object;
+             return languageCode.equals(o.languageCode)
+                     && countryCode.equals(o.countryCode)
+-                    && variantCode.equals(o.variantCode);
++                    && variantCode.equals(o.variantCode)
++                    && scriptCode.equals(o.scriptCode)
++                    && extensions.equals(o.extensions);
++
+         }
+         return false;
+     }
+@@ -399,9 +983,10 @@ public final class Locale implements Cloneable, Serializable {
+         if (countryCode.isEmpty()) {
+             return "";
+         }
+-        String result = ICU.getDisplayCountryNative(toString(), locale.toString());
++        String result = ICU.getDisplayCountryNative(getIcuLocaleId(), locale.getIcuLocaleId());
+         if (result == null) { // TODO: do we need to do this, or does ICU do it for us?
+-            result = ICU.getDisplayCountryNative(toString(), Locale.getDefault().toString());
++            result = ICU.getDisplayCountryNative(getIcuLocaleId(),
++                    Locale.getDefault().getIcuLocaleId());
+         }
+         return result;
+     }
+@@ -427,12 +1012,14 @@ public final class Locale implements Cloneable, Serializable {
+         // using "fil" when they're not.
+         String localeString = toString();
+         if (languageCode.equals("tl")) {
+-            localeString = toNewString("fil", countryCode, variantCode);
++            localeString = toNewString("fil", countryCode, variantCode, scriptCode,
++                    extensions);
+         }
+ 
+-        String result = ICU.getDisplayLanguageNative(localeString, locale.toString());
++        String result = ICU.getDisplayLanguageNative(localeString, locale.getIcuLocaleId());
+         if (result == null) { // TODO: do we need to do this, or does ICU do it for us?
+-            result = ICU.getDisplayLanguageNative(localeString, Locale.getDefault().toString());
++            result = ICU.getDisplayLanguageNative(localeString,
++                    Locale.getDefault().getIcuLocaleId());
+         }
+         return result;
+     }
+@@ -467,6 +1054,14 @@ public final class Locale implements Cloneable, Serializable {
+             buffer.append(displayLanguage.isEmpty() ? languageCode : displayLanguage);
+             ++count;
+         }
++        if (!scriptCode.isEmpty()) {
++            if (count == 1) {
++                buffer.append(" (");
++            }
++            String displayScript = getDisplayScript(locale);
++            buffer.append(displayScript.isEmpty() ? countryCode : displayScript);
++            ++count;
++        }
+         if (!countryCode.isEmpty()) {
+             if (count == 1) {
+                 buffer.append(" (");
+@@ -509,9 +1104,10 @@ public final class Locale implements Cloneable, Serializable {
+         if (variantCode.length() == 0) {
+             return variantCode;
+         }
+-        String result = ICU.getDisplayVariantNative(toString(), locale.toString());
++        String result = ICU.getDisplayVariantNative(getIcuLocaleId(), locale.getIcuLocaleId());
+         if (result == null) { // TODO: do we need to do this, or does ICU do it for us?
+-            result = ICU.getDisplayVariantNative(toString(), Locale.getDefault().toString());
++            result = ICU.getDisplayVariantNative(getIcuLocaleId(),
++                    Locale.getDefault().getIcuLocaleId());
+         }
+         return result;
+     }
+@@ -522,7 +1118,7 @@ public final class Locale implements Cloneable, Serializable {
+      * @throws MissingResourceException if there's no 3-letter country code for this locale.
+      */
+     public String getISO3Country() {
+-        String code = ICU.getISO3CountryNative(toString());
++        String code = ICU.getISO3CountryNative(getIcuLocaleId());
+         if (!countryCode.isEmpty() && code.isEmpty()) {
+             throw new MissingResourceException("No 3-letter country code for locale: " + this, "FormatData_" + this, "ShortCountry");
+         }
+@@ -535,7 +1131,7 @@ public final class Locale implements Cloneable, Serializable {
+      * @throws MissingResourceException if there's no 3-letter language code for this locale.
+      */
+     public String getISO3Language() {
+-        String code = ICU.getISO3LanguageNative(toString());
++        String code = ICU.getISO3LanguageNative(getIcuLocaleId());
+         if (!languageCode.isEmpty() && code.isEmpty()) {
+             throw new MissingResourceException("No 3-letter language code for locale: " + this, "FormatData_" + this, "ShortLanguage");
+         }
+@@ -574,10 +1170,155 @@ public final class Locale implements Cloneable, Serializable {
+         return variantCode;
+     }
+ 
++    /**
++     * Returns the script code for this {@code Locale} or an empty {@code String} if no script
++     * was set.
++     *
++     * If set, the script code will be a title cased string of length 4, as per the ISO 15924
++     * specification.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public String getScript() {
++        return scriptCode;
++    }
++
++    /**
++     * Equivalent to {@code getDisplayScript(Locale.getDefault()))}
++     *
++     * @hide
++     * @since 1.7
++     */
++    public String getDisplayScript() {
++        return getDisplayScript(getDefault());
++    }
++
++    /**
++     * Returns the name of this locale's script code, localized to {@link Locale}. If the
++     * script code is unknown, the return value of this method is the same as that of
++     * {@link #getScript()}.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public String getDisplayScript(Locale locale) {
++        if (scriptCode.isEmpty()) {
++            return "";
++        }
++
++        String result = ICU.getDisplayScriptNative(getIcuLocaleId(), locale.getIcuLocaleId());
++        if (result == null) { // TODO: do we need to do this, or does ICU do it for us?
++            result = ICU.getDisplayScriptNative(getIcuLocaleId(),
++                    Locale.getDefault().getIcuLocaleId());
++        }
++
++        return result;
++
++    }
++
++    /**
++     * Returns a well formed BCP-47 language tag that identifies this locale.
++     *
++     * Note that this locale itself might consist of ill formed fields, since the
++     * public {@code Locale} constructors do not perform validity checks to maintain
++     * backwards compatibility. When this is the case, this method will either replace
++     * ill formed fields with standard BCP-47 subtags (For eg. "und" (undetermined)
++     * for invalid languages) or omit them altogether.
++     *
++     * Additionally, ill formed variants will result in the remainder of the tag
++     * (both variants and extensions) being moved to the private use extension,
++     * where they will appear after a subtag whose value is {@code "lvariant"}.
++     *
++     * It's also important to note that the BCP-47 tag is well formed in the sense
++     * that it is unambiguously parsable into its specified components. We do not
++     * require that any of the components are registered with the applicable registries.
++     * For example, we do not require scripts to be a registered ISO 15924 scripts or
++     * languages to appear in the ISO-639-2 code list.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public String toLanguageTag() {
++        if (cachedLanguageTag == null) {
++            cachedLanguageTag = ICU.toLanguageTag(this);
++        }
++
++        return cachedLanguageTag;
++    }
++
++    /**
++     * Returns the set of BCP-47 extensions this locale contains.
++     *
++     * See <a href="https://tools.ietf.org/html/bcp47#section-2.1">
++     *     the IETF BCP-47 specification</a> (Section 2.2.6) for details.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public Set<Character> getExtensionKeys() {
++        return extensions.keySet();
++    }
++
++    /**
++     * Returns the BCP-47 extension whose key is {@code extensionKey}, or {@code null}
++     * if this locale does not contain the extension.
++     *
++     * Individual Keywords and attributes for the unicode
++     * locale extension can be fetched using {@link #getUnicodeLocaleAttributes()},
++     * {@link #getUnicodeLocaleKeys()}  and {@link #getUnicodeLocaleType}.
++     *
++     * @hide
++     * @since 1.7
++     */
++    public String getExtension(char extensionKey) {
++        return extensions.get(extensionKey);
++    }
++
++    /**
++     * Returns the {@code type} for the specified unicode locale extension {@code key}.
++     *
++     * For more information about types and keywords, see {@link Builder#setUnicodeLocaleKeyword}
++     * and <a href="http://www.unicode.org/reports/tr35/#BCP47">Unicode Technical Standard #35</a>
++     *
++     * @hide
++     * @since 1.7
++     */
++    public String getUnicodeLocaleType(String keyWord) {
++        return unicodeKeywords.get(keyWord);
++    }
++
++    /**
++     * Returns the set of unicode locale extension attributes this locale contains.
++     *
++     * For more information about attributes, see {@link Builder#addUnicodeLocaleAttribute}
++     * and <a href="http://www.unicode.org/reports/tr35/#BCP47">Unicode Technical Standard #35</a>
++     *
++     * @hide
++     * @since 1.7
++     */
++    public Set<String> getUnicodeLocaleAttributes() {
++        return unicodeAttributes;
++    }
++
++    /**
++     * Returns the set of unicode locale extension keywords this locale contains.
++     *
++     * For more information about types and keywords, see {@link Builder#setUnicodeLocaleKeyword}
++     * and <a href="http://www.unicode.org/reports/tr35/#BCP47">Unicode Technical Standard #35</a>
++     *
++     * @hide
++     * @since 1.7
++     */
++    public Set<String> getUnicodeLocaleKeys() {
++        return unicodeKeywords.keySet();
++    }
++
+     @Override
+     public synchronized int hashCode() {
+-        return countryCode.hashCode() + languageCode.hashCode()
+-                + variantCode.hashCode();
++        return countryCode.hashCode()
++                + languageCode.hashCode() + variantCode.hashCode()
++                + scriptCode.hashCode() + extensions.hashCode();
+     }
+ 
+     /**
+@@ -610,30 +1351,68 @@ public final class Locale implements Cloneable, Serializable {
+     public final String toString() {
+         String result = cachedToStringResult;
+         if (result == null) {
+-            result = cachedToStringResult = toNewString(languageCode, countryCode, variantCode);
++            result = cachedToStringResult = toNewString(languageCode, countryCode,
++                    variantCode, scriptCode, extensions);
+         }
+         return result;
+     }
+ 
+-    private static String toNewString(String languageCode, String countryCode, String variantCode) {
++    private String getIcuLocaleId() {
++        if (cachedIcuLocaleId == null) {
++            cachedIcuLocaleId = ICU.localeIdFromLocale(this);
++        }
++
++        return cachedIcuLocaleId;
++    }
++
++    private static String toNewString(String languageCode, String countryCode,
++            String variantCode, String scriptCode, Map<Character, String> extensions) {
+         // The string form of a locale that only has a variant is the empty string.
+         if (languageCode.length() == 0 && countryCode.length() == 0) {
+             return "";
+         }
++
+         // Otherwise, the output format is "ll_cc_variant", where language and country are always
+         // two letters, but the variant is an arbitrary length. A size of 11 characters has room
+         // for "en_US_POSIX", the largest "common" value. (In practice, the string form is almost
+         // always 5 characters: "ll_cc".)
+         StringBuilder result = new StringBuilder(11);
+         result.append(languageCode);
+-        if (countryCode.length() > 0 || variantCode.length() > 0) {
++
++        final boolean hasScriptOrExtensions = !scriptCode.isEmpty() ||
++                !extensions.isEmpty();
++
++        if (!countryCode.isEmpty() || !variantCode.isEmpty() || hasScriptOrExtensions) {
+             result.append('_');
+         }
+         result.append(countryCode);
+-        if (variantCode.length() > 0) {
++        if (!variantCode.isEmpty() || hasScriptOrExtensions) {
+             result.append('_');
+         }
+         result.append(variantCode);
++
++        if (hasScriptOrExtensions) {
++            if (!variantCode.isEmpty()) {
++                result.append('_');
++            }
++
++            // Note that this is notably different from the BCP-47 spec (for
++            // backwards compatibility). We are forced to append a "#" before the script tag.
++            // and also put the script code right at the end.
++            result.append("#");
++            if (!scriptCode.isEmpty() ) {
++                result.append(scriptCode);
++            }
++
++            // Note the use of "-" instead of "_" before the extensions.
++            if (!extensions.isEmpty()) {
++                if (!scriptCode.isEmpty()) {
++                    result.append('-');
++                }
++                result.append(serializeExtensions(extensions));
++            }
++        }
++
+         return result.toString();
+     }
+ 
+@@ -642,6 +1421,8 @@ public final class Locale implements Cloneable, Serializable {
+         new ObjectStreamField("hashcode", int.class),
+         new ObjectStreamField("language", String.class),
+         new ObjectStreamField("variant", String.class),
++        new ObjectStreamField("script", String.class),
++        new ObjectStreamField("extensions", String.class),
+     };
+ 
+     private void writeObject(ObjectOutputStream stream) throws IOException {
+@@ -650,6 +1431,12 @@ public final class Locale implements Cloneable, Serializable {
+         fields.put("hashcode", -1);
+         fields.put("language", languageCode);
+         fields.put("variant", variantCode);
++        fields.put("script", scriptCode);
++
++        if (!extensions.isEmpty()) {
++            fields.put("extensions", serializeExtensions(extensions));
++        }
++
+         stream.writeFields();
+     }
+ 
+@@ -658,5 +1445,313 @@ public final class Locale implements Cloneable, Serializable {
+         countryCode = (String) fields.get("country", "");
+         languageCode = (String) fields.get("language", "");
+         variantCode = (String) fields.get("variant", "");
++        scriptCode = (String) fields.get("script", "");
++
++        this.unicodeKeywords = Collections.EMPTY_MAP;
++        this.unicodeAttributes = Collections.EMPTY_SET;
++        this.extensions = Collections.EMPTY_MAP;
++
++        String extensions = (String) fields.get("extensions", null);
++        if (extensions != null) {
++            readExtensions(extensions);
++        }
++    }
++
++    private void readExtensions(String extensions) {
++        Map<Character, String> extensionsMap = new TreeMap<Character, String>();
++        parseSerializedExtensions(extensions, extensionsMap);
++        this.extensions = Collections.unmodifiableMap(extensionsMap);
++
++        if (extensionsMap.containsKey(UNICODE_LOCALE_EXTENSION)) {
++            String unicodeExtension = extensionsMap.get(UNICODE_LOCALE_EXTENSION);
++            String[] subTags = unicodeExtension.split("-");
++
++            Map<String, String> unicodeKeywords = new TreeMap<String, String>();
++            Set<String> unicodeAttributes = new TreeSet<String>();
++            parseUnicodeExtension(subTags, unicodeKeywords, unicodeAttributes);
++
++            this.unicodeKeywords = Collections.unmodifiableMap(unicodeKeywords);
++            this.unicodeAttributes = Collections.unmodifiableSet(unicodeAttributes);
++        }
++    }
++
++    /**
++     * The serialized form for extensions is straightforward. It's simply
++     * of the form key1-value1-key2-value2 where each value might in turn contain
++     * multiple subtags separated by hyphens. Each key is guaranteed to be a single
++     * character in length.
++     *
++     * This method assumes that {@code extensionsMap} is non-empty.
++     *
++     * Visible for testing.
++     *
++     * @hide
++     */
++    public static String serializeExtensions(Map<Character, String> extensionsMap) {
++        Iterator<Map.Entry<Character, String>> entryIterator = extensionsMap.entrySet().iterator();
++        StringBuilder sb = new StringBuilder(64);
++
++        while (true) {
++            final Map.Entry<Character, String> entry = entryIterator.next();
++            sb.append(entry.getKey());
++            sb.append('-');
++            sb.append(entry.getValue());
++
++            if (entryIterator.hasNext()) {
++                sb.append('-');
++            } else {
++                break;
++            }
++        }
++
++        return sb.toString();
++    }
++
++    /**
++     * Visible for testing.
++     *
++     * @hide
++     */
++    public static void parseSerializedExtensions(String extString, Map<Character, String> outputMap) {
++        // This probably isn't the most efficient approach, but it's the
++        // most straightforward to code.
++        //
++        // Start by splitting the string on "-". We will then keep track of
++        // where each of the extension keys (single characters) appear in the
++        // original string and then use those indices to construct substrings
++        // representing the values.
++        final String[] subTags = extString.split("-");
++        final int[] typeStartIndices = new int[subTags.length / 2];
++
++        int length = 0;
++        int count = 0;
++        for (String subTag : subTags) {
++            if (subTag.length() > 0) {
++                // Account for the length of the "-" at the end of each subtag.
++                length += (subTag.length() + 1);
++            }
++
++            if (subTag.length() == 1) {
++                typeStartIndices[count++] = length;
++            }
++        }
++
++        for (int i = 0; i < count; ++i) {
++            final int valueStart = typeStartIndices[i];
++            // Since the start Index points to the beginning of the next type
++            // ....prev-k-next.....
++            //            |_ here
++            // (idx - 2) is the index of the next key
++            // (idx - 3) is the (non inclusive) end of the previous type.
++            final int valueEnd = (i == (count - 1)) ?
++                    extString.length() : (typeStartIndices[i + 1] - 3);
++
++            outputMap.put(extString.charAt(typeStartIndices[i] - 2),
++                    extString.substring(valueStart, valueEnd));
++        }
++    }
++
++
++    /**
++     * A UN M.49 is a 3 digit numeric code.
++     */
++    private static boolean isUnM49AreaCode(String code) {
++        if (code.length() != 3) {
++            return false;
++        }
++
++        for (int i = 0; i < 3; ++i) {
++            final char character = code.charAt(i);
++            if (!(character >= '0' && character <= '9')) {
++                return false;
++            }
++        }
++
++        return true;
++    }
++
++    /*
++     * Checks whether a given string is an ASCII alphanumeric string.
++     */
++    private static boolean isAsciiAlphaNum(String string) {
++        for (int i = 0; i < string.length(); i++) {
++            final char character = string.charAt(i);
++            if (!(character >= 'a' && character <= 'z' ||
++                    character >= 'A' && character <= 'Z' ||
++                    character >= '0' && character <= '9')) {
++                return false;
++            }
++        }
++
++        return true;
++    }
++
++    private static boolean isValidBcp47Alpha(String string,
++            int lowerBound, int upperBound) {
++        final int length = string.length();
++        if (length < lowerBound || length > upperBound) {
++            return false;
++        }
++
++        for (int i = 0; i < length; ++i) {
++            final char character = string.charAt(i);
++            if (!(character >= 'a' && character <= 'z' ||
++                    character >= 'A' && character <= 'Z')) {
++                return false;
++            }
++        }
++
++        return true;
++    }
++
++    private static boolean isValidBcp47Alphanum(String attributeOrType,
++            int lowerBound, int upperBound) {
++        if (attributeOrType.length() < lowerBound || attributeOrType.length() > upperBound) {
++            return false;
++        }
++
++        return isAsciiAlphaNum(attributeOrType);
++    }
++
++    private static String titleCaseAsciiWord(String word) {
++        try {
++            byte[] chars = word.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII);
++            chars[0] = (byte) ((int) chars[0] + 'A' - 'a');
++            return new String(chars, StandardCharsets.US_ASCII);
++        } catch (UnsupportedOperationException uoe) {
++            throw new AssertionError(uoe);
++        }
++    }
++
++    /**
++     * A type list must contain one or more alphanumeric subtags whose lengths
++     * are between 3 and 8.
++     */
++    private static boolean isValidTypeList(String lowerCaseTypeList) {
++        final String[] splitList = lowerCaseTypeList.split("-");
++        for (String type : splitList) {
++            if (!isValidBcp47Alphanum(type, 3, 8)) {
++                return false;
++            }
++        }
++
++        return true;
++    }
++
++    private static void addUnicodeExtensionToExtensionsMap(
++            Set<String> attributes, Map<String, String> keywords,
++            Map<Character, String> extensions) {
++        if (attributes.isEmpty() && keywords.isEmpty()) {
++            return;
++        }
++
++        // Assume that the common case is a low number of keywords & attributes
++        // (usually one or two).
++        final StringBuilder sb = new StringBuilder(32);
++
++        // All attributes must appear before keywords, in lexical order.
++        if (!attributes.isEmpty()) {
++            Iterator<String> attributesIterator = attributes.iterator();
++            while (true) {
++                sb.append(attributesIterator.next());
++                if (attributesIterator.hasNext()) {
++                    sb.append('-');
++                } else {
++                    break;
++                }
++            }
++        }
++
++        if (!keywords.isEmpty()) {
++            if (!attributes.isEmpty()) {
++                sb.append('-');
++            }
++
++            Iterator<Map.Entry<String, String>> keywordsIterator = keywords.entrySet().iterator();
++            while (true) {
++                final Map.Entry<String, String> keyWord = keywordsIterator.next();
++                sb.append(keyWord.getKey());
++                sb.append('-');
++                sb.append(keyWord.getValue());
++                if (keywordsIterator.hasNext()) {
++                    sb.append('-');
++                } else {
++                    break;
++                }
++            }
++        }
++
++        extensions.put(UNICODE_LOCALE_EXTENSION, sb.toString());
++    }
++
++    /**
++     * This extension is described by http://www.unicode.org/reports/tr35/#RFC5234
++     * unicode_locale_extensions = sep "u" (1*(sep keyword) / 1*(sep attribute) *(sep keyword)).
++     *
++     * It must contain at least one keyword or attribute and attributes (if any)
++     * must appear before keywords. Attributes can't appear after keywords because
++     * they will be indistinguishable from a subtag of the keyword type.
++     *
++     * Visible for testing.
++     *
++     * @hide
++     */
++    public static void parseUnicodeExtension(String[] subtags,
++            Map<String, String> keywords, Set<String> attributes)  {
++        String lastKeyword = null;
++        List<String> subtagsForKeyword = new ArrayList<String>();
++        for (String subtag : subtags) {
++            if (subtag.length() == 2) {
++                if (subtagsForKeyword.size() > 0) {
++                    keywords.put(lastKeyword, joinBcp47Subtags(subtagsForKeyword));
++                    subtagsForKeyword.clear();
++                }
++
++                lastKeyword = subtag;
++            } else if (subtag.length() > 2) {
++                if (lastKeyword == null) {
++                    attributes.add(subtag);
++                } else {
++                    subtagsForKeyword.add(subtag);
++                }
++            }
++        }
++
++        if (subtagsForKeyword.size() > 0) {
++            keywords.put(lastKeyword, joinBcp47Subtags(subtagsForKeyword));
++        }
++    }
++
++    /**
++     * Joins a list of subtags into a BCP-47 tag using the standard separator
++     * ("-").
++     */
++    private static String joinBcp47Subtags(List<String> strings) {
++        final int size = strings.size();
++
++        StringBuilder sb = new StringBuilder(strings.get(0).length());
++        for (int i = 0; i < size; ++i) {
++            sb.append(strings.get(i));
++            if (i != size - 1) {
++                sb.append('-');
++            }
++        }
++
++        return sb.toString();
++    }
++
++    private static String adjustLanguageCode(String languageCode) {
++        String adjusted = languageCode.toLowerCase(Locale.US);
++        // Map new language codes to the obsolete language
++        // codes so the correct resource bundles will be used.
++        if (languageCode.equals("he")) {
++            adjusted = "iw";
++        } else if (languageCode.equals("id")) {
++            adjusted = "in";
++        } else if (languageCode.equals("yi")) {
++            adjusted = "ji";
++        }
++
++        return adjusted;
+     }
+ }
+diff --git a/luni/src/main/java/libcore/icu/ICU.java b/luni/src/main/java/libcore/icu/ICU.java
+index 76d9c54..073eb2d 100644
+--- a/luni/src/main/java/libcore/icu/ICU.java
++++ b/luni/src/main/java/libcore/icu/ICU.java
+@@ -16,8 +16,13 @@
+ 
+ package libcore.icu;
+ 
++import java.util.Collections;
++import java.util.HashMap;
++import java.util.HashSet;
+ import java.util.LinkedHashSet;
+ import java.util.Locale;
++import java.util.Map;
++import java.util.Set;
+ import libcore.util.BasicLruCache;
+ 
+ /**
+@@ -53,30 +58,254 @@ public final class ICU {
+     return isoCountries.clone();
+   }
+ 
++  public static Locale forLanguageTag(String languageTag, boolean strict) {
++    final String icuLocaleId = localeForLanguageTag(languageTag, strict);
++    if (icuLocaleId == null) {
++      // TODO: We should probably return "und" here. From what I can tell,
++      // this happens only when the language in the languageTag is bad.
++      // Investigate this a bit more.
++      return null;
++    }
++
++    return localeFromIcuLocaleId(icuLocaleId);
++  }
++
++  public static String toLanguageTag(Locale locale) {
++    return languageTagForLocale(localeIdFromLocale(locale));
++  }
++
++  private static final int IDX_LANGUAGE = 0;
++  private static final int IDX_SCRIPT = 1;
++  private static final int IDX_REGION = 2;
++  private static final int IDX_VARIANT = 3;
++
++  /*
++   * Parse the {Language, Script, Region, Variant*} section of the ICU locale
++   * ID. This is the bit that appears before the keyword separate "@". The general
++   * structure is a series of ASCII alphanumeric strings (subtags)
++   * separated by underscores.
++   *
++   * Each subtag is interpreted according to its position in the list of subtags
++   * AND its length (groan...). The various cases are explained in comments
++   * below.
++   */
++  private static void parseLangScriptRegionAndVariants(String string,
++          String[] outputArray) {
++    final int first = string.indexOf('_');
++    final int second = string.indexOf('_', first + 1);
++    final int third = string.indexOf('_', second + 1);
++
++    if (first == -1) {
++      outputArray[IDX_LANGUAGE] = string;
++    } else if (second == -1) {
++      // Language and country ("ja_JP") OR
++      // Language and script ("en_Latn") OR
++      // Language and variant ("en_POSIX").
++
++      outputArray[IDX_LANGUAGE] = string.substring(0, first);
++      final String secondString = string.substring(first + 1);
++
++      if (secondString.length() == 4) {
++          // 4 Letter ISO script code.
++          outputArray[IDX_SCRIPT] = secondString;
++      } else if (secondString.length() == 2 || secondString.length() == 3) {
++          // 2 or 3 Letter region code.
++          outputArray[IDX_REGION] = secondString;
++      } else {
++          // If we're here, the length of the second half is either 1 or greater
++          // than 5. Assume that ICU won't hand us malformed tags, and therefore
++          // assume the rest of the string is a series of variant tags.
++          outputArray[IDX_VARIANT] = secondString;
++      }
++    } else if (third == -1) {
++      // Language and country and variant ("ja_JP_TRADITIONAL") OR
++      // Language and script and variant ("en_Latn_POSIX") OR
++      // Language and script and region ("en_Latn_US"). OR
++      // Language and variant with multiple subtags ("en_POSIX_XISOP")
++
++      outputArray[IDX_LANGUAGE] = string.substring(0, first);
++      final String secondString = string.substring(first + 1, second);
++      final String thirdString = string.substring(second + 1);
++
++      if (secondString.length() == 4) {
++          // The second subtag is a script.
++          outputArray[IDX_SCRIPT] = secondString;
++
++          // The third subtag can be either a region or a variant, depending
++          // on its length.
++          if (thirdString.length() == 2 || thirdString.length() == 3 ||
++                  thirdString.isEmpty()) {
++              outputArray[IDX_REGION] = thirdString;
++          } else {
++              outputArray[IDX_VARIANT] = thirdString;
++          }
++      } else if (secondString.isEmpty() ||
++              secondString.length() == 2 || secondString.length() == 3) {
++          // The second string is a region, and the third a variant.
++          outputArray[IDX_REGION] = secondString;
++          outputArray[IDX_VARIANT] = thirdString;
++      } else {
++          // Variant with multiple subtags.
++          outputArray[IDX_VARIANT] = string.substring(first + 1);
++      }
++    } else {
++      // Language, script, region and variant with 1 or more subtags
++      // ("en_Latn_US_POSIX") OR
++      // Language, region and variant with 2 or more subtags
++      // (en_US_POSIX_VARIANT).
++      outputArray[IDX_LANGUAGE] = string.substring(0, first);
++      final String secondString = string.substring(first + 1, second);
++      if (secondString.length() == 4) {
++          outputArray[IDX_SCRIPT] = secondString;
++          outputArray[IDX_REGION] = string.substring(second + 1, third);
++          outputArray[IDX_VARIANT] = string.substring(third + 1);
++      } else {
++          outputArray[IDX_REGION] = secondString;
++          outputArray[IDX_VARIANT] = string.substring(second + 1);
++      }
++    }
++  }
++
+   /**
+    * Returns the appropriate {@code Locale} given a {@code String} of the form returned
+    * by {@code toString}. This is very lenient, and doesn't care what's between the underscores:
+    * this method can parse strings that {@code Locale.toString} won't produce.
+    * Used to remove duplication.
++   *
++   * Package visible for testing.
+    */
+-  public static Locale localeFromString(String localeName) {
+-    int first = localeName.indexOf('_');
+-    int second = localeName.indexOf('_', first + 1);
+-    if (first == -1) {
+-      // Language only ("ja").
+-      return new Locale(localeName);
+-    } else if (second == -1) {
+-      // Language and country ("ja_JP").
+-      String language = localeName.substring(0, first);
+-      String country = localeName.substring(first + 1);
+-      return new Locale(language, country);
++  static Locale localeFromIcuLocaleId(String localeId) {
++    // @ == ULOC_KEYWORD_SEPARATOR_UNICODE (uloc.h).
++    final int extensionsIndex = localeId.indexOf('@');
++
++    Map<Character, String> extensionsMap = Collections.EMPTY_MAP;
++    Map<String, String> unicodeKeywordsMap = Collections.EMPTY_MAP;
++    Set<String> unicodeAttributeSet = Collections.EMPTY_SET;
++
++    if (extensionsIndex != -1) {
++      extensionsMap = new HashMap<Character, String>();
++      unicodeKeywordsMap = new HashMap<String, String>();
++      unicodeAttributeSet = new HashSet<String>();
++
++      // ICU sends us a semi-colon (ULOC_KEYWORD_ITEM_SEPARATOR) delimited string
++      // containing all "keywords" it could parse. An ICU keyword is a key-value pair
++      // separated by an "=" (ULOC_KEYWORD_ASSIGN).
++      //
++      // Each keyword item can be one of three things :
++      // - A unicode extension attribute list: In this case the item key is "attribute"
++      //   and the value is a hyphen separated list of unicode attributes.
++      // - A unicode extension keyword: In this case, the item key will be larger than
++      //   1 char in length, and the value will be the unicode extension value.
++      // - A BCP-47 extension subtag: In this case, the item key will be exactly one
++      //   char in length, and the value will be a sequence of unparsed subtags that
++      //   represent the extension.
++      //
++      // Note that this implies that unicode extension keywords are "promoted" to
++      // to the same namespace as the top level extension subtags and their values.
++      // There can't be any collisions in practice because the BCP-47 spec imposes
++      // restrictions on their lengths.
++      final String extensionsString = localeId.substring(extensionsIndex + 1);
++      final String[] extensions = extensionsString.split(";");
++      for (String extension : extensions) {
++        // This is the special key for the unicode attributes
++        if (extension.startsWith("attribute=")) {
++          String unicodeAttributeValues = extension.substring("attribute=".length());
++          for (String unicodeAttribute : unicodeAttributeValues.split("-")) {
++            unicodeAttributeSet.add(unicodeAttribute);
++          }
++        } else {
++          final int separatorIndex = extension.indexOf('=');
++
++          if (separatorIndex == 1) {
++            // This is a BCP-47 extension subtag.
++            final String value = extension.substring(2);
++            final char extensionId = extension.charAt(0);
++
++            extensionsMap.put(extensionId, value);
++          } else {
++            // This is a unicode extension keyword.
++            unicodeKeywordsMap.put(extension.substring(0, separatorIndex),
++            extension.substring(separatorIndex + 1));
++          }
++        }
++      }
++    }
++
++    final String[] outputArray = new String[] { "", "", "", "" };
++    if (extensionsIndex == -1) {
++      parseLangScriptRegionAndVariants(localeId, outputArray);
+     } else {
+-      // Language and country and variant ("ja_JP_TRADITIONAL").
+-      String language = localeName.substring(0, first);
+-      String country = localeName.substring(first + 1, second);
+-      String variant = localeName.substring(second + 1);
+-      return new Locale(language, country, variant);
++      parseLangScriptRegionAndVariants(localeId.substring(0, extensionsIndex),
++          outputArray);
+     }
++
++    return new Locale(outputArray[IDX_LANGUAGE], outputArray[IDX_REGION],
++        outputArray[IDX_VARIANT], outputArray[IDX_SCRIPT],
++        unicodeAttributeSet, unicodeKeywordsMap, extensionsMap, false);
++  }
++
++  /**
++   * Builds an ICU locale ID from the given locale. The format is very
++   * straightforward. It is a series of subtags in BCP 47 order
++   * {@code lang[_script][_country][_variant]} followed by the keyword
++   * separator {@code @} followed by a list of keywords. Each keyword is
++   * a key value pair, and appear in the form {@code k1=v1;k2=v2;...}.
++   *
++   * In this use case, each key is an extension identifier, and each value
++   * is the value of the extension.
++   */
++  public static String localeIdFromLocale(Locale l) {
++      StringBuilder b = new StringBuilder(16);
++      b.append(l.getLanguage());
++
++      final boolean hasScript = !l.getScript().isEmpty();
++      final boolean hasCountry = !l.getCountry().isEmpty();
++      final boolean hasVariant = !l.getVariant().isEmpty();
++
++      if (hasScript || hasCountry || hasVariant) {
++          b.append('_');
++          if (hasScript) {
++              b.append(l.getScript());
++              if (hasCountry || hasVariant) {
++                  b.append('_');
++              }
++          }
++
++          if (hasCountry) {
++              b.append(l.getCountry());
++              if (hasVariant) {
++                  b.append('_');
++              }
++          }
++
++          b.append(l.getVariant());
++      }
++
++      if (!l.getExtensionKeys().isEmpty()) {
++        b.append('@');
++        // The private use extension ('x') must show up last in the list
++        // so we cache its value here and append it right at the end.
++        String privateUseExtensionValue = null;
++        for (char c : l.getExtensionKeys()) {
++          if (c == Locale.PRIVATE_USE_EXTENSION) {
++            privateUseExtensionValue = l.getExtension(Locale.PRIVATE_USE_EXTENSION);
++          } else {
++            b.append(c);
++            b.append('=');
++            b.append(l.getExtension(c));
++            b.append(';');
++          }
++        }
++
++        if (privateUseExtensionValue != null) {
++          b.append(Locale.PRIVATE_USE_EXTENSION);
++          b.append('=');
++          b.append(privateUseExtensionValue);
++          b.append(';');
++        }
++      }
++
++      return b.toString();
+   }
+ 
+   public static Locale[] localesFromStrings(String[] localeNames) {
+@@ -85,7 +314,7 @@ public final class ICU {
+     // both so that we never need to convert back when talking to it.
+     LinkedHashSet<Locale> set = new LinkedHashSet<Locale>();
+     for (String localeName : localeNames) {
+-      set.add(localeFromString(localeName));
++      set.add(localeFromIcuLocaleId(localeName));
+     }
+     return set.toArray(new Locale[set.size()]);
+   }
+@@ -231,6 +460,7 @@ public final class ICU {
+   public static native String getDisplayCountryNative(String countryCode, String locale);
+   public static native String getDisplayLanguageNative(String languageCode, String locale);
+   public static native String getDisplayVariantNative(String variantCode, String locale);
++  public static native String getDisplayScriptNative(String variantCode, String locale);
+ 
+   public static native String getISO3CountryNative(String locale);
+   public static native String getISO3LanguageNative(String locale);
+@@ -241,5 +471,8 @@ public final class ICU {
+   private static native String[] getISOLanguagesNative();
+   private static native String[] getISOCountriesNative();
+ 
++  private static native String localeForLanguageTag(String languageTag, boolean strict);
++  public static native String languageTagForLocale(String locale);
++
+   static native boolean initLocaleDataNative(String locale, LocaleData result);
+ }
+diff --git a/luni/src/main/native/libcore_icu_ICU.cpp b/luni/src/main/native/libcore_icu_ICU.cpp
+index 5bbb506..da1cca5 100644
+--- a/luni/src/main/native/libcore_icu_ICU.cpp
++++ b/luni/src/main/native/libcore_icu_ICU.cpp
+@@ -60,6 +60,7 @@
+ #include <sys/types.h>
+ #include <time.h>
+ #include <unistd.h>
++#include <vector>
+ 
+ // TODO: put this in a header file and use it everywhere!
+ // DISALLOW_COPY_AND_ASSIGN disallows the copy and operator= functions.
+@@ -116,6 +117,82 @@ static jstring ICU_getScript(JNIEnv* env, jclass, jstring javaLocale) {
+     return env->NewStringUTF(script);
+ }
+ 
++static jstring ICU_localeForLanguageTag(JNIEnv* env, jclass, jstring languageTag, jboolean strict) {
++    ScopedUtfChars languageTagChars(env, languageTag);
++
++    // Naively assume that in the average case, the size of
++    // the normalized language tag will be very nearly the same as the
++    // size of the input. This is generally true for language
++    // tags that are "simple" language-region-variant combinations
++    // that don't contain any grandfathered tags.
++    const size_t initialBufferSize = languageTagChars.size() + 32;
++    std::vector<char> buffer(initialBufferSize);
++    int32_t parsedLength = 0;
++
++    UErrorCode status = U_ZERO_ERROR;
++    while (true) {
++        const size_t outputLength = uloc_forLanguageTag(languageTagChars.c_str(),
++               &buffer[0], buffer.size(), &parsedLength, &status);
++        if (U_FAILURE(status)) {
++            return NULL;
++        }
++
++        // Assume that we've run out of buffer space when this happens. Double
++        // the buffer size and try again. This should happen very infrequently.
++        if (outputLength == buffer.size()) {
++            buffer.resize(buffer.size() << 1);
++        } else {
++            break;
++        }
++    }
++
++    if (parsedLength < 0) {
++        return NULL;
++    }
++
++    // By default, ICU will ignore all subtags starting at the first unparseable
++    // or invalid subtag. Our "strict" mode is specified to throw an error if
++    // that happens.
++    //
++    // NOTE: The cast is safe because parsedLength can never be negative thanks
++    // to the check above. ICU does not document any negative return values for
++    // that field, but check for it anyway.
++    if ((strict == JNI_TRUE) &&
++        (static_cast<uint32_t>(parsedLength) != languageTagChars.size())) {
++        return NULL;
++    }
++
++    return env->NewStringUTF(&buffer[0]);
++}
++
++static jstring ICU_languageTagForLocale(JNIEnv* env, jclass, jstring javaLocaleId) {
++    ScopedUtfChars localeID(env, javaLocaleId);
++
++    // The conversion from an ICU locale ID to a BCP 47 tag will shrink
++    // the size of the string unless there's an invalid language or a bad
++    // parse (which will result in an x-lvariant private use subtag at
++    // the end of the input).
++    const size_t initialBufferSize = localeID.size();
++    std::vector<char> buffer(initialBufferSize);
++
++    UErrorCode status = U_ZERO_ERROR;
++    while (true) {
++        const size_t outputLength = uloc_toLanguageTag(localeID.c_str(),
++                &buffer[0], buffer.size(), false /* strict */, &status);
++        if (U_FAILURE(status)) {
++            return NULL;
++        }
++
++        if (outputLength == buffer.size()) {
++            buffer.resize(buffer.size() << 1);
++        } else {
++            break;
++        }
++    }
++
++    return env->NewStringUTF(&buffer[0]);
++}
++
+ static jint ICU_getCurrencyFractionDigits(JNIEnv* env, jclass, jstring javaCurrencyCode) {
+   ScopedJavaUnicodeString currencyCode(env, javaCurrencyCode);
+   if (!currencyCode.valid()) {
+@@ -225,6 +302,14 @@ static jstring ICU_getDisplayLanguageNative(JNIEnv* env, jclass, jstring targetL
+     return env->NewString(str.getBuffer(), str.length());
+ }
+ 
++static jstring ICU_getDisplayScriptNative(JNIEnv* env, jclass, jstring targetLocale, jstring locale) {
++    Locale loc = getLocale(env, locale);
++    Locale targetLoc = getLocale(env, targetLocale);
++    UnicodeString str;
++    targetLoc.getDisplayScript(loc, str);
++    return env->NewString(str.getBuffer(), str.length());
++}
++
+ static jstring ICU_getDisplayVariantNative(JNIEnv* env, jclass, jstring targetLocale, jstring locale) {
+     Locale loc = getLocale(env, locale);
+     Locale targetLoc = getLocale(env, targetLocale);
+@@ -682,6 +767,7 @@ static JNINativeMethod gMethods[] = {
+     NATIVE_METHOD(ICU, getCurrencySymbol, "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, getDisplayCountryNative, "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, getDisplayLanguageNative, "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
++    NATIVE_METHOD(ICU, getDisplayScriptNative, "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, getDisplayVariantNative, "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, getISO3CountryNative, "(Ljava/lang/String;)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, getISO3LanguageNative, "(Ljava/lang/String;)Ljava/lang/String;"),
+@@ -690,6 +776,8 @@ static JNINativeMethod gMethods[] = {
+     NATIVE_METHOD(ICU, getIcuVersion, "()Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, getScript, "(Ljava/lang/String;)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, getUnicodeVersion, "()Ljava/lang/String;"),
++    NATIVE_METHOD(ICU, languageTagForLocale, "(Ljava/lang/String;)Ljava/lang/String;"),
++    NATIVE_METHOD(ICU, localeForLanguageTag, "(Ljava/lang/String;Z)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, initLocaleDataNative, "(Ljava/lang/String;Llibcore/icu/LocaleData;)Z"),
+     NATIVE_METHOD(ICU, toLowerCase, "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+     NATIVE_METHOD(ICU, toUpperCase, "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+diff --git a/luni/src/test/java/libcore/icu/ICUTest.java b/luni/src/test/java/libcore/icu/ICUTest.java
+index b3d16f9..60ed0ca 100644
+--- a/luni/src/test/java/libcore/icu/ICUTest.java
++++ b/luni/src/test/java/libcore/icu/ICUTest.java
+@@ -53,15 +53,15 @@ public class ICUTest extends junit.framework.TestCase {
+   public void test_localeFromString() throws Exception {
+     // localeFromString is pretty lenient. Some of these can't be round-tripped
+     // through Locale.toString.
+-    assertEquals(Locale.ENGLISH, ICU.localeFromString("en"));
+-    assertEquals(Locale.ENGLISH, ICU.localeFromString("en_"));
+-    assertEquals(Locale.ENGLISH, ICU.localeFromString("en__"));
+-    assertEquals(Locale.US, ICU.localeFromString("en_US"));
+-    assertEquals(Locale.US, ICU.localeFromString("en_US_"));
+-    assertEquals(new Locale("", "US", ""), ICU.localeFromString("_US"));
+-    assertEquals(new Locale("", "US", ""), ICU.localeFromString("_US_"));
+-    assertEquals(new Locale("", "", "POSIX"), ICU.localeFromString("__POSIX"));
+-    assertEquals(new Locale("aa", "BB", "CC"), ICU.localeFromString("aa_BB_CC"));
++    assertEquals(Locale.ENGLISH, ICU.localeFromIcuLocaleId("en"));
++    assertEquals(Locale.ENGLISH, ICU.localeFromIcuLocaleId("en_"));
++    assertEquals(Locale.ENGLISH, ICU.localeFromIcuLocaleId("en__"));
++    assertEquals(Locale.US, ICU.localeFromIcuLocaleId("en_US"));
++    assertEquals(Locale.US, ICU.localeFromIcuLocaleId("en_US_"));
++    assertEquals(new Locale("", "US", ""), ICU.localeFromIcuLocaleId("_US"));
++    assertEquals(new Locale("", "US", ""), ICU.localeFromIcuLocaleId("_US_"));
++    assertEquals(new Locale("", "", "POSIX"), ICU.localeFromIcuLocaleId("__POSIX"));
++    assertEquals(new Locale("aa", "BB", "CC"), ICU.localeFromIcuLocaleId("aa_BB_CC"));
+   }
+ 
+   public void test_getScript_addLikelySubtags() throws Exception {
+diff --git a/luni/src/test/java/libcore/java/util/LocaleTest.java b/luni/src/test/java/libcore/java/util/LocaleTest.java
+index dee529f..9b67025 100644
+--- a/luni/src/test/java/libcore/java/util/LocaleTest.java
++++ b/luni/src/test/java/libcore/java/util/LocaleTest.java
+@@ -20,10 +20,9 @@ import java.text.BreakIterator;
+ import java.text.Collator;
+ import java.text.DateFormat;
+ import java.text.DateFormatSymbols;
+-import java.text.DecimalFormatSymbols;
+ import java.text.NumberFormat;
+-import java.util.Arrays;
+ import java.util.Calendar;
++import java.util.IllformedLocaleException;
+ import java.util.Locale;
+ import java.util.MissingResourceException;
+ 
+@@ -178,4 +177,959 @@ public class LocaleTest extends junit.framework.TestCase {
+         assertEquals("eng", new Locale("en", "CA").getISO3Language());
+         assertEquals("eng", new Locale("en", "XX").getISO3Language());
+     }
+-  }
++    /*
++
++    public void test_serializeExtensions() {
++        Map<Character, String> extensions = new TreeMap<Character, String>();
++
++        extensions.put('x', "fooo-baar-baaz");
++        assertEquals("x-fooo-baar-baaz", Locale.serializeExtensions(extensions));
++
++        extensions.put('y', "gaaa-caar-caaz");
++        // Must show up in lexical order.
++        assertEquals("x-fooo-baar-baaz-y-gaaa-caar-caaz",
++                Locale.serializeExtensions(extensions));
++    }
++
++    public void test_parseSerializedExtensions() {
++        Map<Character, String> extensions = new HashMap<Character, String>();
++
++        Locale.parseSerializedExtensions("x-foo", extensions);
++        assertEquals("foo", extensions.get('x'));
++
++        extensions.clear();
++        Locale.parseSerializedExtensions("x-foo-y-bar-z-baz", extensions);
++        assertEquals("foo", extensions.get('x'));
++        assertEquals("bar", extensions.get('y'));
++        assertEquals("baz", extensions.get('z'));
++
++        extensions.clear();
++        Locale.parseSerializedExtensions("x-fooo-baar-baaz", extensions);
++        assertEquals("fooo-baar-baaz", extensions.get('x'));
++
++        extensions.clear();
++        Locale.parseSerializedExtensions("x-fooo-baar-baaz-y-gaaa-caar-caaz", extensions);
++        assertEquals("fooo-baar-baaz", extensions.get('x'));
++        assertEquals("gaaa-caar-caaz", extensions.get('y'));
++    }
++
++    public void test_parseUnicodeExtension() {
++        Map<String, String> keywords = new HashMap<String, String>();
++        Set<String> attributes = new HashSet<String>();
++
++        // Only attributes.
++        Locale.parseUnicodeExtension("foooo".split("-"), keywords, attributes);
++        assertTrue(attributes.contains("foooo"));
++        assertTrue(keywords.isEmpty());
++
++        attributes.clear();
++        keywords.clear();
++        Locale.parseUnicodeExtension("foooo-baa-baaabaaa".split("-"),
++                keywords, attributes);
++        assertTrue(attributes.contains("foooo"));
++        assertTrue(attributes.contains("baa"));
++        assertTrue(attributes.contains("baaabaaa"));
++        assertTrue(keywords.isEmpty());
++
++        // Only keywords
++        attributes.clear();
++        keywords.clear();
++        Locale.parseUnicodeExtension("ko-koko".split("-"), keywords, attributes);
++        assertTrue(attributes.isEmpty());
++        assertEquals("koko", keywords.get("ko"));
++
++        attributes.clear();
++        keywords.clear();
++        Locale.parseUnicodeExtension("ko-koko-kokoko".split("-"), keywords, attributes);
++        assertTrue(attributes.isEmpty());
++        assertEquals("koko-kokoko", keywords.get("ko"));
++
++        attributes.clear();
++        keywords.clear();
++        Locale.parseUnicodeExtension("ko-koko-kokoko-ba-baba-bababa".split("-"),
++                keywords, attributes);
++        assertTrue(attributes.isEmpty());
++        assertEquals("koko-kokoko", keywords.get("ko"));
++        assertEquals("baba-bababa", keywords.get("ba"));
++
++        // A mixture of attributes and keywords.
++        attributes.clear();
++        keywords.clear();
++        Locale.parseUnicodeExtension("attri1-attri2-k1-type1-type1-k2-type2".split("-"),
++                keywords, attributes);
++        assertTrue(attributes.contains("attri1"));
++        assertTrue(attributes.contains("attri2"));
++        assertEquals("type1-type1", keywords.get("k1"));
++        assertEquals("type2", keywords.get("k2"));
++    }
++    */
++
++    public void test_Builder_setLanguage() {
++        Locale.Builder b = new Locale.Builder();
++
++        // Should normalize to lower case.
++        b.setLanguage("EN");
++        assertEquals("en", b.build().getLanguage());
++
++        b = new Locale.Builder();
++
++        // Too short.
++        try {
++            b.setLanguage("e");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Too long
++        try {
++            b.setLanguage("engl");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Contains non ASCII characters
++        try {
++            b.setLanguage("தமிழ்");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Null or empty languages must clear state.
++        b = new Locale.Builder();
++        b.setLanguage("en");
++        b.setLanguage(null);
++        assertEquals("", b.build().getLanguage());
++
++        b = new Locale.Builder();
++        b.setLanguage("en");
++        b.setLanguage("");
++        assertEquals("", b.build().getLanguage());
++    }
++
++    public void test_Builder_setRegion() {
++        Locale.Builder b = new Locale.Builder();
++
++        // Should normalize to upper case.
++        b.setRegion("us");
++        assertEquals("US", b.build().getCountry());
++
++        b = new Locale.Builder();
++
++        // Too short.
++        try {
++            b.setRegion("e");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Too long
++        try {
++            b.setRegion("USA");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Contains non ASCII characters
++        try {
++            b.setLanguage("திழ்");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Null or empty regions must clear state.
++        b = new Locale.Builder();
++        b.setRegion("US");
++        b.setRegion(null);
++        assertEquals("", b.build().getCountry());
++
++        b = new Locale.Builder();
++        b.setRegion("US");
++        b.setRegion("");
++        assertEquals("", b.build().getCountry());
++    }
++
++    public void test_Builder_setVariant() {
++        Locale.Builder b = new Locale.Builder();
++
++        // Should normalize "_" to "-"
++        b = new Locale.Builder();
++        b.setVariant("vArIaNt-VaRiAnT-VARIANT");
++        assertEquals("vArIaNt_VaRiAnT_VARIANT", b.build().getVariant());
++
++        b = new Locale.Builder();
++        // Too short
++        try {
++            b.setVariant("shor");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Too long
++        try {
++            b.setVariant("waytoolong");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        try {
++            b.setVariant("foooo-foooo-fo");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Special case. Variants of length 4 are allowed when the first
++        // character is a digit.
++        b.setVariant("0ABC");
++        assertEquals("0ABC", b.build().getVariant());
++
++        b = new Locale.Builder();
++        b.setVariant("variant");
++        b.setVariant(null);
++        assertEquals("", b.build().getVariant());
++
++        b = new Locale.Builder();
++        b.setVariant("variant");
++        b.setVariant("");
++        assertEquals("", b.build().getVariant());
++    }
++
++    public void test_Builder_setLocale() {
++        // Default case.
++        Locale.Builder b = new Locale.Builder();
++        b.setLocale(Locale.US);
++        assertEquals("en", b.build().getLanguage());
++        assertEquals("US", b.build().getCountry());
++
++        // Should throw when locale is malformed.
++        // - Bad language
++        Locale bad = new Locale("e", "US");
++        b = new Locale.Builder();
++        try {
++            b.setLocale(bad);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++        // - Bad country
++        bad = new Locale("en", "USA");
++        try {
++            b.setLocale(bad);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // - Bad variant
++        bad = new Locale("en", "US", "c");
++        try {
++            b.setLocale(bad);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Test values are normalized as they should be
++        b = new Locale.Builder();
++        Locale good = new Locale("EN", "us", "variant-VARIANT");
++        b.setLocale(good);
++        Locale l = b.build();
++        assertEquals("en", l.getLanguage());
++        assertEquals("US", l.getCountry());
++        assertEquals("variant_VARIANT", l.getVariant());
++
++        // Test that none of the existing fields are messed with
++        // if the locale update fails.
++        b = new Locale.Builder();
++        b.setLanguage("fr").setRegion("FR");
++
++        try {
++            b.setLocale(bad);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        l = b.build();
++        assertEquals("fr", l.getLanguage());
++        assertEquals("FR", l.getCountry());
++    }
++
++    public void test_Builder_setScript() {
++        Locale.Builder b = new Locale.Builder();
++
++        // Should normalize variants to lower case.
++        b.setScript("lAtN");
++        assertEquals("Latn", b.build().getScript());
++
++        b = new Locale.Builder();
++        // Too short
++        try {
++            b.setScript("lat");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Too long
++        try {
++            b.setScript("latin");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        b = new Locale.Builder();
++        b.setScript("Latn");
++        b.setScript(null);
++        assertEquals("", b.build().getScript());
++
++        b = new Locale.Builder();
++        b.setScript("Latn");
++        b.setScript("");
++        assertEquals("", b.build().getScript());
++    }
++
++    public void test_Builder_clear() {
++        Locale.Builder b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn").setRegion("US")
++                .setVariant("POSIX").setExtension('g', "foo")
++                .setUnicodeLocaleKeyword("fo", "baar")
++                .addUnicodeLocaleAttribute("baaaaz");
++
++        Locale l = b.clear().build();
++        assertEquals("", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getVariant());
++        assertEquals("", l.getScript());
++        assertTrue(l.getExtensionKeys().isEmpty());
++    }
++
++    public void test_Builder_setExtension() {
++        Locale.Builder b = new Locale.Builder();
++        b.setExtension('g', "FO_ba-BR_bg");
++
++        Locale l = b.build();
++        assertEquals("fo-ba-br-bg", l.getExtension('g'));
++
++        b = new Locale.Builder();
++
++        // Too short
++        try {
++            b.setExtension('g', "fo-ba-br-x");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Too long
++        try {
++            b.setExtension('g', "fo-ba-br-extension");
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Special case, the private use extension allows single char subtags.
++        b.setExtension(Locale.PRIVATE_USE_EXTENSION, "fo-ba-br-m");
++        l = b.build();
++        assertEquals("fo-ba-br-m", l.getExtension('x'));
++
++        // Special case, the unicode locale extension must be parsed into
++        // its individual components. The correctness of the parse is tested
++        // in test_parseUnicodeExtension.
++        b.setExtension(Locale.UNICODE_LOCALE_EXTENSION, "foooo_BaaaR-BA_Baz-bI_BIZ");
++        l = b.build();
++        // Note that attributes and keywords are sorted alphabetically.
++        assertEquals("baaar-foooo-ba-baz-bi-biz", l.getExtension('u'));
++
++        assertTrue(l.getUnicodeLocaleAttributes().contains("foooo"));
++        assertTrue(l.getUnicodeLocaleAttributes().contains("baaar"));
++        assertEquals("baz", l.getUnicodeLocaleType("ba"));
++        assertEquals("biz", l.getUnicodeLocaleType("bi"));
++    }
++
++    public void test_Builder_clearExtensions() {
++        Locale.Builder b = new Locale.Builder();
++        b.setExtension('g', "FO_ba-BR_bg");
++        b.setExtension(Locale.PRIVATE_USE_EXTENSION, "fo-ba-br-m");
++        b.clearExtensions();
++
++        assertTrue(b.build().getExtensionKeys().isEmpty());
++    }
++
++    private static Locale fromLanguageTag(String languageTag, boolean useBuilder) {
++        if (useBuilder) {
++            return (new Locale.Builder().setLanguageTag(languageTag).build());
++        } else {
++            return Locale.forLanguageTag(languageTag);
++        }
++    }
++
++    private void test_setLanguageTag_wellFormedsingleSubtag(boolean useBuilder) {
++        Locale l = fromLanguageTag("en", useBuilder);
++        assertEquals("en", l.getLanguage());
++
++        l = fromLanguageTag("eng", useBuilder);
++        assertEquals("eng", l.getLanguage());
++    }
++
++    private void test_setLanguageTag_twoWellFormedSubtags(boolean useBuilder) {
++        Locale l =  fromLanguageTag("en-US", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("US", l.getCountry());
++
++        l =  fromLanguageTag("eng-419", useBuilder);
++        assertEquals("eng", l.getLanguage());
++        assertEquals("419", l.getCountry());
++
++        // IND is an invalid region code so ICU helpfully tries to parse it as
++        // a 3 letter language code, even if it isn't a valid ISO-639-3 code
++        // either.
++        l =  fromLanguageTag("en-USB", useBuilder);
++        assertEquals("usb", l.getLanguage());
++        assertEquals("", l.getCountry());
++
++        // Script tags shouldn't be mis-recognized as regions.
++        l =  fromLanguageTag("en-Latn", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("Latn", l.getScript());
++
++        // Neither should variant tags.
++        l =  fromLanguageTag("en-POSIX", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getScript());
++        assertEquals("POSIX", l.getVariant());
++    }
++
++    public void test_Builder_setLanguageTag_malformedTags() {
++        try {
++            fromLanguageTag("a", true);
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++        // Three subtags
++        // lang-region-illformedvariant
++        try {
++            fromLanguageTag("en-US-BA", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // lang-variant-illformedvariant
++        try {
++            fromLanguageTag("en-FOOOO-BA", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Four or more sub tags
++        try {
++            fromLanguageTag("en-US-POSIX-P2", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        try {
++            fromLanguageTag("en-Latn-US-P2", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Extensions
++        // Ill-formed empty extension.
++        try {
++            fromLanguageTag("en-f-f", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Ill-formed empty extension.
++        try {
++            fromLanguageTag("en-f", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Ill-formed extension with long subtag.
++        try {
++            fromLanguageTag("en-f-fooobaaaz", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++
++        // Ill-formed extension key.
++        try {
++            fromLanguageTag("en-9-baa", true);
++            fail();
++        } catch (IllformedLocaleException expected) {
++        }
++    }
++
++    private void test_setLanguageTag_threeWellFormedSubtags(boolean useBuilder) {
++        // lang-region-variant
++        Locale l = fromLanguageTag("en-US-FOOOO", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("US", l.getCountry());
++        assertEquals("", l.getScript());
++        assertEquals("FOOOO", l.getVariant());
++
++        // lang-script-variant
++        l = fromLanguageTag("en-Latn-FOOOO", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("Latn", l.getScript());
++        assertEquals("FOOOO", l.getVariant());
++
++        // lang-script-region
++        l = fromLanguageTag("en-Latn-US", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("US", l.getCountry());
++        assertEquals("Latn", l.getScript());
++        assertEquals("", l.getVariant());
++
++        // lang-variant-variant
++        l = fromLanguageTag("en-FOOOO-BAAAR", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getScript());
++        assertEquals("FOOOO_BAAAR", l.getVariant());
++    }
++
++    private void test_setLanguageTag_fourOrMoreWellFormedSubtags(boolean useBuilder) {
++        // lang-script-region-variant.
++        Locale l = fromLanguageTag("en-Latn-US-foooo", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("US", l.getCountry());
++        assertEquals("FOOOO", l.getVariant());
++
++        // Variant with multiple subtags.
++        l = fromLanguageTag("en-Latn-US-foooo-gfffh", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("US", l.getCountry());
++        assertEquals("FOOOO_GFFFH", l.getVariant());
++
++        // Variant with 3 subtags. POSIX shouldn't be recognized
++        // as a region or a script.
++        l = fromLanguageTag("en-POSIX-P2003-P2004", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getScript());
++        assertEquals("", l.getCountry());
++        assertEquals("POSIX_P2003_P2004", l.getVariant());
++
++        // lang-script-variant-variant.
++        l = fromLanguageTag("en-Latn-POSIX-P2003", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("", l.getCountry());
++        assertEquals("POSIX_P2003", l.getVariant());
++
++        // lang-region-variant-variant
++        l = fromLanguageTag("en-US-POSIX-P2003", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getScript());
++        assertEquals("US", l.getCountry());
++        assertEquals("POSIX_P2003", l.getVariant());
++    }
++
++    private void test_setLanguageTag_withWellFormedExtensions(boolean useBuilder) {
++        Locale l = fromLanguageTag("en-Latn-GB-foooo-g-fo-bar-baaz", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("GB", l.getCountry());
++        assertEquals("FOOOO_POSIX", l.getVariant());
++        assertEquals("fo-bar-baaz", l.getExtension('g'));
++
++        // Multiple extensions
++        l = fromLanguageTag("en-Latn-US-foooo-g-fo-bar-h-go-gaz", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("US", l.getCountry());
++        assertEquals("FOOOO_POSIX", l.getVariant());
++        assertEquals("fo-bar", l.getExtension('g'));
++        assertEquals("go-gaz", l.getExtension('h'));
++
++        // Unicode locale extension.
++        l = fromLanguageTag("en-Latn-US-foooo-u-koooo-fo-bar", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("US", l.getCountry());
++        assertEquals("koooo-fo-bar", l.getExtension('u'));
++        assertTrue(l.getUnicodeLocaleAttributes().contains("koooo"));
++        assertEquals("bar", l.getUnicodeLocaleType("fo"));
++
++        // Extensions without variants
++        l = fromLanguageTag("en-Latn-US-f-fo", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("US", l.getCountry());
++        assertEquals("fo", l.getExtension('f'));
++
++        l = fromLanguageTag("en-Latn-f-fo", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("Latn", l.getScript());
++        assertEquals("fo", l.getExtension('f'));
++
++        l = fromLanguageTag("en-f-fo", useBuilder);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getScript());
++        assertEquals("", l.getCountry());
++        assertEquals("fo", l.getExtension('f'));
++    }
++
++    public void test_forLanguageTag() {
++        test_setLanguageTag_wellFormedsingleSubtag(false);
++        test_setLanguageTag_twoWellFormedSubtags(false);
++        test_setLanguageTag_threeWellFormedSubtags(false);
++        test_setLanguageTag_fourOrMoreWellFormedSubtags(false);
++        test_setLanguageTag_withWellFormedExtensions(false);
++    }
++
++    public void test_Builder_setLanguageTag() {
++        test_setLanguageTag_wellFormedsingleSubtag(true);
++        test_setLanguageTag_twoWellFormedSubtags(true);
++        test_setLanguageTag_threeWellFormedSubtags(true);
++        test_setLanguageTag_fourOrMoreWellFormedSubtags(true);
++        test_setLanguageTag_withWellFormedExtensions(true);
++    }
++
++    public void test_getDisplayScript() {
++        Locale.Builder b = new Locale.Builder();
++        b.setLanguage("en").setRegion("US").setScript("Latn");
++
++        Locale l = b.build();
++        assertEquals("Latin", l.getDisplayScript());
++        assertEquals("Lateinisch", l.getDisplayScript(Locale.GERMAN));
++        // Fallback for navajo, a language for which we don't have data.
++        assertEquals("Latin", l.getDisplayScript(new Locale("nv", "US")));
++
++        b= new Locale.Builder();
++        b.setLanguage("en").setRegion("US").setScript("Fooo");
++
++        // Will be equivalent to getScriptCode for scripts that aren't
++        // registered with ISO-15429 (but are otherwise well formed).
++        l = b.build();
++        assertEquals("Fooo", l.getDisplayScript());
++    }
++
++    public void test_setLanguageTag_malformedTags() {
++        Locale l = fromLanguageTag("a", false);
++        assertEquals("", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getVariant());
++        assertEquals("", l.getScript());
++
++        l = fromLanguageTag("en-US-BA", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("US", l.getCountry());
++        assertEquals("", l.getVariant());
++        assertEquals("", l.getScript());
++
++        l = fromLanguageTag("en-FOOOO-BA", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("FOOOO", l.getVariant());
++        assertEquals("", l.getScript());
++
++        l = fromLanguageTag("en-US-POSIX-P2", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("US", l.getCountry());
++        assertEquals("POSIX", l.getVariant());
++        assertEquals("", l.getScript());
++
++        l = fromLanguageTag("en-Latn-US-P2", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("US", l.getCountry());
++        assertEquals("Latn", l.getScript());
++
++        l = fromLanguageTag("en-f-f", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getVariant());
++        assertEquals("", l.getScript());
++
++        l = fromLanguageTag("en-f", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getVariant());
++        assertEquals("", l.getScript());
++
++        l = fromLanguageTag("en-f-fooobaaaz", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getVariant());
++        assertEquals("", l.getScript());
++
++        l = fromLanguageTag("en-9-baa", false);
++        assertEquals("en", l.getLanguage());
++        assertEquals("", l.getCountry());
++        assertEquals("", l.getVariant());
++        assertEquals("", l.getScript());
++    }
++
++    public void test_Builder_unicodeAttributes() {
++        // Adding and removing attributes
++        Locale.Builder b = new Locale.Builder();
++        b.setLanguage("en");
++
++        // Well formed attribute.
++        b.addUnicodeLocaleAttribute("foooo");
++
++        try {
++            b.addUnicodeLocaleAttribute("fo");
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++        try {
++            b.removeUnicodeLocaleAttribute("fo");
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++        try {
++            b.addUnicodeLocaleAttribute("greaterthaneightchars");
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++        try {
++            b.removeUnicodeLocaleAttribute("greaterthaneightchars");
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++        try {
++            b.addUnicodeLocaleAttribute(null);
++            fail();
++        } catch (NullPointerException npe) {
++        }
++
++        try {
++            b.removeUnicodeLocaleAttribute(null);
++            fail();
++        } catch (NullPointerException npe) {
++        }
++
++        Locale l = b.build();
++        assertEquals("en-u-foooo", l.toLanguageTag());
++        assertTrue(l.getUnicodeLocaleAttributes().contains("foooo"));
++
++        b.addUnicodeLocaleAttribute("dAtA");
++        l = b.build();
++        assertEquals("data-foooo", l.getExtension('u'));
++        assertTrue(l.getUnicodeLocaleAttributes().contains("data"));
++        assertTrue(l.getUnicodeLocaleAttributes().contains("foooo"));
++    }
++
++    public void test_Builder_unicodeKeywords() {
++        // Adding and removing attributes
++        Locale.Builder b = new Locale.Builder();
++        b.setLanguage("en");
++
++        // Key not of length 2.
++        try {
++            b.setUnicodeLocaleKeyword("k", "fooo");
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++        // Value too short
++        try {
++            b.setUnicodeLocaleKeyword("k", "fo");
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++        // Value too long
++        try {
++            b.setUnicodeLocaleKeyword("k", "foooooooo");
++            fail();
++        } catch (IllformedLocaleException ifle) {
++        }
++
++
++        // Null should clear the key.
++        b.setUnicodeLocaleKeyword("bo", "baaz");
++        Locale l = b.build();
++        assertEquals("bo-baaz", l.getExtension('u'));
++        assertEquals("baaz", l.getUnicodeLocaleType("bo"));
++
++        b = new Locale.Builder();
++        b.setUnicodeLocaleKeyword("bo", "baaz");
++        b.setUnicodeLocaleKeyword("bo", null);
++        l = b.build();
++        assertNull(l.getExtension('u'));
++        assertNull(l.getUnicodeLocaleType("bo"));
++
++        // When we set attributes, they should show up before extensions.
++        b = new Locale.Builder();
++        b.addUnicodeLocaleAttribute("fooo");
++        b.addUnicodeLocaleAttribute("gooo");
++        b.setUnicodeLocaleKeyword("fo", "baz");
++        b.setUnicodeLocaleKeyword("ka", "kaz");
++        l = b.build();
++        assertEquals("fooo-gooo-fo-baz-ka-kaz", l.getExtension('u'));
++        assertEquals("baz", l.getUnicodeLocaleType("fo"));
++        assertEquals("kaz", l.getUnicodeLocaleType("ka"));
++        assertTrue(l.getUnicodeLocaleAttributes().contains("fooo"));
++        assertTrue(l.getUnicodeLocaleAttributes().contains("gooo"));
++    }
++
++    public void test_multipleExtensions() {
++        Locale.Builder b = new Locale.Builder();
++        b.setLanguage("en");
++        b.addUnicodeLocaleAttribute("attrib");
++        b.addUnicodeLocaleAttribute("attrib2");
++        b.setExtension('f', "fo-baaz-ga-gaaz");
++        b.setExtension('x', "xo-baaz-ga-gaaz");
++        b.setExtension('z', "zo-baaz-ga-gaaz");
++
++        Locale l = b.build();
++        // Implicitly added because we added unicode locale attributes.
++        assertEquals("attrib-attrib2", l.getExtension('u'));
++        assertEquals("fo-baaz-ga-gaaz", l.getExtension('f'));
++        assertEquals("xo-baaz-ga-gaaz", l.getExtension('x'));
++        assertEquals("zo-baaz-ga-gaaz", l.getExtension('z'));
++    }
++
++    public void test_immutability() {
++        Locale.Builder b = new Locale.Builder();
++        b.setExtension('g', "fooo-baaz-baar");
++        b.setExtension('u', "foooo-baaar-ba-baaz-ka-kaaz");
++
++        Locale l = b.build();
++        try {
++            l.getExtensionKeys().add('g');
++            fail();
++        } catch (UnsupportedOperationException expected) {
++        }
++
++        try {
++            l.getUnicodeLocaleAttributes().add("fooo");
++            fail();
++        } catch (UnsupportedOperationException expected) {
++        }
++    }
++
++    public void test_toLanguageTag() {
++        Locale.Builder b = new Locale.Builder();
++
++        // Empty builder.
++        Locale l = b.build();
++        // TODO: Fix this. We should return "und" and not NULL.
++        // assertEquals("und", l.toLanguageTag());
++
++        // Only language.
++        b = new Locale.Builder();
++        b.setLanguage("en");
++        assertEquals("en", b.build().toLanguageTag());
++
++        // Language & Region
++        b = new Locale.Builder();
++        b.setLanguage("en").setRegion("US");
++        assertEquals("en-US", b.build().toLanguageTag());
++
++        // Language & Script
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn");
++        assertEquals("en-Latn", b.build().toLanguageTag());
++
++        // Language & Variant
++        b = new Locale.Builder();
++        b.setLanguage("en").setVariant("foooo");
++        assertEquals("en-foooo", b.build().toLanguageTag());
++
++        // Language / script & country
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn").setRegion("US");
++        assertEquals("en-Latn-US", b.build().toLanguageTag());
++
++        // Language / script & variant
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn").setVariant("foooo");
++        assertEquals("en-Latn-foooo", b.build().toLanguageTag());
++
++        // Language / script / country / variant.
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn").setVariant("foooo").setRegion("US");
++        assertEquals("en-Latn-US-foooo", b.build().toLanguageTag());
++
++        // Language / extension
++        b = new Locale.Builder();
++        b.setLanguage("en").setExtension('x', "fooo-baar");
++        assertEquals("en-x-fooo-baar", b.build().toLanguageTag());
++
++        // Language & multiple extensions (including unicode).
++        b = new Locale.Builder();
++        b.setLanguage("en");
++        b.addUnicodeLocaleAttribute("attrib");
++        b.addUnicodeLocaleAttribute("attrib2");
++        b.setExtension('f', "fo-baaz-ga-gaaz");
++        b.setExtension('x', "xo-baaz-ga-gaaz");
++        b.setExtension('z', "zo-baaz-ga-gaaz");
++
++        l = b.build();
++        // Implicitly added because we added unicode locale attributes.
++        assertEquals("attrib-attrib2", l.getExtension('u'));
++        assertEquals("fo-baaz-ga-gaaz", l.getExtension('f'));
++        assertEquals("xo-baaz-ga-gaaz", l.getExtension('x'));
++        assertEquals("zo-baaz-ga-gaaz", l.getExtension('z'));
++
++        assertEquals("en-" +
++                "f-fo-baaz-ga-gaaz-" +   // extension tags in lexical order
++                "u-attrib-attrib2-z-zo-baaz-ga-gaaz-" +  // unicode attribs & keywords in lex order
++                "x-xo-baaz-ga-gaaz", // private use extension unmodified.
++                l.toLanguageTag());
++    }
++
++    public void test_toString() {
++                Locale.Builder b = new Locale.Builder();
++
++        // Empty builder.
++        Locale l = b.build();
++        assertEquals("", l.toString());
++
++        // Only language.
++        b = new Locale.Builder();
++        b.setLanguage("en");
++        assertEquals("en", b.build().toString());
++
++        // Only region
++        b = new Locale.Builder();
++        b.setRegion("US");
++        assertEquals("_US", b.build().toString());
++
++        // Language & Region
++        b = new Locale.Builder();
++        b.setLanguage("en").setRegion("US");
++        assertEquals("en_US", b.build().toString());
++
++        // Language & Script
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn");
++        assertEquals("en__#Latn", b.build().toString());
++
++        // Language & Variant
++        b = new Locale.Builder();
++        b.setLanguage("en").setVariant("foooo");
++        assertEquals("en__foooo", b.build().toString());
++
++        // Language / script & country
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn").setRegion("US");
++        assertEquals("en_US_#Latn", b.build().toString());
++
++        // Language / script & variant
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn").setVariant("foooo");
++        assertEquals("en__foooo_#Latn", b.build().toString());
++
++        // Language / script / country / variant.
++        b = new Locale.Builder();
++        b.setLanguage("en").setScript("Latn").setVariant("foooo").setRegion("US");
++        assertEquals("en_US_foooo_#Latn", b.build().toString());
++
++        // Language / extension
++        b = new Locale.Builder();
++        b.setLanguage("en").setExtension('x', "fooo-baar");
++        assertEquals("en__#x-fooo-baar", b.build().toString());
++    }
++}
++
+-- 
+2.7.4
+

@@ -1,0 +1,45 @@
+From 22e69d46aa610879786427bd5ca10b84ce868515 Mon Sep 17 00:00:00 2001
+From: Matt Caswell <matt@openssl.org>
+Date: Fri, 4 Mar 2016 10:17:17 +0000
+Subject: [PATCH 14/16] Avoid overflow in EVP_EncodeUpdate
+
+An overflow can occur in the EVP_EncodeUpdate function which is used for
+Base64 encoding of binary data. If an attacker is able to supply very large
+amounts of input data then a length check can overflow resulting in a heap
+corruption. Due to the very large amounts of data involved this will most
+likely result in a crash.
+
+Internally to OpenSSL the EVP_EncodeUpdate function is primarly used by the
+PEM_write_bio* family of functions. These are mainly used within the
+OpenSSL command line applications, so any application which processes
+data from an untrusted source and outputs it as a PEM file should be
+considered vulnerable to this issue.
+
+User applications that call these APIs directly with large amounts of
+untrusted data may also be vulnerable.
+
+Issue reported by Guido Vranken.
+
+CVE-2016-2105
+
+Change-Id: Ifb878fbfd72ea4e7b847180b1da1a22bc94f0864
+---
+ crypto/evp/encode.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/crypto/evp/encode.c b/crypto/evp/encode.c
+index 28546a8..3118087 100644
+--- a/crypto/evp/encode.c
++++ b/crypto/evp/encode.c
+@@ -137,7 +137,7 @@ void EVP_EncodeUpdate(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl,
+ 	*outl=0;
+ 	if (inl == 0) return;
+ 	OPENSSL_assert(ctx->length <= (int)sizeof(ctx->enc_data));
+-	if ((ctx->num+inl) < ctx->length)
++        if (ctx->length - ctx->num > inl) 
+ 		{
+ 		memcpy(&(ctx->enc_data[ctx->num]),in,inl);
+ 		ctx->num+=inl;
+-- 
+2.7.4
+

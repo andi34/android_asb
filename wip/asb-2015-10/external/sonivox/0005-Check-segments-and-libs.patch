@@ -1,0 +1,35 @@
+From 161a3de9f6f5d813e8ea2b47cb6c86f863a4f20a Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Wed, 19 Aug 2015 15:08:13 -0700
+Subject: [PATCH 05/15] Check segments and libs
+
+Bug: 23286323
+Change-Id: I95ee385d0fb1503a4ce5a96e30d034ac8b81170e
+---
+ arm-wt-22k/lib_src/jet.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/jet.c b/arm-wt-22k/lib_src/jet.c
+index 97672cf..2f1541f 100644
+--- a/arm-wt-22k/lib_src/jet.c
++++ b/arm-wt-22k/lib_src/jet.c
+@@ -282,10 +282,16 @@ static EAS_RESULT JetParseInfoChunk (EAS_DATA_HANDLE easHandle, EAS_I32 pos, EAS
+         switch (infoType)
+         {
+             case INFO_NUM_SMF_CHUNKS:
++                if (temp >= JET_MAX_SEGMENTS) {
++                    return EAS_ERROR_INCOMPATIBLE_VERSION;
++                }
+                 easHandle->jetHandle->numSegments = (EAS_U8) temp;
+                 break;
+ 
+             case INFO_NUM_DLS_CHUNKS:
++                if (temp >= JET_MAX_DLS_COLLECTIONS) {
++                    return EAS_ERROR_INCOMPATIBLE_VERSION;
++                }
+                 easHandle->jetHandle->numLibraries = (EAS_U8) temp;
+                 break;
+ 
+-- 
+2.7.4
+

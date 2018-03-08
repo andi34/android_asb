@@ -1,0 +1,129 @@
+From 86fbed97042260af66e87923fd5cc1469c186ba2 Mon Sep 17 00:00:00 2001
+From: "Dr. Stephen Henson" <steve@openssl.org>
+Date: Thu, 16 Apr 2015 16:43:09 +0100
+Subject: [PATCH 07/16] Fix encoding bug in i2c_ASN1_INTEGER
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fix bug where i2c_ASN1_INTEGER mishandles zero if it is marked as
+negative.
+
+Thanks to Huzaifa Sidhpurwala <huzaifas@redhat.com> and
+Hanno Böck <hanno@hboeck.de> for reporting this issue.
+
+Reviewed-by: Rich Salz <rsalz@openssl.org>
+
+(cherry-picked from a0eed48d37a4b7beea0c966caf09ad46f4a92a44)
+
+Bug: 28175332
+Change-Id: I4366a15dee46a02e67746fd1642f2a7bd17f8f84
+---
+ crypto/asn1/a_int.c                 |  6 +++--
+ openssl.config                      |  1 +
+ patches/0020-encoding_neg_int.patch | 50 +++++++++++++++++++++++++++++++++++++
+ 3 files changed, 55 insertions(+), 2 deletions(-)
+ create mode 100644 patches/0020-encoding_neg_int.patch
+
+diff --git a/crypto/asn1/a_int.c b/crypto/asn1/a_int.c
+index ad0d250..8dabe1a 100644
+--- a/crypto/asn1/a_int.c
++++ b/crypto/asn1/a_int.c
+@@ -124,6 +124,8 @@ int i2c_ASN1_INTEGER(ASN1_INTEGER *a, unsigned char **pp)
+ 		{
+ 		ret=a->length;
+ 		i=a->data[0];
++		if (ret == 1 && i == 0)
++			neg = 0;
+ 		if (!neg && (i > 127)) {
+ 			pad=1;
+ 			pb=0;
+@@ -157,7 +159,7 @@ int i2c_ASN1_INTEGER(ASN1_INTEGER *a, unsigned char **pp)
+ 		p += a->length - 1;
+ 		i = a->length;
+ 		/* Copy zeros to destination as long as source is zero */
+-		while(!*n) {
++		while(!*n && i > 1) {
+ 			*(p--) = 0;
+ 			n--;
+ 			i--;
+@@ -415,7 +417,7 @@ ASN1_INTEGER *BN_to_ASN1_INTEGER(const BIGNUM *bn, ASN1_INTEGER *ai)
+ 		ASN1err(ASN1_F_BN_TO_ASN1_INTEGER,ERR_R_NESTED_ASN1_ERROR);
+ 		goto err;
+ 		}
+-	if (BN_is_negative(bn))
++	if (BN_is_negative(bn) && !BN_is_zero(bn))
+ 		ret->type = V_ASN1_NEG_INTEGER;
+ 	else ret->type=V_ASN1_INTEGER;
+ 	j=BN_num_bits(bn);
+diff --git a/openssl.config b/openssl.config
+index d85daae..b8d2185 100644
+--- a/openssl.config
++++ b/openssl.config
+@@ -996,6 +996,7 @@ alpn.patch \
+ early_ccs.patch \
+ 0018-tls_fallback_scsv.patch \
+ 0019-dsa_double_free.patch \
++0020-encoding_neg_int.patch \
+ "
+ 
+ OPENSSL_PATCHES_progs_SOURCES="\
+diff --git a/patches/0020-encoding_neg_int.patch b/patches/0020-encoding_neg_int.patch
+new file mode 100644
+index 0000000..d475801
+--- /dev/null
++++ b/patches/0020-encoding_neg_int.patch
+@@ -0,0 +1,50 @@
++From: "Dr. Stephen Henson" <steve@openssl.org>
++Date: Thu, 16 Apr 2015 16:43:09 +0100
++Subject: [PATCH] Fix encoding bug in i2c_ASN1_INTEGER
++
++Fix bug where i2c_ASN1_INTEGER mishandles zero if it is marked as
++negative.
++
++Thanks to Huzaifa Sidhpurwala <huzaifas@redhat.com> and
++Hanno Böck <hanno@hboeck.de> for reporting this issue.
++
++Reviewed-by: Rich Salz <rsalz@openssl.org>
++
++---
++ crypto/asn1/a_int.c | 6 ++++--
++ 1 file changed, 4 insertions(+), 2 deletions(-)
++
++diff --git a/crypto/asn1/a_int.c b/crypto/asn1/a_int.c
++index ad0d250..6574260 100644
++--- a/crypto/asn1/a_int.c
+++++ b/crypto/asn1/a_int.c
++@@ -124,6 +124,8 @@ int i2c_ASN1_INTEGER(ASN1_INTEGER *a, unsigned char **pp)
++ 		{
++ 		ret=a->length;
++ 		i=a->data[0];
+++		if (ret == 1 && i == 0)
+++			neg = 0;
++ 		if (!neg && (i > 127)) {
++ 			pad=1;
++ 			pb=0;
++@@ -157,7 +159,7 @@ int i2c_ASN1_INTEGER(ASN1_INTEGER *a, unsigned char **pp)
++ 		p += a->length - 1;
++ 		i = a->length;
++ 		/* Copy zeros to destination as long as source is zero */
++-		while(!*n) {
+++		while(!*n && i > 1) {
++ 			*(p--) = 0;
++ 			n--;
++ 			i--;
++@@ -415,7 +417,7 @@ ASN1_INTEGER *BN_to_ASN1_INTEGER(const BIGNUM *bn, ASN1_INTEGER *ai)
++ 		ASN1err(ASN1_F_BN_TO_ASN1_INTEGER,ERR_R_NESTED_ASN1_ERROR);
++ 		goto err;
++ 		}
++-	if (BN_is_negative(bn))
+++	if (BN_is_negative(bn) && !BN_is_zero(bn))
++ 		ret->type = V_ASN1_NEG_INTEGER;
++ 	else ret->type=V_ASN1_INTEGER;
++ 	j=BN_num_bits(bn);
++-- 
++2.8.0.rc3.226.g39d4020
++
+-- 
+2.7.4
+

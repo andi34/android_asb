@@ -1,0 +1,40 @@
+From 42437d1ce6d02194a20f3cd55e4f75816629fe8b Mon Sep 17 00:00:00 2001
+From: Kazuki Yamaguchi <k@rhe.jp>
+Date: Mon, 22 Aug 2016 02:36:36 +0900
+Subject: [PATCH 12/16] Fix overflow check in BN_bn2dec()
+
+Fix an off by one error in the overflow check added by 07bed46f332fc
+("Check for errors in BN_bn2dec()").
+
+Change-Id: I1f193d3ba326e4e36335e708582d0bf1a004d023
+Reviewed-by: Stephen Henson <steve@openssl.org>
+Reviewed-by: Matt Caswell <matt@openssl.org>
+---
+ crypto/bn/bn_print.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/crypto/bn/bn_print.c b/crypto/bn/bn_print.c
+index f3d555b..e0bd4bd 100644
+--- a/crypto/bn/bn_print.c
++++ b/crypto/bn/bn_print.c
+@@ -139,15 +139,14 @@ char *BN_bn2dec(const BIGNUM *a)
+ 		if (BN_is_negative(t))
+ 			*p++ = '-';
+ 
+-		i=0;
+ 		while (!BN_is_zero(t))
+ 			{
++			if (lp - bn_data >= bn_data_num)
++				goto err;
+ 			*lp=BN_div_word(t,BN_DEC_CONV);
+ 			if (*lp == (BN_ULONG)-1)
+ 				goto err;
+ 			lp++;
+-			if (lp - bn_data >= bn_data_num)
+-				goto err;
+ 			}
+ 		lp--;
+ 		/* We now have a series of blocks, BN_DEC_NUM chars
+-- 
+2.7.4
+

@@ -1,0 +1,37 @@
+From c78565c7b7b0481536f754f2b9ad020cffd16225 Mon Sep 17 00:00:00 2001
+From: Ricardo Cerqueira <cyanogenmod@cerqueira.org>
+Date: Tue, 29 Apr 2014 12:16:34 +0100
+Subject: [PATCH 13/18] Locale: Retain compatibility with 4.4 APIs
+
+Wrap the new methods from change I9b2d7f8d17f970d1b57111dcfe92c16e68b0fa67
+in the previous public method.
+
+Fixes libcore.icu.ICUTest#test_localeFromString
+
+Change-Id: Icbffb5d5b55329f29c791b57d019817b5c298431
+---
+ luni/src/main/java/libcore/icu/ICU.java | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/luni/src/main/java/libcore/icu/ICU.java b/luni/src/main/java/libcore/icu/ICU.java
+index 073eb2d..61f576a 100644
+--- a/luni/src/main/java/libcore/icu/ICU.java
++++ b/luni/src/main/java/libcore/icu/ICU.java
+@@ -167,6 +167,14 @@ public final class ICU {
+   }
+ 
+   /**
++   * The new code from master breaks libcore.icu.ICUTest#test_localeFromString,
++   * which expects the old API. Retain this for 4.4
++   */
++  public static Locale localeFromString(String localeName) {
++      return localeFromIcuLocaleId(localeName);
++  }
++
++  /**
+    * Returns the appropriate {@code Locale} given a {@code String} of the form returned
+    * by {@code toString}. This is very lenient, and doesn't care what's between the underscores:
+    * this method can parse strings that {@code Locale.toString} won't produce.
+-- 
+2.7.4
+

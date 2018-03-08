@@ -1,0 +1,118 @@
+From b0266543b7fb01ce98296c9c2ad25b3577f391a8 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 5 Jan 2016 10:16:24 -0800
+Subject: [PATCH 06/15] Sonivox: sanity check numSamples.
+
+Bug: 26366256
+Change-Id: I066888c25035ea4c60c88f316db4508dc4dab6bc
+---
+ arm-wt-22k/lib_src/eas_wtengine.c | 26 ++++++++++++++++++++++++++
+ arm-wt-22k/lib_src/eas_wtsynth.c  |  6 ++++++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/eas_wtengine.c b/arm-wt-22k/lib_src/eas_wtengine.c
+index 224f60d..e7263fd 100644
+--- a/arm-wt-22k/lib_src/eas_wtengine.c
++++ b/arm-wt-22k/lib_src/eas_wtengine.c
+@@ -32,6 +32,8 @@
+  * includes
+  *------------------------------------
+ */
++#include "log/log.h"
++
+ #include "eas_types.h"
+ #include "eas_math.h"
+ #include "eas_audioconst.h"
+@@ -88,6 +90,10 @@ void WT_VoiceGain (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+ 
+     /* initialize some local variables */
+     numSamples = pWTIntFrame->numSamples;
++    if (numSamples <= 0) {
++        ALOGE("b/26366256");
++        return;
++    }
+     pMixBuffer = pWTIntFrame->pMixBuffer;
+     pInputBuffer = pWTIntFrame->pAudioBuffer;
+ 
+@@ -182,6 +188,10 @@ void WT_Interpolate (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+ 
+     /* initialize some local variables */
+     numSamples = pWTIntFrame->numSamples;
++    if (numSamples <= 0) {
++        ALOGE("b/26366256");
++        return;
++    }
+     pOutputBuffer = pWTIntFrame->pAudioBuffer;
+ 
+     loopEnd = (const EAS_SAMPLE*) pWTVoice->loopEnd + 1;
+@@ -275,6 +285,10 @@ void WT_InterpolateNoLoop (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+ 
+     /* initialize some local variables */
+     numSamples = pWTIntFrame->numSamples;
++    if (numSamples <= 0) {
++        ALOGE("b/26366256");
++        return;
++    }
+     pOutputBuffer = pWTIntFrame->pAudioBuffer;
+ 
+     phaseInc = pWTIntFrame->frame.phaseIncrement;
+@@ -363,6 +377,10 @@ void WT_VoiceFilter (S_FILTER_CONTROL *pFilter, S_WT_INT_FRAME *pWTIntFrame)
+ 
+     /* initialize some local variables */
+     numSamples = pWTIntFrame->numSamples;
++    if (numSamples <= 0) {
++        ALOGE("b/26366256");
++        return;
++    }
+     pAudioBuffer = pWTIntFrame->pAudioBuffer;
+ 
+     z1 = pFilter->z1;
+@@ -426,6 +444,10 @@ void WT_VoiceFilter (S_FILTER_CONTROL *pFilter, S_WT_INT_FRAME *pWTIntFrame)
+ 
+     /* initialize some local variables */
+     numSamples = pWTIntFrame->numSamples;
++    if (numSamples <= 0) {
++        ALOGE("b/26366256");
++        return;
++    }
+     pOutputBuffer = pWTIntFrame->pAudioBuffer;
+     phaseInc = pWTIntFrame->frame.phaseIncrement;
+ 
+@@ -569,6 +591,10 @@ void WT_InterpolateMono (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame)
+     EAS_I8 *pLoopStart;
+ 
+     numSamples = pWTIntFrame->numSamples;
++    if (numSamples <= 0) {
++        ALOGE("b/26366256");
++        return;
++    }
+     pMixBuffer = pWTIntFrame->pMixBuffer;
+ 
+     /* calculate gain increment */
+diff --git a/arm-wt-22k/lib_src/eas_wtsynth.c b/arm-wt-22k/lib_src/eas_wtsynth.c
+index 45cf4b1..25a70db 100644
+--- a/arm-wt-22k/lib_src/eas_wtsynth.c
++++ b/arm-wt-22k/lib_src/eas_wtsynth.c
+@@ -28,6 +28,8 @@
+ */
+ 
+ // includes
++#include "log/log.h"
++
+ #include "eas_data.h"
+ #include "eas_report.h"
+ #include "eas_host.h"
+@@ -467,6 +469,10 @@ EAS_BOOL WT_CheckSampleEnd (S_WT_VOICE *pWTVoice, S_WT_INT_FRAME *pWTIntFrame, E
+         } else {
+             pWTIntFrame->numSamples = numSamples;
+         }
++        if (pWTIntFrame->numSamples < 0) {
++            ALOGE("b/26366256");
++            pWTIntFrame->numSamples = 0;
++        }
+ 
+         /* sound will be done this frame */
+         done = EAS_TRUE;
+-- 
+2.7.4
+

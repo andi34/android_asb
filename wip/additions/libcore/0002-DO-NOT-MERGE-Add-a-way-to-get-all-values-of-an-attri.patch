@@ -1,0 +1,184 @@
+From 39c70da1795297028198424cd1615a122c9cd910 Mon Sep 17 00:00:00 2001
+From: Alex Klyubin <klyubin@google.com>
+Date: Thu, 24 Jul 2014 09:40:56 -0700
+Subject: [PATCH 02/18] DO NOT MERGE: Add a way to get all values of an
+ attribute of DN.
+
+This is needed to switch Apache HTTP hostname verification from its
+own Distinguished Name (DN) parsing code to this library's
+DistinguishedNameParser.
+
+Bug: 16510257
+
+(cherry picked from commit 7bbe7cb0a77527a8d4043315f70c156b2447b462)
+
+Change-Id: I4a20729dad557aebe0bd055736777e34b51167e8
+---
+ .../javax/net/ssl/DistinguishedNameParser.java     | 70 ++++++++++++++++++++++
+ .../javax/net/ssl/DistinguishedNameParserTest.java | 52 +++++++++-------
+ 2 files changed, 102 insertions(+), 20 deletions(-)
+
+diff --git a/luni/src/main/java/javax/net/ssl/DistinguishedNameParser.java b/luni/src/main/java/javax/net/ssl/DistinguishedNameParser.java
+index c3c1606..25ab76f 100644
+--- a/luni/src/main/java/javax/net/ssl/DistinguishedNameParser.java
++++ b/luni/src/main/java/javax/net/ssl/DistinguishedNameParser.java
+@@ -17,6 +17,9 @@
+ 
+ package javax.net.ssl;
+ 
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.List;
+ import javax.security.auth.x500.X500Principal;
+ 
+ /**
+@@ -406,4 +409,71 @@ public final class DistinguishedNameParser {
+             }
+         }
+     }
++
++    /**
++     * Parses the DN and returns all values for an attribute type, in
++     * the order of decreasing significance (most significant first).
++     *
++     * @param attributeType attribute type to look for (e.g. "ca")
++     */
++    public List<String> getAllMostSpecificFirst(String attributeType) {
++        // Initialize internal state.
++        pos = 0;
++        beg = 0;
++        end = 0;
++        cur = 0;
++        chars = dn.toCharArray();
++        List<String> result = Collections.emptyList();
++
++        String attType = nextAT();
++        if (attType == null) {
++            return result;
++        }
++        while (pos < length) {
++            String attValue = "";
++
++            switch (chars[pos]) {
++            case '"':
++                attValue = quotedAV();
++                break;
++            case '#':
++                attValue = hexAV();
++                break;
++            case '+':
++            case ',':
++            case ';': // compatibility with RFC 1779: semicolon can separate RDNs
++                //empty attribute value
++                break;
++            default:
++                attValue = escapedAV();
++            }
++
++            // Values are ordered from most specific to least specific
++            // due to the RFC2253 formatting. So take the first match
++            // we see.
++            if (attributeType.equalsIgnoreCase(attType)) {
++                if (result.isEmpty()) {
++                    result = new ArrayList<String>();
++                }
++                result.add(attValue);
++            }
++
++            if (pos >= length) {
++                break;
++            }
++
++            if (chars[pos] == ',' || chars[pos] == ';') {
++            } else if (chars[pos] != '+') {
++                throw new IllegalStateException("Malformed DN: " + dn);
++            }
++
++            pos++;
++            attType = nextAT();
++            if (attType == null) {
++                throw new IllegalStateException("Malformed DN: " + dn);
++            }
++        }
++
++        return result;
++    }
+ }
+diff --git a/luni/src/test/java/libcore/javax/net/ssl/DistinguishedNameParserTest.java b/luni/src/test/java/libcore/javax/net/ssl/DistinguishedNameParserTest.java
+index 723c697..91c596f 100644
+--- a/luni/src/test/java/libcore/javax/net/ssl/DistinguishedNameParserTest.java
++++ b/luni/src/test/java/libcore/javax/net/ssl/DistinguishedNameParserTest.java
+@@ -19,38 +19,50 @@ package libcore.javax.net.ssl;
+ import javax.net.ssl.DistinguishedNameParser;
+ import javax.security.auth.x500.X500Principal;
+ import junit.framework.TestCase;
++import java.util.Arrays;
+ 
+ public final class DistinguishedNameParserTest extends TestCase {
+-    public void testGetFirstCn() {
+-        assertFirstCn("", null);
+-        assertFirstCn("ou=xxx", null);
+-        assertFirstCn("ou=xxx,cn=xxx", "xxx");
+-        assertFirstCn("ou=xxx+cn=yyy,cn=zzz+cn=abc", "yyy");
+-        assertFirstCn("cn=a,cn=b", "a");
+-        assertFirstCn("cn=Cc,cn=Bb,cn=Aa", "Cc");
+-        assertFirstCn("cn=imap.gmail.com", "imap.gmail.com");
++    public void testGetCns() {
++        assertCns("");
++        assertCns("ou=xxx");
++        assertCns("ou=xxx,cn=xxx", "xxx");
++        assertCns("ou=xxx+cn=yyy,cn=zzz+cn=abc", "yyy", "zzz", "abc");
++        assertCns("cn=a,cn=b", "a", "b");
++        assertCns("cn=Cc,cn=Bb,cn=Aa", "Cc", "Bb", "Aa");
++        assertCns("cn=imap.gmail.com", "imap.gmail.com");
++        assertCns("l=\"abcn=a,b\", cn=c", "c");
+     }
+ 
+-    public void testGetFirstCnWithOid() {
+-        assertFirstCn("2.5.4.3=a,ou=xxx", "a");
++    public void testGetCnsWithOid() {
++        assertCns("2.5.4.3=a,ou=xxx", "a");
+     }
+ 
+-    public void testGetFirstCnWithQuotedStrings() {
+-        assertFirstCn("cn=\"\\\" a ,=<>#;\"", "\" a ,=<>#;");
+-        assertFirstCn("cn=abc\\,def", "abc,def");
++    public void testGetCnsWithQuotedStrings() {
++        assertCns("cn=\"\\\" a ,=<>#;\"", "\" a ,=<>#;");
++        assertCns("cn=abc\\,def", "abc,def");
+     }
+ 
+-    public void testGetFirstCnWithUtf8() {
+-        assertFirstCn("cn=Lu\\C4\\8Di\\C4\\87", "\u004c\u0075\u010d\u0069\u0107");
++    public void testGetCnsWithUtf8() {
++        assertCns("cn=Lu\\C4\\8Di\\C4\\87", "\u004c\u0075\u010d\u0069\u0107");
+     }
+ 
+-    public void testGetFirstCnWithWhitespace() {
+-        assertFirstCn("ou=a, cn=  a  b  ,o=x", "a  b");
+-        assertFirstCn("cn=\"  a  b  \" ,o=x", "  a  b  ");
++    public void testGetCnsWithWhitespace() {
++        assertCns("ou=a, cn=  a  b  ,o=x", "a  b");
++        assertCns("cn=\"  a  b  \" ,o=x", "  a  b  ");
+     }
+ 
+-    private void assertFirstCn(String dn, String expected) {
++    private void assertCns(String dn, String... expected) {
+         X500Principal principal = new X500Principal(dn);
+-        assertEquals(dn, expected, new DistinguishedNameParser(principal).findMostSpecific("cn"));
++        DistinguishedNameParser parser = new DistinguishedNameParser(principal);
++
++        // Test getAllMostSpecificFirst
++        assertEquals(dn, Arrays.asList(expected), parser.getAllMostSpecificFirst("cn"));
++
++        // Test findMostSpecific
++        if (expected.length > 0) {
++            assertEquals(dn, expected[0], parser.findMostSpecific("cn"));
++        } else {
++            assertNull(dn, parser.findMostSpecific("cn"));
++        }
+     }
+ }
+-- 
+2.7.4
+

@@ -1,0 +1,82 @@
+From 30d2012079619abe4a97e99ab07932901c957304 Mon Sep 17 00:00:00 2001
+From: Kenny Root <kroot@google.com>
+Date: Thu, 12 May 2016 14:15:24 -0700
+Subject: [PATCH 16/18] Use SSL_session_reused to check when a session was
+ reused
+
+The returned session_id could be exactly the same in the case of TLS
+session tickets, so use the SSL_session_reused API to determine exactly
+when a session was reused.
+
+(cherry picked from commit 1115fa0f6dbbff3a913fbce39ca98f9a78425c72)
+
+Bug: 28751153
+Change-Id: Ie82e4d1bb326d7e7deb7981a1e57df393f6c0e1f
+(cherry picked from commit 91f9851e8703ba93d3c9bfbac5c139f84e4c44dd)
+---
+ crypto/src/main/java/org/conscrypt/NativeCrypto.java      |  2 ++
+ crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java |  3 +--
+ crypto/src/main/native/org_conscrypt_NativeCrypto.cpp     | 13 +++++++++++++
+ 3 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/crypto/src/main/java/org/conscrypt/NativeCrypto.java b/crypto/src/main/java/org/conscrypt/NativeCrypto.java
+index f60e286..0e96c90 100644
+--- a/crypto/src/main/java/org/conscrypt/NativeCrypto.java
++++ b/crypto/src/main/java/org/conscrypt/NativeCrypto.java
+@@ -945,6 +945,8 @@ public final class NativeCrypto {
+     public static native void SSL_set_session_creation_enabled(
+             long sslNativePointer, boolean creationEnabled) throws SSLException;
+ 
++    public static native boolean SSL_session_reused(long sslNativePointer);
++
+     public static native void SSL_set_tlsext_host_name(long sslNativePointer, String hostname)
+             throws SSLException;
+     public static native String SSL_get_servername(long sslNativePointer);
+diff --git a/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java b/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java
+index 4b705d7..03fe4b9 100644
+--- a/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java
++++ b/crypto/src/main/java/org/conscrypt/OpenSSLSocketImpl.java
+@@ -411,8 +411,7 @@ public class OpenSSLSocketImpl
+                 wrapper.initCause(e);
+                 throw wrapper;
+             }
+-            byte[] sessionId = NativeCrypto.SSL_SESSION_session_id(sslSessionNativePointer);
+-            if (sessionToReuse != null && Arrays.equals(sessionToReuse.getId(), sessionId)) {
++            if (sessionToReuse != null && NativeCrypto.SSL_session_reused(sslNativePointer)) {
+                 this.sslSession = sessionToReuse;
+                 sslSession.lastAccessedTime = System.currentTimeMillis();
+                 NativeCrypto.SSL_SESSION_free(sslSessionNativePointer);
+diff --git a/crypto/src/main/native/org_conscrypt_NativeCrypto.cpp b/crypto/src/main/native/org_conscrypt_NativeCrypto.cpp
+index cc5abbd..0a43824 100644
+--- a/crypto/src/main/native/org_conscrypt_NativeCrypto.cpp
++++ b/crypto/src/main/native/org_conscrypt_NativeCrypto.cpp
+@@ -6742,6 +6742,18 @@ static void NativeCrypto_SSL_set_session_creation_enabled(JNIEnv* env, jclass,
+     SSL_set_session_creation_enabled(ssl, creation_enabled);
+ }
+ 
++static jboolean NativeCrypto_SSL_session_reused(JNIEnv* env, jclass, jlong ssl_address) {
++    SSL* ssl = to_SSL(env, ssl_address, true);
++    JNI_TRACE("ssl=%p NativeCrypto_SSL_session_reused", ssl);
++    if (ssl == nullptr) {
++        return JNI_FALSE;
++    }
++
++    int reused = SSL_session_reused(ssl);
++    JNI_TRACE("ssl=%p NativeCrypto_SSL_session_reused => %d", ssl, reused);
++    return reused == 1 ? JNI_TRUE : JNI_FALSE;
++}
++
+ static void NativeCrypto_SSL_set_tlsext_host_name(JNIEnv* env, jclass,
+         jlong ssl_address, jstring hostname)
+ {
+@@ -8161,6 +8173,7 @@ static JNINativeMethod sNativeCryptoMethods[] = {
+     NATIVE_METHOD(NativeCrypto, SSL_set_verify, "(JI)V"),
+     NATIVE_METHOD(NativeCrypto, SSL_set_session, "(JJ)V"),
+     NATIVE_METHOD(NativeCrypto, SSL_set_session_creation_enabled, "(JZ)V"),
++    NATIVE_METHOD(NativeCrypto, SSL_session_reused, "(J)Z"),
+     NATIVE_METHOD(NativeCrypto, SSL_set_tlsext_host_name, "(JLjava/lang/String;)V"),
+     NATIVE_METHOD(NativeCrypto, SSL_get_servername, "(J)Ljava/lang/String;"),
+     NATIVE_METHOD(NativeCrypto, SSL_do_handshake, "(J" FILE_DESCRIPTOR SSL_CALLBACKS "IZ[B[B)I"),
+-- 
+2.7.4
+

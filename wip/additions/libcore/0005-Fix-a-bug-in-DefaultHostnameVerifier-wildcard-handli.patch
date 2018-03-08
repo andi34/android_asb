@@ -1,0 +1,58 @@
+From 894c826bad832143ebd2b851a8420ecab5738860 Mon Sep 17 00:00:00 2001
+From: Alex Klyubin <klyubin@google.com>
+Date: Tue, 18 Nov 2014 17:37:20 -0800
+Subject: [PATCH 05/18] Fix a bug in DefaultHostnameVerifier wildcard handling.
+
+Wildcard domain name patterns of the form *.remainder are supposed to
+match domain names that exactly match the remainder. Due to a bug,
+the match was not exact but rather a prefix match: domain names
+starting with the remainder would match too.
+
+This CL fixes the issue.
+
+Bug: 18432707
+Change-Id: Ic2fccbfeac4f5d6e71b49ecbd36c248214baebad
+---
+ luni/src/main/java/javax/net/ssl/DefaultHostnameVerifier.java          | 2 +-
+ .../test/java/libcore/javax/net/ssl/DefaultHostnameVerifierTest.java   | 3 +++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/luni/src/main/java/javax/net/ssl/DefaultHostnameVerifier.java b/luni/src/main/java/javax/net/ssl/DefaultHostnameVerifier.java
+index fa11371..fd84c3e 100644
+--- a/luni/src/main/java/javax/net/ssl/DefaultHostnameVerifier.java
++++ b/luni/src/main/java/javax/net/ssl/DefaultHostnameVerifier.java
+@@ -137,7 +137,7 @@ public final class DefaultHostnameVerifier implements HostnameVerifier {
+             return hostName.equals(cn);
+         }
+ 
+-        if (cn.startsWith("*.") && hostName.regionMatches(0, cn, 2, cn.length() - 2)) {
++        if (cn.startsWith("*.") && hostName.equals(cn.substring(2))) {
+             return true; // "*.foo.com" matches "foo.com"
+         }
+ 
+diff --git a/luni/src/test/java/libcore/javax/net/ssl/DefaultHostnameVerifierTest.java b/luni/src/test/java/libcore/javax/net/ssl/DefaultHostnameVerifierTest.java
+index e1c9fe3..feecebe 100644
+--- a/luni/src/test/java/libcore/javax/net/ssl/DefaultHostnameVerifierTest.java
++++ b/luni/src/test/java/libcore/javax/net/ssl/DefaultHostnameVerifierTest.java
+@@ -114,15 +114,18 @@ public final class DefaultHostnameVerifierTest extends TestCase {
+     public void testWildcardMatchesWildcardSuffix() {
+         assertTrue(verifier.verifyHostName("b.c.d", "*.b.c.d"));
+         assertTrue(verifier.verifyHostName("imap.google.com", "*.imap.google.com"));
++        assertFalse(verifier.verifyHostName("imap.google.com.au", "*.imap.google.com"));
+     }
+ 
+     public void testWildcardMatchingSubstring() {
+         assertTrue(verifier.verifyHostName("b.c.d", "b*.c.d"));
+         assertTrue(verifier.verifyHostName("imap.google.com", "ima*.google.com"));
++        assertFalse(verifier.verifyHostName("imap.google.com.au", "ima*.google.com"));
+     }
+ 
+     public void testWildcardMatchingEmptySubstring() {
+         assertTrue(verifier.verifyHostName("imap.google.com", "imap*.google.com"));
++        assertFalse(verifier.verifyHostName("imap.google.com.au", "imap*.google.com"));
+     }
+ 
+     public void testWildcardMatchesChildDomain() {
+-- 
+2.7.4
+

@@ -1,0 +1,28 @@
+From ac4e1ec8b9ebcc20add9d7ded49745c225a4e86a Mon Sep 17 00:00:00 2001
+From: Eric Laurent <elaurent@google.com>
+Date: Thu, 14 May 2015 09:10:40 -0700
+Subject: [PATCH 01/15] DLS parser: fix wave pool size check.
+
+Bug: 21132860.
+Change-Id: I8ae872ea2cc2e8fec5fa0b7815f0b6b31ce744ff
+(cherry picked from commit 2d7f8e1be2241e48458f5d3cab5e90be2b07c699)
+---
+ arm-wt-22k/lib_src/eas_mdls.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arm-wt-22k/lib_src/eas_mdls.c b/arm-wt-22k/lib_src/eas_mdls.c
+index e8dc463..51cce70 100644
+--- a/arm-wt-22k/lib_src/eas_mdls.c
++++ b/arm-wt-22k/lib_src/eas_mdls.c
+@@ -938,7 +938,7 @@ static EAS_RESULT Parse_wave (SDLS_SYNTHESIZER_DATA *pDLSData, EAS_I32 pos, EAS_
+     }
+ 
+     // limit to reasonable size
+-    if (dataSize > MAX_DLS_WAVE_SIZE)
++    if (dataSize < 0 || dataSize > MAX_DLS_WAVE_SIZE)
+     {
+         return EAS_ERROR_SOUND_LIBRARY;
+     }
+-- 
+2.7.4
+

@@ -1,0 +1,70 @@
+From de823c2aead3649ffc8e66c6a2f3cd3c315b174e Mon Sep 17 00:00:00 2001
+From: Dave Platt <dplatt@google.com>
+Date: Wed, 5 Feb 2014 17:05:33 -0800
+Subject: [PATCH 08/18] Finish fixing Zygote descriptor leakage problem
+
+In order to prevent Zygote descriptors from leaking into the child
+environment, they should be closed by the forked-off child process
+before the child switches to the application UID.  These changes close
+the descriptors via dup2(), substituting a descriptor open to
+/dev/null in their place; this allows the Zygote Java code to close
+the FileDescriptor objects cleanly.
+
+This is a multi-project change: dalvik, art, libcore, frameworks/base,
+and external/sepolicy are affected.  The CLs need to be approved
+together, lest the build break or the software fail to boot.
+
+Bug: 12114500
+Change-Id: I8ea69de7b1cfbd811977a5629eb0af665f6dd66a
+---
+ dalvik/src/main/java/dalvik/system/Zygote.java | 22 +++++++++++++++++++---
+ 1 file changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/dalvik/src/main/java/dalvik/system/Zygote.java b/dalvik/src/main/java/dalvik/system/Zygote.java
+index ea9dbdc..c8bc628 100644
+--- a/dalvik/src/main/java/dalvik/system/Zygote.java
++++ b/dalvik/src/main/java/dalvik/system/Zygote.java
+@@ -122,21 +122,37 @@ public class Zygote {
+      * @param seInfo null-ok a string specifying SELinux information for
+      * the new process.
+      * @param niceName null-ok a string specifying the process name.
++     * @param fdsToClose an array of ints, holding one or more POSIX
++     * file descriptor numbers that are to be closed by the child
++     * (and replaced by /dev/null) after forking.  An integer value
++     * of -1 in any entry in the array means "ignore this one".
+      *
+      * @return 0 if this is the child, pid of the child
+      * if this is the parent, or -1 on error.
+      */
+     public static int forkAndSpecialize(int uid, int gid, int[] gids, int debugFlags,
+-            int[][] rlimits, int mountExternal, String seInfo, String niceName) {
++          int[][] rlimits, int mountExternal, String seInfo, String niceName, int[] fdsToClose) {
++        preFork();
++        int pid = nativeForkAndSpecialize_new(
++                  uid, gid, gids, debugFlags, rlimits, mountExternal, seInfo, niceName, fdsToClose);
++        postFork();
++        return pid;
++    }
++
++    public static int forkAndSpecialize(int uid, int gid, int[] gids, int debugFlags,
++          int[][] rlimits, int mountExternal, String seInfo, String niceName) {
+         preFork();
+         int pid = nativeForkAndSpecialize(
+-                uid, gid, gids, debugFlags, rlimits, mountExternal, seInfo, niceName);
++                  uid, gid, gids, debugFlags, rlimits, mountExternal, seInfo, niceName);
+         postFork();
+         return pid;
+     }
+ 
++    native public static int nativeForkAndSpecialize_new(int uid, int gid, int[] gids, int debugFlags,
++          int[][] rlimits, int mountExternal, String seInfo, String niceName, int[] fdsToClose);
++
+     native public static int nativeForkAndSpecialize(int uid, int gid, int[] gids, int debugFlags,
+-            int[][] rlimits, int mountExternal, String seInfo, String niceName);
++          int[][] rlimits, int mountExternal, String seInfo, String niceName);
+ 
+     /**
+      * Special method to start the system server process. In addition to the
+-- 
+2.7.4
+

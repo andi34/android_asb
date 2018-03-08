@@ -1,0 +1,35 @@
+From 1168aa449559cff341db788734d3db2c0875962f Mon Sep 17 00:00:00 2001
+From: djsollen <djsollen@google.com>
+Date: Tue, 26 Aug 2014 11:35:14 -0700
+Subject: [PATCH 4/9] Prevent malformed ICO files from recursively decoding
+
+R=reed@google.com, scroggo@google.com
+
+Author: djsollen@google.com
+
+Review URL: https://codereview.chromium.org/511453002
+
+bug:17265466,17262540
+Change-Id: I128b54c74d75b7afca20e47e6650c500278c5adc
+---
+ src/images/SkImageDecoder_libico.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/images/SkImageDecoder_libico.cpp b/src/images/SkImageDecoder_libico.cpp
+index 542f53d..a7a6f14 100644
+--- a/src/images/SkImageDecoder_libico.cpp
++++ b/src/images/SkImageDecoder_libico.cpp
+@@ -160,6 +160,10 @@ bool SkICOImageDecoder::onDecode(SkStream* stream, SkBitmap* bm, Mode mode)
+         SkMemoryStream subStream(buf + offset, size, false);
+         SkAutoTDelete<SkImageDecoder> otherDecoder(SkImageDecoder::Factory(&subStream));
+         if (otherDecoder.get() != NULL) {
++            // Disallow nesting ICO files within one another
++            if (otherDecoder->getFormat() == SkImageDecoder::kICO_Format) {
++                return false;
++            }
+             // Set fields on the other decoder to be the same as this one.
+             this->copyFieldsToOther(otherDecoder.get());
+             if(otherDecoder->decode(&subStream, bm, this->getDefaultPref(), mode)) {
+-- 
+2.7.4
+

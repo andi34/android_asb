@@ -1,0 +1,47 @@
+From 784d91f63a57a5a4f76daeb0e58fad9b880816a3 Mon Sep 17 00:00:00 2001
+From: "Brian C. Young" <bcyoung@google.com>
+Date: Mon, 3 Apr 2017 12:21:57 -0700
+Subject: [PATCH 6/7] DO NOT MERGE: Apply upstream Chromium patch for encoding
+ changes
+
+Give up looking up interned names if the encoding changed during parsing
+
+NEXTL may process encoding changes by refilling the parser's input
+buffer, which makes the accumulated length 'len' inaccurate.
+
+Chromium bug: http://crbug.com/620679
+
+Review-Url: https://codereview.chromium.org/2603933002
+Cr-Commit-Position: refs/heads/master@{#442517}
+
+Bug: 36553781
+Change-Id: Id3484fbee201d1e19b684b109009d6590354b1d9
+(cherry picked from commit 008262d3e46b3d5aae2d2f981e26ca69c8bd2b51)
+---
+ parser.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/parser.c b/parser.c
+index f4ae9df..1efcd6f 100644
+--- a/parser.c
++++ b/parser.c
+@@ -3258,8 +3258,15 @@ xmlParseNameComplex(xmlParserCtxtPtr ctxt) {
+ 	    c = CUR_CHAR(l);
+ 	}
+     }
+-    if ((*ctxt->input->cur == '\n') && (ctxt->input->cur[-1] == '\r'))
++    if (ctxt->input->cur > ctxt->input->base && (*ctxt->input->cur == '\n') && (ctxt->input->cur[-1] == '\r')) {
++        if (ctxt->input->base > ctxt->input->cur - (len + 1)) {
++            return(NULL);
++        }
+         return(xmlDictLookup(ctxt->dict, ctxt->input->cur - (len + 1), len));
++    }
++    if (ctxt->input->base > ctxt->input->cur - len) {
++        return(NULL);
++    }
+     return(xmlDictLookup(ctxt->dict, ctxt->input->cur - len, len));
+ }
+ 
+-- 
+2.7.4
+

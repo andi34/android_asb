@@ -1,0 +1,42 @@
+From 4a0fbab72f72fa6d8d97f9f84733b28c18f0060e Mon Sep 17 00:00:00 2001
+From: Derek Sollenberger <djsollen@google.com>
+Date: Mon, 23 May 2016 16:30:29 -0400
+Subject: [PATCH 8/9] Use min/max to pin value between 0 and 255.
+
+bug:27210135
+Change-Id: I377cd4a228312d47cd2ffa1d91e1a5535be5721e
+(cherry picked from commit 6c3a6caae5b2e9cfe1f8188b7a9dc4d46072e7ea)
+---
+ src/effects/SkArithmeticMode.cpp | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/src/effects/SkArithmeticMode.cpp b/src/effects/SkArithmeticMode.cpp
+index 2cec153..fb57cf9 100644
+--- a/src/effects/SkArithmeticMode.cpp
++++ b/src/effects/SkArithmeticMode.cpp
+@@ -18,6 +18,8 @@
+ #include "SkImageFilterUtils.h"
+ #endif
+ 
++#include <algorithm>
++
+ static const bool gUseUnpremul = false;
+ 
+ class SkArithmeticMode_scalar : public SkXfermode {
+@@ -60,12 +62,7 @@ private:
+ };
+ 
+ static int pinToByte(int value) {
+-    if (value < 0) {
+-        value = 0;
+-    } else if (value > 255) {
+-        value = 255;
+-    }
+-    return value;
++    return std::max(0, std::min(255, value));
+ }
+ 
+ static int arith(SkScalar k1, SkScalar k2, SkScalar k3, SkScalar k4,
+-- 
+2.7.4
+

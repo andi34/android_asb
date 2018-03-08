@@ -1,0 +1,64 @@
+From b1488c9bcb440953834ded5ad8327aad9afd5e1a Mon Sep 17 00:00:00 2001
+From: fionaxu <fionaxu@google.com>
+Date: Mon, 20 Jun 2016 19:11:57 -0700
+Subject: [PATCH 3/6] backport security fix: avoid set NITZ time to 2038
+
+Bug: 29083635
+Change-Id: I21c5f4147d8146f92b7e33f0967a179ae644a263
+(cherry picked from commit 6c2365a258381ac0ecb34f143b620a32649d3d32)
+---
+ .../android/internal/telephony/cdma/CdmaServiceStateTracker.java    | 6 ++++++
+ .../com/android/internal/telephony/gsm/GsmServiceStateTracker.java  | 6 ++++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/cdma/CdmaServiceStateTracker.java b/src/java/com/android/internal/telephony/cdma/CdmaServiceStateTracker.java
+index e522559..d09cbbd 100644
+--- a/src/java/com/android/internal/telephony/cdma/CdmaServiceStateTracker.java
++++ b/src/java/com/android/internal/telephony/cdma/CdmaServiceStateTracker.java
+@@ -91,6 +91,8 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
+     private static final int NITZ_UPDATE_DIFF_DEFAULT = 2000;
+     private int mNitzUpdateDiff = SystemProperties.getInt("ro.nitz_update_diff",
+             NITZ_UPDATE_DIFF_DEFAULT);
++    /** Time stamp after 19 January 2038 is not supported under 32 bit */
++    private static final int MAX_NITZ_YEAR = 2037;
+ 
+     private boolean mCdmaRoaming = false;
+     private int mRoamingIndicator;
+@@ -1324,6 +1326,10 @@ public class CdmaServiceStateTracker extends ServiceStateTracker {
+             String[] nitzSubs = nitz.split("[/:,+-]");
+ 
+             int year = 2000 + Integer.parseInt(nitzSubs[0]);
++            if (year > MAX_NITZ_YEAR) {
++              if (DBG) loge("NITZ year: " + year + " exceeds limit, skip NITZ time update");
++              return;
++            }
+             c.set(Calendar.YEAR, year);
+ 
+             // month is 0 based!
+diff --git a/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java b/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
+index 24ec586..a641569 100644
+--- a/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
++++ b/src/java/com/android/internal/telephony/gsm/GsmServiceStateTracker.java
+@@ -127,6 +127,8 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
+ 
+     /** Boolean is true is setTimeFromNITZString was called */
+     private boolean mNitzUpdatedTime = false;
++    /** Time stamp after 19 January 2038 is not supported under 32 bit */
++    private static final int MAX_NITZ_YEAR = 2037;
+ 
+     String mSavedTimeZone;
+     long mSavedTime;
+@@ -1502,6 +1504,10 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
+             String[] nitzSubs = nitz.split("[/:,+-]");
+ 
+             int year = 2000 + Integer.parseInt(nitzSubs[0]);
++            if (year > MAX_NITZ_YEAR) {
++              if (DBG) loge("NITZ year: " + year + " exceeds limit, skip NITZ time update");
++              return;
++            }
+             c.set(Calendar.YEAR, year);
+ 
+             // month is 0 based!
+-- 
+2.7.4
+

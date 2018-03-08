@@ -1,0 +1,36 @@
+From 6c241c349e9310d8c0b6510aff84f119b24bfd4d Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Thu, 11 May 2017 14:43:54 -0700
+Subject: [PATCH 11/15] Check chunk size
+
+to make sure we actually advance in the file
+
+Bug: 37093318
+Test: decoded poc and other files with and without change
+AOSP-Change-Id: I94cf65336ce4132c17c39b651dc520264f02a704
+(cherry picked from commit f01750adb0558d1885c7d5a5c8900d2187d0d38d)
+
+Change-Id: I2ef49d38d52f83e61debea4d9e16988531011819
+---
+ arm-wt-22k/lib_src/eas_mdls.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/eas_mdls.c b/arm-wt-22k/lib_src/eas_mdls.c
+index 296d783..8097ba4 100644
+--- a/arm-wt-22k/lib_src/eas_mdls.c
++++ b/arm-wt-22k/lib_src/eas_mdls.c
+@@ -785,6 +785,11 @@ static EAS_RESULT NextChunk (SDLS_SYNTHESIZER_DATA *pDLSData, EAS_I32 *pPos, EAS
+     if ((result = EAS_HWGetDWord(pDLSData->hwInstData, pDLSData->fileHandle, pSize, EAS_FALSE)) != EAS_SUCCESS)
+         return result;
+ 
++    if (*pSize < 0) {
++        ALOGE("b/37093318");
++        return EAS_ERROR_FILE_FORMAT;
++    }
++
+     /* get form type for RIFF and LIST types */
+     if ((*pChunkType == CHUNK_RIFF) || (*pChunkType == CHUNK_LIST))
+     {
+-- 
+2.7.4
+

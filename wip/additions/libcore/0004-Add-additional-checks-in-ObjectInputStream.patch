@@ -1,0 +1,538 @@
+From 822236ad8903d4d3f95fa59b860b1832ad2bb0d7 Mon Sep 17 00:00:00 2001
+From: Neil Fuller <nfuller@google.com>
+Date: Wed, 25 Jun 2014 17:54:12 +0100
+Subject: [PATCH 04/18] Add additional checks in ObjectInputStream
+
+Thanks to Jann Horn for reporting a bug in ObjectInputStream
+and sending the initial patch.
+
+Add some checks that the class of an object
+being deserialized still conforms to the requirements
+for serialization.
+
+Add some checks that the class being deserialized matches
+the type information (enum, serializable, externalizable)
+held in the stream.
+
+Delayed static initialization of classes until the
+type of the class has been validated against the stream
+content in some cases.
+
+Added more tests.
+
+Bug: 15874291
+(cherry picked from commit 738c833d38d41f8f76eb7e77ab39add82b1ae1e2)
+
+Change-Id: I9f5437ed60936882de56589537176466624e631d
+---
+ luni/src/main/java/java/io/ObjectInputStream.java  |  25 +-
+ luni/src/main/java/java/io/ObjectStreamClass.java  |  69 +++++-
+ .../main/java/java/io/ObjectStreamConstants.java   |  16 +-
+ .../java/libcore/java/io/SerializationTest.java    | 260 ++++++++++++++++++++-
+ 4 files changed, 349 insertions(+), 21 deletions(-)
+
+diff --git a/luni/src/main/java/java/io/ObjectInputStream.java b/luni/src/main/java/java/io/ObjectInputStream.java
+index 34c3138..17a6974 100644
+--- a/luni/src/main/java/java/io/ObjectInputStream.java
++++ b/luni/src/main/java/java/io/ObjectInputStream.java
+@@ -1052,7 +1052,8 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
+      * @see #readFields
+      * @see #readObject()
+      */
+-    private void readFieldValues(Object obj, ObjectStreamClass classDesc) throws OptionalDataException, ClassNotFoundException, IOException {
++    private void readFieldValues(Object obj, ObjectStreamClass classDesc)
++            throws OptionalDataException, ClassNotFoundException, IOException {
+         // Now we must read all fields and assign them to the receiver
+         ObjectStreamField[] fields = classDesc.getLoadFields();
+         fields = (fields == null) ? ObjectStreamClass.NO_FIELDS : fields;
+@@ -1574,6 +1575,9 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
+             ClassNotFoundException, IOException {
+         // read classdesc for Enum first
+         ObjectStreamClass classDesc = readEnumDesc();
++
++        Class enumType = classDesc.checkAndGetTcEnumClass();
++
+         int newHandle = nextHandle();
+         // read name after class desc
+         String name;
+@@ -1595,9 +1599,11 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
+ 
+         Enum<?> result;
+         try {
+-            result = Enum.valueOf((Class) classDesc.forClass(), name);
++            result = Enum.valueOf(enumType, name);
+         } catch (IllegalArgumentException e) {
+-            throw new InvalidObjectException(e.getMessage());
++            InvalidObjectException ioe = new InvalidObjectException(e.getMessage());
++            ioe.initCause(e);
++            throw ioe;
+         }
+         registerObjectRead(result, newHandle, unshared);
+         return result;
+@@ -1781,9 +1787,10 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
+             throw missingClassDescriptor();
+         }
+ 
++        Class<?> objectClass = classDesc.checkAndGetTcObjectClass();
++
+         int newHandle = nextHandle();
+-        Class<?> objectClass = classDesc.forClass();
+-        Object result = null;
++        Object result;
+         Object registeredResult = null;
+         if (objectClass != null) {
+             // Now we know which class to instantiate and which constructor to
+@@ -2055,8 +2062,7 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
+      *             if the source stream does not contain readable serialized
+      *             objects.
+      */
+-    protected void readStreamHeader() throws IOException,
+-            StreamCorruptedException {
++    protected void readStreamHeader() throws IOException, StreamCorruptedException {
+         if (input.readShort() == STREAM_MAGIC
+                 && input.readShort() == STREAM_VERSION) {
+             return;
+@@ -2256,7 +2262,7 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
+                 // not primitive class
+                 // Use the first non-null ClassLoader on the stack. If null, use
+                 // the system class loader
+-                cls = Class.forName(className, true, callerClassLoader);
++                cls = Class.forName(className, false, callerClassLoader);
+             }
+         }
+         return cls;
+@@ -2330,8 +2336,7 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
+             throws InvalidClassException {
+ 
+         Class<?> localClass = loadedStreamClass.forClass();
+-        ObjectStreamClass localStreamClass = ObjectStreamClass
+-                .lookupStreamClass(localClass);
++        ObjectStreamClass localStreamClass = ObjectStreamClass.lookupStreamClass(localClass);
+ 
+         if (loadedStreamClass.getSerialVersionUID() != localStreamClass
+                 .getSerialVersionUID()) {
+diff --git a/luni/src/main/java/java/io/ObjectStreamClass.java b/luni/src/main/java/java/io/ObjectStreamClass.java
+index b11ffd2..1a27c9d 100644
+--- a/luni/src/main/java/java/io/ObjectStreamClass.java
++++ b/luni/src/main/java/java/io/ObjectStreamClass.java
+@@ -1088,7 +1088,6 @@ public class ObjectStreamClass implements Serializable {
+             tlc.put(cl, cachedValue);
+         }
+         return cachedValue;
+-
+     }
+ 
+     /**
+@@ -1318,4 +1317,72 @@ public class ObjectStreamClass implements Serializable {
+     public String toString() {
+         return getName() + ": static final long serialVersionUID =" + getSerialVersionUID() + "L;";
+     }
++
++    /**
++     * Checks the local class to make sure it is valid for {@link ObjectStreamConstants#TC_OBJECT}
++     * deserialization. Also performs some sanity checks of the stream data. This method is used
++     * during deserialization to confirm the local class is likely to be compatible with the coming
++     * stream data, but before an instance is instantiated.
++     *
++     * @hide used internally during deserialization
++     */
++    public Class<?> checkAndGetTcObjectClass() throws InvalidClassException {
++        // We check some error possibilities that might cause problems later.
++        boolean wasSerializable = (flags & ObjectStreamConstants.SC_SERIALIZABLE) != 0;
++        boolean wasExternalizable = (flags & ObjectStreamConstants.SC_EXTERNALIZABLE) != 0;
++        if (wasSerializable == wasExternalizable) {
++            throw new InvalidClassException(
++                    getName() + " stream data is corrupt: SC_SERIALIZABLE=" + wasSerializable
++                            + " SC_EXTERNALIZABLE=" + wasExternalizable
++                            + ", classDescFlags must have one or the other");
++        }
++
++        // TC_ENUM is handled elsewhere. See checkAndGetTcEnumClass().
++        if (isEnum()) {
++            throw new InvalidClassException(
++                    getName() + " local class is incompatible: Local class is an enum, streamed"
++                            + " data is tagged with TC_OBJECT");
++        }
++
++        // isSerializable() is true if the local class implements Serializable. Externalizable
++        // classes are also Serializable via inheritance.
++        if (!isSerializable()) {
++            throw new InvalidClassException(getName() + " local class is incompatible: Not"
++                    + " Serializable");
++        }
++
++        // The stream class was externalizable, but is only serializable locally.
++        if (wasExternalizable != isExternalizable()) {
++            throw new InvalidClassException(
++                    getName() + " local class is incompatible: Local class is Serializable, stream"
++                            + " data requires Externalizable");
++        }
++
++        // The following are left unchecked and thus are treated leniently at this point.
++        // SC_BLOCK_DATA may be set iff SC_EXTERNALIZABLE is set AND version 2 of the protocol is in
++        // use.
++        // SC_ENUM should not be set.
++
++        return forClass();
++    }
++
++    /**
++     * Checks the local class to make sure it is valid for {@link ObjectStreamConstants#TC_ENUM}
++     * deserialization. This method is used during deserialization to confirm the local class is
++     * likely to be compatible with the coming stream data, but before an instance is instantiated.
++     *
++     * @hide used internally during deserialization
++     */
++    public Class<?> checkAndGetTcEnumClass() throws InvalidClassException {
++        if (!isEnum()) {
++            throw new InvalidClassException(
++                    getName() + " local class is incompatible: Local class is not an enum,"
++                            + " streamed data is tagged with TC_ENUM");
++        }
++
++        // The stream flags are expected to be SC_SERIALIZABLE | SC_ENUM but these and the
++        // other flags are not used when reading enum data so they are treated leniently.
++
++        return forClass();
++    }
+ }
+diff --git a/luni/src/main/java/java/io/ObjectStreamConstants.java b/luni/src/main/java/java/io/ObjectStreamConstants.java
+index 8228b33..95f8b03 100644
+--- a/luni/src/main/java/java/io/ObjectStreamConstants.java
++++ b/luni/src/main/java/java/io/ObjectStreamConstants.java
+@@ -149,25 +149,25 @@ public abstract interface ObjectStreamConstants {
+     // Flags that indicate if the object was serializable, externalizable
+     // and had a writeObject method when dumped.
+     /**
+-     * Bit mask for the {@code flag} field in ObjectStreamClass. Indicates
+-     * that a serializable class has its own {@code writeObject} method.
++     * Bit mask for the {@code flag} field in {@link ObjectStreamClass}. Indicates
++     * that a {@link Serializable} class has its own {@code writeObject} method.
+      */
+     public static final byte SC_WRITE_METHOD = 0x01; // If SC_SERIALIZABLE
+ 
+     /**
+-     * Bit mask for the {@code flag} field in ObjectStreamClass. Indicates
+-     * that a class is serializable.
++     * Bit mask for the {@code flag} field in {@link ObjectStreamClass}. Indicates
++     * that a class implements {@link Serializable} but not {@link Externalizable}.
+      */
+     public static final byte SC_SERIALIZABLE = 0x02;
+ 
+     /**
+-     * Bit mask for the {@code flag} field in ObjectStreamClass. Indicates
+-     * that a class is externalizable.
++     * Bit mask for the {@code flag} field in {@link ObjectStreamClass}. Indicates
++     * that a class implements {@link Externalizable}.
+      */
+     public static final byte SC_EXTERNALIZABLE = 0x04;
+ 
+     /**
+-     * Bit mask for the {@code flag} field in ObjectStreamClass. Indicates
++     * Bit mask for the {@code flag} field in {@link ObjectStreamClass}. Indicates
+      * that an externalizable class is written in block data mode.
+      */
+     public static final byte SC_BLOCK_DATA = 0x08; // If SC_EXTERNALIZABLE
+@@ -178,7 +178,7 @@ public abstract interface ObjectStreamConstants {
+     public static final byte TC_ENUM = 0x7E;
+ 
+     /**
+-     * Bit mask for the {@code flag} field in ObjectStreamClass. Indicates
++     * Bit mask for the {@code flag} field in {@link ObjectStreamClass}. Indicates
+      * that a class is an enum type.
+      */
+     public static final byte SC_ENUM = 0x10;
+diff --git a/luni/src/test/java/libcore/java/io/SerializationTest.java b/luni/src/test/java/libcore/java/io/SerializationTest.java
+index 556abe0..32bc402 100644
+--- a/luni/src/test/java/libcore/java/io/SerializationTest.java
++++ b/luni/src/test/java/libcore/java/io/SerializationTest.java
+@@ -16,13 +16,16 @@
+ 
+ package libcore.java.io;
+ 
+-import java.io.IOException;
++import junit.framework.TestCase;
++
+ import java.io.InvalidClassException;
++import java.io.InvalidObjectException;
+ import java.io.NotSerializableException;
+ import java.io.ObjectStreamClass;
+ import java.io.ObjectStreamField;
+ import java.io.Serializable;
+-import junit.framework.TestCase;
++import java.lang.reflect.InvocationHandler;
++import java.lang.reflect.Method;
+ import libcore.util.SerializationTester;
+ 
+ public final class SerializationTest extends TestCase {
+@@ -153,6 +156,7 @@ public final class SerializationTest extends TestCase {
+         }
+     }
+ 
++    @SuppressWarnings("unused") // Required for deserialization test
+     static class SerialVersionUidChanged implements Serializable {
+         private static final long serialVersionUID = 1L; // was 0L
+         private int a;
+@@ -169,7 +173,259 @@ public final class SerializationTest extends TestCase {
+         }
+     }
+ 
++    @SuppressWarnings("unused") // Required for deserialization test
+     static class FieldsChanged implements Serializable {
+         private int b; // was 'a'
+     }
++
++    public static boolean wasSerializableInitializedFlag = false;
++
++    @SuppressWarnings("unused")  // Required for deserialization test.
++    public static class WasSerializable /* implements java.io.Serializable */ {
++        static final long serialVersionUID = 0L;
++        static {
++            SerializationTest.wasSerializableInitializedFlag = true;
++        }
++        private int i;
++    }
++
++    public void testDeserializeWasSerializableClass() throws Exception {
++        // This was created by serializing a WasSerializable when it was serializable.
++        // String s = SerializationTester.serializeHex(new WasSerializable());
++        final String s = "aced0005737200316c6962636f72652e6a6176612e696f2e53657269616c697a6174696f6"
++                + "e546573742457617353657269616c697a61626c65000000000000000002000149000169787000000"
++                + "000";
++
++        wasSerializableInitializedFlag = false;
++        try {
++            SerializationTester.deserializeHex(s);
++            fail();
++        } catch (InvalidClassException expected) {
++        }
++        assertFalse(wasSerializableInitializedFlag);
++    }
++
++    // The WasExternalizable class before it was modified.
++    /*
++    public static class WasExternalizable implements Externalizable {
++        static final long serialVersionUID = 0L;
++
++        @Override
++        public void readExternal(ObjectInput input) throws IOException, ClassNotFoundException {
++
++        }
++
++        @Override
++        public void writeExternal(ObjectOutput output) throws IOException {
++
++        }
++    }
++    */
++
++    public static boolean wasExternalizableInitializedFlag = false;
++
++    @SuppressWarnings("unused") // Required for deserialization test
++    public static class WasExternalizable implements Serializable {
++        static final long serialVersionUID = 0L;
++        static {
++            SerializationTest.wasExternalizableInitializedFlag = true;
++        }
++
++    }
++
++    public void testDeserializeWasExternalizableClass() throws Exception {
++        // This was created by serializing a WasExternalizable when it was externalizable.
++        // String s = SerializationTester.serializeHex(new WasExternalizable());
++        final String s = "aced0005737200336c6962636f72652e6a6176612e696f2e53657269616c697a6174696f6"
++                + "e546573742457617345787465726e616c697a61626c6500000000000000000c0000787078";
++
++        wasExternalizableInitializedFlag = false;
++        try {
++            SerializationTester.deserializeHex(s);
++            fail();
++        } catch (InvalidClassException expected) {
++        }
++        // Unlike other similar tests static initialization will take place if the local class is
++        // Serializable or Externalizable because serialVersionUID field is accessed.
++        // The RI appears to do the same.
++        assertTrue(wasExternalizableInitializedFlag);
++    }
++
++    // The WasEnum class before it was modified.
++    /*
++    public enum WasEnum {
++        VALUE
++    }
++    */
++
++    public static boolean wasEnumInitializedFlag = false;
++
++    @SuppressWarnings("unused") // Required for deserialization test
++    public static class WasEnum {
++        static final long serialVersionUID = 0L;
++        static {
++            SerializationTest.wasEnumInitializedFlag = true;
++        }
++    }
++
++    public void testDeserializeWasEnum() throws Exception {
++        // This was created by serializing a WasEnum when it was an enum.
++        // String s = SerializationTester.serializeHex(WasEnum.VALUE);
++        final String s = "aced00057e7200296c6962636f72652e6a6176612e696f2e53657269616c697a6174696f6"
++                + "e5465737424576173456e756d00000000000000001200007872000e6a6176612e6c616e672e456e7"
++                + "56d0000000000000000120000787074000556414c5545";
++
++        wasEnumInitializedFlag = false;
++        try {
++            SerializationTester.deserializeHex(s);
++            fail();
++        } catch (InvalidClassException expected) {
++        }
++        assertFalse(wasEnumInitializedFlag);
++    }
++
++    // The WasObject class before it was modified.
++    /*
++    public static class WasObject implements java.io.Serializable {
++        static final long serialVersionUID = 0L;
++        private int i;
++    }
++    */
++
++    public static boolean wasObjectInitializedFlag;
++
++    @SuppressWarnings("unused") // Required for deserialization test
++    public enum WasObject {
++        VALUE;
++
++        static {
++            SerializationTest.wasObjectInitializedFlag = true;
++        }
++    }
++
++    public void testDeserializeWasObject() throws Exception {
++        // This was created by serializing a WasObject when it wasn't yet an enum.
++        // String s = SerializationTester.serializeHex(new WasObject());
++        final String s = "aced00057372002b6c6962636f72652e6a6176612e696f2e53657269616c697a6174696f6"
++                + "e54657374245761734f626a656374000000000000000002000149000169787000000000";
++
++        wasObjectInitializedFlag = false;
++        try {
++            SerializationTester.deserializeHex(s);
++            fail();
++        } catch (InvalidClassException expected) {
++        }
++        assertFalse(wasObjectInitializedFlag);
++    }
++
++    @SuppressWarnings("unused") // Required for deserialization test
++    public enum EnumMissingValue {
++        /*MISSING_VALUE*/
++    }
++
++    public void testDeserializeEnumMissingValue() throws Exception {
++        // This was created by serializing a EnumMissingValue when it had MISSING_VALUE.
++        // String s = SerializationTester.serializeHex(EnumMissingValue.MISSING_VALUE);
++        final String s = "aced00057e7200326c6962636f72652e6a6176612e696f2e53657269616c697a6174696f6"
++                + "e5465737424456e756d4d697373696e6756616c756500000000000000001200007872000e6a61766"
++                + "12e6c616e672e456e756d0000000000000000120000787074000d4d495353494e475f56414c5545";
++
++        try {
++            SerializationTester.deserializeHex(s);
++            fail();
++        } catch (InvalidObjectException expected) {
++        }
++    }
++
++
++    public static Object hasStaticInitializerObject;
++
++    public static class HasStaticInitializer implements Serializable {
++        static {
++            SerializationTest.hasStaticInitializerObject = new Object();
++        }
++    }
++
++    public void testDeserializeStaticInitializerIsRunEventually() throws Exception {
++        // This was created by serializing a HasStaticInitializer
++        // String s = SerializationTester.serializeHex(new HasStaticInitializer());
++        final String s = "aced0005737200366c6962636f72652e6a6176612e696f2e53657269616c697a6174696f6"
++                + "e5465737424486173537461746963496e697469616c697a6572138aa8ed9e9b660a0200007870";
++
++        // Confirm the ClassLoader behaves as it should.
++        Class.forName(
++                HasStaticInitializer.class.getName(),
++                false /* shouldInitialize */,
++                Thread.currentThread().getContextClassLoader());
++        assertNull(hasStaticInitializerObject);
++
++        SerializationTester.deserializeHex(s);
++
++        assertNotNull(hasStaticInitializerObject);
++    }
++
++    @SuppressWarnings("unused") // Required for deserialization test
++    public static /*interface*/ class WasInterface {
++    }
++
++    @SuppressWarnings("unused") // Required for deserialization test
++    public static class SerializableInvocationHandler implements InvocationHandler, Serializable {
++        @Override
++        public Object invoke(Object proxy, Method method, Object[] args) {
++            return null;
++        }
++    }
++
++    public void testDeserializeProxyWasInterface() throws Exception {
++        // This was created by serializing a proxy referencing WasInterface when it was an
++        // interface.
++        // Object o = Proxy.newProxyInstance(
++        //        Thread.currentThread().getContextClassLoader(),
++        //        new Class[] { WasInterface.class },
++        //        new SerializableInvocationHandler());
++        // String s = SerializationTester.serializeHex(o);
++        final String s = "aced0005737d00000001002e6c6962636f72652e6a6176612e696f2e53657269616c697a6"
++                + "174696f6e5465737424576173496e74657266616365787200176a6176612e6c616e672e7265666c6"
++                + "563742e50726f7879e127da20cc1043cb0200014c0001687400254c6a6176612f6c616e672f72656"
++                + "66c6563742f496e766f636174696f6e48616e646c65723b78707372003f6c6962636f72652e6a617"
++                + "6612e696f2e53657269616c697a6174696f6e546573742453657269616c697a61626c65496e766f6"
++                + "36174696f6e48616e646c6572e6ceffa2941ee3210200007870";
++        try {
++            SerializationTester.deserializeHex(s);
++            fail();
++        } catch (ClassNotFoundException expected) {
++        }
++    }
++
++    @SuppressWarnings("unused") // Required for deserialization test
++    public static class WasSerializableInvocationHandler
++            implements InvocationHandler /*, Serializable*/ {
++        static final long serialVersionUID = 0L;
++
++        @Override
++        public Object invoke(Object proxy, Method method, Object[] args) {
++            return null;
++        }
++    }
++
++    public void testDeserializeProxyInvocationHandlerWasSerializable() throws Exception {
++        // This was created by serializing a proxy referencing WasSerializableInvocationHandler when
++        // it was Serializable.
++        // Object o = Proxy.newProxyInstance(
++        //        Thread.currentThread().getContextClassLoader(),
++        //        new Class[] { Comparable.class },
++        //        new WasSerializableInvocationHandler());
++        // String s = SerializationTester.serializeHex(o);
++        final String s = "aced0005737d0000000100146a6176612e6c616e672e436f6d70617261626c65787200176"
++                + "a6176612e6c616e672e7265666c6563742e50726f7879e127da20cc1043cb0200014c00016874002"
++                + "54c6a6176612f6c616e672f7265666c6563742f496e766f636174696f6e48616e646c65723b78707"
++                + "37200426c6962636f72652e6a6176612e696f2e53657269616c697a6174696f6e546573742457617"
++                + "353657269616c697a61626c65496e766f636174696f6e48616e646c6572000000000000000002000"
++                + "07870";
++        try {
++            SerializationTester.deserializeHex(s);
++            fail();
++        } catch (InvalidClassException expected) {
++        }
++    }
+ }
+-- 
+2.7.4
+

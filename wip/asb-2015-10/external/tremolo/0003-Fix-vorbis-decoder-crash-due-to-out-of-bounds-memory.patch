@@ -1,0 +1,31 @@
+From b7a83c4cd3addf73a99c17a992c9838b84e8098e Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 12 May 2015 13:04:25 -0700
+Subject: [PATCH 3/9] Fix vorbis decoder crash due to out of bounds memory
+ access
+
+Bug: 20915134
+Change-Id: Ia7b503910b2fd0a4e3931837bd55dff3ea28ce86
+(cherry picked from commit c7fdab4f4832fbe4ab9655f91dbed6b3878fe4b7)
+---
+ Tremolo/floor1.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/Tremolo/floor1.c b/Tremolo/floor1.c
+index a2a035b..4a4937d 100644
+--- a/Tremolo/floor1.c
++++ b/Tremolo/floor1.c
+@@ -232,8 +232,9 @@ static void render_line(int n,int x0,int x1,int y0,int y1,ogg_int32_t *d){
+ 
+   if(n>x1)n=x1;
+   n -= x0;
+-  if (n <= 0)
++  if (n <= 0 || y0 < 0 || y0 > 255 || y1 < 0 || y1 > 255) {
+     return;
++  }
+   dy=y1-y0;
+   adx=x1-x0;
+   ady=abs(dy);
+-- 
+2.7.4
+

@@ -1,0 +1,141 @@
+From c7852417b2612251277f94d62c1c62c8308f06bf Mon Sep 17 00:00:00 2001
+From: "Dr. Stephen Henson" <steve@openssl.org>
+Date: Thu, 23 Oct 2014 17:09:57 +0100
+Subject: [PATCH 01/16] Only allow ephemeral RSA keys in export ciphersuites.
+
+OpenSSL clients would tolerate temporary RSA keys in non-export
+ciphersuites. It also had an option SSL_OP_EPHEMERAL_RSA which
+enabled this server side. Remove both options as they are a
+protocol violation.
+
+Thanks to Karthikeyan Bhargavan for reporting this issue.
+(CVE-2015-0204)
+Reviewed-by: Matt Caswell <matt@openssl.org>
+
+Conflicts:
+	CHANGES
+	doc/ssl/SSL_CTX_set_options.pod
+	doc/ssl/SSL_CTX_set_tmp_rsa_callback.pod
+	ssl/s3_srvr.c
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-0204
+
+Change-Id: I034a600962e60a49bddab295ca5b3b0584182b8d
+---
+ ssl/d1_srvr.c | 21 ++++++---------------
+ ssl/s3_clnt.c |  7 +++++++
+ ssl/s3_srvr.c | 21 ++++++---------------
+ ssl/ssl.h     |  5 ++---
+ 4 files changed, 21 insertions(+), 33 deletions(-)
+
+diff --git a/ssl/d1_srvr.c b/ssl/d1_srvr.c
+index 29421da..99c8e12 100644
+--- a/ssl/d1_srvr.c
++++ b/ssl/d1_srvr.c
+@@ -449,24 +449,15 @@ int dtls1_accept(SSL *s)
+ 		case SSL3_ST_SW_KEY_EXCH_B:
+ 			alg_k = s->s3->tmp.new_cipher->algorithm_mkey;
+ 
+-			/* clear this, it may get reset by
+-			 * send_server_key_exchange */
+-			if ((s->options & SSL_OP_EPHEMERAL_RSA)
+-#ifndef OPENSSL_NO_KRB5
+-				&& !(alg_k & SSL_kKRB5)
+-#endif /* OPENSSL_NO_KRB5 */
+-				)
+-				/* option SSL_OP_EPHEMERAL_RSA sends temporary RSA key
+-				 * even when forbidden by protocol specs
+-				 * (handshake may fail as clients are not required to
+-				 * be able to handle this) */
+-				s->s3->tmp.use_rsa_tmp=1;
+-			else
+-				s->s3->tmp.use_rsa_tmp=0;
++			/*
++			 * clear this, it may get reset by
++			 * send_server_key_exchange
++			 */
++			s->s3->tmp.use_rsa_tmp=0;
+ 
+ 			/* only send if a DH key exchange or
+ 			 * RSA but we have a sign only certificate */
+-			if (s->s3->tmp.use_rsa_tmp
++			if (
+ 			/* PSK: send ServerKeyExchange if PSK identity
+ 			 * hint if provided */
+ #ifndef OPENSSL_NO_PSK
+diff --git a/ssl/s3_clnt.c b/ssl/s3_clnt.c
+index edfcf58..ef2ff18 100644
+--- a/ssl/s3_clnt.c
++++ b/ssl/s3_clnt.c
+@@ -1554,6 +1554,13 @@ int ssl3_get_key_exchange(SSL *s)
+ #ifndef OPENSSL_NO_RSA
+ 	if (alg_k & SSL_kRSA)
+ 		{
++		/* Temporary RSA keys only allowed in export ciphersuites */
++		if (!SSL_C_IS_EXPORT(s->s3->tmp.new_cipher))
++			{
++			al=SSL_AD_UNEXPECTED_MESSAGE;
++			SSLerr(SSL_F_SSL3_GET_SERVER_CERTIFICATE,SSL_R_UNEXPECTED_MESSAGE);
++			goto f_err;
++			}
+ 		if ((rsa=RSA_new()) == NULL)
+ 			{
+ 			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,ERR_R_MALLOC_FAILURE);
+diff --git a/ssl/s3_srvr.c b/ssl/s3_srvr.c
+index 8a18833..aa4958e 100644
+--- a/ssl/s3_srvr.c
++++ b/ssl/s3_srvr.c
+@@ -444,20 +444,11 @@ int ssl3_accept(SSL *s)
+ 		case SSL3_ST_SW_KEY_EXCH_B:
+ 			alg_k = s->s3->tmp.new_cipher->algorithm_mkey;
+ 
+-			/* clear this, it may get reset by
+-			 * send_server_key_exchange */
+-			if ((s->options & SSL_OP_EPHEMERAL_RSA)
+-#ifndef OPENSSL_NO_KRB5
+-				&& !(alg_k & SSL_kKRB5)
+-#endif /* OPENSSL_NO_KRB5 */
+-				)
+-				/* option SSL_OP_EPHEMERAL_RSA sends temporary RSA key
+-				 * even when forbidden by protocol specs
+-				 * (handshake may fail as clients are not required to
+-				 * be able to handle this) */
+-				s->s3->tmp.use_rsa_tmp=1;
+-			else
+-				s->s3->tmp.use_rsa_tmp=0;
++			/*
++			 * clear this, it may get reset by
++			 * send_server_key_exchange
++			 */
++			s->s3->tmp.use_rsa_tmp=0;
+ 
+ 
+ 			/* only send if a DH key exchange, fortezza or
+@@ -471,7 +462,7 @@ int ssl3_accept(SSL *s)
+ 			 * server certificate contains the server's
+ 			 * public key for key exchange.
+ 			 */
+-			if (s->s3->tmp.use_rsa_tmp
++			if (0
+ 			/* PSK: send ServerKeyExchange if PSK identity
+ 			 * hint if provided */
+ #ifndef OPENSSL_NO_PSK
+diff --git a/ssl/ssl.h b/ssl/ssl.h
+index 35eb044..77dc317 100644
+--- a/ssl/ssl.h
++++ b/ssl/ssl.h
+@@ -590,9 +590,8 @@ struct ssl_session_st
+ #define SSL_OP_SINGLE_ECDH_USE				0x00080000L
+ /* If set, always create a new key when using tmp_dh parameters */
+ #define SSL_OP_SINGLE_DH_USE				0x00100000L
+-/* Set to always use the tmp_rsa key when doing RSA operations,
+- * even when this violates protocol specs */
+-#define SSL_OP_EPHEMERAL_RSA				0x00200000L
++/* Does nothing: retained for compatibiity */
++#define SSL_OP_EPHEMERAL_RSA				0x0
+ /* Set on servers to choose the cipher according to the server's
+  * preferences */
+ #define SSL_OP_CIPHER_SERVER_PREFERENCE			0x00400000L
+-- 
+2.7.4
+

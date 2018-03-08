@@ -1,0 +1,47 @@
+From 3e9f00637b852a552879fbb883f7e3ed4e81fca1 Mon Sep 17 00:00:00 2001
+From: scroggo <scroggo@google.com>
+Date: Wed, 9 Jul 2014 15:04:20 -0700
+Subject: [PATCH 2/9] Handle bad ICO data better.
+
+Cherry-pick from 57ad493789cb1a97574390b5ccf4fb9183ed3814 in Skia:
+
+Interpret size and offset as size_t, as they should be. When read
+as int, they could be negative values. If they are negative (rather
+than positive and very large), they will not allow us to fail the
+length test, resulting in trying to read uninitialized memory.
+
+BUG=b/16010240
+R=halcanary@google.com
+
+Author: scroggo@google.com
+
+Review URL: https://codereview.chromium.org/374413005
+
+BUG:16010240
+Change-Id: I70ff31c1d06ea2705700bb9f5c767a100b946d09
+---
+ src/images/SkImageDecoder_libico.cpp | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/images/SkImageDecoder_libico.cpp b/src/images/SkImageDecoder_libico.cpp
+index 2b65a36..bff08c0 100644
+--- a/src/images/SkImageDecoder_libico.cpp
++++ b/src/images/SkImageDecoder_libico.cpp
+@@ -148,10 +148,11 @@ bool SkICOImageDecoder::onDecode(SkStream* stream, SkBitmap* bm, Mode mode)
+     //int reservedToo = readByte(buf, 9 + choice*16);   //0
+     //int planes = read2Bytes(buf, 10 + choice*16);       //1 - but often 0
+     //int fakeBitCount = read2Bytes(buf, 12 + choice*16); //should be real - usually 0
+-    int size = read4Bytes(buf, 14 + choice*16);           //matters?
+-    int offset = read4Bytes(buf, 18 + choice*16);
+-    if ((size_t)(offset + size) > length)
++    const size_t size = read4Bytes(buf, 14 + choice*16);           //matters?
++    const size_t offset = read4Bytes(buf, 18 + choice*16);
++    if ((offset + size) > length) {
+         return false;
++    }
+ 
+     // Check to see if this is a PNG image inside the ICO
+     {
+-- 
+2.7.4
+

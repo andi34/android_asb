@@ -1,0 +1,45 @@
+From 47c113e4ce06b41974dfb2171af051d181518137 Mon Sep 17 00:00:00 2001
+From: Kurt Roeckx <kurt@roeckx.be>
+Date: Sat, 16 Apr 2016 14:08:56 -0700
+Subject: [PATCH 09/16] Check that we have enough padding characters.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Reviewed-by: Emilia Käsper <emilia@openssl.org>
+CVE-2016-2107
+
+MR: #2572
+
+(cherry-picked from commit 4159f311671cf3bac03815e5de44681eb758304a)
+
+Bug: 28550804
+Change-Id: Ia43cfe32f8930112eb38dbef614c96db43b30c27
+---
+ crypto/evp/e_aes_cbc_hmac_sha1.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/crypto/evp/e_aes_cbc_hmac_sha1.c b/crypto/evp/e_aes_cbc_hmac_sha1.c
+index 483e04b..c00006c 100644
+--- a/crypto/evp/e_aes_cbc_hmac_sha1.c
++++ b/crypto/evp/e_aes_cbc_hmac_sha1.c
+@@ -59,6 +59,7 @@
+ #include <openssl/aes.h>
+ #include <openssl/sha.h>
+ #include "evp_locl.h"
++#include "constant_time_locl.h"
+ 
+ #ifndef EVP_CIPH_FLAG_AEAD_CIPHER
+ #define EVP_CIPH_FLAG_AEAD_CIPHER	0x200000
+@@ -278,6 +279,8 @@ static int aesni_cbc_hmac_sha1_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
+ 			maxpad |= (255-maxpad)>>(sizeof(maxpad)*8-8);
+ 			maxpad &= 255;
+ 
++			ret &= constant_time_ge(maxpad, pad);
++
+ 			inp_len = len - (SHA_DIGEST_LENGTH+pad+1);
+ 			mask = (0-((inp_len-len)>>(sizeof(inp_len)*8-1)));
+ 			inp_len &= mask;
+-- 
+2.7.4
+

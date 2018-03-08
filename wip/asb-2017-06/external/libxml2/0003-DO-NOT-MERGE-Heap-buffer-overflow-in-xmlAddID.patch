@@ -1,0 +1,39 @@
+From 3961607db11598743f61791ae437ff1cf0fd1190 Mon Sep 17 00:00:00 2001
+From: "Brian C. Young" <bcyoung@google.com>
+Date: Thu, 6 Apr 2017 17:02:29 -0700
+Subject: [PATCH 3/7] DO NOT MERGE: Heap buffer overflow in xmlAddID
+
+Patch from ddkilzer@apple.com
+See https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=598
+and https://bugzilla.gnome.org/show_bug.cgi?id=780228
+
+Bug: 37104170
+Change-Id: I0286459ff9066b664dc26f7f1ff65a1388de3d92
+(cherry picked from commit eb80f32c3c9e5cb1cb6f6adc0bf35b3ec46c0963)
+---
+ valid.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/valid.c b/valid.c
+index 5de491d..1952c56 100644
+--- a/valid.c
++++ b/valid.c
+@@ -4622,13 +4622,13 @@ xmlNodePtr elem, const xmlChar *prefix, xmlNsPtr ns, const xmlChar *value) {
+ 
+     /* Validity Constraint: ID uniqueness */
+     if (attrDecl->atype == XML_ATTRIBUTE_ID) {
+-        if (xmlAddID(ctxt, doc, value, (xmlAttrPtr) ns) == NULL)
++        if (xmlAddID(ctxt, doc, value, (xmlAttrPtr) attrDecl) == NULL)
+ 	    ret = 0;
+     }
+ 
+     if ((attrDecl->atype == XML_ATTRIBUTE_IDREF) ||
+ 	(attrDecl->atype == XML_ATTRIBUTE_IDREFS)) {
+-        if (xmlAddRef(ctxt, doc, value, (xmlAttrPtr) ns) == NULL)
++        if (xmlAddRef(ctxt, doc, value, (xmlAttrPtr) attrDecl) == NULL)
+ 	    ret = 0;
+     }
+ 
+-- 
+2.7.4
+

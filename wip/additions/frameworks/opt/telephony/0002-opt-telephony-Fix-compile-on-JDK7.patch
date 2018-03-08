@@ -1,0 +1,60 @@
+From 4770a8770b01849812b1aa98e7a72c83d1af3917 Mon Sep 17 00:00:00 2001
+From: Jiangyi <sam.andrew.jiang@gmail.com>
+Date: Tue, 15 Oct 2013 13:17:11 -0400
+Subject: [PATCH 2/6] opt/telephony: Fix compile on JDK7
+
+UNEXPECTED TOP-LEVEL EXCEPTION:
+com.android.dx.util.ExceptionWithContext
+        at
+com.android.dx.util.ExceptionWithContext.withContext(ExceptionWithContext.java:46)
+        at com.android.dx.dex.cf.CfTranslator.processMethods(CfTranslator.java:344)
+        at com.android.dx.dex.cf.CfTranslator.translate0(CfTranslator.java:134)
+        at com.android.dx.dex.cf.CfTranslator.translate(CfTranslator.java:87)
+        at com.android.dx.command.dexer.Main.processClass(Main.java:487)
+        at com.android.dx.command.dexer.Main.processFileBytes(Main.java:459)
+        at com.android.dx.command.dexer.Main.access$400(Main.java:67)
+        at com.android.dx.command.dexer.Main$1.processFileBytes(Main.java:398)
+        at com.android.dx.cf.direct.ClassPathOpener.processArchive(ClassPathOpener.java:245)
+        at com.android.dx.cf.direct.ClassPathOpener.processOne(ClassPathOpener.java:131)
+        at com.android.dx.cf.direct.ClassPathOpener.process(ClassPathOpener.java:109)
+        at com.android.dx.command.dexer.Main.processOne(Main.java:422)
+        at com.android.dx.command.dexer.Main.processAllFiles(Main.java:333)
+        at com.android.dx.command.dexer.Main.run(Main.java:209)
+        at com.android.dx.command.dexer.Main.main(Main.java:174)
+        at com.android.dx.command.Main.main(Main.java:91)
+Caused by: java.lang.NullPointerException
+        at com.android.dx.cf.code.ConcreteMethod.<init>(ConcreteMethod.java:87)
+        at com.android.dx.cf.code.ConcreteMethod.<init>(ConcreteMethod.java:75)
+        at com.android.dx.dex.cf.CfTranslator.processMethods(CfTranslator.java:247)
+        ... 14 more
+...while processing <init> (Lcom/android/internal/telephony/gsm/GSMPhone;)V
+...while processing com/android/internal/telephony/gsm/GSMPhone$1.class
+
+Change-Id: If39b2067c9190f0f3ed6cd3bb909ccc3201262cb
+---
+ src/java/com/android/internal/telephony/gsm/GSMPhone.java | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/gsm/GSMPhone.java b/src/java/com/android/internal/telephony/gsm/GSMPhone.java
+index 0e2a73e..f200699 100644
+--- a/src/java/com/android/internal/telephony/gsm/GSMPhone.java
++++ b/src/java/com/android/internal/telephony/gsm/GSMPhone.java
+@@ -167,6 +167,7 @@ public class GSMPhone extends PhoneBase {
+         mCi.setOnSuppServiceNotification(this, EVENT_SSN, null);
+         mSST.registerForNetworkAttached(this, EVENT_REGISTERED_TO_NETWORK, null);
+ 
++/* This block blows up java 7
+         if (DBG_PORT) {
+             try {
+                 //debugSocket = new LocalServerSocket("com.android.internal.telephony.debug");
+@@ -201,6 +202,7 @@ public class GSMPhone extends PhoneBase {
+                 Rlog.w(LOG_TAG, "Failure to open com.android.internal.telephony.debug socket", ex);
+             }
+         }
++*/
+ 
+         //Change the system property
+         SystemProperties.set(TelephonyProperties.CURRENT_ACTIVE_PHONE,
+-- 
+2.7.4
+

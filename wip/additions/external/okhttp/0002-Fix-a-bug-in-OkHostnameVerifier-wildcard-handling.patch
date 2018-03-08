@@ -1,0 +1,49 @@
+From eae39447887e66fa3e27eb664245625e5cf2720f Mon Sep 17 00:00:00 2001
+From: Alex Klyubin <klyubin@google.com>
+Date: Tue, 18 Nov 2014 17:45:01 -0800
+Subject: [PATCH 2/2] Fix a bug in OkHostnameVerifier wildcard handling.
+
+Wildcard domain name patterns of the form *.remainder are supposed to
+match domain names that exactly match the remainder. Due to a bug,
+the match was not exact but rather a prefix match: domain names
+starting with the remainder would match too.
+
+This CL fixes the issue.
+
+(cherry picked from commit a03ec4ced2b11f9eae6cbeeedb1db2b1b29fafb1)
+
+Bug: 18432707
+Change-Id: Ie40b71a26df1ac2a972341e7b3b40dd9cf38e8b1
+---
+ src/main/java/com/squareup/okhttp/internal/tls/OkHostnameVerifier.java  | 2 +-
+ .../java/com/squareup/okhttp/internal/tls/HostnameVerifierTest.java     | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/main/java/com/squareup/okhttp/internal/tls/OkHostnameVerifier.java b/src/main/java/com/squareup/okhttp/internal/tls/OkHostnameVerifier.java
+index a08773f..21e539c 100644
+--- a/src/main/java/com/squareup/okhttp/internal/tls/OkHostnameVerifier.java
++++ b/src/main/java/com/squareup/okhttp/internal/tls/OkHostnameVerifier.java
+@@ -162,7 +162,7 @@ public final class OkHostnameVerifier implements HostnameVerifier {
+       return hostName.equals(cn);
+     }
+ 
+-    if (cn.startsWith("*.") && hostName.regionMatches(0, cn, 2, cn.length() - 2)) {
++    if (cn.startsWith("*.") && hostName.equals(cn.substring(2))) {
+       return true; // "*.foo.com" matches "foo.com"
+     }
+ 
+diff --git a/src/test/java/com/squareup/okhttp/internal/tls/HostnameVerifierTest.java b/src/test/java/com/squareup/okhttp/internal/tls/HostnameVerifierTest.java
+index f1decc8..82b1952 100644
+--- a/src/test/java/com/squareup/okhttp/internal/tls/HostnameVerifierTest.java
++++ b/src/test/java/com/squareup/okhttp/internal/tls/HostnameVerifierTest.java
+@@ -293,6 +293,7 @@ public final class HostnameVerifierTest {
+     assertTrue(verifier.verify("www.foo.com", session));
+     assertTrue(verifier.verify("\u82b1\u5b50.foo.com", session));
+     assertFalse(verifier.verify("a.b.foo.com", session));
++    assertFalse(verifier.verify("foo.com.au", session));
+   }
+ 
+   @Test public void verifyWilcardCnOnTld() throws Exception {
+-- 
+2.7.4
+

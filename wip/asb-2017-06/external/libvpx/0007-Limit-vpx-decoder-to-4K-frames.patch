@@ -1,0 +1,159 @@
+From 413f1fd9a10aa17177768cd6c9665d2ef7dd37ed Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 4 Apr 2017 08:41:32 -0700
+Subject: [PATCH 7/8] Limit vpx decoder to 4K frames
+
+Bug: 34360591
+Change-Id: If66c3498b9a7052219af2dcaa2ef33e1408a8587
+(cherry picked from commit 8c714fb5bb5199f6072595c905d226b6f2e858c0)
+---
+ armv7a-neon/vpx_config.c | 2 +-
+ armv7a-neon/vpx_config.h | 4 +++-
+ armv7a/vpx_config.c      | 2 +-
+ armv7a/vpx_config.h      | 4 +++-
+ generic/vpx_config.c     | 2 +-
+ generic/vpx_config.h     | 4 +++-
+ mips-dspr2/vpx_config.c  | 2 +-
+ mips-dspr2/vpx_config.h  | 4 +++-
+ mips/vpx_config.c        | 2 +-
+ mips/vpx_config.h        | 4 +++-
+ 10 files changed, 20 insertions(+), 10 deletions(-)
+
+diff --git a/armv7a-neon/vpx_config.c b/armv7a-neon/vpx_config.c
+index 8c9848b..5ea7bee 100644
+--- a/armv7a-neon/vpx_config.c
++++ b/armv7a-neon/vpx_config.c
+@@ -6,5 +6,5 @@
+ /* in the file PATENTS.  All contributing project authors may */
+ /* be found in the AUTHORS file in the root of the source tree. */
+ #include "vpx/vpx_codec.h"
+-static const char* const cfg = "--target=armv7-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --disable-examples --disable-docs --enable-realtime-only --disable-webm-io";
++static const char* const cfg = "--target=armv7-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --disable-examples --disable-docs --enable-realtime-only --disable-webm-io --disable-install-docs --size-limit=4096x3072";
+ const char *vpx_codec_build_config(void) {return cfg;}
+diff --git a/armv7a-neon/vpx_config.h b/armv7a-neon/vpx_config.h
+index 046aa42..3daea10 100644
+--- a/armv7a-neon/vpx_config.h
++++ b/armv7a-neon/vpx_config.h
+@@ -91,8 +91,10 @@
+ #define CONFIG_COEFFICIENT_RANGE_CHECKING 0
+ #define CONFIG_VP9_HIGHBITDEPTH 0
+ #define CONFIG_EXPERIMENTAL 0
+-#define CONFIG_SIZE_LIMIT 0
++#define CONFIG_SIZE_LIMIT 1
+ #define CONFIG_SPATIAL_SVC 0
+ #define CONFIG_FP_MB_STATS 0
+ #define CONFIG_EMULATE_HARDWARE 0
++#define DECODE_WIDTH_LIMIT 4096
++#define DECODE_HEIGHT_LIMIT 3072
+ #endif /* VPX_CONFIG_H */
+diff --git a/armv7a/vpx_config.c b/armv7a/vpx_config.c
+index e7f06d4..8d93170 100644
+--- a/armv7a/vpx_config.c
++++ b/armv7a/vpx_config.c
+@@ -6,5 +6,5 @@
+ /* in the file PATENTS.  All contributing project authors may */
+ /* be found in the AUTHORS file in the root of the source tree. */
+ #include "vpx/vpx_codec.h"
+-static const char* const cfg = "--target=armv7-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --disable-neon --disable-neon-asm --disable-examples --disable-docs --enable-realtime-only --disable-webm-io";
++static const char* const cfg = "--target=armv7-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --disable-neon --disable-neon-asm --disable-examples --disable-docs --enable-realtime-only --disable-webm-io --disable-install-docs --size-limit=4096x3072";
+ const char *vpx_codec_build_config(void) {return cfg;}
+diff --git a/armv7a/vpx_config.h b/armv7a/vpx_config.h
+index 1493a4a..55da628 100644
+--- a/armv7a/vpx_config.h
++++ b/armv7a/vpx_config.h
+@@ -91,8 +91,10 @@
+ #define CONFIG_COEFFICIENT_RANGE_CHECKING 0
+ #define CONFIG_VP9_HIGHBITDEPTH 0
+ #define CONFIG_EXPERIMENTAL 0
+-#define CONFIG_SIZE_LIMIT 0
++#define CONFIG_SIZE_LIMIT 1
+ #define CONFIG_SPATIAL_SVC 0
+ #define CONFIG_FP_MB_STATS 0
+ #define CONFIG_EMULATE_HARDWARE 0
++#define DECODE_WIDTH_LIMIT 4096
++#define DECODE_HEIGHT_LIMIT 3072
+ #endif /* VPX_CONFIG_H */
+diff --git a/generic/vpx_config.c b/generic/vpx_config.c
+index 850fda0..81b8a19 100644
+--- a/generic/vpx_config.c
++++ b/generic/vpx_config.c
+@@ -6,5 +6,5 @@
+ /* in the file PATENTS.  All contributing project authors may */
+ /* be found in the AUTHORS file in the root of the source tree. */
+ #include "vpx/vpx_codec.h"
+-static const char* const cfg = "--force-target=generic-gnu --disable-vp9-encoder --disable-examples --disable-docs --enable-realtime-only --disable-webm-io";
++static const char* const cfg = "--force-target=generic-gnu --disable-vp9-encoder --disable-examples --disable-docs --enable-realtime-only --disable-webm-io --disable-install-docs --size-limit=4096x3072";
+ const char *vpx_codec_build_config(void) {return cfg;}
+diff --git a/generic/vpx_config.h b/generic/vpx_config.h
+index dee08b7..657e58d 100644
+--- a/generic/vpx_config.h
++++ b/generic/vpx_config.h
+@@ -91,8 +91,10 @@
+ #define CONFIG_COEFFICIENT_RANGE_CHECKING 0
+ #define CONFIG_VP9_HIGHBITDEPTH 0
+ #define CONFIG_EXPERIMENTAL 0
+-#define CONFIG_SIZE_LIMIT 0
++#define CONFIG_SIZE_LIMIT 1
+ #define CONFIG_SPATIAL_SVC 0
+ #define CONFIG_FP_MB_STATS 0
+ #define CONFIG_EMULATE_HARDWARE 0
++#define DECODE_WIDTH_LIMIT 4096
++#define DECODE_HEIGHT_LIMIT 3072
+ #endif /* VPX_CONFIG_H */
+diff --git a/mips-dspr2/vpx_config.c b/mips-dspr2/vpx_config.c
+index b5e89d6..8ad6197 100644
+--- a/mips-dspr2/vpx_config.c
++++ b/mips-dspr2/vpx_config.c
+@@ -6,5 +6,5 @@
+ /* in the file PATENTS.  All contributing project authors may */
+ /* be found in the AUTHORS file in the root of the source tree. */
+ #include "vpx/vpx_codec.h"
+-static const char* const cfg = "--force-target=mips32-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --enable-dspr2 --disable-examples --disable-docs --enable-realtime-only --disable-webm-io";
++static const char* const cfg = "--force-target=mips32-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --enable-dspr2 --disable-examples --disable-docs --enable-realtime-only --disable-webm-io --disable-install-docs --size-limit=4096x3072";
+ const char *vpx_codec_build_config(void) {return cfg;}
+diff --git a/mips-dspr2/vpx_config.h b/mips-dspr2/vpx_config.h
+index 216b6bd..b318e37 100644
+--- a/mips-dspr2/vpx_config.h
++++ b/mips-dspr2/vpx_config.h
+@@ -91,8 +91,10 @@
+ #define CONFIG_COEFFICIENT_RANGE_CHECKING 0
+ #define CONFIG_VP9_HIGHBITDEPTH 0
+ #define CONFIG_EXPERIMENTAL 0
+-#define CONFIG_SIZE_LIMIT 0
++#define CONFIG_SIZE_LIMIT 1
+ #define CONFIG_SPATIAL_SVC 0
+ #define CONFIG_FP_MB_STATS 0
+ #define CONFIG_EMULATE_HARDWARE 0
++#define DECODE_WIDTH_LIMIT 4096
++#define DECODE_HEIGHT_LIMIT 3072
+ #endif /* VPX_CONFIG_H */
+diff --git a/mips/vpx_config.c b/mips/vpx_config.c
+index 78bcbae..dcad683 100644
+--- a/mips/vpx_config.c
++++ b/mips/vpx_config.c
+@@ -6,5 +6,5 @@
+ /* in the file PATENTS.  All contributing project authors may */
+ /* be found in the AUTHORS file in the root of the source tree. */
+ #include "vpx/vpx_codec.h"
+-static const char* const cfg = "--force-target=mips32-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --disable-examples --disable-docs --enable-realtime-only --disable-webm-io";
++static const char* const cfg = "--force-target=mips32-android-gcc --disable-runtime-cpu-detect --sdk-path=/usr/local/google/home/vigneshv/Downloads/android-ndk-r10 --disable-vp9-encoder --disable-examples --disable-docs --enable-realtime-only --disable-webm-io --disable-install-docs --size-limit=4096x3072";
+ const char *vpx_codec_build_config(void) {return cfg;}
+diff --git a/mips/vpx_config.h b/mips/vpx_config.h
+index 1458bf9..4312a9d 100644
+--- a/mips/vpx_config.h
++++ b/mips/vpx_config.h
+@@ -91,8 +91,10 @@
+ #define CONFIG_COEFFICIENT_RANGE_CHECKING 0
+ #define CONFIG_VP9_HIGHBITDEPTH 0
+ #define CONFIG_EXPERIMENTAL 0
+-#define CONFIG_SIZE_LIMIT 0
++#define CONFIG_SIZE_LIMIT 1
+ #define CONFIG_SPATIAL_SVC 0
+ #define CONFIG_FP_MB_STATS 0
+ #define CONFIG_EMULATE_HARDWARE 0
++#define DECODE_WIDTH_LIMIT 4096
++#define DECODE_HEIGHT_LIMIT 3072
+ #endif /* VPX_CONFIG_H */
+-- 
+2.7.4
+

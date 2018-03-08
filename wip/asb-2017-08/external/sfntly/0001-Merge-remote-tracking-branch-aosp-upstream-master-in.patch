@@ -1,0 +1,1115 @@
+From 764af5614ede76df1d85e161f4c751d439815da3 Mon Sep 17 00:00:00 2001
+From: Colin Cross <ccross@android.com>
+Date: Fri, 7 Apr 2017 10:50:33 -0700
+Subject: [PATCH 1/2] Merge remote-tracking branch 'aosp/upstream-master' into
+ master
+
+Bug: 32096780
+Test: mmma -j external/skia
+Change-Id: Ia60d7b9984c1007e82bfea10c1a6df32418100d5
+(cherry picked from commit bd503d67f403ca1e1d33226626c494d5513701e4)
+(cherry picked from commit d7c3ad1d95c38b33c49a462f2647dc10f1fff7b7)
+---
+ README.md                                         |  17 +++
+ cpp/src/sample/chromium/font_subsetter.cc         |  21 ++++
+ cpp/src/sample/chromium/font_subsetter.h          |  26 ++++-
+ cpp/src/sample/chromium/subsetter_impl.cc         |  18 +++
+ cpp/src/sample/chromium/subsetter_impl.h          |   3 +
+ cpp/src/sample/subtly/font_assembler.cc           |   2 +
+ cpp/src/sfntly/data/byte_array.cc                 |   2 +
+ cpp/src/sfntly/data/font_data.cc                  |  44 +++++---
+ cpp/src/sfntly/data/font_data.h                   |  15 +--
+ cpp/src/sfntly/data/readable_font_data.cc         | 131 ++++++++++++++++------
+ cpp/src/sfntly/data/readable_font_data.h          |  25 +++--
+ cpp/src/sfntly/data/writable_font_data.cc         |   9 +-
+ cpp/src/sfntly/font.cc                            | 113 +++++++++++--------
+ cpp/src/sfntly/font.h                             |   2 +-
+ cpp/src/sfntly/port/file_input_stream.cc          |   2 +
+ cpp/src/sfntly/port/logging.h                     |  31 +++++
+ cpp/src/sfntly/port/memory_input_stream.cc        |   2 +
+ cpp/src/sfntly/port/refcount.h                    |  21 ++--
+ cpp/src/sfntly/port/type.h                        |   2 +-
+ cpp/src/sfntly/table/core/font_header_table.cc    |   5 +-
+ cpp/src/sfntly/table/core/font_header_table.h     |   1 +
+ cpp/src/sfntly/table/core/name_table.cc           |  10 +-
+ cpp/src/sfntly/table/core/os2_table.cc            |   2 +
+ cpp/src/sfntly/table/table_based_table_builder.cc |   6 +-
+ cpp/src/sfntly/table/truetype/glyph_table.cc      |   9 +-
+ 25 files changed, 367 insertions(+), 152 deletions(-)
+ create mode 100644 README.md
+ create mode 100644 cpp/src/sfntly/port/logging.h
+
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..9961600
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,17 @@
++# What is sfntly?
++
++sfntly is pronounced "esfontlee".
++
++sfntly is a Java and C++ library for using, editing, and creating sfnt container based fonts (e.g. OpenType, TrueType). This library was initially created by Google's Font Team and the C++ port was done by the Chrome team. It has been made open source.
++
++The basic features of sfntly are the reading, editing, and writing of an sfnt container font. Fonts that use an sfnt container include OpenType, TrueType, AAT/GX, and Graphite. sfntly isn't itself a tool that is usable by an end user - it is a library that allows software developers to build tools that manipulate fonts in ways that haven't been easily accessible to most developers. The sfntly library is available in Java with a partial C++ port. However, we have included some font tools that are built on top of sfntly: a font subsetter, font dumper, a font linter, some compression utilities.
++
++The uses of sfntly are really anything that you can think of that involves reading and/or editing fonts. Right now, the Java version is the core library used to power Google's Web Fonts project. There it is used for all font manipulation - to read font data, to pull apart fonts, and to then reassemble them before they are streamed out to a user. Portions of the font that are not needed - specific glyph ranges or features - are stripped using sfntly to minimize the size of the streamed font. The C++ port is used somewhat similarly within Chrome to subset fonts for insertion into a PDF for viewing or printing. Though the features stripped in the font are different in Chrome than in Web Fonts because the end use is different.
++
++Using sfntly you can read and extract any of the tables in a font. The tables are the individual data structures within the font for each of the features and functionality: glyph outlines, character maps, kerning, meta data, etc. If you look over the OpenType and TrueType specs, you will see a number of categories of tables. sfntly currently supports all of the required tables, the TrueType outline tables, bitmap glyph tables, and a couple of the other miscellaneous tables. This level of support provides for many of the needs developers have related to the informational reading of font data. It also covers a lot of the editing needs.
++
++To get started with sfntly: clone the repository and follow the quickstart.txt guide in the Java directory
++
++have fun
++
++Stuart Gill - sfntly Architect and Lead Developer
+diff --git a/cpp/src/sample/chromium/font_subsetter.cc b/cpp/src/sample/chromium/font_subsetter.cc
+index 14f5494..0f9bc13 100644
+--- a/cpp/src/sample/chromium/font_subsetter.cc
++++ b/cpp/src/sample/chromium/font_subsetter.cc
+@@ -37,3 +37,24 @@ int SfntlyWrapper::SubsetFont(const char* font_name,
+ 
+   return subsetter.SubsetFont(glyph_ids, glyph_count, output_buffer);
+ }
++
++int SfntlyWrapper::SubsetFont(int font_index,
++                              const unsigned char* original_font,
++                              size_t font_size,
++                              const unsigned int* glyph_ids,
++                              size_t glyph_count,
++                              unsigned char** output_buffer) {
++  if (output_buffer == NULL ||
++      original_font == NULL || font_size == 0 ||
++      glyph_ids == NULL || glyph_count == 0) {
++    return 0;
++  }
++
++  sfntly::SubsetterImpl subsetter;
++  if (!subsetter.LoadFont(font_index, original_font, font_size)) {
++    return -1;  // Load error or font not found.
++  }
++
++  return subsetter.SubsetFont(glyph_ids, glyph_count, output_buffer);
++}
++
+diff --git a/cpp/src/sample/chromium/font_subsetter.h b/cpp/src/sample/chromium/font_subsetter.h
+index 07b1b5b..c8e65e2 100644
+--- a/cpp/src/sample/chromium/font_subsetter.h
++++ b/cpp/src/sample/chromium/font_subsetter.h
+@@ -18,7 +18,7 @@
+ #ifndef SFNTLY_CPP_SRC_TEST_FONT_SUBSETTER_H_
+ #define SFNTLY_CPP_SRC_TEST_FONT_SUBSETTER_H_
+ 
+-#include <cstddef>
++#include <stddef.h>
+ 
+ class SfntlyWrapper {
+  public:
+@@ -46,6 +46,30 @@ class SfntlyWrapper {
+                         const unsigned int* glyph_ids,
+                         size_t glyph_count,
+                         unsigned char** output_buffer);
++
++
++  // Font subsetting API
++  //
++  // Input TTF/TTC/OTF fonts, specify the glyph IDs to subset, and the subset
++  // font is returned in |output_buffer| (caller to delete[]).  Return value is
++  // the length of output_buffer allocated.
++  //
++  // If subsetting fails, a negative value is returned.  If none of the glyph
++  // IDs specified is found, the function will return 0.
++  //
++  // |font_name|      Font index, ignored for non-TTC files, 0-indexed.
++  // |original_font|  Original font file contents.
++  // |font_size|      Size of |original_font| in bytes.
++  // |glyph_ids|      Glyph IDs to subset.  If the specified glyph ID is not
++  //                  found in the font file, it will be ignored silently.
++  // |glyph_count|    Number of glyph IDs in |glyph_ids|
++  // |output_buffer|  Generated subset font.  Caller to delete[].
++  static int SubsetFont(int font_index,
++                        const unsigned char* original_font,
++                        size_t font_size,
++                        const unsigned int* glyph_ids,
++                        size_t glyph_count,
++                        unsigned char** output_buffer);
+ };
+ 
+ #endif  // SFNTLY_CPP_SRC_TEST_FONT_SUBSETTER_H_
+diff --git a/cpp/src/sample/chromium/subsetter_impl.cc b/cpp/src/sample/chromium/subsetter_impl.cc
+index 528e336..c53e607 100644
+--- a/cpp/src/sample/chromium/subsetter_impl.cc
++++ b/cpp/src/sample/chromium/subsetter_impl.cc
+@@ -616,6 +616,24 @@ SubsetterImpl::SubsetterImpl() {
+ SubsetterImpl::~SubsetterImpl() {
+ }
+ 
++bool SubsetterImpl::LoadFont(int font_index,
++                             const unsigned char* original_font,
++                             size_t font_size) {
++  MemoryInputStream mis;
++  mis.Attach(original_font, font_size);
++  if (factory_ == NULL) {
++    factory_.Attach(FontFactory::GetInstance());
++  }
++
++  FontArray font_array;
++  factory_->LoadFonts(&mis, &font_array);
++  if (font_index < 0 || (size_t)font_index >= font_array.size()) {
++    return false;
++  }
++  font_ = font_array[font_index].p_;
++  return font_ != NULL;
++}
++
+ bool SubsetterImpl::LoadFont(const char* font_name,
+                              const unsigned char* original_font,
+                              size_t font_size) {
+diff --git a/cpp/src/sample/chromium/subsetter_impl.h b/cpp/src/sample/chromium/subsetter_impl.h
+index ffbf408..738a8d4 100644
+--- a/cpp/src/sample/chromium/subsetter_impl.h
++++ b/cpp/src/sample/chromium/subsetter_impl.h
+@@ -57,6 +57,9 @@ class SubsetterImpl {
+   bool LoadFont(const char* font_name,
+                 const unsigned char* original_font,
+                 size_t font_size);
++  bool LoadFont(int font_index,
++                const unsigned char* original_font,
++                size_t font_size);
+   int SubsetFont(const unsigned int* glyph_ids,
+                  size_t glyph_count,
+                  unsigned char** output_buffer);
+diff --git a/cpp/src/sample/subtly/font_assembler.cc b/cpp/src/sample/subtly/font_assembler.cc
+index 2f7cd11..4717512 100644
+--- a/cpp/src/sample/subtly/font_assembler.cc
++++ b/cpp/src/sample/subtly/font_assembler.cc
+@@ -211,6 +211,8 @@ bool FontAssembler::AssembleGlyphAndLocaTables() {
+     // If there are missing glyphs between the last glyph_id and the
+     // current resolved_glyph_id, since the LOCA table needs to have the same
+     // size, the offset is kept the same.
++    loca_list.resize(std::max(loca_list.size(),
++                     static_cast<size_t>(resolved_glyph_id + 2)));
+     for (int32_t i = last_glyph_id + 1; i <= resolved_glyph_id; ++i)
+       loca_list[i] = last_offset;
+     last_offset += length;
+diff --git a/cpp/src/sfntly/data/byte_array.cc b/cpp/src/sfntly/data/byte_array.cc
+index 915a40c..57f9eed 100644
+--- a/cpp/src/sfntly/data/byte_array.cc
++++ b/cpp/src/sfntly/data/byte_array.cc
+@@ -35,6 +35,8 @@ int32_t ByteArray::SetFilledLength(int32_t filled_length) {
+ }
+ 
+ int32_t ByteArray::Get(int32_t index) {
++  if (index < 0 || index >= Length())
++    return -1;
+   return InternalGet(index) & 0xff;
+ }
+ 
+diff --git a/cpp/src/sfntly/data/font_data.cc b/cpp/src/sfntly/data/font_data.cc
+index d2b95ea..95bee3e 100644
+--- a/cpp/src/sfntly/data/font_data.cc
++++ b/cpp/src/sfntly/data/font_data.cc
+@@ -14,11 +14,13 @@
+  * limitations under the License.
+  */
+ 
+-#include <limits.h>
++#include "sfntly/data/font_data.h"
++
+ #include <algorithm>
+ #include <functional>
++#include <limits>
+ 
+-#include "sfntly/data/font_data.h"
++#include "sfntly/port/logging.h"
+ 
+ namespace sfntly {
+ 
+@@ -26,21 +28,29 @@ int32_t FontData::Size() const {
+   return std::min<int32_t>(array_->Size() - bound_offset_, bound_length_);
+ }
+ 
+-bool FontData::Bound(int32_t offset, int32_t length) {
+-  if (offset + length > Size() || offset < 0 || length < 0)
+-    return false;
+-
+-  bound_offset_ += offset;
++void FontData::Bound(int32_t offset, int32_t length) {
++  // Inputs should not be negative.
++  CHECK(offset >= 0);
++  CHECK(length >= 0);
++
++  // Check to make sure |bound_offset_| will not overflow.
++  CHECK(bound_offset_ <= std::numeric_limits<int32_t>::max() - offset);
++  const int32_t new_offset = bound_offset_ + offset;
++
++  if (length == GROWABLE_SIZE) {
++    // When |length| has the special value of GROWABLE_SIZE, it means the size
++    // should not have any artificial limits, thus it is just the underlying
++    // |array_|'s size. Just make sure |new_offset| is still within bounds.
++    CHECK(new_offset <= array_->Size());
++  } else {
++    // When |length| has any other value, |new_offset| + |length| points to the
++    // end of the array. Make sure that is within bounds, but use subtraction to
++    // avoid an integer overflow.
++    CHECK(new_offset <= array_->Size() - length);
++  }
++
++  bound_offset_ = new_offset;
+   bound_length_ = length;
+-  return true;
+-}
+-
+-bool FontData::Bound(int32_t offset) {
+-if (offset > Size() || offset < 0)
+-    return false;
+-
+-  bound_offset_ += offset;
+-  return true;
+ }
+ 
+ int32_t FontData::Length() const {
+@@ -60,7 +70,7 @@ FontData::FontData(FontData* data, int32_t offset) {
+   Init(data->array_);
+   Bound(data->bound_offset_ + offset,
+         (data->bound_length_ == GROWABLE_SIZE)
+-            ? GROWABLE_SIZE : data->bound_length_ - offset);
++        ? GROWABLE_SIZE : data->bound_length_ - offset);
+ }
+ 
+ FontData::~FontData() {}
+diff --git a/cpp/src/sfntly/data/font_data.h b/cpp/src/sfntly/data/font_data.h
+index d02e8b7..e0e7e79 100644
+--- a/cpp/src/sfntly/data/font_data.h
++++ b/cpp/src/sfntly/data/font_data.h
+@@ -19,11 +19,9 @@
+ 
+ #include <limits.h>
+ 
+-#include <vector>
+-
+-#include "sfntly/port/type.h"
+ #include "sfntly/data/byte_array.h"
+ #include "sfntly/port/refcount.h"
++#include "sfntly/port/type.h"
+ 
+ namespace sfntly {
+ 
+@@ -60,16 +58,7 @@ class FontData : virtual public RefCount {
+   // visible within the bounds set.
+   // @param offset the start of the new bounds
+   // @param length the number of bytes in the bounded array
+-  // @return true if the bounding range was successful; false otherwise
+-  virtual bool Bound(int32_t offset, int32_t length);
+-
+-  // Sets limits on the size of the FontData. This is a offset bound only so if
+-  // the FontData is writable and growable then there is no limit to that growth
+-  // from the bounding operation.
+-  // @param offset the start of the new bounds which must be within the current
+-  //        size of the FontData
+-  // @return true if the bounding range was successful; false otherwise
+-  virtual bool Bound(int32_t offset);
++  virtual void Bound(int32_t offset, int32_t length);
+ 
+   // Makes a slice of this FontData. The returned slice will share the data with
+   // the original <code>FontData</code>.
+diff --git a/cpp/src/sfntly/data/readable_font_data.cc b/cpp/src/sfntly/data/readable_font_data.cc
+index 06d783f..07a0db6 100644
+--- a/cpp/src/sfntly/data/readable_font_data.cc
++++ b/cpp/src/sfntly/data/readable_font_data.cc
+@@ -18,6 +18,8 @@
+ 
+ #include <stdio.h>
+ 
++#include <limits>
++
+ #include "sfntly/data/memory_byte_array.h"
+ #include "sfntly/data/writable_font_data.h"
+ #include "sfntly/port/exception_type.h"
+@@ -59,23 +61,25 @@ void ReadableFontData::SetCheckSumRanges(const IntegerList& ranges) {
+ 
+ int32_t ReadableFontData::ReadUByte(int32_t index) {
+   int32_t b = array_->Get(BoundOffset(index));
+-#if !defined (SFNTLY_NO_EXCEPTION)
+   if (b < 0) {
++#if !defined (SFNTLY_NO_EXCEPTION)
+     throw IndexOutOfBoundException(
+         "Index attempted to be read from is out of bounds", index);
+-  }
+ #endif
++    return kInvalidUnsigned;
++  }
+   return b;
+ }
+ 
+ int32_t ReadableFontData::ReadByte(int32_t index) {
+   int32_t b = array_->Get(BoundOffset(index));
+-#if !defined (SFNTLY_NO_EXCEPTION)
+   if (b < 0) {
++#if !defined (SFNTLY_NO_EXCEPTION)
+     throw IndexOutOfBoundException(
+         "Index attempted to be read from is out of bounds", index);
+-  }
+ #endif
++    return kInvalidByte;
++  }
+   return (b << 24) >> 24;
+ }
+ 
+@@ -91,24 +95,54 @@ int32_t ReadableFontData::ReadChar(int32_t index) {
+ }
+ 
+ int32_t ReadableFontData::ReadUShort(int32_t index) {
+-  return 0xffff & (ReadUByte(index) << 8 | ReadUByte(index + 1));
++  int32_t b1 = ReadUByte(index);
++  if (b1 < 0)
++    return kInvalidUnsigned;
++  int32_t b2 = ReadUByte(index + 1);
++  if (b2 < 0)
++    return kInvalidUnsigned;
++  return 0xffff & (b1 << 8 | b2);
+ }
+ 
+ int32_t ReadableFontData::ReadShort(int32_t index) {
+-  return ((ReadByte(index) << 8 | ReadUByte(index + 1)) << 16) >> 16;
++  int32_t b1 = ReadByte(index);
++  if (b1 == kInvalidByte)
++    return kInvalidShort;
++  int32_t b2 = ReadUByte(index + 1);
++  if (b2 < 0)
++    return kInvalidShort;
++
++  uint32_t result = static_cast<uint32_t>(b1) << 8 | b2;
++  return static_cast<int32_t>(result << 16) >> 16;
+ }
+ 
+ int32_t ReadableFontData::ReadUInt24(int32_t index) {
+-  return 0xffffff & (ReadUByte(index) << 16 |
+-                     ReadUByte(index + 1) << 8 |
+-                     ReadUByte(index + 2));
++  int32_t b1 = ReadUByte(index);
++  if (b1 < 0)
++    return kInvalidUnsigned;
++  int32_t b2 = ReadUByte(index + 1);
++  if (b2 < 0)
++    return kInvalidUnsigned;
++  int32_t b3 = ReadUByte(index + 2);
++  if (b3 < 0)
++    return kInvalidUnsigned;
++  return 0xffffff & (b1 << 16 | b2 << 8 | b3);
+ }
+ 
+ int64_t ReadableFontData::ReadULong(int32_t index) {
+-  return 0xffffffffL & (ReadUByte(index) << 24 |
+-                        ReadUByte(index + 1) << 16 |
+-                        ReadUByte(index + 2) << 8 |
+-                        ReadUByte(index + 3));
++  int32_t b1 = ReadUByte(index);
++  if (b1 < 0)
++    return kInvalidUnsigned;
++  int32_t b2 = ReadUByte(index + 1);
++  if (b2 < 0)
++    return kInvalidUnsigned;
++  int32_t b3 = ReadUByte(index + 2);
++  if (b3 < 0)
++    return kInvalidUnsigned;
++  int32_t b4 = ReadUByte(index + 3);
++  if (b4 < 0)
++    return kInvalidUnsigned;
++  return 0xffffffffL & (b1 << 24 | b2 << 16 | b3 << 8 | b4);
+ }
+ 
+ int32_t ReadableFontData::ReadULongAsInt(int32_t index) {
+@@ -122,17 +156,35 @@ int32_t ReadableFontData::ReadULongAsInt(int32_t index) {
+ }
+ 
+ int64_t ReadableFontData::ReadULongLE(int32_t index) {
+-  return 0xffffffffL & (ReadUByte(index) |
+-                        ReadUByte(index + 1) << 8 |
+-                        ReadUByte(index + 2) << 16 |
+-                        ReadUByte(index + 3) << 24);
++  int32_t b1 = ReadUByte(index);
++  if (b1 < 0)
++    return kInvalidUnsigned;
++  int32_t b2 = ReadUByte(index + 1);
++  if (b2 < 0)
++    return kInvalidUnsigned;
++  int32_t b3 = ReadUByte(index + 2);
++  if (b3 < 0)
++    return kInvalidUnsigned;
++  int32_t b4 = ReadUByte(index + 3);
++  if (b4 < 0)
++    return kInvalidUnsigned;
++  return 0xffffffffL & (b1 | b2 << 8 | b3 << 16 | b4 << 24);
+ }
+ 
+ int32_t ReadableFontData::ReadLong(int32_t index) {
+-  return ReadByte(index) << 24 |
+-         ReadUByte(index + 1) << 16 |
+-         ReadUByte(index + 2) << 8 |
+-         ReadUByte(index + 3);
++  int32_t b1 = ReadByte(index);
++  if (b1 == kInvalidByte)
++    return kInvalidLong;
++  int32_t b2 = ReadUByte(index + 1);
++  if (b2 < 0)
++    return kInvalidLong;
++  int32_t b3 = ReadUByte(index + 2);
++  if (b3 < 0)
++    return kInvalidLong;
++  int32_t b4 = ReadUByte(index + 3);
++  if (b4 < 0)
++    return kInvalidLong;
++  return static_cast<uint32_t>(b1) << 24 | b2 << 16 | b3 << 8 | b4;
+ }
+ 
+ int32_t ReadableFontData::ReadFixed(int32_t index) {
+@@ -140,7 +192,13 @@ int32_t ReadableFontData::ReadFixed(int32_t index) {
+ }
+ 
+ int64_t ReadableFontData::ReadDateTimeAsLong(int32_t index) {
+-  return (int64_t)ReadULong(index) << 32 | ReadULong(index + 4);
++  int32_t high = ReadULong(index);
++  if (high == kInvalidUnsigned)
++    return kInvalidLongDateTime;
++  int32_t low = ReadULong(index + 4);
++  if (low == kInvalidUnsigned)
++    return kInvalidLongDateTime;
++  return (int64_t)high << 32 | low;
+ }
+ 
+ int32_t ReadableFontData::ReadFWord(int32_t index) {
+@@ -187,12 +245,11 @@ int32_t ReadableFontData::SearchUShort(int32_t start_index,
+ #if defined (SFNTLY_DEBUG_FONTDATA)
+       fprintf(stderr, "**start: %d; end: %d\n", location_start, location_end);
+ #endif
+-      if (key <= location_end) {
++      if (key <= location_end)
+         return location;
+-      } else {
+-        // location is above the current location
+-        bottom = location + 1;
+-      }
++
++      // location is above the current location
++      bottom = location + 1;
+     }
+   }
+   return -1;
+@@ -208,14 +265,15 @@ int32_t ReadableFontData::SearchUShort(int32_t start_index,
+   while (top != bottom) {
+     location = (top + bottom) / 2;
+     int32_t location_start = ReadUShort(start_index + location * start_offset);
++    if (key == location_start)
++      return location;
++
+     if (key < location_start) {
+       // location is below current location
+       top = location;
+-    } else if (key > location_start) {
++    } else {
+       // location is above current location
+       bottom = location + 1;
+-    } else {
+-      return location;
+     }
+   }
+   return -1;
+@@ -243,12 +301,11 @@ int32_t ReadableFontData::SearchULong(int32_t start_index,
+ #if defined (SFNTLY_DEBUG_FONTDATA)
+       fprintf(stderr, "**start: %d; end: %d\n", location_start, location_end);
+ #endif
+-      if (key <= location_end) {
++      if (key <= location_end)
+         return location;
+-      } else {
+-        // location is above the current location
+-        bottom = location + 1;
+-      }
++
++      // location is above the current location
++      bottom = location + 1;
+     }
+   }
+   return -1;
+@@ -256,7 +313,9 @@ int32_t ReadableFontData::SearchULong(int32_t start_index,
+ 
+ CALLER_ATTACH FontData* ReadableFontData::Slice(int32_t offset,
+                                                 int32_t length) {
+-  if (offset < 0 || offset + length > Size()) {
++  if (offset < 0 || length < 0 ||
++      offset > std::numeric_limits<int32_t>::max() - length ||
++      offset + length > Size()) {
+ #if !defined (SFNTLY_NO_EXCEPTION)
+     throw IndexOutOfBoundsException(
+         "Attempt to bind data outside of its limits");
+diff --git a/cpp/src/sfntly/data/readable_font_data.h b/cpp/src/sfntly/data/readable_font_data.h
+index b43c626..37a0918 100644
+--- a/cpp/src/sfntly/data/readable_font_data.h
++++ b/cpp/src/sfntly/data/readable_font_data.h
+@@ -22,8 +22,8 @@
+ 
+ namespace sfntly {
+ 
+-class WritableFontData;
+ class OutputStream;
++class WritableFontData;
+ 
+ // Writable font data wrapper. Supports reading of data primitives in the
+ // TrueType / OpenType spec.
+@@ -51,6 +51,12 @@ class ReadableFontData : public FontData,
+   explicit ReadableFontData(ByteArray* array);
+   virtual ~ReadableFontData();
+ 
++  static const int32_t kInvalidByte = 128;
++  static const int32_t kInvalidShort = 32768;
++  static const int32_t kInvalidLong = 0xffffffff;
++  static const int32_t kInvalidUnsigned = -1;
++  static const int64_t kInvalidLongDateTime = -1;
++
+   static CALLER_ATTACH ReadableFontData* CreateReadableFontData(ByteVector* b);
+ 
+   // Gets a computed checksum for the data. This checksum uses the OpenType spec
+@@ -76,7 +82,7 @@ class ReadableFontData : public FontData,
+ 
+   // Read the BYTE at the given index.
+   // @param index index into the font data
+-  // @return the BYTE
++  // @return the BYTE; |kInvalidByte| if outside the bounds of the font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int32_t ReadByte(int32_t index);
+ 
+@@ -94,31 +100,31 @@ class ReadableFontData : public FontData,
+ 
+   // Read the CHAR at the given index.
+   // @param index index into the font data
+-  // @return the CHAR
++  // @return the CHAR; -1 if outside the bounds of the font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int32_t ReadChar(int32_t index);
+ 
+   // Read the USHORT at the given index.
+   // @param index index into the font data
+-  // @return the USHORT
++  // @return the USHORT; -1 if outside the bounds of the font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int32_t ReadUShort(int32_t index);
+ 
+   // Read the SHORT at the given index.
+   // @param index index into the font data
+-  // @return the SHORT
++  // @return the SHORT; |kInvalidShort| if outside the bounds of the font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int32_t ReadShort(int32_t index);
+ 
+   // Read the UINT24 at the given index.
+   // @param index index into the font data
+-  // @return the UINT24
++  // @return the UINT24; -1 if outside the bounds of the font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int32_t ReadUInt24(int32_t index);
+ 
+   // Read the ULONG at the given index.
+   // @param index index into the font data
+-  // @return the ULONG
++  // @return the ULONG; kInvalidUnsigned if outside the bounds of the font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int64_t ReadULong(int32_t index);
+ 
+@@ -136,7 +142,7 @@ class ReadableFontData : public FontData,
+ 
+   // Read the LONG at the given index.
+   // @param index index into the font data
+-  // @return the LONG
++  // @return the LONG; kInvalidLong if outside the bounds of the font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int32_t ReadLong(int32_t index);
+ 
+@@ -148,7 +154,8 @@ class ReadableFontData : public FontData,
+ 
+   // Read the LONGDATETIME at the given index.
+   // @param index index into the font data
+-  // @return the LONGDATETIME
++  // @return the LONGDATETIME; kInvalidLongDateTime if outside the bounds of the
++  // font data
+   // @throws IndexOutOfBoundsException if index is outside the FontData's range
+   virtual int64_t ReadDateTimeAsLong(int32_t index);
+ 
+diff --git a/cpp/src/sfntly/data/writable_font_data.cc b/cpp/src/sfntly/data/writable_font_data.cc
+index 7f6f72f..073e9df 100644
+--- a/cpp/src/sfntly/data/writable_font_data.cc
++++ b/cpp/src/sfntly/data/writable_font_data.cc
+@@ -16,6 +16,9 @@
+ 
+ #include "sfntly/data/writable_font_data.h"
+ 
++#include <algorithm>
++#include <limits>
++
+ #include "sfntly/data/memory_byte_array.h"
+ #include "sfntly/data/growable_memory_byte_array.h"
+ 
+@@ -165,7 +168,9 @@ void WritableFontData::CopyFrom(InputStream* is) {
+ 
+ CALLER_ATTACH FontData* WritableFontData::Slice(int32_t offset,
+                                                 int32_t length) {
+-  if (offset < 0 || offset + length > Size()) {
++  if (offset < 0 || length < 0 ||
++      offset > std::numeric_limits<int32_t>::max() - length ||
++      offset + length > Size()) {
+ #if !defined (SFNTLY_NO_EXCEPTION)
+     throw IndexOutOfBoundsException(
+         "Attempt to bind data outside of its limits");
+@@ -177,7 +182,7 @@ CALLER_ATTACH FontData* WritableFontData::Slice(int32_t offset,
+ }
+ 
+ CALLER_ATTACH FontData* WritableFontData::Slice(int32_t offset) {
+-  if (offset > Size()) {
++  if (offset < 0 || offset > Size()) {
+ #if !defined (SFNTLY_NO_EXCEPTION)
+     throw IndexOutOfBoundsException(
+         "Attempt to bind data outside of its limits");
+diff --git a/cpp/src/sfntly/font.cc b/cpp/src/sfntly/font.cc
+index 347e0c1..ca35048 100644
+--- a/cpp/src/sfntly/font.cc
++++ b/cpp/src/sfntly/font.cc
+@@ -40,24 +40,27 @@
+ 
+ namespace sfntly {
+ 
+-const int32_t SFNTVERSION_MAJOR = 1;
+-const int32_t SFNTVERSION_MINOR = 0;
++namespace {
++
++const int32_t kSFNTVersionMajor = 1;
++const int32_t kSFNTVersionMinor = 0;
++
++const int32_t kMaxTableSize = 200 * 1024 * 1024;
++
++}  // namespace
+ 
+ /******************************************************************************
+  * Font class
+  ******************************************************************************/
+ Font::~Font() {}
+ 
+-bool Font::HasTable(int32_t tag) {
+-  TableMap::const_iterator result = tables_.find(tag);
+-  TableMap::const_iterator end = tables_.end();
+-  return (result != end);
++bool Font::HasTable(int32_t tag) const {
++  return tables_.find(tag) != tables_.end();
+ }
+ 
+ Table* Font::GetTable(int32_t tag) {
+-  if (!HasTable(tag)) {
++  if (!HasTable(tag))
+     return NULL;
+-  }
+   return tables_[tag];
+ }
+ 
+@@ -308,15 +311,12 @@ Table::Builder* Font::Builder::NewTableBuilder(int32_t tag,
+ }
+ 
+ void Font::Builder::RemoveTableBuilder(int32_t tag) {
+-  TableBuilderMap::iterator target = table_builders_.find(tag);
+-  if (target != table_builders_.end()) {
+-    table_builders_.erase(target);
+-  }
++  table_builders_.erase(tag);
+ }
+ 
+ Font::Builder::Builder(FontFactory* factory)
+     : factory_(factory),
+-      sfnt_version_(Fixed1616::Fixed(SFNTVERSION_MAJOR, SFNTVERSION_MINOR)) {
++      sfnt_version_(Fixed1616::Fixed(kSFNTVersionMajor, kSFNTVersionMinor)) {
+ }
+ 
+ void Font::Builder::LoadFont(InputStream* is) {
+@@ -393,57 +393,66 @@ void Font::Builder::BuildTablesFromBuilders(Font* font,
+ }
+ 
+ static Table::Builder* GetBuilder(TableBuilderMap* builder_map, int32_t tag) {
+-  if (builder_map) {
+-    TableBuilderMap::iterator target = builder_map->find(tag);
+-    if (target != builder_map->end()) {
+-      return target->second.p_;
+-    }
+-  }
++  if (!builder_map)
++    return NULL;
+ 
+-  return NULL;
++  TableBuilderMap::iterator target = builder_map->find(tag);
++  if (target == builder_map->end())
++    return NULL;
++
++  return target->second.p_;
++}
++
++// Like GetBuilder(), but the returned Builder must be able to support reads.
++static Table::Builder* GetReadBuilder(TableBuilderMap* builder_map, int32_t tag) {
++  Table::Builder* builder = GetBuilder(builder_map, tag);
++  if (!builder || !builder->InternalReadData())
++    return NULL;
++
++  return builder;
+ }
+ 
+ void Font::Builder::InterRelateBuilders(TableBuilderMap* builder_map) {
+-  Table::Builder* raw_head_builder = GetBuilder(builder_map, Tag::head);
++  Table::Builder* raw_head_builder = GetReadBuilder(builder_map, Tag::head);
+   FontHeaderTableBuilderPtr header_table_builder;
+   if (raw_head_builder != NULL) {
+-      header_table_builder =
+-          down_cast<FontHeaderTable::Builder*>(raw_head_builder);
++    header_table_builder =
++        down_cast<FontHeaderTable::Builder*>(raw_head_builder);
+   }
+ 
+-  Table::Builder* raw_hhea_builder = GetBuilder(builder_map, Tag::hhea);
++  Table::Builder* raw_hhea_builder = GetReadBuilder(builder_map, Tag::hhea);
+   HorizontalHeaderTableBuilderPtr horizontal_header_builder;
+   if (raw_head_builder != NULL) {
+-      horizontal_header_builder =
+-          down_cast<HorizontalHeaderTable::Builder*>(raw_hhea_builder);
++    horizontal_header_builder =
++        down_cast<HorizontalHeaderTable::Builder*>(raw_hhea_builder);
+   }
+ 
+-  Table::Builder* raw_maxp_builder = GetBuilder(builder_map, Tag::maxp);
++  Table::Builder* raw_maxp_builder = GetReadBuilder(builder_map, Tag::maxp);
+   MaximumProfileTableBuilderPtr max_profile_builder;
+   if (raw_maxp_builder != NULL) {
+-      max_profile_builder =
+-          down_cast<MaximumProfileTable::Builder*>(raw_maxp_builder);
++    max_profile_builder =
++        down_cast<MaximumProfileTable::Builder*>(raw_maxp_builder);
+   }
+ 
+   Table::Builder* raw_loca_builder = GetBuilder(builder_map, Tag::loca);
+   LocaTableBuilderPtr loca_table_builder;
+   if (raw_loca_builder != NULL) {
+-      loca_table_builder = down_cast<LocaTable::Builder*>(raw_loca_builder);
++    loca_table_builder = down_cast<LocaTable::Builder*>(raw_loca_builder);
+   }
+ 
+   Table::Builder* raw_hmtx_builder = GetBuilder(builder_map, Tag::hmtx);
+   HorizontalMetricsTableBuilderPtr horizontal_metrics_builder;
+   if (raw_hmtx_builder != NULL) {
+-      horizontal_metrics_builder =
+-          down_cast<HorizontalMetricsTable::Builder*>(raw_hmtx_builder);
++    horizontal_metrics_builder =
++        down_cast<HorizontalMetricsTable::Builder*>(raw_hmtx_builder);
+   }
+ 
+ #if defined (SFNTLY_EXPERIMENTAL)
+   Table::Builder* raw_hdmx_builder = GetBuilder(builder_map, Tag::hdmx);
+   HorizontalDeviceMetricsTableBuilderPtr hdmx_table_builder;
+   if (raw_hdmx_builder != NULL) {
+-      hdmx_table_builder =
+-          down_cast<HorizontalDeviceMetricsTable::Builder*>(raw_hdmx_builder);
++    hdmx_table_builder =
++        down_cast<HorizontalDeviceMetricsTable::Builder*>(raw_hdmx_builder);
+   }
+ #endif
+ 
+@@ -525,32 +534,38 @@ void Font::Builder::LoadTableData(HeaderOffsetSortedSet* headers,
+                                   FontInputStream* is,
+                                   DataBlockMap* table_data) {
+   assert(table_data);
+-  for (HeaderOffsetSortedSet::iterator table_header = headers->begin(),
++  for (HeaderOffsetSortedSet::iterator it = headers->begin(),
+                                        table_end = headers->end();
+-                                       table_header != table_end;
+-                                       ++table_header) {
+-    is->Skip((*table_header)->offset() - is->position());
+-    FontInputStream table_is(is, (*table_header)->length());
++                                       it != table_end;
++                                       ++it) {
++    const Ptr<Header> header = *it;
++    is->Skip(header->offset() - is->position());
++    if (header->length() > kMaxTableSize)
++      continue;
++
++    FontInputStream table_is(is, header->length());
+     WritableFontDataPtr data;
+-    data.Attach(
+-        WritableFontData::CreateWritableFontData((*table_header)->length()));
+-    data->CopyFrom(&table_is, (*table_header)->length());
+-    table_data->insert(DataBlockEntry(*table_header, data));
++    data.Attach(WritableFontData::CreateWritableFontData(header->length()));
++    data->CopyFrom(&table_is, header->length());
++    table_data->insert(DataBlockEntry(header, data));
+   }
+ }
+ 
+ void Font::Builder::LoadTableData(HeaderOffsetSortedSet* headers,
+                                   WritableFontData* fd,
+                                   DataBlockMap* table_data) {
+-  for (HeaderOffsetSortedSet::iterator table_header = headers->begin(),
++  for (HeaderOffsetSortedSet::iterator it = headers->begin(),
+                                        table_end = headers->end();
+-                                       table_header != table_end;
+-                                       ++table_header) {
++                                       it != table_end;
++                                       ++it) {
++    const Ptr<Header> header = *it;
++    if (header->length() > kMaxTableSize)
++      continue;
++
+     FontDataPtr sliced_data;
+-    sliced_data.Attach(
+-        fd->Slice((*table_header)->offset(), (*table_header)->length()));
++    sliced_data.Attach(fd->Slice(header->offset(), header->length()));
+     WritableFontDataPtr data = down_cast<WritableFontData*>(sliced_data.p_);
+-    table_data->insert(DataBlockEntry(*table_header, data));
++    table_data->insert(DataBlockEntry(header, data));
+   }
+ }
+ 
+diff --git a/cpp/src/sfntly/font.h b/cpp/src/sfntly/font.h
+index 975e8cc..2220adb 100644
+--- a/cpp/src/sfntly/font.h
++++ b/cpp/src/sfntly/font.h
+@@ -245,7 +245,7 @@ class Font : public RefCounted<Font> {
+   int32_t num_tables() { return (int32_t)tables_.size(); }
+ 
+   // Whether the font has a particular table.
+-  bool HasTable(int32_t tag);
++  bool HasTable(int32_t tag) const;
+ 
+   // UNIMPLEMENTED: public Iterator<? extends Table> iterator
+ 
+diff --git a/cpp/src/sfntly/port/file_input_stream.cc b/cpp/src/sfntly/port/file_input_stream.cc
+index 5bcb434..dfe9a7b 100644
+--- a/cpp/src/sfntly/port/file_input_stream.cc
++++ b/cpp/src/sfntly/port/file_input_stream.cc
+@@ -18,6 +18,8 @@
+ #include <windows.h>
+ #endif
+ 
++#include <algorithm>
++
+ #include "sfntly/port/file_input_stream.h"
+ #include "sfntly/port/exception_type.h"
+ 
+diff --git a/cpp/src/sfntly/port/logging.h b/cpp/src/sfntly/port/logging.h
+new file mode 100644
+index 0000000..1d9e319
+--- /dev/null
++++ b/cpp/src/sfntly/port/logging.h
+@@ -0,0 +1,31 @@
++/*
++ * Copyright 2015 Google Inc. All Rights Reserved.
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef SFNTLY_CPP_SRC_SFNTLY_PORT_LOGGING_H_
++#define SFNTLY_CPP_SRC_SFNTLY_PORT_LOGGING_H_
++
++#include <stdio.h>
++#include <stdlib.h>
++
++// Cheap base/logging.h knock off.
++
++#define CHECK(expr) \
++    if (!(expr)) { \
++      printf("CHECK failed\n"); \
++      abort(); \
++    }
++
++#endif  // SFNTLY_CPP_SRC_SFNTLY_PORT_LOGGING_H_
+diff --git a/cpp/src/sfntly/port/memory_input_stream.cc b/cpp/src/sfntly/port/memory_input_stream.cc
+index 56ee81e..f6f2b9b 100755
+--- a/cpp/src/sfntly/port/memory_input_stream.cc
++++ b/cpp/src/sfntly/port/memory_input_stream.cc
+@@ -20,6 +20,8 @@
+ 
+ #include <string.h>
+ 
++#include <algorithm>
++
+ #include "sfntly/port/memory_input_stream.h"
+ #include "sfntly/port/exception_type.h"
+ 
+diff --git a/cpp/src/sfntly/port/refcount.h b/cpp/src/sfntly/port/refcount.h
+index eed5162..6353b08 100644
+--- a/cpp/src/sfntly/port/refcount.h
++++ b/cpp/src/sfntly/port/refcount.h
+@@ -99,22 +99,18 @@
+ 
+ namespace sfntly {
+ 
++template <typename T>
++class Ptr;
++
+ class RefCount {
+  public:
+   // Make gcc -Wnon-virtual-dtor happy.
+   virtual ~RefCount() {}
+ 
+-  virtual size_t AddRef() const = 0;
+-  virtual size_t Release() const = 0;
+-};
+-
+-template <typename T>
+-class NoAddRefRelease : public T {
+- public:
+-  NoAddRefRelease();
+-  ~NoAddRefRelease();
+-
+  private:
++  template <typename T>
++  friend class Ptr;
++
+   virtual size_t AddRef() const = 0;
+   virtual size_t Release() const = 0;
+ };
+@@ -142,6 +138,7 @@ class RefCounted : virtual public RefCount {
+     return *this;
+   }
+ 
++ private:
+   virtual size_t AddRef() const {
+     size_t new_count = AtomicIncrement(&ref_count_);
+     DEBUG_OUTPUT("A ");
+@@ -224,8 +221,8 @@ class Ptr {
+     return *p_;  // It can throw!
+   }
+ 
+-  NoAddRefRelease<T>* operator->() const {
+-    return (NoAddRefRelease<T>*)p_;  // It can throw!
++  T* operator->() const {
++    return p_;  // It can throw!
+   }
+ 
+   bool operator!() const {
+diff --git a/cpp/src/sfntly/port/type.h b/cpp/src/sfntly/port/type.h
+index 20a5ba8..9f82a5a 100644
+--- a/cpp/src/sfntly/port/type.h
++++ b/cpp/src/sfntly/port/type.h
+@@ -41,7 +41,7 @@
+   #include <stdint.h>
+ #endif
+ 
+-#include <cstddef>
++#include <stddef.h>
+ #include <vector>
+ #include <set>
+ 
+diff --git a/cpp/src/sfntly/table/core/font_header_table.cc b/cpp/src/sfntly/table/core/font_header_table.cc
+index 60015ca..a848afd 100644
+--- a/cpp/src/sfntly/table/core/font_header_table.cc
++++ b/cpp/src/sfntly/table/core/font_header_table.cc
+@@ -239,7 +239,10 @@ void FontHeaderTable::Builder::SetFontDirectionHint(int32_t hint) {
+ }
+ 
+ int32_t FontHeaderTable::Builder::IndexToLocFormat() {
+-  return down_cast<FontHeaderTable*>(GetTable())->IndexToLocFormat();
++  Table* table = GetTable();
++  if (!table)
++    return IndexToLocFormat::kInvalidOffset;
++  return down_cast<FontHeaderTable*>(table)->IndexToLocFormat();
+ }
+ 
+ void FontHeaderTable::Builder::SetIndexToLocFormat(int32_t format) {
+diff --git a/cpp/src/sfntly/table/core/font_header_table.h b/cpp/src/sfntly/table/core/font_header_table.h
+index 841955b..4851775 100644
+--- a/cpp/src/sfntly/table/core/font_header_table.h
++++ b/cpp/src/sfntly/table/core/font_header_table.h
+@@ -24,6 +24,7 @@ namespace sfntly {
+ 
+ struct IndexToLocFormat {
+   enum {
++    kInvalidOffset = -1,
+     kShortOffset = 0,
+     kLongOffset = 1
+   };
+diff --git a/cpp/src/sfntly/table/core/name_table.cc b/cpp/src/sfntly/table/core/name_table.cc
+index 8d2f64f..c9fe468 100644
+--- a/cpp/src/sfntly/table/core/name_table.cc
++++ b/cpp/src/sfntly/table/core/name_table.cc
+@@ -469,12 +469,14 @@ int32_t NameTable::NameId(int32_t index) {
+ 
+ void NameTable::NameAsBytes(int32_t index, ByteVector* b) {
+   assert(b);
+-  int32_t length = NameLength(index);
+   b->clear();
++
++  int32_t length = NameLength(index);
++  if (length <= 0)
++    return;
++
+   b->resize(length);
+-  if (length > 0) {
+-    data_->ReadBytes(NameOffset(index), &((*b)[0]), 0, length);
+-  }
++  data_->ReadBytes(NameOffset(index), &((*b)[0]), 0, length);
+ }
+ 
+ void NameTable::NameAsBytes(int32_t platform_id,
+diff --git a/cpp/src/sfntly/table/core/os2_table.cc b/cpp/src/sfntly/table/core/os2_table.cc
+index 7ca9d9a..1fef309 100644
+--- a/cpp/src/sfntly/table/core/os2_table.cc
++++ b/cpp/src/sfntly/table/core/os2_table.cc
+@@ -16,6 +16,8 @@
+ 
+ #include "sfntly/table/core/os2_table.h"
+ 
++#include <algorithm>
++
+ namespace sfntly {
+ /******************************************************************************
+  * Constants
+diff --git a/cpp/src/sfntly/table/table_based_table_builder.cc b/cpp/src/sfntly/table/table_based_table_builder.cc
+index b505704..51a5a3b 100644
+--- a/cpp/src/sfntly/table/table_based_table_builder.cc
++++ b/cpp/src/sfntly/table/table_based_table_builder.cc
+@@ -60,8 +60,10 @@ TableBasedTableBuilder::TableBasedTableBuilder(Header* header)
+ }
+ 
+ Table* TableBasedTableBuilder::GetTable() {
+-  if (table_ == NULL) {
+-    table_.Attach(down_cast<Table*>(SubBuildTable(InternalReadData())));
++  if (!table_) {
++    ReadableFontData* data = InternalReadData();
++    if (data)
++      table_.Attach(down_cast<Table*>(SubBuildTable(data)));
+   }
+   return table_;
+ }
+diff --git a/cpp/src/sfntly/table/truetype/glyph_table.cc b/cpp/src/sfntly/table/truetype/glyph_table.cc
+index f38fac5..0c1e841 100644
+--- a/cpp/src/sfntly/table/truetype/glyph_table.cc
++++ b/cpp/src/sfntly/table/truetype/glyph_table.cc
+@@ -215,10 +215,11 @@ CALLER_ATTACH GlyphTable::Glyph*
+ 
+   ReadableFontDataPtr sliced_data;
+   sliced_data.Attach(down_cast<ReadableFontData*>(data->Slice(offset, length)));
+-  if (type == GlyphType::kSimple) {
+-    glyph = new SimpleGlyph(sliced_data);
+-  } else {
+-    glyph = new CompositeGlyph(sliced_data);
++  if (sliced_data) {
++    if (type == GlyphType::kSimple)
++      glyph = new SimpleGlyph(sliced_data);
++    else
++      glyph = new CompositeGlyph(sliced_data);
+   }
+   return glyph.Detach();
+ }
+-- 
+2.7.4
+

@@ -1,0 +1,51 @@
+From ae64a20abadaae2926445cccf4b6937ee23f4b04 Mon Sep 17 00:00:00 2001
+From: "zoran.jovanovic" <zoran.jovanovic@sonymobile.com>
+Date: Thu, 16 Apr 2015 11:03:16 -0700
+Subject: [PATCH 1/9] SkScaledBitmapSampler: fix memory overwritten
+
+Cherry-picked from https://codereview.chromium.org/1085253002
+in Skia.
+
+Memory will be overwritten while downsampling some
+interlaced gif images, most commonly with odd sizes,
+when index of destination row stores in the current
+line computed from GifInterlaceIter meets:
+
+ X is an integer in [0..height-1]
+   and
+ (X < height)
+ && ((X - sampleSize/2) % sampleSize == 0)
+ && ((X - sampleSize/2)/sampleSize >= height/sampleSize)
+
+Signed-off-by: Lu Tong <lu.x.tong@sonymobile.com>
+
+BUG=skia:
+
+Review URL: https://codereview.chromium.org/1085253002
+
+CVE-2015-3877
+
+BUG:20723696
+Change-Id: I2cca83a2a5c39b5a497f36b40724262b438ead8b
+---
+ src/images/SkScaledBitmapSampler.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/images/SkScaledBitmapSampler.cpp b/src/images/SkScaledBitmapSampler.cpp
+index 03ee2ee..6433a97 100644
+--- a/src/images/SkScaledBitmapSampler.cpp
++++ b/src/images/SkScaledBitmapSampler.cpp
+@@ -745,7 +745,9 @@ bool SkScaledBitmapSampler::sampleInterlaced(const uint8_t* SK_RESTRICT src, int
+     // of the destination bitmap's pixels, which is used to calculate the destination row
+     // each time this function is called.
+     const int dstY = srcYMinusY0 / fDY;
+-    SkASSERT(dstY < fScaledHeight);
++    if (dstY >= fScaledHeight) {
++        return false;
++    }
+     char* dstRow = fDstRow + dstY * fDstRowBytes;
+     return fRowProc(dstRow, src + fX0 * fSrcPixelSize, fScaledWidth,
+                     fDX * fSrcPixelSize, dstY, fCTable);
+-- 
+2.7.4
+

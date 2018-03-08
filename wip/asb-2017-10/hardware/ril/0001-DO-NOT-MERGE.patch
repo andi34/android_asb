@@ -1,0 +1,63 @@
+From 076915cf242cfe629b7a30ea6ae8679efa37d954 Mon Sep 17 00:00:00 2001
+From: Sanket Padawe <sanketpadawe@google.com>
+Date: Thu, 13 Jul 2017 14:19:28 -0700
+Subject: [PATCH] DO NOT MERGE Fix security vulnerability in pre-O rild code.
+
+Remove wrong code for setup_data_call.
+Add check for max address for RIL_DIAL.
+
+Bug: 37896655
+Test: Manual.
+Change-Id: I05c027140ae828a2653794fcdd94e1b1a130941b
+(cherry picked from commit dda24c6557911aa1f4708abbd6b2f20f0e205b9e)
+CVE-2017-0823
+---
+ libril/ril.cpp | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/libril/ril.cpp b/libril/ril.cpp
+index 1957939..0c8fd27 100644
+--- a/libril/ril.cpp
++++ b/libril/ril.cpp
+@@ -2927,11 +2927,11 @@ static void debugCallback (int fd, short flags, void *param) {
+     int data;
+     unsigned int qxdm_data[6];
+     const char *deactData[1] = {"1"};
+-    char *actData[1];
+     RIL_Dial dialData;
+     int hangupData[1] = {1};
+     int number;
+     char **args;
++    int MAX_DIAL_ADDRESS = 128;
+ 
+     acceptFD = accept (fd,  (sockaddr *) &peeraddr, &socklen);
+ 
+@@ -3013,12 +3013,6 @@ static void debugCallback (int fd, short flags, void *param) {
+             // Set network selection automatic.
+             issueLocalRequest(RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC, NULL, 0);
+             break;
+-        case 6:
+-            RLOGI("Debug port: Setup Data Call, Apn :%s\n", args[1]);
+-            actData[0] = args[1];
+-            issueLocalRequest(RIL_REQUEST_SETUP_DATA_CALL, &actData,
+-                              sizeof(actData));
+-            break;
+         case 7:
+             RLOGI("Debug port: Deactivate Data Call");
+             issueLocalRequest(RIL_REQUEST_DEACTIVATE_DATA_CALL, &deactData,
+@@ -3027,6 +3021,12 @@ static void debugCallback (int fd, short flags, void *param) {
+         case 8:
+             RLOGI("Debug port: Dial Call");
+             dialData.clir = 0;
++            if (strlen(args[1]) > MAX_DIAL_ADDRESS) {
++                RLOGE("Debug port: Error calling Dial");
++                freeDebugCallbackArgs(number, args);
++                close(acceptFD);
++                return;
++            }
+             dialData.address = args[1];
+             issueLocalRequest(RIL_REQUEST_DIAL, &dialData, sizeof(dialData));
+             break;
+-- 
+2.7.4
+

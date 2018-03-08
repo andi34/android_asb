@@ -1,0 +1,87 @@
+From 7dedfd21589f98265bbfa05f77aeb272a01740a1 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 8 Sep 2015 09:35:22 -0700
+Subject: [PATCH 4/9] libvorbisidec: sanity check index of marker.
+
+Bug: 23881715
+Change-Id: I6b9185fc41341f997dca25f6394dcaab0927487b
+(cherry picked from commit 9c91d74747d890e1bf5ca3a444ec62838823c083)
+(cherry picked from commit 3830d0b585ada64ee75dea6da267505b19c622fd)
+---
+ Android.mk         |  2 ++
+ Tremolo/codebook.c | 12 +++++++++---
+ 2 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/Android.mk b/Android.mk
+index 9e3a0a0..f457606 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -33,6 +33,8 @@ LOCAL_CFLAGS+= -O2
+ LOCAL_C_INCLUDES:= \
+ 	$(LOCAL_PATH)/Tremolo
+ 
++LOCAL_SHARED_LIBRARIES := liblog
++
+ LOCAL_ARM_MODE := arm
+ 
+ LOCAL_MODULE := libvorbisidec
+diff --git a/Tremolo/codebook.c b/Tremolo/codebook.c
+index 66979dc..ff280b7 100644
+--- a/Tremolo/codebook.c
++++ b/Tremolo/codebook.c
+@@ -39,12 +39,14 @@
+ #include <string.h>
+ #include <math.h>
+ #include <limits.h>
++#include <log/log.h>
+ #include "ogg.h"
+ #include "ivorbiscodec.h"
+ #include "codebook.h"
+ #include "misc.h"
+ #include "os.h"
+ 
++#define MARKER_SIZE 33
+ 
+ /**** pack/unpack helpers ******************************************/
+ int _ilog(unsigned int v){
+@@ -145,7 +147,7 @@ static int _make_words(char *l,long n,ogg_uint32_t *r,long quantvals,
+ 		       codebook *b, oggpack_buffer *opb,int maptype){
+   long i,j,count=0;
+   long top=0;
+-  ogg_uint32_t marker[33];
++  ogg_uint32_t marker[MARKER_SIZE];
+ 
+   if (n<1)
+     return 1;
+@@ -158,6 +160,10 @@ static int _make_words(char *l,long n,ogg_uint32_t *r,long quantvals,
+     for(i=0;i<n;i++){
+       long length=l[i];
+       if(length){
++        if (length < 0 || length >= MARKER_SIZE) {
++          ALOGE("b/23881715");
++          return 1;
++        }
+ 	ogg_uint32_t entry=marker[length];
+ 	long chase=0;
+ 	if(count && !entry)return -1; /* overpopulated tree! */
+@@ -200,7 +206,7 @@ static int _make_words(char *l,long n,ogg_uint32_t *r,long quantvals,
+ 	/* prune the tree; the implicit invariant says all the longer
+ 	   markers were dangling from our just-taken node.  Dangle them
+ 	   from our *new* node. */
+-	for(j=length+1;j<33;j++)
++	for(j=length+1;j<MARKER_SIZE;j++)
+ 	  if((marker[j]>>1) == entry){
+ 	    entry=marker[j];
+ 	    marker[j]=marker[j-1]<<1;
+@@ -217,7 +223,7 @@ static int _make_words(char *l,long n,ogg_uint32_t *r,long quantvals,
+      really exist; there's only one possible 'codeword' or zero bits,
+      but the above tree-gen code doesn't mark that. */
+   if(b->used_entries != 1){
+-    for(i=1;i<33;i++)
++    for(i=1;i<MARKER_SIZE;i++)
+       if(marker[i] & (0xffffffffUL>>(32-i))){
+           return 1;
+       }
+-- 
+2.7.4
+

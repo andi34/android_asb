@@ -1,0 +1,33 @@
+From 9a3eff3a6f08690679b7525d9f43a9709cb0cc36 Mon Sep 17 00:00:00 2001
+From: fionaxu <fionaxu@google.com>
+Date: Thu, 7 Jul 2016 12:10:40 -0700
+Subject: [PATCH 6/6] Do not allow premium SMS during SuW
+
+Bug: 29420123
+Change-Id: I41ef7138635f11fbe7f495dd81103458cb969c35
+(cherry picked from commit 15f55ca2f204e664807e047b5f898693b274bab6)
+(cherry picked from commit d8764991caedd2cd5f6b92de0ea609313cbead03)
+---
+ src/java/com/android/internal/telephony/SMSDispatcher.java | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/SMSDispatcher.java b/src/java/com/android/internal/telephony/SMSDispatcher.java
+index 0698ad8..2bb5b57 100644
+--- a/src/java/com/android/internal/telephony/SMSDispatcher.java
++++ b/src/java/com/android/internal/telephony/SMSDispatcher.java
+@@ -756,6 +756,12 @@ public abstract class SMSDispatcher extends Handler {
+                 return true;    // not a premium short code
+             }
+ 
++            // Do not allow any premium sms during SuW
++            if (Settings.Global.getInt(mResolver, Settings.Global.DEVICE_PROVISIONED, 0) == 0) {
++                Rlog.e(TAG, "Can't send premium sms during Setup Wizard");
++                return false;
++            }
++
+             // Wait for user confirmation unless the user has set permission to always allow/deny
+             int premiumSmsPermission = mUsageMonitor.getPremiumSmsPermission(
+                     tracker.mAppInfo.packageName);
+-- 
+2.7.4
+

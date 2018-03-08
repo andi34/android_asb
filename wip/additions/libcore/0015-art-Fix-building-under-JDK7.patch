@@ -1,0 +1,25 @@
+From 1f1ef094acc754cd5bec8b3dd14219c4c3d6c903 Mon Sep 17 00:00:00 2001
+From: Ricardo Cerqueira <cyanogenmod@cerqueira.org>
+Date: Sat, 2 Nov 2013 20:25:01 +0000
+Subject: [PATCH 15/18] art: Fix building under JDK7
+
+---
+ libart/src/main/java/java/lang/Enum.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libart/src/main/java/java/lang/Enum.java b/libart/src/main/java/java/lang/Enum.java
+index f98554a..adfd1c4 100644
+--- a/libart/src/main/java/java/lang/Enum.java
++++ b/libart/src/main/java/java/lang/Enum.java
+@@ -148,7 +148,7 @@ public abstract class Enum<E extends Enum<E>> implements Serializable, Comparabl
+      * @see java.lang.Comparable
+      */
+     public final int compareTo(E o) {
+-        return ordinal - o.ordinal;
++        return ordinal - o.ordinal ();
+     }
+ 
+     /**
+-- 
+2.7.4
+

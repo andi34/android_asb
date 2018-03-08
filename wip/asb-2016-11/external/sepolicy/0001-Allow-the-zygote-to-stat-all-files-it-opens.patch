@@ -1,0 +1,36 @@
+From 894c043143238b826fa851d599a8640e50603f82 Mon Sep 17 00:00:00 2001
+From: Narayan Kamath <narayan@google.com>
+Date: Tue, 23 Aug 2016 17:02:57 +0100
+Subject: [PATCH] Allow the zygote to stat all files it opens.
+
+bug: 30963384
+
+(cherry picked from commit 3ff0b0282688c3776904b8e5409a4dfb7f231e73)
+
+Change-Id: I0ce25e14d08f35b106f4cc476736d9f39fc61e0e
+(cherry picked from commit 6d8b863a2a320689a904cd117618ec439a19730d)
+---
+ zygote.te | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/zygote.te b/zygote.te
+index 29288e8..9a051ec 100644
+--- a/zygote.te
++++ b/zygote.te
+@@ -27,6 +27,13 @@ allow zygote system_file:file x_file_perms;
+ # Control cgroups.
+ allow zygote cgroup:dir create_dir_perms;
+ allow zygote self:capability sys_admin;
++# Allow zygote to stat the files that it opens. The zygote must
++# be able to inspect them so that it can reopen them on fork
++# if necessary: b/30963384
++# allow zygote pmsg_device:chr_file { getattr };
++allow zygote debugfs:dir search;
++allow zygote debugfs:file { getattr };
++
+ # Check validity of SELinux context before use.
+ selinux_check_context(zygote)
+ # Check SELinux permissions.
+-- 
+2.7.4
+

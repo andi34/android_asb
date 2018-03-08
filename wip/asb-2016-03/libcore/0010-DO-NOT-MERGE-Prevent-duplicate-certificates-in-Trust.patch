@@ -1,0 +1,41 @@
+From 90c7c5d2c37953fb3a448bfe819f47bbfbb62002 Mon Sep 17 00:00:00 2001
+From: Chad Brubaker <cbrubaker@google.com>
+Date: Sun, 20 Dec 2015 20:49:24 -0800
+Subject: [PATCH 10/18] DO NOT MERGE Prevent duplicate certificates in
+ TrustedCertificateIndex
+
+With the separate caching of intermediate certificates in
+TrustManagerImpl a given intermediate may be passed into .index multiple
+times. Avoid adding the certificate to the list each time.
+
+(cherry-picked from commit d080e064abba665e2dde2a8c113f837ba4d9a85e)
+Bug: 26232830
+Change-Id: I6bed2c65d9e42e052b9b1b129200a997e7dca745
+(cherry picked from commit 129c0584885effd7f99a22550c0a5f2b789f967e)
+---
+ crypto/src/main/java/org/conscrypt/TrustedCertificateIndex.java | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/crypto/src/main/java/org/conscrypt/TrustedCertificateIndex.java b/crypto/src/main/java/org/conscrypt/TrustedCertificateIndex.java
+index b322cd1..dbd0506 100644
+--- a/crypto/src/main/java/org/conscrypt/TrustedCertificateIndex.java
++++ b/crypto/src/main/java/org/conscrypt/TrustedCertificateIndex.java
+@@ -69,6 +69,15 @@ public final class TrustedCertificateIndex {
+             if (anchors == null) {
+                 anchors = new ArrayList<TrustAnchor>(1);
+                 subjectToTrustAnchors.put(subject, anchors);
++            } else {
++                // Avoid indexing the same certificate multiple times
++                if (cert != null) {
++                    for (TrustAnchor entry : anchors) {
++                        if (cert.equals(entry.getTrustedCert())) {
++                            return;
++                        }
++                    }
++                }
+             }
+             anchors.add(anchor);
+         }
+-- 
+2.7.4
+

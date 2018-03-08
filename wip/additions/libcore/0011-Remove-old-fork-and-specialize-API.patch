@@ -1,0 +1,51 @@
+From 1a65a30252f90a102d019edc61755c53e08d8618 Mon Sep 17 00:00:00 2001
+From: Dave Platt <dplatt@google.com>
+Date: Thu, 13 Feb 2014 13:34:11 -0800
+Subject: [PATCH 11/18] Remove old fork-and-specialize API
+
+As promised, this is the cleanup patch-set which removes the
+old native "fork and specialize" API, which has been replaced
+by a slightly-enhanced one which can close the Zygote socket
+descriptors in the Zygote child.
+
+Change-Id: Icaeab730bee8638354dc664524e4118cdd946d2f
+---
+ dalvik/src/main/java/dalvik/system/Zygote.java | 16 ++--------------
+ 1 file changed, 2 insertions(+), 14 deletions(-)
+
+diff --git a/dalvik/src/main/java/dalvik/system/Zygote.java b/dalvik/src/main/java/dalvik/system/Zygote.java
+index c8bc628..62ba7b0 100644
+--- a/dalvik/src/main/java/dalvik/system/Zygote.java
++++ b/dalvik/src/main/java/dalvik/system/Zygote.java
+@@ -133,26 +133,14 @@ public class Zygote {
+     public static int forkAndSpecialize(int uid, int gid, int[] gids, int debugFlags,
+           int[][] rlimits, int mountExternal, String seInfo, String niceName, int[] fdsToClose) {
+         preFork();
+-        int pid = nativeForkAndSpecialize_new(
+-                  uid, gid, gids, debugFlags, rlimits, mountExternal, seInfo, niceName, fdsToClose);
+-        postFork();
+-        return pid;
+-    }
+-
+-    public static int forkAndSpecialize(int uid, int gid, int[] gids, int debugFlags,
+-          int[][] rlimits, int mountExternal, String seInfo, String niceName) {
+-        preFork();
+         int pid = nativeForkAndSpecialize(
+-                  uid, gid, gids, debugFlags, rlimits, mountExternal, seInfo, niceName);
++                  uid, gid, gids, debugFlags, rlimits, mountExternal, seInfo, niceName, fdsToClose);
+         postFork();
+         return pid;
+     }
+ 
+-    native public static int nativeForkAndSpecialize_new(int uid, int gid, int[] gids, int debugFlags,
+-          int[][] rlimits, int mountExternal, String seInfo, String niceName, int[] fdsToClose);
+-
+     native public static int nativeForkAndSpecialize(int uid, int gid, int[] gids, int debugFlags,
+-          int[][] rlimits, int mountExternal, String seInfo, String niceName);
++          int[][] rlimits, int mountExternal, String seInfo, String niceName, int[] fdsToClose);
+ 
+     /**
+      * Special method to start the system server process. In addition to the
+-- 
+2.7.4
+

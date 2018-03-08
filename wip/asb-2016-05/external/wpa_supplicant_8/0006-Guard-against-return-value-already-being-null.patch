@@ -1,0 +1,33 @@
+From 0ae423e95c9412bb61ed9c785540c45125186fb5 Mon Sep 17 00:00:00 2001
+From: Paul Stewart <pstew@google.com>
+Date: Fri, 18 Mar 2016 18:14:26 -0700
+Subject: [PATCH 06/17] Guard against return value already being null
+
+If there is no retrieved parameter, we should not de-reference null
+
+Bug: 27748546
+Change-Id: I8e6ceba26ab7d73ab365b72c0bfdcdb0a36a59a7
+---
+ wpa_supplicant/config.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/wpa_supplicant/config.c b/wpa_supplicant/config.c
+index 4565329..c952c29 100644
+--- a/wpa_supplicant/config.c
++++ b/wpa_supplicant/config.c
+@@ -2218,8 +2218,10 @@ char * wpa_config_get(struct wpa_ssid *ssid, const char *var)
+ 		const struct parse_data *field = &ssid_fields[i];
+ 		if (os_strcmp(var, field->name) == 0) {
+ 			char *ret = field->writer(field, ssid);
+-			if (os_strchr(ret, '\r') != NULL || os_strchr(ret, '\n') != NULL) {
+-				wpa_printf(MSG_ERROR, "Found newline in value for %s; "
++			if (ret != NULL && (os_strchr(ret, '\r') != NULL ||
++				os_strchr(ret, '\n') != NULL)) {
++				wpa_printf(MSG_ERROR,
++					"Found newline in value for %s; "
+ 					"not returning it", var);
+ 				os_free(ret);
+ 				ret = NULL;
+-- 
+2.7.4
+

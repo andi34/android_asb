@@ -1,0 +1,31 @@
+From f854f3d605f311d1c7cc1cdff8491084b6048079 Mon Sep 17 00:00:00 2001
+From: "Brian C. Young" <bcyoung@google.com>
+Date: Mon, 3 Apr 2017 12:54:00 -0700
+Subject: [PATCH 4/7] DO NOT MERGE: fix for the XPath nodeTab use-after-free
+ bug from nmehta@
+
+see https://bugs.chromium.org/p/chromium/issues/detail?id=705445
+
+Bug: 36809819
+Change-Id: I4832550032669a8e921bd46068281d9daf594ae1
+(cherry picked from commit 7f671748797331e20da23db2d95a6116bb1c6c55)
+---
+ xpath.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xpath.c b/xpath.c
+index 763ca09..9440dad 100644
+--- a/xpath.c
++++ b/xpath.c
+@@ -4303,7 +4303,7 @@ xmlXPathNewValueTree(xmlNodePtr val) {
+     }
+     memset(ret, 0 , (size_t) sizeof(xmlXPathObject));
+     ret->type = XPATH_XSLT_TREE;
+-    ret->boolval = 1;
++    ret->boolval = 0;
+     ret->user = (void *) val;
+     ret->nodesetval = xmlXPathNodeSetCreate(val);
+ #ifdef XP_DEBUG_OBJ_USAGE
+-- 
+2.7.4
+

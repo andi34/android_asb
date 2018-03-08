@@ -1,0 +1,56 @@
+From f22c84d648b2a4d356b0f25ee0dc540ab69eb34e Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Thu, 30 Apr 2015 13:45:34 -0700
+Subject: [PATCH 2/9] Fix allocation failure crash
+
+Bug: 20718524
+Change-Id: I86dcaf7d7452ad892822ff96fbcc0908e035b118
+---
+ Tremolo/codebook.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/Tremolo/codebook.c b/Tremolo/codebook.c
+index dc88c00..66979dc 100644
+--- a/Tremolo/codebook.c
++++ b/Tremolo/codebook.c
+@@ -521,13 +521,12 @@ int vorbis_book_unpack(oggpack_buffer *opb,codebook *s){
+ 	/* use dec_type 1: vector of packed values */
+ 
+ 	/* need quantized values before  */
+-	s->q_val=alloca(sizeof(ogg_uint16_t)*quantvals);
++	s->q_val=calloc(sizeof(ogg_uint16_t), quantvals);
+ 	if (!s->q_val) goto _eofout;
+ 	for(i=0;i<quantvals;i++)
+ 	  ((ogg_uint16_t *)s->q_val)[i]=(ogg_uint16_t)oggpack_read(opb,s->q_bits);
+ 
+ 	if(oggpack_eop(opb)){
+-	  s->q_val=0; /* cleanup must not free alloca memory */
+ 	  goto _eofout;
+ 	}
+ 
+@@ -537,12 +536,11 @@ int vorbis_book_unpack(oggpack_buffer *opb,codebook *s){
+ 	s->dec_leafw=_determine_leaf_words(s->dec_nodeb,
+ 					   (s->q_bits*s->dim+8)/8);
+ 	if(_make_decode_table(s,lengthlist,quantvals,opb,maptype)){
+-	  s->q_val=0; /* cleanup must not free alloca memory */
+ 	  goto _errout;
+ 	}
+ 
+-	s->q_val=0; /* about to go out of scope; _make_decode_table
+-                       was using it */
++	free(s->q_val);
++	s->q_val=0;
+ 
+       }else{
+ 	/* use dec_type 2: packed vector of column offsets */
+@@ -633,6 +631,7 @@ int vorbis_book_unpack(oggpack_buffer *opb,codebook *s){
+  _eofout:
+   vorbis_book_clear(s);
+   free(lengthlist);
++  free(s->q_val);
+   return -1;
+ }
+ 
+-- 
+2.7.4
+

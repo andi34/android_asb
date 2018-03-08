@@ -1,0 +1,33 @@
+From feacaf7b7c7d77ab48a640df5f40afaf7acc9b45 Mon Sep 17 00:00:00 2001
+From: Steve Kondik <shade@chemlab.org>
+Date: Wed, 9 Jan 2013 23:43:49 -0800
+Subject: [PATCH 14/18] Fix compilation of Enum on JDK 7
+
+Change-Id: I2e58b6a527e4ef1fc7ed3359b8aea88d01a031fb
+
+libcore: Better Enum fix for JDK 7
+
+ * Jerome Pilliet suggests using a cast in the compareTo method instead of
+   changing the field visibility. This is a much better fix.
+
+Change-Id: I334105e0922225512a4d0a2d4b6c9c6ec71b9c51
+---
+ libdvm/src/main/java/java/lang/Enum.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libdvm/src/main/java/java/lang/Enum.java b/libdvm/src/main/java/java/lang/Enum.java
+index 7a0f514..1713561 100644
+--- a/libdvm/src/main/java/java/lang/Enum.java
++++ b/libdvm/src/main/java/java/lang/Enum.java
+@@ -147,7 +147,7 @@ public abstract class Enum<E extends Enum<E>> implements Serializable, Comparabl
+      * @see java.lang.Comparable
+      */
+     public final int compareTo(E o) {
+-        return ordinal - o.ordinal;
++        return ordinal - ((Enum<?>) o).ordinal;
+     }
+ 
+     /**
+-- 
+2.7.4
+

@@ -1,0 +1,1437 @@
+From c10cb2bbaee21b597972c2824ba2adbc62733706 Mon Sep 17 00:00:00 2001
+From: Jon Larimer <jlarimer@google.com>
+Date: Wed, 26 Aug 2015 20:32:35 -0400
+Subject: [PATCH 2/3] sqlite: upgrade to patched SQLite 3.7.11 - DO NOT MERGE
+
+Downloaded from https://www.sqlite.org/2015/sqlite3-3.7.11-patched-20150522.tar.gz
+
+  $ sha256sum sqlite3-3.7.11-patched-20150522.tar.gz
+  d5ddd42b5af5823547e05a1771747e8464afb3f0318e69c8621a4148fdf36a4b  sqlite3-3.7.11-patched-20150522.tar.gz
+
+dist/orig contains the stock sqlite3 code, as packaged in the ZIP file above.
+
+dist contains a copy of dist/orig, but with the Android.patch file applied.
+Please see Android.patch for a list of differences between stock and
+Android.
+
+This distribution contains 3.7.11 plus several security fixes:
+
+https://www.sqlite.org/src/info/eddc05e7bb31fae7
+https://www.sqlite.org/src/info/02e3c88fbf6abdcf
+https://www.sqlite.org/src/info/c494171f77dc2e5e
+https://www.sqlite.org/src/info/95625ef3adc3c408
+https://www.sqlite.org/src/info/0cdf502885ea7e58
+https://www.sqlite.org/src/info/586a94e85bc13700
+
+Bug: 20099586
+Change-Id: I4f0ca09a2c84e270ab3e7efdd2754b2afbf347a7
+---
+ dist/Android.patch  |  20 ++---
+ dist/orig/shell.c   |  58 +++++++++-----
+ dist/orig/sqlite3.c | 108 ++++++++++++++++----------
+ dist/orig/sqlite3.h |   2 +-
+ dist/shell.c        |  58 +++++++++-----
+ dist/sqlite3.c      | 214 ++++++++++++++++++++++++++++------------------------
+ dist/sqlite3.h      |   2 +-
+ dist/version        |   2 +-
+ 8 files changed, 276 insertions(+), 188 deletions(-)
+
+diff --git a/dist/Android.patch b/dist/Android.patch
+index 5c35b2c..d3d4765 100644
+--- a/dist/Android.patch
++++ b/dist/Android.patch
+@@ -1,6 +1,6 @@
+ diff -r -u -d orig/shell.c ./shell.c
+---- orig/shell.c	2012-04-19 19:18:38.000000000 -0700
+-+++ ./shell.c	2012-04-19 19:26:02.000000000 -0700
++--- orig/shell.c	2015-08-26 20:02:12.904405871 -0400
+++++ ./shell.c	2015-08-26 20:04:05.975485109 -0400
+ @@ -35,6 +35,11 @@
+  #include "sqlite3.h"
+  #include <ctype.h>
+@@ -13,7 +13,7 @@ diff -r -u -d orig/shell.c ./shell.c
+  
+  #if !defined(_WIN32) && !defined(WIN32) && !defined(__OS2__)
+  # include <signal.h>
+-@@ -1463,6 +1468,20 @@
++@@ -1466,6 +1471,20 @@
+  #ifndef SQLITE_OMIT_LOAD_EXTENSION
+      sqlite3_enable_load_extension(p->db, 1);
+  #endif
+@@ -35,8 +35,8 @@ diff -r -u -d orig/shell.c ./shell.c
+  }
+  
+ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+---- orig/sqlite3.c	2012-04-19 19:18:38.000000000 -0700
+-+++ ./sqlite3.c	2012-04-19 19:26:02.000000000 -0700
++--- orig/sqlite3.c	2015-08-26 20:02:12.912405806 -0400
+++++ ./sqlite3.c	2015-08-26 20:04:05.975485109 -0400
+ @@ -25387,7 +25387,12 @@
+  #else
+    { "pread64",      (sqlite3_syscall_ptr)0,          0  },
+@@ -65,7 +65,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+  
+  #if SQLITE_ENABLE_LOCKING_STYLE
+    { "fchmod",       (sqlite3_syscall_ptr)fchmod,     0  },
+-@@ -93937,7 +93948,7 @@
++@@ -93936,7 +93947,7 @@
+    }
+    if( pDb->pSchema->file_format>SQLITE_MAX_FILE_FORMAT ){
+      sqlite3SetString(pzErrMsg, db, "unsupported file format");
+@@ -74,7 +74,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+      goto initone_error_out;
+    }
+  
+-@@ -112387,7 +112398,7 @@
++@@ -112404,7 +112415,7 @@
+  extern "C" {
+  #endif  /* __cplusplus */
+  
+@@ -83,7 +83,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+  
+  #if 0
+  }  /* extern "C" */
+-@@ -114717,9 +114728,24 @@
++@@ -114734,9 +114745,24 @@
+  #endif
+  
+  #ifdef SQLITE_ENABLE_FTS3
+@@ -111,7 +111,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+  #endif
+  
+  #ifdef SQLITE_ENABLE_ICU
+-@@ -120143,7 +120169,7 @@
++@@ -120169,7 +120195,7 @@
+  ** SQLite. If fts3 is built as a dynamically loadable extension, this
+  ** function is called by the sqlite3_extension_init() entry point.
+  */
+@@ -120,7 +120,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+    int rc = SQLITE_OK;
+    Fts3Hash *pHash = 0;
+    const sqlite3_tokenizer_module *pSimple = 0;
+-@@ -120204,7 +120230,10 @@
++@@ -120230,7 +120256,10 @@
+     && SQLITE_OK==(rc = sqlite3_overload_function(db, "optimize", 1))
+    ){
+      rc = sqlite3_create_module_v2(
+diff --git a/dist/orig/shell.c b/dist/orig/shell.c
+index d3ddfa9..6514031 100644
+--- a/dist/orig/shell.c
++++ b/dist/orig/shell.c
+@@ -434,6 +434,7 @@ struct callback_data {
+                          ** .explain ON */
+   char outfile[FILENAME_MAX]; /* Filename for *out */
+   const char *zDbFilename;    /* name of the database file */
++  char *zFreeOnClose;         /* Filename to free when closing */
+   const char *zVfs;           /* Name of VFS to use */
+   sqlite3_stmt *pStmt;   /* Current statement if any. */
+   FILE *pLog;            /* Write log output here */
+@@ -1416,6 +1417,7 @@ static char zHelp[] =
+   "                         tabs     Tab-separated values\n"
+   "                         tcl      TCL list elements\n"
+   ".nullvalue STRING      Print STRING in place of NULL values\n"
++  ".open ?FILENAME?       Close existing database and reopen FILENAME\n"
+   ".output FILENAME       Send output to FILENAME\n"
+   ".output stdout         Send output to the screen\n"
+   ".prompt MAIN CONTINUE  Replace the standard prompts\n"
+@@ -1447,7 +1449,7 @@ static int process_input(struct callback_data *p, FILE *in);
+ ** Make sure the database is open.  If it is not, then open it.  If
+ ** the database fails to open, print an error message and exit.
+ */
+-static void open_db(struct callback_data *p){
++static void open_db(struct callback_data *p, int keepAlive){
+   if( p->db==0 ){
+     sqlite3_open(p->zDbFilename, &p->db);
+     db = p->db;
+@@ -1458,6 +1460,7 @@ static void open_db(struct callback_data *p){
+     if( db==0 || SQLITE_OK!=sqlite3_errcode(db) ){
+       fprintf(stderr,"Error: unable to open database \"%s\": %s\n", 
+           p->zDbFilename, sqlite3_errmsg(db));
++      if( keepAlive ) return;
+       exit(1);
+     }
+ #ifndef SQLITE_OMIT_LOAD_EXTENSION
+@@ -1578,7 +1581,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+       sqlite3_close(pDest);
+       return 1;
+     }
+-    open_db(p);
++    open_db(p, 0);
+     pBackup = sqlite3_backup_init(pDest, "main", p->db, zDb);
+     if( pBackup==0 ){
+       fprintf(stderr, "Error: %s\n", sqlite3_errmsg(pDest));
+@@ -1603,7 +1606,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   if( c=='d' && n>1 && strncmp(azArg[0], "databases", n)==0 && nArg==1 ){
+     struct callback_data data;
+     char *zErrMsg = 0;
+-    open_db(p);
++    open_db(p, 0);
+     memcpy(&data, p, sizeof(data));
+     data.showHeader = 1;
+     data.mode = MODE_Column;
+@@ -1620,7 +1623,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   }else
+ 
+   if( c=='d' && strncmp(azArg[0], "dump", n)==0 && nArg<3 ){
+-    open_db(p);
++    open_db(p, 0);
+     /* When playing back a "dump", the content might appear in an order
+     ** which causes immediate foreign key constraints to be violated.
+     ** So disable foreign-key constraint enforcement to prevent problems. */
+@@ -1738,7 +1741,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     FILE *in;                   /* The input file */
+     int lineno = 0;             /* Line number of input file */
+ 
+-    open_db(p);
++    open_db(p, 0);
+     nSep = strlen30(p->separator);
+     if( nSep==0 ){
+       fprintf(stderr, "Error: non-null separator required for import\n");
+@@ -1853,7 +1856,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   if( c=='i' && strncmp(azArg[0], "indices", n)==0 && nArg<3 ){
+     struct callback_data data;
+     char *zErrMsg = 0;
+-    open_db(p);
++    open_db(p, 0);
+     memcpy(&data, p, sizeof(data));
+     data.showHeader = 0;
+     data.mode = MODE_List;
+@@ -1919,7 +1922,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     char *zErrMsg = 0;
+     zFile = azArg[1];
+     zProc = nArg>=3 ? azArg[2] : 0;
+-    open_db(p);
++    open_db(p, 0);
+     rc = sqlite3_load_extension(p->db, zFile, zProc, &zErrMsg);
+     if( rc!=SQLITE_OK ){
+       fprintf(stderr, "Error: %s\n", zErrMsg);
+@@ -1998,6 +2001,26 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+                      "%.*s", (int)ArraySize(p->nullvalue)-1, azArg[1]);
+   }else
+ 
++  if( c=='o' && strncmp(azArg[0], "open", n)==0 && n>=2 ){
++    sqlite3 *savedDb = p->db;
++    const char *zSavedFilename = p->zDbFilename;
++    char *zNewFilename = 0;
++    p->db = 0;
++    if( nArg>=2 ){
++      p->zDbFilename = zNewFilename = sqlite3_mprintf("%s", azArg[1]);
++    }
++    open_db(p, 1);
++    if( p->db!=0 ){
++      sqlite3_close(savedDb);
++      sqlite3_free(p->zFreeOnClose);
++      p->zFreeOnClose = zNewFilename;
++    }else{
++      sqlite3_free(zNewFilename);
++      p->db = savedDb;
++      p->zDbFilename = zSavedFilename;
++    }
++  }else
++
+   if( c=='o' && strncmp(azArg[0], "output", n)==0 && nArg==2 ){
+     if( p->out!=stdout ){
+       fclose(p->out);
+@@ -2061,7 +2084,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+       sqlite3_close(pSrc);
+       return 1;
+     }
+-    open_db(p);
++    open_db(p, 0);
+     pBackup = sqlite3_backup_init(p->db, zDb, pSrc, "main");
+     if( pBackup==0 ){
+       fprintf(stderr, "Error: %s\n", sqlite3_errmsg(p->db));
+@@ -2091,7 +2114,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   if( c=='s' && strncmp(azArg[0], "schema", n)==0 && nArg<3 ){
+     struct callback_data data;
+     char *zErrMsg = 0;
+-    open_db(p);
++    open_db(p, 0);
+     memcpy(&data, p, sizeof(data));
+     data.showHeader = 0;
+     data.mode = MODE_Semi;
+@@ -2197,7 +2220,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     char **azResult;
+     int nRow;
+     char *zErrMsg;
+-    open_db(p);
++    open_db(p, 0);
+     if( nArg==1 ){
+       rc = sqlite3_get_table(p->db,
+         "SELECT name FROM sqlite_master "
+@@ -2273,7 +2296,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     int testctrl = -1;
+     int rc = 0;
+     int i, n;
+-    open_db(p);
++    open_db(p, 0);
+ 
+     /* convert testctrl text option to value. allow any unique prefix
+     ** of the option name, or a numerical value. */
+@@ -2372,7 +2395,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   }else
+ 
+   if( c=='t' && n>4 && strncmp(azArg[0], "timeout", n)==0 && nArg==2 ){
+-    open_db(p);
++    open_db(p, 0);
+     sqlite3_busy_timeout(p->db, atoi(azArg[1]));
+   }else
+     
+@@ -2381,7 +2404,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   ){
+     enableTimer = booleanValue(azArg[1]);
+   }else
+-  
++
+   if( c=='v' && strncmp(azArg[0], "version", n)==0 ){
+     printf("SQLite %s %s\n" /*extra-version-info*/,
+         sqlite3_libversion(), sqlite3_sourceid());
+@@ -2555,7 +2578,7 @@ static int process_input(struct callback_data *p, FILE *in){
+     if( zSql && _contains_semicolon(&zSql[nSqlPrior], nSql-nSqlPrior)
+                 && sqlite3_complete(zSql) ){
+       p->cnt = 0;
+-      open_db(p);
++      open_db(p, 0);
+       BEGIN_TIMER;
+       rc = shell_exec(p->db, zSql, shell_callback, p, &zErrMsg);
+       END_TIMER;
+@@ -2883,7 +2906,7 @@ int main(int argc, char **argv){
+   ** to the sqlite command-line tool.
+   */
+   if( access(data.zDbFilename, 0)==0 ){
+-    open_db(&data);
++    open_db(&data, 0);
+   }
+ 
+   /* Process the initialization file if there is one.  If no -init option
+@@ -2975,7 +2998,7 @@ int main(int argc, char **argv){
+         rc = do_meta_command(z, &data);
+         if( rc && bail_on_error ) return rc;
+       }else{
+-        open_db(&data);
++        open_db(&data, 0);
+         rc = shell_exec(data.db, z, shell_callback, &data, &zErrMsg);
+         if( zErrMsg!=0 ){
+           fprintf(stderr,"Error: %s\n", zErrMsg);
+@@ -2998,7 +3021,7 @@ int main(int argc, char **argv){
+     if( zFirstCmd[0]=='.' ){
+       rc = do_meta_command(zFirstCmd, &data);
+     }else{
+-      open_db(&data);
++      open_db(&data, 0);
+       rc = shell_exec(data.db, zFirstCmd, shell_callback, &data, &zErrMsg);
+       if( zErrMsg!=0 ){
+         fprintf(stderr,"Error: %s\n", zErrMsg);
+@@ -3046,5 +3069,6 @@ int main(int argc, char **argv){
+   if( data.db ){
+     sqlite3_close(data.db);
+   }
++  sqlite3_free(data.zFreeOnClose); 
+   return rc;
+ }
+diff --git a/dist/orig/sqlite3.c b/dist/orig/sqlite3.c
+index 6090bba..0897d7a 100644
+--- a/dist/orig/sqlite3.c
++++ b/dist/orig/sqlite3.c
+@@ -659,7 +659,7 @@ extern "C" {
+ */
+ #define SQLITE_VERSION        "3.7.11"
+ #define SQLITE_VERSION_NUMBER 3007011
+-#define SQLITE_SOURCE_ID      "2012-03-20 11:35:50 00bb9c9ce4f465e6ac321ced2a9d0062dc364669"
++#define SQLITE_SOURCE_ID      "2015-05-21 02:24:35 000197cc4e3874711388d79d9ad5af6f0aba6cf9"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -11253,7 +11253,7 @@ struct Trigger {
+  * orconf    -> stores the ON CONFLICT algorithm
+  * pSelect   -> If this is an INSERT INTO ... SELECT ... statement, then
+  *              this stores a pointer to the SELECT statement. Otherwise NULL.
+- * target    -> A token holding the quoted name of the table to insert into.
++ * zTarget   -> Dequoted name of the table to insert into.
+  * pExprList -> If this is an INSERT INTO ... VALUES ... statement, then
+  *              this stores values to be inserted. Otherwise NULL.
+  * pIdList   -> If this is an INSERT INTO ... (<column-names>) VALUES ... 
+@@ -11261,12 +11261,12 @@ struct Trigger {
+  *              inserted into.
+  *
+  * (op == TK_DELETE)
+- * target    -> A token holding the quoted name of the table to delete from.
++ * zTarget   -> Dequoted name of the table to delete from.
+  * pWhere    -> The WHERE clause of the DELETE statement if one is specified.
+  *              Otherwise NULL.
+  * 
+  * (op == TK_UPDATE)
+- * target    -> A token holding the quoted name of the table to update rows of.
++ * zTarget   -> Dequoted name of the table to update.
+  * pWhere    -> The WHERE clause of the UPDATE statement if one is specified.
+  *              Otherwise NULL.
+  * pExprList -> A list of the columns to update and the expressions to update
+@@ -11278,8 +11278,8 @@ struct TriggerStep {
+   u8 op;               /* One of TK_DELETE, TK_UPDATE, TK_INSERT, TK_SELECT */
+   u8 orconf;           /* OE_Rollback etc. */
+   Trigger *pTrig;      /* The trigger that this step is a part of */
+-  Select *pSelect;     /* SELECT statment or RHS of INSERT INTO .. SELECT ... */
+-  Token target;        /* Target table for DELETE, UPDATE, INSERT */
++  Select *pSelect;     /* SELECT statement or RHS of INSERT INTO SELECT ... */
++  char *zTarget;       /* Target table for DELETE, UPDATE, INSERT */
+   Expr *pWhere;        /* The WHERE clause for DELETE or UPDATE steps */
+   ExprList *pExprList; /* SET clause for UPDATE.  VALUES clause for INSERT */
+   IdList *pIdList;     /* Column names for INSERT */
+@@ -88759,10 +88759,10 @@ static Trigger *fkActionTrigger(
+       ** parent table are used for the comparison. */
+       pEq = sqlite3PExpr(pParse, TK_EQ,
+           sqlite3PExpr(pParse, TK_DOT, 
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tOld),
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol)
++            sqlite3ExprAlloc(db, TK_ID, &tOld, 0),
++            sqlite3ExprAlloc(db, TK_ID, &tToCol, 0)
+           , 0),
+-          sqlite3PExpr(pParse, TK_ID, 0, 0, &tFromCol)
++          sqlite3ExprAlloc(db, TK_ID, &tFromCol, 0)
+       , 0);
+       pWhere = sqlite3ExprAnd(db, pWhere, pEq);
+ 
+@@ -88774,12 +88774,12 @@ static Trigger *fkActionTrigger(
+       if( pChanges ){
+         pEq = sqlite3PExpr(pParse, TK_IS,
+             sqlite3PExpr(pParse, TK_DOT, 
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tOld),
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol),
++              sqlite3ExprAlloc(db, TK_ID, &tOld, 0),
++              sqlite3ExprAlloc(db, TK_ID, &tToCol, 0),
+               0),
+             sqlite3PExpr(pParse, TK_DOT, 
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tNew),
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol),
++              sqlite3ExprAlloc(db, TK_ID, &tNew, 0),
++              sqlite3ExprAlloc(db, TK_ID, &tToCol, 0),
+               0),
+             0);
+         pWhen = sqlite3ExprAnd(db, pWhen, pEq);
+@@ -88789,8 +88789,8 @@ static Trigger *fkActionTrigger(
+         Expr *pNew;
+         if( action==OE_Cascade ){
+           pNew = sqlite3PExpr(pParse, TK_DOT, 
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tNew),
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol)
++            sqlite3ExprAlloc(db, TK_ID, &tNew, 0),
++            sqlite3ExprAlloc(db, TK_ID, &tToCol, 0)
+           , 0);
+         }else if( action==OE_SetDflt ){
+           Expr *pDflt = pFKey->pFrom->aCol[iFromCol].pDflt;
+@@ -88837,13 +88837,12 @@ static Trigger *fkActionTrigger(
+     pTrigger = (Trigger *)sqlite3DbMallocZero(db, 
+         sizeof(Trigger) +         /* struct Trigger */
+         sizeof(TriggerStep) +     /* Single step in trigger program */
+-        nFrom + 1                 /* Space for pStep->target.z */
++        nFrom + 1                 /* Space for pStep->zTarget */
+     );
+     if( pTrigger ){
+       pStep = pTrigger->step_list = (TriggerStep *)&pTrigger[1];
+-      pStep->target.z = (char *)&pStep[1];
+-      pStep->target.n = nFrom;
+-      memcpy((char *)pStep->target.z, zFrom, nFrom);
++      pStep->zTarget = (char *)&pStep[1];
++      memcpy((char *)pStep->zTarget, zFrom, nFrom);
+   
+       pStep->pWhere = sqlite3ExprDup(db, pWhere, EXPRDUP_REDUCE);
+       pStep->pExprList = sqlite3ExprListDup(db, pList, EXPRDUP_REDUCE);
+@@ -93704,7 +93703,7 @@ SQLITE_PRIVATE int sqlite3InitCallback(void *pInit, int argc, char **argv, char
+   if( argv==0 ) return 0;   /* Might happen if EMPTY_RESULT_CALLBACKS are on */
+   if( argv[1]==0 ){
+     corruptSchema(pData, argv[0], 0);
+-  }else if( argv[2] && argv[2][0] ){
++  }else if( argv[2] && sqlite3_strnicmp(argv[2],"create ",7)==0 ){
+     /* Call the parser to process a CREATE TABLE, INDEX or VIEW.
+     ** But because db->init.busy is set to 1, no VDBE code is generated
+     ** or executed.  All the parser does is build the internal data
+@@ -93735,8 +93734,8 @@ SQLITE_PRIVATE int sqlite3InitCallback(void *pInit, int argc, char **argv, char
+       }
+     }
+     sqlite3_finalize(pStmt);
+-  }else if( argv[0]==0 ){
+-    corruptSchema(pData, 0, 0);
++  }else if( argv[0]==0 || (argv[2]!=0 && argv[2][0]!=0) ){
++    corruptSchema(pData, argv[0], 0);
+   }else{
+     /* If the SQL column is blank it means this is an index that
+     ** was created to be the PRIMARY KEY or to fulfill a UNIQUE
+@@ -99687,12 +99686,12 @@ static TriggerStep *triggerStepAllocate(
+ ){
+   TriggerStep *pTriggerStep;
+ 
+-  pTriggerStep = sqlite3DbMallocZero(db, sizeof(TriggerStep) + pName->n);
++  pTriggerStep = sqlite3DbMallocZero(db, sizeof(TriggerStep) + pName->n + 1);
+   if( pTriggerStep ){
+     char *z = (char*)&pTriggerStep[1];
+     memcpy(z, pName->z, pName->n);
+-    pTriggerStep->target.z = z;
+-    pTriggerStep->target.n = pName->n;
++    sqlite3Dequote(z);
++    pTriggerStep->zTarget = z;
+     pTriggerStep->op = op;
+   }
+   return pTriggerStep;
+@@ -99981,7 +99980,7 @@ SQLITE_PRIVATE Trigger *sqlite3TriggersExist(
+ }
+ 
+ /*
+-** Convert the pStep->target token into a SrcList and return a pointer
++** Convert the pStep->zTarget string into a SrcList and return a pointer
+ ** to that SrcList.
+ **
+ ** This routine adds a specific database name, if needed, to the target when
+@@ -99994,17 +99993,17 @@ static SrcList *targetSrcList(
+   Parse *pParse,       /* The parsing context */
+   TriggerStep *pStep   /* The trigger containing the target token */
+ ){
++  sqlite3 *db = pParse->db;
+   int iDb;             /* Index of the database to use */
+   SrcList *pSrc;       /* SrcList to be returned */
+ 
+-  pSrc = sqlite3SrcListAppend(pParse->db, 0, &pStep->target, 0);
++  pSrc = sqlite3SrcListAppend(db, 0, 0, 0);
+   if( pSrc ){
+     assert( pSrc->nSrc>0 );
+-    assert( pSrc->a!=0 );
+-    iDb = sqlite3SchemaToIndex(pParse->db, pStep->pTrig->pSchema);
++    pSrc->a[pSrc->nSrc-1].zName = sqlite3DbStrDup(db, pStep->zTarget);
++    iDb = sqlite3SchemaToIndex(db, pStep->pTrig->pSchema);
+     if( iDb==0 || iDb>=2 ){
+-      sqlite3 *db = pParse->db;
+-      assert( iDb<pParse->db->nDb );
++      assert( iDb<db->nDb );
+       pSrc->a[pSrc->nSrc-1].zDatabase = sqlite3DbStrDup(db, db->aDb[iDb].zName);
+     }
+   }
+@@ -101487,6 +101486,8 @@ end_of_vacuum:
+ struct VtabCtx {
+   Table *pTab;
+   VTable *pVTable;
++  VtabCtx *pPrior;    /* Parent context (if any) */
++  int bDeclared;      /* True after sqlite3_declare_vtab() is called */
+ };
+ 
+ /*
+@@ -101916,8 +101917,20 @@ static int vtabCallConstructor(
+   const char *const*azArg = (const char *const*)pTab->azModuleArg;
+   int nArg = pTab->nModuleArg;
+   char *zErr = 0;
+-  char *zModuleName = sqlite3MPrintf(db, "%s", pTab->zName);
++  char *zModuleName;
++  VtabCtx *pCtx;
++
++  /* Check that the virtual-table is not already being initialized */
++  for(pCtx=db->pVtabCtx; pCtx; pCtx=pCtx->pPrior){
++    if( pCtx->pTab==pTab ){
++      *pzErr = sqlite3MPrintf(db, 
++          "vtable constructor called recursively: %s", pTab->zName
++      );
++      return SQLITE_LOCKED;
++    }
++  }
+ 
++  zModuleName = sqlite3MPrintf(db, "%s", pTab->zName);
+   if( !zModuleName ){
+     return SQLITE_NOMEM;
+   }
+@@ -101935,10 +101948,13 @@ static int vtabCallConstructor(
+   assert( xConstruct );
+   sCtx.pTab = pTab;
+   sCtx.pVTable = pVTable;
++  sCtx.pPrior = db->pVtabCtx;
++  sCtx.bDeclared = 0;
+   db->pVtabCtx = &sCtx;
+   rc = xConstruct(db, pMod->pAux, nArg, azArg, &pVTable->pVtab, &zErr);
+-  db->pVtabCtx = 0;
++  db->pVtabCtx = sCtx.pPrior;
+   if( rc==SQLITE_NOMEM ) db->mallocFailed = 1;
++  assert( sCtx.pTab==pTab );
+ 
+   if( SQLITE_OK!=rc ){
+     if( zErr==0 ){
+@@ -101953,7 +101969,7 @@ static int vtabCallConstructor(
+     ** the sqlite3_vtab object if successful.  */
+     pVTable->pVtab->pModule = pMod->pModule;
+     pVTable->nRef = 1;
+-    if( sCtx.pTab ){
++    if( sCtx.bDeclared==0 ){
+       const char *zFormat = "vtable constructor did not declare schema: %s";
+       *pzErr = sqlite3MPrintf(db, zFormat, pTab->zName);
+       sqlite3VtabUnlock(pVTable);
+@@ -102123,18 +102139,19 @@ SQLITE_PRIVATE int sqlite3VtabCallCreate(sqlite3 *db, int iDb, const char *zTab,
+ ** virtual table module.
+ */
+ SQLITE_API int sqlite3_declare_vtab(sqlite3 *db, const char *zCreateTable){
++  VtabCtx *pCtx = db->pVtabCtx;
+   Parse *pParse;
+-
+   int rc = SQLITE_OK;
+   Table *pTab;
+   char *zErr = 0;
+ 
+   sqlite3_mutex_enter(db->mutex);
+-  if( !db->pVtabCtx || !(pTab = db->pVtabCtx->pTab) ){
++  if( !pCtx || pCtx->bDeclared ){
+     sqlite3Error(db, SQLITE_MISUSE, 0);
+     sqlite3_mutex_leave(db->mutex);
+     return SQLITE_MISUSE_BKPT;
+   }
++  pTab = pCtx->pTab;
+   assert( (pTab->tabFlags & TF_Virtual)!=0 );
+ 
+   pParse = sqlite3StackAllocZero(db, sizeof(*pParse));
+@@ -102157,7 +102174,7 @@ SQLITE_API int sqlite3_declare_vtab(sqlite3 *db, const char *zCreateTable){
+         pParse->pNewTable->nCol = 0;
+         pParse->pNewTable->aCol = 0;
+       }
+-      db->pVtabCtx->pTab = 0;
++      pCtx->bDeclared = 1;
+     }else{
+       sqlite3Error(db, SQLITE_ERROR, (zErr ? "%s" : 0), zErr);
+       sqlite3DbFree(db, zErr);
+@@ -117555,7 +117572,6 @@ static int fts3PrefixParameter(
+ 
+   aIndex = sqlite3_malloc(sizeof(struct Fts3Index) * nIndex);
+   *apIndex = aIndex;
+-  *pnIndex = nIndex;
+   if( !aIndex ){
+     return SQLITE_NOMEM;
+   }
+@@ -117567,11 +117583,17 @@ static int fts3PrefixParameter(
+     for(i=1; i<nIndex; i++){
+       int nPrefix;
+       if( fts3GobbleInt(&p, &nPrefix) ) return SQLITE_ERROR;
+-      aIndex[i].nPrefix = nPrefix;
++      if( nPrefix<=0 ){
++        nIndex--;
++        i--;
++      }else{
++        aIndex[i].nPrefix = nPrefix;
++      }
+       p++;
+     }
+   }
+ 
++  *pnIndex = nIndex;
+   return SQLITE_OK;
+ }
+ 
+@@ -117606,7 +117628,8 @@ static int fts3ContentColumns(
+   const char *zTbl,               /* Name of content table */
+   const char ***pazCol,           /* OUT: Malloc'd array of column names */
+   int *pnCol,                     /* OUT: Size of array *pazCol */
+-  int *pnStr                      /* OUT: Bytes of string content */
++  int *pnStr,                     /* OUT: Bytes of string content */
++  char **pzErr                    /* OUT: error message */
+ ){
+   int rc = SQLITE_OK;             /* Return code */
+   char *zSql;                     /* "SELECT *" statement on zTbl */  
+@@ -117617,6 +117640,9 @@ static int fts3ContentColumns(
+     rc = SQLITE_NOMEM;
+   }else{
+     rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
++    if( rc!=SQLITE_OK ){
++      *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
++    }
+   }
+   sqlite3_free(zSql);
+ 
+@@ -117850,7 +117876,7 @@ static int fts3InitVtab(
+     if( nCol==0 ){
+       sqlite3_free((void*)aCol); 
+       aCol = 0;
+-      rc = fts3ContentColumns(db, argv[1], zContent, &aCol, &nCol, &nString);
++      rc = fts3ContentColumns(db, argv[1], zContent,&aCol,&nCol,&nString,pzErr);
+ 
+       /* If a languageid= option was specified, remove the language id
+       ** column from the aCol[] array. */ 
+diff --git a/dist/orig/sqlite3.h b/dist/orig/sqlite3.h
+index f193784..4d8fb29 100644
+--- a/dist/orig/sqlite3.h
++++ b/dist/orig/sqlite3.h
+@@ -109,7 +109,7 @@ extern "C" {
+ */
+ #define SQLITE_VERSION        "3.7.11"
+ #define SQLITE_VERSION_NUMBER 3007011
+-#define SQLITE_SOURCE_ID      "2012-03-20 11:35:50 00bb9c9ce4f465e6ac321ced2a9d0062dc364669"
++#define SQLITE_SOURCE_ID      "2015-05-21 02:24:35 000197cc4e3874711388d79d9ad5af6f0aba6cf9"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+diff --git a/dist/shell.c b/dist/shell.c
+index 42eb7a8..37ac987 100644
+--- a/dist/shell.c
++++ b/dist/shell.c
+@@ -439,6 +439,7 @@ struct callback_data {
+                          ** .explain ON */
+   char outfile[FILENAME_MAX]; /* Filename for *out */
+   const char *zDbFilename;    /* name of the database file */
++  char *zFreeOnClose;         /* Filename to free when closing */
+   const char *zVfs;           /* Name of VFS to use */
+   sqlite3_stmt *pStmt;   /* Current statement if any. */
+   FILE *pLog;            /* Write log output here */
+@@ -1421,6 +1422,7 @@ static char zHelp[] =
+   "                         tabs     Tab-separated values\n"
+   "                         tcl      TCL list elements\n"
+   ".nullvalue STRING      Print STRING in place of NULL values\n"
++  ".open ?FILENAME?       Close existing database and reopen FILENAME\n"
+   ".output FILENAME       Send output to FILENAME\n"
+   ".output stdout         Send output to the screen\n"
+   ".prompt MAIN CONTINUE  Replace the standard prompts\n"
+@@ -1452,7 +1454,7 @@ static int process_input(struct callback_data *p, FILE *in);
+ ** Make sure the database is open.  If it is not, then open it.  If
+ ** the database fails to open, print an error message and exit.
+ */
+-static void open_db(struct callback_data *p){
++static void open_db(struct callback_data *p, int keepAlive){
+   if( p->db==0 ){
+     sqlite3_open(p->zDbFilename, &p->db);
+     db = p->db;
+@@ -1463,6 +1465,7 @@ static void open_db(struct callback_data *p){
+     if( db==0 || SQLITE_OK!=sqlite3_errcode(db) ){
+       fprintf(stderr,"Error: unable to open database \"%s\": %s\n", 
+           p->zDbFilename, sqlite3_errmsg(db));
++      if( keepAlive ) return;
+       exit(1);
+     }
+ #ifndef SQLITE_OMIT_LOAD_EXTENSION
+@@ -1597,7 +1600,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+       sqlite3_close(pDest);
+       return 1;
+     }
+-    open_db(p);
++    open_db(p, 0);
+     pBackup = sqlite3_backup_init(pDest, "main", p->db, zDb);
+     if( pBackup==0 ){
+       fprintf(stderr, "Error: %s\n", sqlite3_errmsg(pDest));
+@@ -1622,7 +1625,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   if( c=='d' && n>1 && strncmp(azArg[0], "databases", n)==0 && nArg==1 ){
+     struct callback_data data;
+     char *zErrMsg = 0;
+-    open_db(p);
++    open_db(p, 0);
+     memcpy(&data, p, sizeof(data));
+     data.showHeader = 1;
+     data.mode = MODE_Column;
+@@ -1639,7 +1642,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   }else
+ 
+   if( c=='d' && strncmp(azArg[0], "dump", n)==0 && nArg<3 ){
+-    open_db(p);
++    open_db(p, 0);
+     /* When playing back a "dump", the content might appear in an order
+     ** which causes immediate foreign key constraints to be violated.
+     ** So disable foreign-key constraint enforcement to prevent problems. */
+@@ -1757,7 +1760,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     FILE *in;                   /* The input file */
+     int lineno = 0;             /* Line number of input file */
+ 
+-    open_db(p);
++    open_db(p, 0);
+     nSep = strlen30(p->separator);
+     if( nSep==0 ){
+       fprintf(stderr, "Error: non-null separator required for import\n");
+@@ -1872,7 +1875,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   if( c=='i' && strncmp(azArg[0], "indices", n)==0 && nArg<3 ){
+     struct callback_data data;
+     char *zErrMsg = 0;
+-    open_db(p);
++    open_db(p, 0);
+     memcpy(&data, p, sizeof(data));
+     data.showHeader = 0;
+     data.mode = MODE_List;
+@@ -1938,7 +1941,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     char *zErrMsg = 0;
+     zFile = azArg[1];
+     zProc = nArg>=3 ? azArg[2] : 0;
+-    open_db(p);
++    open_db(p, 0);
+     rc = sqlite3_load_extension(p->db, zFile, zProc, &zErrMsg);
+     if( rc!=SQLITE_OK ){
+       fprintf(stderr, "Error: %s\n", zErrMsg);
+@@ -2017,6 +2020,26 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+                      "%.*s", (int)ArraySize(p->nullvalue)-1, azArg[1]);
+   }else
+ 
++  if( c=='o' && strncmp(azArg[0], "open", n)==0 && n>=2 ){
++    sqlite3 *savedDb = p->db;
++    const char *zSavedFilename = p->zDbFilename;
++    char *zNewFilename = 0;
++    p->db = 0;
++    if( nArg>=2 ){
++      p->zDbFilename = zNewFilename = sqlite3_mprintf("%s", azArg[1]);
++    }
++    open_db(p, 1);
++    if( p->db!=0 ){
++      sqlite3_close(savedDb);
++      sqlite3_free(p->zFreeOnClose);
++      p->zFreeOnClose = zNewFilename;
++    }else{
++      sqlite3_free(zNewFilename);
++      p->db = savedDb;
++      p->zDbFilename = zSavedFilename;
++    }
++  }else
++
+   if( c=='o' && strncmp(azArg[0], "output", n)==0 && nArg==2 ){
+     if( p->out!=stdout ){
+       fclose(p->out);
+@@ -2080,7 +2103,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+       sqlite3_close(pSrc);
+       return 1;
+     }
+-    open_db(p);
++    open_db(p, 0);
+     pBackup = sqlite3_backup_init(p->db, zDb, pSrc, "main");
+     if( pBackup==0 ){
+       fprintf(stderr, "Error: %s\n", sqlite3_errmsg(p->db));
+@@ -2110,7 +2133,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   if( c=='s' && strncmp(azArg[0], "schema", n)==0 && nArg<3 ){
+     struct callback_data data;
+     char *zErrMsg = 0;
+-    open_db(p);
++    open_db(p, 0);
+     memcpy(&data, p, sizeof(data));
+     data.showHeader = 0;
+     data.mode = MODE_Semi;
+@@ -2216,7 +2239,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     char **azResult;
+     int nRow;
+     char *zErrMsg;
+-    open_db(p);
++    open_db(p, 0);
+     if( nArg==1 ){
+       rc = sqlite3_get_table(p->db,
+         "SELECT name FROM sqlite_master "
+@@ -2292,7 +2315,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+     int testctrl = -1;
+     int rc = 0;
+     int i, n;
+-    open_db(p);
++    open_db(p, 0);
+ 
+     /* convert testctrl text option to value. allow any unique prefix
+     ** of the option name, or a numerical value. */
+@@ -2391,7 +2414,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   }else
+ 
+   if( c=='t' && n>4 && strncmp(azArg[0], "timeout", n)==0 && nArg==2 ){
+-    open_db(p);
++    open_db(p, 0);
+     sqlite3_busy_timeout(p->db, atoi(azArg[1]));
+   }else
+     
+@@ -2400,7 +2423,7 @@ static int do_meta_command(char *zLine, struct callback_data *p){
+   ){
+     enableTimer = booleanValue(azArg[1]);
+   }else
+-  
++
+   if( c=='v' && strncmp(azArg[0], "version", n)==0 ){
+     printf("SQLite %s %s\n" /*extra-version-info*/,
+         sqlite3_libversion(), sqlite3_sourceid());
+@@ -2574,7 +2597,7 @@ static int process_input(struct callback_data *p, FILE *in){
+     if( zSql && _contains_semicolon(&zSql[nSqlPrior], nSql-nSqlPrior)
+                 && sqlite3_complete(zSql) ){
+       p->cnt = 0;
+-      open_db(p);
++      open_db(p, 0);
+       BEGIN_TIMER;
+       rc = shell_exec(p->db, zSql, shell_callback, p, &zErrMsg);
+       END_TIMER;
+@@ -2902,7 +2925,7 @@ int main(int argc, char **argv){
+   ** to the sqlite command-line tool.
+   */
+   if( access(data.zDbFilename, 0)==0 ){
+-    open_db(&data);
++    open_db(&data, 0);
+   }
+ 
+   /* Process the initialization file if there is one.  If no -init option
+@@ -2994,7 +3017,7 @@ int main(int argc, char **argv){
+         rc = do_meta_command(z, &data);
+         if( rc && bail_on_error ) return rc;
+       }else{
+-        open_db(&data);
++        open_db(&data, 0);
+         rc = shell_exec(data.db, z, shell_callback, &data, &zErrMsg);
+         if( zErrMsg!=0 ){
+           fprintf(stderr,"Error: %s\n", zErrMsg);
+@@ -3017,7 +3040,7 @@ int main(int argc, char **argv){
+     if( zFirstCmd[0]=='.' ){
+       rc = do_meta_command(zFirstCmd, &data);
+     }else{
+-      open_db(&data);
++      open_db(&data, 0);
+       rc = shell_exec(data.db, zFirstCmd, shell_callback, &data, &zErrMsg);
+       if( zErrMsg!=0 ){
+         fprintf(stderr,"Error: %s\n", zErrMsg);
+@@ -3065,5 +3088,6 @@ int main(int argc, char **argv){
+   if( data.db ){
+     sqlite3_close(data.db);
+   }
++  sqlite3_free(data.zFreeOnClose); 
+   return rc;
+ }
+diff --git a/dist/sqlite3.c b/dist/sqlite3.c
+index f65fcbc..46cf812 100644
+--- a/dist/sqlite3.c
++++ b/dist/sqlite3.c
+@@ -659,7 +659,7 @@ extern "C" {
+ */
+ #define SQLITE_VERSION        "3.7.11"
+ #define SQLITE_VERSION_NUMBER 3007011
+-#define SQLITE_SOURCE_ID      "2012-03-20 11:35:50 00bb9c9ce4f465e6ac321ced2a9d0062dc364669"
++#define SQLITE_SOURCE_ID      "2015-05-21 02:24:35 000197cc4e3874711388d79d9ad5af6f0aba6cf9"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -11253,7 +11253,7 @@ struct Trigger {
+  * orconf    -> stores the ON CONFLICT algorithm
+  * pSelect   -> If this is an INSERT INTO ... SELECT ... statement, then
+  *              this stores a pointer to the SELECT statement. Otherwise NULL.
+- * target    -> A token holding the quoted name of the table to insert into.
++ * zTarget   -> Dequoted name of the table to insert into.
+  * pExprList -> If this is an INSERT INTO ... VALUES ... statement, then
+  *              this stores values to be inserted. Otherwise NULL.
+  * pIdList   -> If this is an INSERT INTO ... (<column-names>) VALUES ... 
+@@ -11261,12 +11261,12 @@ struct Trigger {
+  *              inserted into.
+  *
+  * (op == TK_DELETE)
+- * target    -> A token holding the quoted name of the table to delete from.
++ * zTarget   -> Dequoted name of the table to delete from.
+  * pWhere    -> The WHERE clause of the DELETE statement if one is specified.
+  *              Otherwise NULL.
+  * 
+  * (op == TK_UPDATE)
+- * target    -> A token holding the quoted name of the table to update rows of.
++ * zTarget   -> Dequoted name of the table to update.
+  * pWhere    -> The WHERE clause of the UPDATE statement if one is specified.
+  *              Otherwise NULL.
+  * pExprList -> A list of the columns to update and the expressions to update
+@@ -11278,8 +11278,8 @@ struct TriggerStep {
+   u8 op;               /* One of TK_DELETE, TK_UPDATE, TK_INSERT, TK_SELECT */
+   u8 orconf;           /* OE_Rollback etc. */
+   Trigger *pTrig;      /* The trigger that this step is a part of */
+-  Select *pSelect;     /* SELECT statment or RHS of INSERT INTO .. SELECT ... */
+-  Token target;        /* Target table for DELETE, UPDATE, INSERT */
++  Select *pSelect;     /* SELECT statement or RHS of INSERT INTO SELECT ... */
++  char *zTarget;       /* Target table for DELETE, UPDATE, INSERT */
+   Expr *pWhere;        /* The WHERE clause for DELETE or UPDATE steps */
+   ExprList *pExprList; /* SET clause for UPDATE.  VALUES clause for INSERT */
+   IdList *pIdList;     /* Column names for INSERT */
+@@ -24853,13 +24853,6 @@ SQLITE_API int sqlite3_os_end(void){
+ */
+ #if SQLITE_OS_UNIX              /* This file is used on unix only */
+ 
+-/* Use posix_fallocate() if it is available
+-*/
+-#if !defined(HAVE_POSIX_FALLOCATE) \
+-      && (_XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L)
+-# define HAVE_POSIX_FALLOCATE 1
+-#endif
+-
+ /*
+ ** There are various methods for file locking used for concurrency
+ ** control:
+@@ -25426,7 +25419,11 @@ static struct unix_syscall {
+                     aSyscall[13].pCurrent)
+ #endif
+ 
++#if SQLITE_ENABLE_LOCKING_STYLE
+   { "fchmod",       (sqlite3_syscall_ptr)fchmod,     0  },
++#else
++  { "fchmod",       (sqlite3_syscall_ptr)0,          0  },
++#endif
+ #define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
+ 
+ #if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
+@@ -25451,6 +25448,9 @@ static struct unix_syscall {
+   { "fchown",       (sqlite3_syscall_ptr)fchown,          0 },
+ #define osFchown    ((int(*)(int,uid_t,gid_t))aSyscall[20].pCurrent)
+ 
++  { "umask",        (sqlite3_syscall_ptr)umask,           0 },
++#define osUmask     ((mode_t(*)(mode_t))aSyscall[21].pCurrent)
++
+ }; /* End of the overrideable system calls */
+ 
+ /*
+@@ -25554,20 +25554,20 @@ static const char *unixNextSystemCall(sqlite3_vfs *p, const char *zName){
+ ** recover the hot journals.
+ */
+ static int robust_open(const char *z, int f, mode_t m){
+-  int fd;
+-  mode_t m2 = m ? m : SQLITE_DEFAULT_FILE_PERMISSIONS;
+-  do{
+-    fd = osOpen(z,f,m2);
+-  }while( fd<0 && errno==EINTR );
+-  if( fd>=0 ){
+-    if( m!=0 ){
+-      struct stat statbuf;
+-      if( osFstat(fd, &statbuf)==0 && (statbuf.st_mode&0777)!=m ){
+-        osFchmod(fd, m);
+-      }
+-    }
++  int rc;
++  mode_t m2;
++  mode_t origM = 0;
++  if( m==0 ){
++    m2 = SQLITE_DEFAULT_FILE_PERMISSIONS;
++  }else{
++    m2 = m;
++    origM = osUmask(0);
++  }
++  do{ rc = osOpen(z,f,m2); }while( rc<0 && errno==EINTR );
++  if( m ){
++    osUmask(origM);
+   }
+-  return fd;
++  return rc;
+ }
+ 
+ /*
+@@ -28484,7 +28484,7 @@ static int unixFileSize(sqlite3_file *id, i64 *pSize){
+   SimulateIOError( rc=1 );
+   if( rc!=0 ){
+     ((unixFile*)id)->lastErrno = errno;
+-    return unixLogError(SQLITE_IOERR_FSTAT, "fstat", ((unixFile*)id)->zPath);
++    return SQLITE_IOERR_FSTAT;
+   }
+   *pSize = buf.st_size;
+ 
+@@ -28519,9 +28519,7 @@ static int fcntlSizeHint(unixFile *pFile, i64 nByte){
+     i64 nSize;                    /* Required file size */
+     struct stat buf;              /* Used to hold return values of fstat() */
+    
+-    if( osFstat(pFile->h, &buf) ) {
+-      return unixLogError(SQLITE_IOERR_FSTAT, "fstat", pFile->zPath);
+-    }
++    if( osFstat(pFile->h, &buf) ) return SQLITE_IOERR_FSTAT;
+ 
+     nSize = ((nByte+pFile->szChunk-1) / pFile->szChunk) * pFile->szChunk;
+     if( nSize>(i64)buf.st_size ){
+@@ -28919,7 +28917,7 @@ static int unixOpenSharedMemory(unixFile *pDbFd){
+     ** with the same permissions.
+     */
+     if( osFstat(pDbFd->h, &sStat) && pInode->bProcessLock==0 ){
+-      rc = unixLogError(SQLITE_IOERR_FSTAT, "fstat", pDbFd->zPath);
++      rc = SQLITE_IOERR_FSTAT;
+       goto shm_open_err;
+     }
+ 
+@@ -29091,19 +29089,11 @@ static int unixShmMap(
+         ** the requested memory region.
+         */
+         if( !bExtend ) goto shmpage_out;
+-#if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
+-        if( osFallocate(pShmNode->h, sStat.st_size, nByte)!=0 ){
+-          rc = unixLogError(SQLITE_FULL, "fallocate",
+-                            pShmNode->zFilename);
+-          goto shmpage_out;
+-        }
+-#else
+         if( robust_ftruncate(pShmNode->h, nByte) ){
+           rc = unixLogError(SQLITE_IOERR_SHMSIZE, "ftruncate",
+                             pShmNode->zFilename);
+           goto shmpage_out;
+         }
+-#endif
+       }
+     }
+ 
+@@ -30016,7 +30006,7 @@ static int findCreateFileMode(
+       *pUid = sStat.st_uid;
+       *pGid = sStat.st_gid;
+     }else{
+-      rc = unixLogError(SQLITE_IOERR_FSTAT, "stat", zDb);
++      rc = SQLITE_IOERR_FSTAT;
+     }
+   }else if( flags & SQLITE_OPEN_DELETEONCLOSE ){
+     *pMode = 0600;
+@@ -72607,14 +72597,6 @@ static int createFile(JournalFile *p){
+         assert(p->iSize<=p->nBuf);
+         rc = sqlite3OsWrite(p->pReal, p->zBuf, p->iSize, 0);
+       }
+-      if( rc!=SQLITE_OK ){
+-        /* If an error occurred while writing to the file, close it before
+-        ** returning. This way, SQLite uses the in-memory journal data to
+-        ** roll back changes made to the internal page-cache before this
+-        ** function was called.  */
+-        sqlite3OsClose(pReal);
+-        p->pReal = 0;
+-      }
+     }
+   }
+   return rc;
+@@ -88788,10 +88770,10 @@ static Trigger *fkActionTrigger(
+       ** parent table are used for the comparison. */
+       pEq = sqlite3PExpr(pParse, TK_EQ,
+           sqlite3PExpr(pParse, TK_DOT, 
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tOld),
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol)
++            sqlite3ExprAlloc(db, TK_ID, &tOld, 0),
++            sqlite3ExprAlloc(db, TK_ID, &tToCol, 0)
+           , 0),
+-          sqlite3PExpr(pParse, TK_ID, 0, 0, &tFromCol)
++          sqlite3ExprAlloc(db, TK_ID, &tFromCol, 0)
+       , 0);
+       pWhere = sqlite3ExprAnd(db, pWhere, pEq);
+ 
+@@ -88803,12 +88785,12 @@ static Trigger *fkActionTrigger(
+       if( pChanges ){
+         pEq = sqlite3PExpr(pParse, TK_IS,
+             sqlite3PExpr(pParse, TK_DOT, 
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tOld),
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol),
++              sqlite3ExprAlloc(db, TK_ID, &tOld, 0),
++              sqlite3ExprAlloc(db, TK_ID, &tToCol, 0),
+               0),
+             sqlite3PExpr(pParse, TK_DOT, 
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tNew),
+-              sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol),
++              sqlite3ExprAlloc(db, TK_ID, &tNew, 0),
++              sqlite3ExprAlloc(db, TK_ID, &tToCol, 0),
+               0),
+             0);
+         pWhen = sqlite3ExprAnd(db, pWhen, pEq);
+@@ -88818,8 +88800,8 @@ static Trigger *fkActionTrigger(
+         Expr *pNew;
+         if( action==OE_Cascade ){
+           pNew = sqlite3PExpr(pParse, TK_DOT, 
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tNew),
+-            sqlite3PExpr(pParse, TK_ID, 0, 0, &tToCol)
++            sqlite3ExprAlloc(db, TK_ID, &tNew, 0),
++            sqlite3ExprAlloc(db, TK_ID, &tToCol, 0)
+           , 0);
+         }else if( action==OE_SetDflt ){
+           Expr *pDflt = pFKey->pFrom->aCol[iFromCol].pDflt;
+@@ -88866,13 +88848,12 @@ static Trigger *fkActionTrigger(
+     pTrigger = (Trigger *)sqlite3DbMallocZero(db, 
+         sizeof(Trigger) +         /* struct Trigger */
+         sizeof(TriggerStep) +     /* Single step in trigger program */
+-        nFrom + 1                 /* Space for pStep->target.z */
++        nFrom + 1                 /* Space for pStep->zTarget */
+     );
+     if( pTrigger ){
+       pStep = pTrigger->step_list = (TriggerStep *)&pTrigger[1];
+-      pStep->target.z = (char *)&pStep[1];
+-      pStep->target.n = nFrom;
+-      memcpy((char *)pStep->target.z, zFrom, nFrom);
++      pStep->zTarget = (char *)&pStep[1];
++      memcpy((char *)pStep->zTarget, zFrom, nFrom);
+   
+       pStep->pWhere = sqlite3ExprDup(db, pWhere, EXPRDUP_REDUCE);
+       pStep->pExprList = sqlite3ExprListDup(db, pList, EXPRDUP_REDUCE);
+@@ -93733,7 +93714,7 @@ SQLITE_PRIVATE int sqlite3InitCallback(void *pInit, int argc, char **argv, char
+   if( argv==0 ) return 0;   /* Might happen if EMPTY_RESULT_CALLBACKS are on */
+   if( argv[1]==0 ){
+     corruptSchema(pData, argv[0], 0);
+-  }else if( argv[2] && argv[2][0] ){
++  }else if( argv[2] && sqlite3_strnicmp(argv[2],"create ",7)==0 ){
+     /* Call the parser to process a CREATE TABLE, INDEX or VIEW.
+     ** But because db->init.busy is set to 1, no VDBE code is generated
+     ** or executed.  All the parser does is build the internal data
+@@ -93764,8 +93745,8 @@ SQLITE_PRIVATE int sqlite3InitCallback(void *pInit, int argc, char **argv, char
+       }
+     }
+     sqlite3_finalize(pStmt);
+-  }else if( argv[0]==0 ){
+-    corruptSchema(pData, 0, 0);
++  }else if( argv[0]==0 || (argv[2]!=0 && argv[2][0]!=0) ){
++    corruptSchema(pData, argv[0], 0);
+   }else{
+     /* If the SQL column is blank it means this is an index that
+     ** was created to be the PRIMARY KEY or to fulfill a UNIQUE
+@@ -99716,12 +99697,12 @@ static TriggerStep *triggerStepAllocate(
+ ){
+   TriggerStep *pTriggerStep;
+ 
+-  pTriggerStep = sqlite3DbMallocZero(db, sizeof(TriggerStep) + pName->n);
++  pTriggerStep = sqlite3DbMallocZero(db, sizeof(TriggerStep) + pName->n + 1);
+   if( pTriggerStep ){
+     char *z = (char*)&pTriggerStep[1];
+     memcpy(z, pName->z, pName->n);
+-    pTriggerStep->target.z = z;
+-    pTriggerStep->target.n = pName->n;
++    sqlite3Dequote(z);
++    pTriggerStep->zTarget = z;
+     pTriggerStep->op = op;
+   }
+   return pTriggerStep;
+@@ -100010,7 +99991,7 @@ SQLITE_PRIVATE Trigger *sqlite3TriggersExist(
+ }
+ 
+ /*
+-** Convert the pStep->target token into a SrcList and return a pointer
++** Convert the pStep->zTarget string into a SrcList and return a pointer
+ ** to that SrcList.
+ **
+ ** This routine adds a specific database name, if needed, to the target when
+@@ -100023,17 +100004,17 @@ static SrcList *targetSrcList(
+   Parse *pParse,       /* The parsing context */
+   TriggerStep *pStep   /* The trigger containing the target token */
+ ){
++  sqlite3 *db = pParse->db;
+   int iDb;             /* Index of the database to use */
+   SrcList *pSrc;       /* SrcList to be returned */
+ 
+-  pSrc = sqlite3SrcListAppend(pParse->db, 0, &pStep->target, 0);
++  pSrc = sqlite3SrcListAppend(db, 0, 0, 0);
+   if( pSrc ){
+     assert( pSrc->nSrc>0 );
+-    assert( pSrc->a!=0 );
+-    iDb = sqlite3SchemaToIndex(pParse->db, pStep->pTrig->pSchema);
++    pSrc->a[pSrc->nSrc-1].zName = sqlite3DbStrDup(db, pStep->zTarget);
++    iDb = sqlite3SchemaToIndex(db, pStep->pTrig->pSchema);
+     if( iDb==0 || iDb>=2 ){
+-      sqlite3 *db = pParse->db;
+-      assert( iDb<pParse->db->nDb );
++      assert( iDb<db->nDb );
+       pSrc->a[pSrc->nSrc-1].zDatabase = sqlite3DbStrDup(db, db->aDb[iDb].zName);
+     }
+   }
+@@ -101516,6 +101497,8 @@ end_of_vacuum:
+ struct VtabCtx {
+   Table *pTab;
+   VTable *pVTable;
++  VtabCtx *pPrior;    /* Parent context (if any) */
++  int bDeclared;      /* True after sqlite3_declare_vtab() is called */
+ };
+ 
+ /*
+@@ -101945,8 +101928,20 @@ static int vtabCallConstructor(
+   const char *const*azArg = (const char *const*)pTab->azModuleArg;
+   int nArg = pTab->nModuleArg;
+   char *zErr = 0;
+-  char *zModuleName = sqlite3MPrintf(db, "%s", pTab->zName);
++  char *zModuleName;
++  VtabCtx *pCtx;
++
++  /* Check that the virtual-table is not already being initialized */
++  for(pCtx=db->pVtabCtx; pCtx; pCtx=pCtx->pPrior){
++    if( pCtx->pTab==pTab ){
++      *pzErr = sqlite3MPrintf(db, 
++          "vtable constructor called recursively: %s", pTab->zName
++      );
++      return SQLITE_LOCKED;
++    }
++  }
+ 
++  zModuleName = sqlite3MPrintf(db, "%s", pTab->zName);
+   if( !zModuleName ){
+     return SQLITE_NOMEM;
+   }
+@@ -101964,10 +101959,13 @@ static int vtabCallConstructor(
+   assert( xConstruct );
+   sCtx.pTab = pTab;
+   sCtx.pVTable = pVTable;
++  sCtx.pPrior = db->pVtabCtx;
++  sCtx.bDeclared = 0;
+   db->pVtabCtx = &sCtx;
+   rc = xConstruct(db, pMod->pAux, nArg, azArg, &pVTable->pVtab, &zErr);
+-  db->pVtabCtx = 0;
++  db->pVtabCtx = sCtx.pPrior;
+   if( rc==SQLITE_NOMEM ) db->mallocFailed = 1;
++  assert( sCtx.pTab==pTab );
+ 
+   if( SQLITE_OK!=rc ){
+     if( zErr==0 ){
+@@ -101982,7 +101980,7 @@ static int vtabCallConstructor(
+     ** the sqlite3_vtab object if successful.  */
+     pVTable->pVtab->pModule = pMod->pModule;
+     pVTable->nRef = 1;
+-    if( sCtx.pTab ){
++    if( sCtx.bDeclared==0 ){
+       const char *zFormat = "vtable constructor did not declare schema: %s";
+       *pzErr = sqlite3MPrintf(db, zFormat, pTab->zName);
+       sqlite3VtabUnlock(pVTable);
+@@ -102152,18 +102150,19 @@ SQLITE_PRIVATE int sqlite3VtabCallCreate(sqlite3 *db, int iDb, const char *zTab,
+ ** virtual table module.
+ */
+ SQLITE_API int sqlite3_declare_vtab(sqlite3 *db, const char *zCreateTable){
++  VtabCtx *pCtx = db->pVtabCtx;
+   Parse *pParse;
+-
+   int rc = SQLITE_OK;
+   Table *pTab;
+   char *zErr = 0;
+ 
+   sqlite3_mutex_enter(db->mutex);
+-  if( !db->pVtabCtx || !(pTab = db->pVtabCtx->pTab) ){
++  if( !pCtx || pCtx->bDeclared ){
+     sqlite3Error(db, SQLITE_MISUSE, 0);
+     sqlite3_mutex_leave(db->mutex);
+     return SQLITE_MISUSE_BKPT;
+   }
++  pTab = pCtx->pTab;
+   assert( (pTab->tabFlags & TF_Virtual)!=0 );
+ 
+   pParse = sqlite3StackAllocZero(db, sizeof(*pParse));
+@@ -102186,7 +102185,7 @@ SQLITE_API int sqlite3_declare_vtab(sqlite3 *db, const char *zCreateTable){
+         pParse->pNewTable->nCol = 0;
+         pParse->pNewTable->aCol = 0;
+       }
+-      db->pVtabCtx->pTab = 0;
++      pCtx->bDeclared = 1;
+     }else{
+       sqlite3Error(db, SQLITE_ERROR, (zErr ? "%s" : 0), zErr);
+       sqlite3DbFree(db, zErr);
+@@ -112416,7 +112415,7 @@ SQLITE_API int sqlite3_complete16(const void *zSql){
+ extern "C" {
+ #endif  /* __cplusplus */
+ 
+-SQLITE_PRIVATE int sqlite3Fts3Init(sqlite3 *db);
++SQLITE_PRIVATE int sqlite3Fts3Init(sqlite3 *db, const char* registerAs); // Android Change
+ 
+ #if 0
+ }  /* extern "C" */
+@@ -114746,9 +114745,24 @@ static int openDatabase(
+ #endif
+ 
+ #ifdef SQLITE_ENABLE_FTS3
++  // Begin Android change
++  #ifdef SQLITE_ENABLE_FTS3_BACKWARDS
++    /* Also register as fts1 and fts2, for backwards compatability on
++    ** systems known to have never seen a pre-fts3 database.
++    */
++    if( !db->mallocFailed && rc==SQLITE_OK ){
++      rc = sqlite3Fts3Init(db, "fts1");
++    }
++
+     if( !db->mallocFailed && rc==SQLITE_OK ){
+-      rc = sqlite3Fts3Init(db);
++      rc = sqlite3Fts3Init(db, "fts2");
+     }
++  #endif
++
++    if( !db->mallocFailed && rc==SQLITE_OK ){
++      rc = sqlite3Fts3Init(db, "fts3");
++    }
++  // End Android change
+ #endif
+ 
+ #ifdef SQLITE_ENABLE_ICU
+@@ -117584,7 +117598,6 @@ static int fts3PrefixParameter(
+ 
+   aIndex = sqlite3_malloc(sizeof(struct Fts3Index) * nIndex);
+   *apIndex = aIndex;
+-  *pnIndex = nIndex;
+   if( !aIndex ){
+     return SQLITE_NOMEM;
+   }
+@@ -117596,11 +117609,17 @@ static int fts3PrefixParameter(
+     for(i=1; i<nIndex; i++){
+       int nPrefix;
+       if( fts3GobbleInt(&p, &nPrefix) ) return SQLITE_ERROR;
+-      aIndex[i].nPrefix = nPrefix;
++      if( nPrefix<=0 ){
++        nIndex--;
++        i--;
++      }else{
++        aIndex[i].nPrefix = nPrefix;
++      }
+       p++;
+     }
+   }
+ 
++  *pnIndex = nIndex;
+   return SQLITE_OK;
+ }
+ 
+@@ -117635,7 +117654,8 @@ static int fts3ContentColumns(
+   const char *zTbl,               /* Name of content table */
+   const char ***pazCol,           /* OUT: Malloc'd array of column names */
+   int *pnCol,                     /* OUT: Size of array *pazCol */
+-  int *pnStr                      /* OUT: Bytes of string content */
++  int *pnStr,                     /* OUT: Bytes of string content */
++  char **pzErr                    /* OUT: error message */
+ ){
+   int rc = SQLITE_OK;             /* Return code */
+   char *zSql;                     /* "SELECT *" statement on zTbl */  
+@@ -117646,6 +117666,9 @@ static int fts3ContentColumns(
+     rc = SQLITE_NOMEM;
+   }else{
+     rc = sqlite3_prepare(db, zSql, -1, &pStmt, 0);
++    if( rc!=SQLITE_OK ){
++      *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
++    }
+   }
+   sqlite3_free(zSql);
+ 
+@@ -117879,7 +117902,7 @@ static int fts3InitVtab(
+     if( nCol==0 ){
+       sqlite3_free((void*)aCol); 
+       aCol = 0;
+-      rc = fts3ContentColumns(db, argv[1], zContent, &aCol, &nCol, &nString);
++      rc = fts3ContentColumns(db, argv[1], zContent,&aCol,&nCol,&nString,pzErr);
+ 
+       /* If a languageid= option was specified, remove the language id
+       ** column from the aCol[] array. */ 
+@@ -120172,7 +120195,7 @@ SQLITE_PRIVATE void sqlite3Fts3IcuTokenizerModule(sqlite3_tokenizer_module const
+ ** SQLite. If fts3 is built as a dynamically loadable extension, this
+ ** function is called by the sqlite3_extension_init() entry point.
+ */
+-SQLITE_PRIVATE int sqlite3Fts3Init(sqlite3 *db){
++SQLITE_PRIVATE int sqlite3Fts3Init(sqlite3 *db, const char* registerAs){ // Android Change
+   int rc = SQLITE_OK;
+   Fts3Hash *pHash = 0;
+   const sqlite3_tokenizer_module *pSimple = 0;
+@@ -120225,28 +120248,19 @@ SQLITE_PRIVATE int sqlite3Fts3Init(sqlite3 *db){
+   ** module with sqlite.
+   */
+   if( SQLITE_OK==rc 
+-#ifndef ANDROID    /* fts3_tokenizer disabled for security reasons */
+    && SQLITE_OK==(rc = sqlite3Fts3InitHashTable(db, pHash, "fts3_tokenizer"))
+-#endif
+    && SQLITE_OK==(rc = sqlite3_overload_function(db, "snippet", -1))
+    && SQLITE_OK==(rc = sqlite3_overload_function(db, "offsets", 1))
+    && SQLITE_OK==(rc = sqlite3_overload_function(db, "matchinfo", 1))
+    && SQLITE_OK==(rc = sqlite3_overload_function(db, "matchinfo", 2))
+    && SQLITE_OK==(rc = sqlite3_overload_function(db, "optimize", 1))
+   ){
+-#ifdef SQLITE_ENABLE_FTS3_BACKWARDS
+     rc = sqlite3_create_module_v2(
+-        db, "fts1", &fts3Module, (void *)pHash, 0
+-        );
+-    if(rc) return rc;
+-    rc = sqlite3_create_module_v2(
+-        db, "fts2", &fts3Module, (void *)pHash, 0
+-        );
+-    if(rc) return rc;
+-#endif
+-    rc = sqlite3_create_module_v2(
+-        db, "fts3", &fts3Module, (void *)pHash, hashDestroy
+-        );
++        // Begin Android change
++        // Also register as fts1 and fts2
++        db, registerAs, &fts3Module, (void *)pHash, hashDestroy
++        // End Android change
++    );
+     if( rc==SQLITE_OK ){
+       rc = sqlite3_create_module_v2(
+           db, "fts4", &fts3Module, (void *)pHash, 0
+diff --git a/dist/sqlite3.h b/dist/sqlite3.h
+index f193784..4d8fb29 100644
+--- a/dist/sqlite3.h
++++ b/dist/sqlite3.h
+@@ -109,7 +109,7 @@ extern "C" {
+ */
+ #define SQLITE_VERSION        "3.7.11"
+ #define SQLITE_VERSION_NUMBER 3007011
+-#define SQLITE_SOURCE_ID      "2012-03-20 11:35:50 00bb9c9ce4f465e6ac321ced2a9d0062dc364669"
++#define SQLITE_SOURCE_ID      "2015-05-21 02:24:35 000197cc4e3874711388d79d9ad5af6f0aba6cf9"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+diff --git a/dist/version b/dist/version
+index d602ee3..312885f 100644
+--- a/dist/version
++++ b/dist/version
+@@ -1 +1 @@
+-downloaded from http://www.sqlite.org/sqlite-amalgamation-3071100.zip
++downloaded from https://www.sqlite.org/2015/sqlite3-3.7.11-patched-20150522.tar.gz
+-- 
+2.7.4
+

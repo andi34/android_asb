@@ -1,0 +1,39 @@
+From eb6c34238d55e3255ed4e89e65bfb0591ad37698 Mon Sep 17 00:00:00 2001
+From: "Brian C. Young" <bcyoung@google.com>
+Date: Wed, 5 Apr 2017 09:31:12 -0700
+Subject: [PATCH 7/7] DO NOT MERGE: Use correct limit for port values
+
+no upstream report yet, add it here when we have it
+issue found & patch by nmehta@
+
+Bug: 36555370
+Change-Id: Ibf1efea554b95f514e23e939363d608021de4614
+(cherry picked from commit b62884fb49fe92081e414966d9b5fe58250ae53c)
+---
+ uri.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/uri.c b/uri.c
+index 1ae5768..9874920 100644
+--- a/uri.c
++++ b/uri.c
+@@ -12,6 +12,7 @@
+ #include "libxml.h"
+ 
+ #include <string.h>
++#include <limits.h>
+ 
+ #include <libxml/xmlmemory.h>
+ #include <libxml/uri.h>
+@@ -303,6 +304,8 @@ xmlParse3986Port(xmlURIPtr uri, const char **str)
+ 		uri->port = uri->port * 10 + (*cur - '0');
+ 	    cur++;
+ 	}
++	if (uri != NULL)
++	    uri->port = uri->port & USHRT_MAX; /* port value modulo INT_MAX+1 */
+ 	*str = cur;
+ 	return(0);
+     }
+-- 
+2.7.4
+

@@ -1,0 +1,40 @@
+From 3fd5d95d4016c6e4c85e68416d1cae3df3b08e75 Mon Sep 17 00:00:00 2001
+From: Paul Stewart <pstew@google.com>
+Date: Thu, 3 Mar 2016 15:33:47 -0800
+Subject: [PATCH 05/17] Remove newlines from config output
+
+Spurious newlines output while writing the config file can
+corrupt the wpa_supplicant configuration.  Avoid writing these.
+
+Bug: 27371366
+Change-Id: I3bb99b8c46dba1c81cbccc76ed0cd01abc3ccef9
+---
+ wpa_supplicant/config.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/wpa_supplicant/config.c b/wpa_supplicant/config.c
+index 69f920d..4565329 100644
+--- a/wpa_supplicant/config.c
++++ b/wpa_supplicant/config.c
+@@ -2216,8 +2216,16 @@ char * wpa_config_get(struct wpa_ssid *ssid, const char *var)
+ 
+ 	for (i = 0; i < NUM_SSID_FIELDS; i++) {
+ 		const struct parse_data *field = &ssid_fields[i];
+-		if (os_strcmp(var, field->name) == 0)
+-			return field->writer(field, ssid);
++		if (os_strcmp(var, field->name) == 0) {
++			char *ret = field->writer(field, ssid);
++			if (os_strchr(ret, '\r') != NULL || os_strchr(ret, '\n') != NULL) {
++				wpa_printf(MSG_ERROR, "Found newline in value for %s; "
++					"not returning it", var);
++				os_free(ret);
++				ret = NULL;
++			}
++			return ret;
++		}
+ 	}
+ 
+ 	return NULL;
+-- 
+2.7.4
+

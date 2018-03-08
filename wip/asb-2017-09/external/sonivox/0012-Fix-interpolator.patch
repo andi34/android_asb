@@ -1,0 +1,47 @@
+From ba6b382de4f3c6ed3b7a2f1c6d56e2c9cf3c0252 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 6 Jun 2017 14:41:13 -0700
+Subject: [PATCH 12/15] Fix interpolator
+
+If the phase increment was larger than the loop size, the interpolator
+would read further and further outside the sample, eventually segfaulting.
+
+Bug: 38342499
+Test: manual
+Change-Id: I0e70d037e61fdeffdbd49460caa692e9781cc511
+(cherry picked from commit d19edc9c090d64926469463991ca7e86c73368fa)
+CVE-2017-0777
+---
+ arm-wt-22k/lib_src/eas_wtsynth.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/eas_wtsynth.c b/arm-wt-22k/lib_src/eas_wtsynth.c
+index 9257951..f2e466c 100644
+--- a/arm-wt-22k/lib_src/eas_wtsynth.c
++++ b/arm-wt-22k/lib_src/eas_wtsynth.c
+@@ -28,6 +28,7 @@
+ */
+ 
+ // includes
++#define LOG_TAG "SYNTH"
+ #include "log/log.h"
+ #include <cutils/log.h>
+ 
+@@ -557,6 +558,14 @@ static EAS_BOOL WT_UpdateVoice (S_VOICE_MGR *pVoiceMgr, S_SYNTH *pSynth, S_SYNTH
+     else
+         temp += (pVoice->note + pSynth->globalTranspose) * 100;
+     intFrame.frame.phaseIncrement = WT_UpdatePhaseInc(pWTVoice, pArt, pChannel, temp);
++    temp = pWTVoice->loopEnd - pWTVoice->loopStart;
++    if (temp != 0) {
++        temp = temp << NUM_PHASE_FRAC_BITS;
++        if (intFrame.frame.phaseIncrement > temp) {
++            ALOGW("%p phaseIncrement=%d", pWTVoice, (int)intFrame.frame.phaseIncrement);
++            intFrame.frame.phaseIncrement %= temp;
++        }
++    }
+ 
+     /* call into engine to generate samples */
+     intFrame.pAudioBuffer = pVoiceMgr->voiceBuffer;
+-- 
+2.7.4
+

@@ -1,0 +1,40 @@
+From 48e68b8aa5721d7342c3625a94fde1e198f24f48 Mon Sep 17 00:00:00 2001
+From: Jouni Malinen <j@w1.fi>
+Date: Sun, 25 Oct 2015 15:45:50 +0200
+Subject: [PATCH 07/17] WNM: Ignore Key Data in WNM Sleep Mode Response frame
+ if no PMF in use
+
+WNM Sleep Mode Response frame is used to update GTK/IGTK only if PMF is
+enabled. Verify that PMF is in use before using this field on station
+side to avoid accepting unauthenticated key updates.
+
+Bug: 25266660
+
+Change-Id: Ib4b80f9c9e4aa5ea0b827c5202809c9660ad9b39
+Signed-off-by: Jouni Malinen <j@w1.fi>
+Signed-off-by: Dmitry Shmidt <dimitrysh@google.com>
+(cherry picked from commit 1e9857b5f1dd84ac5a0ada0150b1b9c87d44d99d)
+---
+ wpa_supplicant/wnm_sta.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/wpa_supplicant/wnm_sta.c b/wpa_supplicant/wnm_sta.c
+index 4f8d895..fd033b5 100644
+--- a/wpa_supplicant/wnm_sta.c
++++ b/wpa_supplicant/wnm_sta.c
+@@ -185,6 +185,12 @@ static void wnm_sleep_mode_exit_success(struct wpa_supplicant *wpa_s,
+ 	end = ptr + key_len_total;
+ 	wpa_hexdump_key(MSG_DEBUG, "WNM: Key Data", ptr, key_len_total);
+ 
++	if (key_len_total && !wpa_sm_pmf_enabled(wpa_s->wpa)) {
++		wpa_msg(wpa_s, MSG_INFO,
++			"WNM: Ignore Key Data in WNM-Sleep Mode Response - PMF not enabled");
++		return;
++	}
++
+ 	while (ptr + 1 < end) {
+ 		if (ptr + 2 + ptr[1] > end) {
+ 			wpa_printf(MSG_DEBUG, "WNM: Invalid Key Data element "
+-- 
+2.7.4
+

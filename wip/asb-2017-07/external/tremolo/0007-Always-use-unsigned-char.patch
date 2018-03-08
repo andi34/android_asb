@@ -1,0 +1,32 @@
+From dc92d87c25ca3cddfce20d17f13d5275b23ed5c5 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Thu, 11 May 2017 08:26:37 -0700
+Subject: [PATCH 7/9] Always use unsigned char
+
+char is unsigned by default on ARM, so make it so on other architectures
+as well
+
+Bug: 37208566
+Test: ran poc with and without change, ran CTS on x86 and ARM
+Change-Id: I264db1dad884de7fd8f932cd9571199a1c517f6a
+(cherry picked from commit 220e1a7b6c3fec4cee6af028c9e7de9c4cc6aabc)
+---
+ Android.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Android.mk b/Android.mk
+index f457606..d9a1a9c 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -28,7 +28,7 @@ else
+ LOCAL_CFLAGS += \
+     -DONLY_C
+ endif
+-LOCAL_CFLAGS+= -O2
++LOCAL_CFLAGS+= -O2 -funsigned-char
+ 
+ LOCAL_C_INCLUDES:= \
+ 	$(LOCAL_PATH)/Tremolo
+-- 
+2.7.4
+

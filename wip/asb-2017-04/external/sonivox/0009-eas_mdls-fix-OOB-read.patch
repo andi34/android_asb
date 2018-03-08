@@ -1,0 +1,46 @@
+From 5e0e9db314c615f1fea90a76c432e9ead0813d14 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 7 Feb 2017 10:35:31 -0800
+Subject: [PATCH 09/15] eas_mdls: fix OOB read.
+
+Bug: 34031018
+AOSP-Change-Id: I8d373c905f64286b23ec819bdbee51368b12e85a
+
+CVE-2017-0541
+
+Change-Id: Ifb1825e25751e98b7f1d5355c5d3d0699ec08be7
+(cherry picked from commit 56d153259cc3e16a6a0014199a2317dde333c978)
+(cherry picked from commit f7b1abeb6bfd9eb404be641ea347cf2b1198140e)
+---
+ arm-wt-22k/lib_src/eas_mdls.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/arm-wt-22k/lib_src/eas_mdls.c b/arm-wt-22k/lib_src/eas_mdls.c
+index e2cb688..296d783 100644
+--- a/arm-wt-22k/lib_src/eas_mdls.c
++++ b/arm-wt-22k/lib_src/eas_mdls.c
+@@ -114,6 +114,8 @@
+ /* this define allows us to use the sndlib.h structures as RW memory */
+ #define SCNST
+ 
++#include "log/log.h"
++
+ #include "eas_data.h"
+ #include "eas_host.h"
+ #include "eas_mdls.h"
+@@ -2086,8 +2088,11 @@ static EAS_RESULT PushcdlStack (EAS_U32 *pStack, EAS_INT *pStackPtr, EAS_U32 val
+ {
+ 
+     /* stack overflow, return an error */
+-    if (*pStackPtr >= CDL_STACK_SIZE)
++    if (*pStackPtr >= (CDL_STACK_SIZE - 1)) {
++        ALOGE("b/34031018, stackPtr(%d)", *pStackPtr);
++        android_errorWriteLog(0x534e4554, "34031018");
+         return EAS_ERROR_FILE_FORMAT;
++    }
+ 
+     /* push the value onto the stack */
+     *pStackPtr = *pStackPtr + 1;
+-- 
+2.7.4
+
