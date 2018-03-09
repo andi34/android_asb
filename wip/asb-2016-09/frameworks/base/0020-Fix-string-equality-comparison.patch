@@ -1,0 +1,29 @@
+From dc9e10dac3ff8b7a33d765fa2d620c8c4c5839b5 Mon Sep 17 00:00:00 2001
+From: Paul Stewart <pstew@google.com>
+Date: Mon, 21 Mar 2016 09:51:27 -0700
+Subject: [PATCH 20/46] Fix string equality comparison
+
+Don't use "==" to compare strings.
+
+Bug: 25624963
+Change-Id: Id25696e4fdcbcf4d48ec74e8ed65c1a33716b30c
+---
+ wifi/java/android/net/wifi/WifiEnterpriseConfig.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/wifi/java/android/net/wifi/WifiEnterpriseConfig.java b/wifi/java/android/net/wifi/WifiEnterpriseConfig.java
+index 5e2f7d5..2b8ca48 100644
+--- a/wifi/java/android/net/wifi/WifiEnterpriseConfig.java
++++ b/wifi/java/android/net/wifi/WifiEnterpriseConfig.java
+@@ -838,7 +838,7 @@ public class WifiEnterpriseConfig implements Parcelable {
+         StringBuffer sb = new StringBuffer();
+         for (String key : mFields.keySet()) {
+             // Don't display password in toString().
+-            String value = (key == PASSWORD_KEY) ? "<removed>" : mFields.get(key);
++            String value = PASSWORD_KEY.equals(key) ? "<removed>" : mFields.get(key);
+             sb.append(key).append(" ").append(value).append("\n");
+         }
+         return sb.toString();
+-- 
+2.7.4
+

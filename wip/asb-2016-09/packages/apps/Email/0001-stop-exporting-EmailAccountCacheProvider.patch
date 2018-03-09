@@ -1,0 +1,28 @@
+From 8537547d22047313517e928d26447dc8b24d1b57 Mon Sep 17 00:00:00 2001
+From: Andy Huang <ath@google.com>
+Date: Fri, 1 Jul 2016 16:56:19 -0700
+Subject: [PATCH 1/2] stop exporting EmailAccountCacheProvider
+
+Bug: 29767043
+Change-Id: Ib9f16385a5e63557b6f293d148e49c9ad044c9b4
+(cherry picked from commit a17c6c6dddd79883223208a921f2faf9b7966b26)
+---
+ AndroidManifest.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 5a76d04..542a193 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -349,7 +349,7 @@
+         <provider
+             android:authorities="com.android.email.accountcache"
+             android:label="@string/account_cache_provider"
+-            android:exported="true"
++            android:exported="false"
+             android:name="com.android.mail.providers.EmailAccountCacheProvider" >
+             <grant-uri-permission android:pathPattern=".*" />
+         </provider>
+-- 
+2.7.4
+

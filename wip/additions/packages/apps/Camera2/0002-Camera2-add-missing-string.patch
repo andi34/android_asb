@@ -1,0 +1,26 @@
+From cba74f70f296bd2cc4391200966a2176525466dd Mon Sep 17 00:00:00 2001
+From: Andreas Blaesius <skate4life@gmx.de>
+Date: Sun, 15 Oct 2017 14:57:55 +0200
+Subject: [PATCH 2/5] Camera2: add missing string
+
+- used in CropActivity.java
+
+Change-Id: I5034b9fdef6c39d9e1a6901bdb253bb0cbb6f811
+---
+ res/values/strings.xml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index 7df7f5e..4236c4c 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -673,4 +673,6 @@ CHAR LIMIT = NONE] -->
+ 
+     <!--  String shown when setting the homepage wallpaper in the background [CHAR LIMIT=NONE] -->
+     <string name="setting_wallpaper">Setting wallpaper</string>
++
++    <string name="select_image">Select Image</string>
+  </resources>
+-- 
+2.7.4
+

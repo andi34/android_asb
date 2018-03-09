@@ -1,0 +1,105 @@
+From 1eef089733aef0e496aa276b6430b89467c3b9ee Mon Sep 17 00:00:00 2001
+From: Dave Platt <dplatt@google.com>
+Date: Wed, 5 Feb 2014 17:06:42 -0800
+Subject: [PATCH 09/46] Finish fixing Zygote descriptor leakage problem
+
+In order to prevent Zygote descriptors from leaking into the child
+environment, they should be closed by the forked-off child process
+before the child switches to the application UID.  These changes close
+the descriptors via dup2(), substituting a descriptor open to
+/dev/null in their place; this allows the Zygote Java code to close
+the FileDescriptor objects cleanly.
+
+This is a multi-project change: dalvik, art, libcore, frameworks/base,
+and external/sepolicy are affected.  The CLs need to be approved
+together, lest the build break or the software fail to boot.
+
+Round 2: indent change
+
+Bug: 12114500
+Change-Id: I090402136a8a8b7d6aad6eb153026e85d7cf6ad3
+---
+ .../com/android/internal/os/ZygoteConnection.java  | 36 +++++++++++++++++++++-
+ core/java/com/android/internal/os/ZygoteInit.java  | 10 ++++++
+ 2 files changed, 45 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/com/android/internal/os/ZygoteConnection.java b/core/java/com/android/internal/os/ZygoteConnection.java
+index fd7e3b0..419517a 100644
+--- a/core/java/com/android/internal/os/ZygoteConnection.java
++++ b/core/java/com/android/internal/os/ZygoteConnection.java
+@@ -220,9 +220,37 @@ class ZygoteConnection {
+                 ZygoteInit.setCloseOnExec(serverPipeFd, true);
+             }
+ 
++            /**
++             * In order to avoid leaking descriptors to the Zygote child,
++             * the native code must close the two Zygote socket descriptors
++             * in the child process before it switches from Zygote-root to
++             * the UID and privileges of the application being launched.
++             *
++             * In order to avoid "bad file descriptor" errors when the
++             * two LocalSocket objects are closed, the Posix file
++             * descriptors are released via a dup2() call which closes
++             * the socket and substitutes an open descriptor to /dev/null.
++             */
++
++            int [] fdsToClose = { -1, -1 };
++
++            FileDescriptor fd = mSocket.getFileDescriptor();
++
++            if (fd != null) {
++                fdsToClose[0] = fd.getInt$();
++            }
++
++            fd = ZygoteInit.getServerSocketFileDescriptor();
++
++            if (fd != null) {
++                fdsToClose[1] = fd.getInt$();
++            }
++
++            fd = null;
++
+             pid = Zygote.forkAndSpecialize(parsedArgs.uid, parsedArgs.gid, parsedArgs.gids,
+                     parsedArgs.debugFlags, rlimits, parsedArgs.mountExternal, parsedArgs.seInfo,
+-                    parsedArgs.niceName);
++                    parsedArgs.niceName, fdsToClose);
+         } catch (IOException ex) {
+             logAndPrintError(newStderr, "Exception creating pipe", ex);
+         } catch (ErrnoException ex) {
+@@ -875,6 +903,12 @@ class ZygoteConnection {
+             FileDescriptor[] descriptors, FileDescriptor pipeFd, PrintStream newStderr)
+             throws ZygoteInit.MethodAndArgsCaller {
+ 
++        /**
++         * By the time we get here, the native code has closed the two actual Zygote
++         * socket connections, and substituted /dev/null in their place.  The LocalSocket
++         * objects still need to be closed properly.
++         */
++
+         closeSocket();
+         ZygoteInit.closeServerSocket();
+ 
+diff --git a/core/java/com/android/internal/os/ZygoteInit.java b/core/java/com/android/internal/os/ZygoteInit.java
+index 1548f1b..ebcc75f 100644
+--- a/core/java/com/android/internal/os/ZygoteInit.java
++++ b/core/java/com/android/internal/os/ZygoteInit.java
+@@ -207,6 +207,16 @@ public class ZygoteInit {
+         sServerSocket = null;
+     }
+ 
++    /**
++     * Return the server socket's underlying file descriptor, so that
++     * ZygoteConnection can pass it to the native code for proper
++     * closure after a child process is forked off.
++     */
++
++    static FileDescriptor getServerSocketFileDescriptor() {
++        return sServerSocket.getFileDescriptor();
++    }
++
+     private static final int UNPRIVILEGED_UID = 9999;
+     private static final int UNPRIVILEGED_GID = 9999;
+ 
+-- 
+2.7.4
+

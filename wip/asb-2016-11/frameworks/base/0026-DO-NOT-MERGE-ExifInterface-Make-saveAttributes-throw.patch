@@ -1,0 +1,56 @@
+From 7e78207e512d1da6cb83c212d47687552feee354 Mon Sep 17 00:00:00 2001
+From: Sungsoo <sungsoo@google.com>
+Date: Thu, 8 Sep 2016 16:04:44 +0900
+Subject: [PATCH 26/46] DO NOT MERGE) ExifInterface: Make saveAttributes throw
+ an exception before change
+
+ExifInterface object can be created with a unsupported file format.
+If saveAttribute is called with an unsupported file format, ExifInterface
+makes the file corrupted. This CL prevents those cases by throwing
+an exception before making any change on the file.
+
+Bug: 30936376
+Change-Id: I915f56b00ec9422b53591ac5534e070a1d6798e6
+(cherry picked from commit 1bdd10a953d4eee4fe65272b0e8a6039e02a223d)
+---
+ media/java/android/media/ExifInterface.java | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/media/java/android/media/ExifInterface.java b/media/java/android/media/ExifInterface.java
+index 654a08a..d51dbda 100644
+--- a/media/java/android/media/ExifInterface.java
++++ b/media/java/android/media/ExifInterface.java
+@@ -1034,6 +1034,7 @@ public class ExifInterface {
+     private int mThumbnailOffset;
+     private int mThumbnailLength;
+     private byte[] mThumbnailBytes;
++    private boolean mIsSupportedFile;
+ 
+     // Pattern to check non zero timestamp
+     private static final Pattern sNonZeroTimePattern = Pattern.compile(".*[1-9].*");
+@@ -1332,9 +1333,11 @@ public class ExifInterface {
+         try {
+             InputStream in = new FileInputStream(mFilename);
+             getJpegAttributes(in);
++            mIsSupportedFile = true;
+         } catch (IOException e) {
+             // Ignore exceptions in order to keep the compatibility with the old versions of
+             // ExifInterface.
++            mIsSupportedFile = false;
+             Log.w(TAG, "Invalid image.", e);
+         } finally {
+             addDefaultValuesForCompatibility();
+@@ -1363,6 +1366,10 @@ public class ExifInterface {
+      * and make a single call rather than multiple calls for each attribute.
+      */
+     public void saveAttributes() throws IOException {
++        if (!mIsSupportedFile) {
++            throw new UnsupportedOperationException(
++                    "ExifInterface only supports saving attributes on JPEG formats.");
++        }
+         // Keep the thumbnail in memory
+         mThumbnailBytes = getThumbnail();
+ 
+-- 
+2.7.4
+

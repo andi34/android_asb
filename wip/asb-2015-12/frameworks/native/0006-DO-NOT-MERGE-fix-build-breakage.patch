@@ -1,0 +1,32 @@
+From 891ddd277851266e87743ea085561199600b4531 Mon Sep 17 00:00:00 2001
+From: Nick Kralevich <nnk@google.com>
+Date: Thu, 22 Oct 2015 07:09:23 -0700
+Subject: [PATCH 06/18] DO NOT MERGE: fix build breakage
+
+fix klp-dev only build breakage.
+
+  frameworks/native/libs/input/Input.cpp: In member function 'android::status_t android::MotionEvent::readFromParcel(android::Parcel*)':
+  frameworks/native/libs/input/Input.cpp:494:47: error: 'UINT16_MAX' was not declared in this scope
+
+Bug: 23905002
+Change-Id: I4b6b864ca64d39a8873d045a61e0ddaea2ab9109
+(cherry picked from commit 834ac204ce52d874cdd7ae921e5a4d85c5e42c52)
+---
+ include/input/Input.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/input/Input.h b/include/input/Input.h
+index 97101a7..f8075e4 100644
+--- a/include/input/Input.h
++++ b/include/input/Input.h
+@@ -27,6 +27,7 @@
+ #include <utils/Timers.h>
+ #include <utils/RefBase.h>
+ #include <utils/String8.h>
++#include <stdint.h>
+ 
+ /*
+  * Additional private constants not defined in ndk/ui/input.h.
+-- 
+2.7.4
+

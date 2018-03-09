@@ -1,0 +1,64 @@
+From 8d329c4f3f5e2337ed3d8fa2f1cb5b26ac8ce093 Mon Sep 17 00:00:00 2001
+From: Tianjie Xu <xunchang@google.com>
+Date: Thu, 20 Oct 2016 14:09:40 -0700
+Subject: [PATCH 18/20] DO NOT MERGE:Add missing SOCK_CLOEXEC flag when opening
+ socket
+
+Go through the code that opens socket in marshmallow, and backport the
+SOCK_CLOEXEC usage for AF_NETLINK. In kitkat, SOCK_CLOEXEC is not defined;
+therefore I used O_CLOEXEC instead.
+Bug: 31242981
+Test: mma
+
+Change-Id: I792024c16b84ba3d6666d3df6002c89e0028f4b0
+(cherry picked from commit a7ba9ff00b0bfa37dfec16d0fa28b8eabe4715f4)
+---
+ libcutils/uevent.c      | 3 ++-
+ libnetutils/ifc_utils.c | 3 ++-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/libcutils/uevent.c b/libcutils/uevent.c
+index 97a81e3..cae232c 100644
+--- a/libcutils/uevent.c
++++ b/libcutils/uevent.c
+@@ -17,6 +17,7 @@
+ #include <cutils/uevent.h>
+ 
+ #include <errno.h>
++#include <fcntl.h>
+ #include <stdbool.h>
+ #include <string.h>
+ #include <strings.h>
+@@ -104,7 +105,7 @@ int uevent_open_socket(int buf_sz, bool passcred)
+     addr.nl_pid = getpid();
+     addr.nl_groups = 0xffffffff;
+ 
+-    s = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
++    s = socket(PF_NETLINK, SOCK_DGRAM | O_CLOEXEC, NETLINK_KOBJECT_UEVENT);
+     if(s < 0)
+         return -1;
+ 
+diff --git a/libnetutils/ifc_utils.c b/libnetutils/ifc_utils.c
+index eb33d06..5701443 100644
+--- a/libnetutils/ifc_utils.c
++++ b/libnetutils/ifc_utils.c
+@@ -19,6 +19,7 @@
+ #include <unistd.h>
+ #include <string.h>
+ #include <errno.h>
++#include <fcntl.h>
+ 
+ #include <sys/socket.h>
+ #include <sys/select.h>
+@@ -311,7 +312,7 @@ int ifc_act_on_address(int action, const char *name, const char *address,
+     req.n.nlmsg_len = NLMSG_ALIGN(req.n.nlmsg_len) + RTA_LENGTH(addrlen);
+     memcpy(RTA_DATA(rta), addr, addrlen);
+ 
+-    s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
++    s = socket(PF_NETLINK, SOCK_RAW | O_CLOEXEC, NETLINK_ROUTE);
+     if (send(s, &req, req.n.nlmsg_len, 0) < 0) {
+         close(s);
+         return -errno;
+-- 
+2.7.4
+

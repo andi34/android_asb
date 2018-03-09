@@ -1,0 +1,35 @@
+From 01fe2565037a0751af299e38b4a3d44e9b02292d Mon Sep 17 00:00:00 2001
+From: Nick Kralevich <nnk@google.com>
+Date: Thu, 22 Oct 2015 14:48:50 -0700
+Subject: [PATCH 07/18] DO NOT MERGE: fix build try #2
+
+On klp-dev, UINT16_MAX isn't available unless __STDINT_LIMITS
+is defined, which it's not for this code. This isn't relevant
+for later branches due to bionic commit
+e2a292d278b94fec3d078b1f1b27c1f89942c276
+
+Don't use UINT16_MAX when we can just hardcode 65535.
+
+Bug: 23905002
+Change-Id: Ia1fd0f749cb7a4d19866075abc28ed6960424e54
+(cherry picked from commit 778b6f4902ad824d5fc62071caaa837bb47deee5)
+---
+ include/input/Input.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/input/Input.h b/include/input/Input.h
+index f8075e4..44e4027 100644
+--- a/include/input/Input.h
++++ b/include/input/Input.h
+@@ -85,7 +85,7 @@ enum {
+ /*
+  * Maximum number of samples supported per motion event.
+  */
+-#define MAX_SAMPLES UINT16_MAX
++#define MAX_SAMPLES 65535
+ 
+ /*
+  * Maximum pointer id value supported in a motion event.
+-- 
+2.7.4
+

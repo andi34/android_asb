@@ -1,0 +1,43 @@
+From bf1c34eb96e2f0ed69e718bfef2ffa479bfcd977 Mon Sep 17 00:00:00 2001
+From: Zach Jang <zachjang@google.com>
+Date: Fri, 11 Sep 2015 16:35:04 -0700
+Subject: [PATCH 04/46] DO NOT MERGE - Backport of ag/748165 to klp-dev
+ Security patch level in Settings
+
+b/23946860
+
+Change-Id: I610d4dedf18fe1825d7df5febf29e6f0c006490d
+(cherry picked from commit bdf7f3583c637f370e97e74526df14b9c70e6493)
+---
+ core/java/android/os/Build.java | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/core/java/android/os/Build.java b/core/java/android/os/Build.java
+index bc51a60..16b2b67 100644
+--- a/core/java/android/os/Build.java
++++ b/core/java/android/os/Build.java
+@@ -90,6 +90,21 @@ public class Build {
+         public static final String RELEASE = getString("ro.build.version.release");
+ 
+         /**
++         * The base OS build the product is based on.
++         * For Pre-API 23 - use support libs to access.
++         * @hide
++         */
++        public static final String BASE_OS = SystemProperties.get("ro.build.version.base_os", "");
++
++        /**
++         * The user-visible security patch level.
++         * For Pre-API 23 - use support libs to access.
++         * @hide
++         */
++        public static final String SECURITY_PATCH = SystemProperties.get(
++                "ro.build.version.security_patch", "");
++
++        /**
+          * The user-visible SDK version of the framework in its raw String
+          * representation; use {@link #SDK_INT} instead.
+          * 
+-- 
+2.7.4
+

@@ -1,0 +1,37 @@
+From 9ff0c9418f66bc1958e49193cedcf196e1b3aeb4 Mon Sep 17 00:00:00 2001
+From: Dan Stoza <stoza@google.com>
+Date: Mon, 1 May 2017 16:31:53 -0700
+Subject: [PATCH 17/18] libgui: Check slot received from IGBP in Surface
+
+Checks that the slot number received from mGraphicBufferProducer in
+Surface::dequeueBuffer is on the interval [0, NUM_BUFFER_SLOTS) to
+protect against a malicious BnGraphicBufferProducer.
+
+Bug: 36991414
+Change-Id: I1a76fd1bcce1c558f1c0c30f03638278288ed4fa
+(cherry picked from commit 90ce2a9c1d3af422c66b4061805831cb208263d8)
+---
+ libs/gui/Surface.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/libs/gui/Surface.cpp b/libs/gui/Surface.cpp
+index 27dbc4e..637527b 100644
+--- a/libs/gui/Surface.cpp
++++ b/libs/gui/Surface.cpp
+@@ -191,6 +191,13 @@ int Surface::dequeueBuffer(android_native_buffer_t** buffer, int* fenceFd) {
+              result);
+         return result;
+     }
++
++    if (buf < 0 || buf >= NUM_BUFFER_SLOTS) {
++        ALOGE("dequeueBuffer: IGraphicBufferProducer returned invalid slot number %d", buf);
++        android_errorWriteLog(0x534e4554, "36991414"); // SafetyNet logging
++        return FAILED_TRANSACTION;
++    }
++
+     sp<GraphicBuffer>& gbuf(mSlots[buf].buffer);
+ 
+     // this should never happen
+-- 
+2.7.4
+

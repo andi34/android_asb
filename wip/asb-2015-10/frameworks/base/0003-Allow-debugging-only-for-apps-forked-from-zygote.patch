@@ -1,0 +1,121 @@
+From 41d7f47aa2126d4b8a93ce39c0d0921463d0816a Mon Sep 17 00:00:00 2001
+From: Sebastien Hertz <shertz@google.com>
+Date: Mon, 10 Aug 2015 18:55:34 +0200
+Subject: [PATCH 03/46] Allow debugging only for apps forked from zygote
+
+When starting the runtime from app_process, we only pass JDWP options
+if starting zygote. It prevents from opening a JDWP connection in
+non-zygote programs while Android apps (forked from zygote) remain
+debuggable.
+
+CVE-2015-3865
+
+Bug: 23050463
+
+(cherry picked from commit 7a09b8322cab26d6e3da1362d3c74964ae66b5d4)
+
+Change-Id: Ib5b6d3bc4d45389993c3c54226df5a7b72479d19
+---
+ cmds/app_process/app_main.cpp            |  4 ++--
+ core/jni/AndroidRuntime.cpp              | 20 ++++++++++++--------
+ include/android_runtime/AndroidRuntime.h |  4 ++--
+ 3 files changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/cmds/app_process/app_main.cpp b/cmds/app_process/app_main.cpp
+index 28752a5..cb27c5b 100644
+--- a/cmds/app_process/app_main.cpp
++++ b/cmds/app_process/app_main.cpp
+@@ -221,14 +221,14 @@ int main(int argc, char* const argv[])
+ 
+     if (zygote) {
+         runtime.start("com.android.internal.os.ZygoteInit",
+-                startSystemServer ? "start-system-server" : "");
++                startSystemServer ? "start-system-server" : "", zygote);
+     } else if (className) {
+         // Remainder of args get passed to startup class main()
+         runtime.mClassName = className;
+         runtime.mArgC = argc - i;
+         runtime.mArgV = argv + i;
+         runtime.start("com.android.internal.os.RuntimeInit",
+-                application ? "application" : "tool");
++                application ? "application" : "tool", zygote);
+     } else {
+         fprintf(stderr, "Error: no class name or --zygote supplied.\n");
+         app_usage();
+diff --git a/core/jni/AndroidRuntime.cpp b/core/jni/AndroidRuntime.cpp
+index 09577da..f531a5b 100644
+--- a/core/jni/AndroidRuntime.cpp
++++ b/core/jni/AndroidRuntime.cpp
+@@ -432,7 +432,7 @@ void AndroidRuntime::parseExtraOpts(char* extraOptsBuf)
+  *
+  * Returns 0 on success.
+  */
+-int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv)
++int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote)
+ {
+     int result = -1;
+     JavaVMInitArgs initArgs;
+@@ -633,11 +633,15 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv)
+         }
+     }
+ 
+-    /* enable debugging; set suspend=y to pause during VM init */
+-    /* use android ADB transport */
+-    opt.optionString =
+-        "-agentlib:jdwp=transport=dt_android_adb,suspend=n,server=y";
+-    mOptions.add(opt);
++    /*
++     * Enable debugging only for apps forked from zygote.
++     * Set suspend=y to pause during VM init and use android ADB transport.
++     */
++    if (zygote) {
++        opt.optionString =
++            "-agentlib:jdwp=transport=dt_android_adb,suspend=n,server=y";
++        mOptions.add(opt);
++    }
+ 
+     ALOGD("CheckJNI is %s\n", checkJni ? "ON" : "OFF");
+     if (checkJni) {
+@@ -802,7 +806,7 @@ char* AndroidRuntime::toSlashClassName(const char* className)
+  * Passes the main function two arguments, the class name and the specified
+  * options string.
+  */
+-void AndroidRuntime::start(const char* className, const char* options)
++void AndroidRuntime::start(const char* className, const char* options, bool zygote)
+ {
+     ALOGD("\n>>>>>> AndroidRuntime START %s <<<<<<\n",
+             className != NULL ? className : "(unknown)");
+@@ -835,7 +839,7 @@ void AndroidRuntime::start(const char* className, const char* options)
+     JniInvocation jni_invocation;
+     jni_invocation.Init(NULL);
+     JNIEnv* env;
+-    if (startVm(&mJavaVM, &env) != 0) {
++    if (startVm(&mJavaVM, &env, zygote) != 0) {
+         return;
+     }
+     onVmCreated(env);
+diff --git a/include/android_runtime/AndroidRuntime.h b/include/android_runtime/AndroidRuntime.h
+index 0b3ce9a..e8e869d 100644
+--- a/include/android_runtime/AndroidRuntime.h
++++ b/include/android_runtime/AndroidRuntime.h
+@@ -64,7 +64,7 @@ public:
+ 
+     int addVmArguments(int argc, const char* const argv[]);
+ 
+-    void start(const char *classname, const char* options);
++    void start(const char *classname, const char* options, bool zygote);
+ 
+     void exit(int code);
+ 
+@@ -116,7 +116,7 @@ public:
+ private:
+     static int startReg(JNIEnv* env);
+     void parseExtraOpts(char* extraOptsBuf);
+-    int startVm(JavaVM** pJavaVM, JNIEnv** pEnv);
++    int startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote);
+ 
+     Vector<JavaVMOption> mOptions;
+     bool mExitWithoutCleanup;
+-- 
+2.7.4
+

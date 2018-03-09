@@ -1,0 +1,69 @@
+From a8fcb2b437ef373f5c6e00a85f87c03591f7c07b Mon Sep 17 00:00:00 2001
+From: Robin Lee <rgl@google.com>
+Date: Mon, 22 Feb 2016 13:52:17 +0000
+Subject: [PATCH] Trust CA certificates added for the whole OS only
+
+Excludes any CA certificates installed for wifi-only from being used for
+anything else. Does not take effect retroactively against certs which
+were already installed.
+
+The CAs will continue to be saved to a part of the keystore accessible
+by services running under WIFI_UID.
+
+Bug: 26324357
+Bug: 25780055
+Change-Id: Ifeb9daf24c9f9a22b2b2daf247d5622c707c9885
+(cherry picked from commit 4f135c9bd77a54781d25c866657f0af9ecdd94e1)
+---
+ src/com/android/certinstaller/CertInstaller.java    | 3 ++-
+ src/com/android/certinstaller/CredentialHelper.java | 6 ++++++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/certinstaller/CertInstaller.java b/src/com/android/certinstaller/CertInstaller.java
+index 907646e..eb8fa90 100644
+--- a/src/com/android/certinstaller/CertInstaller.java
++++ b/src/com/android/certinstaller/CertInstaller.java
+@@ -180,7 +180,8 @@ public class CertInstaller extends Activity {
+                 Toast.makeText(this, getString(R.string.cert_is_added,
+                         mCredentials.getName()), Toast.LENGTH_LONG).show();
+ 
+-                if (mCredentials.hasCaCerts()) {
++                if (mCredentials.hasCaCerts()
++                        && mCredentials.getInstallAsUid() == KeyStore.UID_SELF) {
+                     // more work to do, don't finish just yet
+                     new InstallCaCertsToKeyChainTask().execute();
+                     return;
+diff --git a/src/com/android/certinstaller/CredentialHelper.java b/src/com/android/certinstaller/CredentialHelper.java
+index c131268..b502a1d 100644
+--- a/src/com/android/certinstaller/CredentialHelper.java
++++ b/src/com/android/certinstaller/CredentialHelper.java
+@@ -100,6 +100,7 @@ class CredentialHelper {
+         try {
+             outStates.putSerializable(DATA_KEY, mBundle);
+             outStates.putString(KeyChain.EXTRA_NAME, mName);
++            outStates.putInt(Credentials.EXTRA_INSTALL_AS_UID, mUid);
+             if (mUserKey != null) {
+                 outStates.putByteArray(Credentials.USER_PRIVATE_KEY,
+                         mUserKey.getEncoded());
+@@ -120,6 +121,7 @@ class CredentialHelper {
+     void onRestoreStates(Bundle savedStates) {
+         mBundle = (HashMap) savedStates.getSerializable(DATA_KEY);
+         mName = savedStates.getString(KeyChain.EXTRA_NAME);
++        mUid = savedStates.getInt(Credentials.EXTRA_INSTALL_AS_UID, -1);
+         byte[] bytes = savedStates.getByteArray(Credentials.USER_PRIVATE_KEY);
+         if (bytes != null) {
+             setPrivateKey(bytes);
+@@ -256,6 +258,10 @@ class CredentialHelper {
+         return mUid != -1;
+     }
+ 
++    int getInstallAsUid() {
++        return mUid;
++    }
++
+     Intent createSystemInstallIntent() {
+         Intent intent = new Intent("com.android.credentials.INSTALL");
+         // To prevent the private key from being sniffed, we explicitly spell
+-- 
+2.7.4
+

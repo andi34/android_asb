@@ -1,0 +1,28 @@
+From 42a69258011e4e47cedf4ca1658cc2d8cb778ec9 Mon Sep 17 00:00:00 2001
+From: Ajay Panicker <apanicke@google.com>
+Date: Thu, 8 Sep 2016 13:23:02 -0700
+Subject: [PATCH 28/46] Prevent FDs from being leaked when accepted sockets are
+ closed
+
+Bug: 28672558
+Change-Id: I4bc14bd7f098e34012c2ae1eeba2d439145901f0
+(cherry picked from commit 786e2694b1de828cef333af907d6270ecad445df)
+---
+ core/java/android/bluetooth/BluetoothSocket.java | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/core/java/android/bluetooth/BluetoothSocket.java b/core/java/android/bluetooth/BluetoothSocket.java
+index d10eaea..5ccabf0 100644
+--- a/core/java/android/bluetooth/BluetoothSocket.java
++++ b/core/java/android/bluetooth/BluetoothSocket.java
+@@ -196,6 +196,7 @@ public final class BluetoothSocket implements Closeable {
+             as.close();
+             throw new IOException("bt socket acept failed");
+         }
++        as.mPfd = new ParcelFileDescriptor(fds[0]);
+         as.mSocket = new LocalSocket(fds[0]);
+         as.mSocketIS = as.mSocket.getInputStream();
+         as.mSocketOS = as.mSocket.getOutputStream();
+-- 
+2.7.4
+

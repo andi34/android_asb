@@ -1,0 +1,116 @@
+From 6494cbb0a950f43c36e9aed3d7b38718931db235 Mon Sep 17 00:00:00 2001
+From: Paul Jensen <pauljensen@google.com>
+Date: Mon, 22 Aug 2016 09:15:40 -0400
+Subject: [PATCH 27/46] Avoid crashing when downloading MitM'd PAC that is too
+ big
+
+There's two pieces to this fix:
+1. Move PAC loading off IoThread which isn't meant for
+   blocking network fetches.  If the fetch takes more than
+   60s Android reboots when the IoThread is used.
+2. Limit PAC fetching to 20MB.  Any PAC bigger than that
+   is likely evil.
+MitM of PACs should only be possbile when a non-SSL PAC URL
+is used.
+
+Change-Id: Ie1658a1c705615dc85a7fc68053f0dad8d048294
+Fixes: 30100884
+(cherry picked from commit 7d2198b586bcfbf96fb627021a0eb85d32829cc0)
+---
+ .../android/server/connectivity/PacManager.java    | 34 +++++++++++++++++++---
+ 1 file changed, 30 insertions(+), 4 deletions(-)
+
+diff --git a/services/java/com/android/server/connectivity/PacManager.java b/services/java/com/android/server/connectivity/PacManager.java
+index 7786fe6..b740674 100644
+--- a/services/java/com/android/server/connectivity/PacManager.java
++++ b/services/java/com/android/server/connectivity/PacManager.java
+@@ -28,6 +28,7 @@ import android.net.Proxy;
+ import android.net.ProxyProperties;
+ import android.os.Binder;
+ import android.os.Handler;
++import android.os.HandlerThread;
+ import android.os.IBinder;
+ import android.os.RemoteException;
+ import android.os.ServiceManager;
+@@ -42,10 +43,10 @@ import com.android.internal.annotations.GuardedBy;
+ import com.android.net.IProxyCallback;
+ import com.android.net.IProxyPortListener;
+ import com.android.net.IProxyService;
+-import com.android.server.IoThread;
+ 
+ import libcore.io.Streams;
+ 
++import java.io.ByteArrayOutputStream;
+ import java.io.IOException;
+ import java.net.URL;
+ import java.net.URLConnection;
+@@ -69,6 +70,7 @@ public class PacManager {
+     private static final int DELAY_1 = 0;
+     private static final int DELAY_4 = 3;
+     private static final int DELAY_LONG = 4;
++    private static final long MAX_PAC_SIZE = 20 * 1000 * 1000;
+ 
+     /** Keep these values up-to-date with ProxyService.java */
+     public static final String KEY_PROXY = "keyProxy";
+@@ -126,15 +128,21 @@ public class PacManager {
+         }
+     };
+ 
++    private final HandlerThread mNetThread = new HandlerThread("android.pacmanager",
++            android.os.Process.THREAD_PRIORITY_DEFAULT);
++    private final Handler mNetThreadHandler;
++
+     class PacRefreshIntentReceiver extends BroadcastReceiver {
+         public void onReceive(Context context, Intent intent) {
+-            IoThread.getHandler().post(mPacDownloader);
++            mNetThreadHandler.post(mPacDownloader);
+         }
+     }
+ 
+     public PacManager(Context context, Handler handler, int proxyMessage) {
+         mContext = context;
+         mLastPort = -1;
++        mNetThread.start();
++        mNetThreadHandler = new Handler(mNetThread.getLooper());
+ 
+         mPacRefreshIntent = PendingIntent.getBroadcast(
+                 context, 0, new Intent(ACTION_PAC_REFRESH), 0);
+@@ -202,7 +210,25 @@ public class PacManager {
+     private static String get(String urlString) throws IOException {
+         URL url = new URL(urlString);
+         URLConnection urlConnection = url.openConnection(java.net.Proxy.NO_PROXY);
+-        return new String(Streams.readFully(urlConnection.getInputStream()));
++        long contentLength = -1;
++        try {
++            contentLength = Long.parseLong(urlConnection.getHeaderField("Content-Length"));
++        } catch (NumberFormatException e) {
++            // Ignore
++        }
++        if (contentLength > MAX_PAC_SIZE) {
++            throw new IOException("PAC too big: " + contentLength + " bytes");
++        }
++        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
++        byte[] buffer = new byte[1024];
++        int count;
++        while ((count = urlConnection.getInputStream().read(buffer)) != -1) {
++            bytes.write(buffer, 0, count);
++            if (bytes.size() > MAX_PAC_SIZE) {
++                throw new IOException("PAC too big");
++            }
++        }
++        return bytes.toString();
+     }
+ 
+     private int getNextDelay(int currentDelay) {
+@@ -305,7 +331,7 @@ public class PacManager {
+                         } catch (RemoteException e) {
+                             Log.e(TAG, "Unable to reach ProxyService - PAC will not be started", e);
+                         }
+-                        IoThread.getHandler().post(mPacDownloader);
++                        mNetThreadHandler.post(mPacDownloader);
+                     }
+                 }
+             }
+-- 
+2.7.4
+

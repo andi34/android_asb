@@ -1,0 +1,40 @@
+From 169c0d5908c01fa52727967417412654cfec06f8 Mon Sep 17 00:00:00 2001
+From: Sanket Padawe <sanketpadawe@google.com>
+Date: Mon, 18 May 2015 11:39:01 -0700
+Subject: [PATCH 1/8] Check for special char when renaming device for Wi-Fi
+ direct.
+
+Bug: 21141820
+Change-Id: I78231d95e5ba3f505325d5657f8e6106a887f11e
+(cherry picked from commit 7186a47ef348c17a985eb51ef74469a32c3c938d)
+---
+ src/com/android/settings/wifi/p2p/WifiP2pSettings.java | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/src/com/android/settings/wifi/p2p/WifiP2pSettings.java b/src/com/android/settings/wifi/p2p/WifiP2pSettings.java
+index cd1d721..07d66b0 100644
+--- a/src/com/android/settings/wifi/p2p/WifiP2pSettings.java
++++ b/src/com/android/settings/wifi/p2p/WifiP2pSettings.java
+@@ -206,6 +206,19 @@ public class WifiP2pSettings extends SettingsPreferenceFragment
+             public void onClick(DialogInterface dialog, int which) {
+                 if (which == DialogInterface.BUTTON_POSITIVE) {
+                     if (mWifiP2pManager != null) {
++                        String name = mDeviceNameText.getText().toString();
++                        if (name != null) {
++                            for (int i = 0; i < name.length(); i++) {
++                                char cur = name.charAt(i);
++                                if(!Character.isDigit(cur) && !Character.isLetter(cur)
++                                        && cur != '-' && cur != '_' && cur != ' ') {
++                                    Toast.makeText(getActivity(),
++                                            R.string.wifi_p2p_failed_rename_message,
++                                            Toast.LENGTH_LONG).show();
++                                    return;
++                                }
++                            }
++                        }
+                         mWifiP2pManager.setDeviceName(mChannel,
+                                 mDeviceNameText.getText().toString(),
+                                 new WifiP2pManager.ActionListener() {
+-- 
+2.7.4
+

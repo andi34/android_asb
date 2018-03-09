@@ -1,0 +1,38 @@
+From efd5646bbd97ce166f9143a687461f17eed71360 Mon Sep 17 00:00:00 2001
+From: Jaewan Kim <jaewan@google.com>
+Date: Thu, 22 Sep 2016 12:44:10 +0900
+Subject: [PATCH 2/4] DO NOT MERGE Check caller for sending media key to
+ telephony service
+
+Prevent sending media key events from the non-system app to the
+telephony service through the AudioManager.dispatchMediaKeyEvent()
+or sending media key broadcast directly.
+
+Bug: 29833954
+Tested: Installed malicious apps and confirmed that they don't work.
+Tested: Run CtsTelecomTestCases and CtsMediaTestCases
+Change-Id: I2a9e78196ba7455324e485f098f095d03b47ee15
+(cherry picked from commit a9c585237f1abe9ce5a50661a1eb986a34993255)
+---
+ src/com/android/phone/PhoneGlobals.java | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/com/android/phone/PhoneGlobals.java b/src/com/android/phone/PhoneGlobals.java
+index 62d542f..26c8658 100644
+--- a/src/com/android/phone/PhoneGlobals.java
++++ b/src/com/android/phone/PhoneGlobals.java
+@@ -1098,6 +1098,11 @@ public class PhoneGlobals extends ContextWrapper implements WiredHeadsetListener
+             KeyEvent event = (KeyEvent) intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+             if (VDBG) Log.d(LOG_TAG,
+                            "MediaButtonBroadcastReceiver.onReceive()...  event = " + event);
++            if (getSendingUserId() != UserHandle.USER_ALL) {
++                Log.w(LOG_TAG, "Ignore media keys from the non-system app userId="
++                        + getSendingUserId());
++                return;
++            }
+             if ((event != null)
+                 && (event.getKeyCode() == KeyEvent.KEYCODE_HEADSETHOOK)) {
+                 if (VDBG) Log.d(LOG_TAG, "MediaButtonBroadcastReceiver: HEADSETHOOK");
+-- 
+2.7.4
+

@@ -1,0 +1,1856 @@
+From 29752d99cc1f55d917fcda1f20dc21feeff18db6 Mon Sep 17 00:00:00 2001
+From: Andreas Blaesius <skate4life@gmx.de>
+Date: Sun, 15 Oct 2017 13:04:31 +0200
+Subject: [PATCH] InCallUI: fix a lot aapt warnings about missing default
+ translations
+
+- fixes:
+   aapt: warning: string XXX has no default translation in packages/apps/Dialer/../InCallUI/res; found: az_AZ be ne_NP si_LK
+
+Change-Id: Id14c7aa1c8e2b4d1e3d43a91ef23099d9cff042d
+---
+ res/values-az-rAZ/strings.xml | 383 ------------------------------------------
+ res/values-be/strings.xml     | 383 ------------------------------------------
+ res/values-ne-rNP/strings.xml | 383 ------------------------------------------
+ res/values-si-rLK/strings.xml | 383 ------------------------------------------
+ 4 files changed, 1532 deletions(-)
+
+diff --git a/res/values-az-rAZ/strings.xml b/res/values-az-rAZ/strings.xml
+index 7853a88..c29f399 100644
+--- a/res/values-az-rAZ/strings.xml
++++ b/res/values-az-rAZ/strings.xml
+@@ -54,117 +54,13 @@
+     <string name="pause_prompt_yes" msgid="3564467212025151797">"Bəli"</string>
+     <string name="pause_prompt_no" msgid="6686238803236884877">"Xeyr"</string>
+     <string name="wild_prompt_str" msgid="5543521676355533577">"Joker simvolları əvəz edin"</string>
+-    <string name="no_vm_number" msgid="4164780423805688336">"Səsli poçt nömrəsi çatışmır"</string>
+-    <string name="no_vm_number_msg" msgid="1300729501030053828">"SIM kartda heç bir səsli poçt nömrəsi yoxdur."</string>
+-    <string name="add_vm_number_str" msgid="4676479471644687453">"Nömrə əlavə edin"</string>
+-    <string name="puk_unlocked" msgid="2284912838477558454">"SIM kartınızın kilidi açıldı. Telefonunuzun da kilidi açılır…"</string>
+-    <string name="label_ndp" msgid="780479633159517250">"SIM şəbəkəni kiliddən çıxaran PIN"</string>
+-    <string name="sim_ndp_unlock_text" msgid="683628237760543009">"Kilidi aç"</string>
+-    <string name="sim_ndp_dismiss_text" msgid="1604823375752456947">"Kənarlaşdır"</string>
+-    <string name="requesting_unlock" msgid="6412629401033249351">"Şəbəkə kilidinin açılması tələbi göndərilir…"</string>
+-    <string name="unlock_failed" msgid="6490531697031504225">"Şəbəkəni kiliddən çıxarmaq sorğusu uğursuzdur."</string>
+-    <string name="unlock_success" msgid="6770085622238180152">"Şəbəkə uğurla kiliddən çıxarıldı."</string>
+-    <string name="labelGSMMore" msgid="5930842194056092106">"GSM zəng parametrləri"</string>
+-    <string name="labelCDMAMore" msgid="1630676740428229339">"CDMA zəng parametrləri"</string>
+-    <string name="apn_settings" msgid="9043423184895642077">"Çatma Nöqtəsi Adları"</string>
+-    <string name="settings_label" msgid="3876743539816984008">"Şəbəkə ayarları"</string>
+     <string name="voicemail" msgid="8693759337917898954">"Səsli poçt"</string>
+-    <string name="voicemail_abbreviated" msgid="2215592488517217448">"SP:"</string>
+-    <string name="networks" msgid="8873030692174541976">"Şəbəkə operatorları"</string>
+     <string name="call_settings" msgid="6112441768261754562">"Zəng parametrləri"</string>
+-    <string name="additional_gsm_call_settings" msgid="1391795981938800617">"Əlavə parametrlər"</string>
+-    <string name="sum_gsm_call_settings" msgid="4076647190996778012">"Əlavə GSM yalnız zəng parametrləri"</string>
+-    <string name="additional_cdma_call_settings" msgid="8628958775721886909">"Əlavə CDMA zəng parametrləri"</string>
+-    <string name="sum_cdma_call_settings" msgid="284753265979035549">"Əlavə CDMA yalnız Zəng ayarları"</string>
+-    <string name="labelNwService" msgid="4699970172021870983">"Şəbəkə xidməti parametrləri"</string>
+-    <string name="labelCallerId" msgid="3888899447379069198">"Zəng edənin ID-si"</string>
+-    <string name="sum_loading_settings" msgid="1826692909391168620">"Parametrlər yüklənir…"</string>
+-    <string name="sum_hide_caller_id" msgid="1071407020290873782">"Gedən zənglərdə nömrə gizlidir"</string>
+-    <string name="sum_show_caller_id" msgid="6768534125447290401">"Gedən zənglərdə nömrə göstərilir"</string>
+-    <string name="sum_default_caller_id" msgid="1954518825510901365">"Gedən zənglərdə nömrəmi göstərmək üçün varsayılan operator parametrlərini istifadə edin"</string>
+-    <string name="labelCW" msgid="6120513814915920200">"Zəng gözləmək"</string>
+-    <string name="sum_cw_enabled" msgid="8083061901633671397">"Zəng zamanı məni gələn zənglərdən xəbərdar et"</string>
+-    <string name="sum_cw_disabled" msgid="3648693907300104575">"Zəng zamanı məni gələn zənglərdən xəbərdar et"</string>
+-    <string name="call_forwarding_settings" msgid="3378927671091537173">"Zəng yönləndirmə parametrləri"</string>
+-    <string name="labelCF" msgid="2574386948026924737">"Zəng yönləndirmə"</string>
+-    <string name="labelCFU" msgid="8147177368148660600">"Həmişə yönləndirin"</string>
+-    <string name="messageCFU" msgid="3560082430662923687">"Həmişə bu nömrəni işlədin"</string>
+-    <string name="sum_cfu_enabled_indicator" msgid="4014187342724130197">"Bütün zənglər yönləndirilir"</string>
+-    <string name="sum_cfu_enabled" msgid="2450052502198827927">"Bütün zənglər <xliff:g id="PHONENUMBER">{0}</xliff:g> nömrəsinə yönləndirilir"</string>
+-    <string name="sum_cfu_enabled_no_number" msgid="6591985777096823616">"Nömrə əlçatmazdır"</string>
+-    <string name="sum_cfu_disabled" msgid="3698472522160364904">"Deaktiv"</string>
+-    <string name="labelCFB" msgid="218938523102207587">"Məşğul olarkən yönləndirin"</string>
+-    <string name="messageCFB" msgid="3711089705936187129">"Məşğul olarkən yönləndiriləcək nömrə"</string>
+-    <string name="sum_cfb_enabled" msgid="5984198104833116690">"<xliff:g id="PHONENUMBER">{0}</xliff:g> nömrəsinə yönləndirilir"</string>
+-    <string name="sum_cfb_disabled" msgid="227440009979537651">"Deaktiv"</string>
+-    <string name="disable_cfb_forbidden" msgid="3506984333877998061">"Sizin mobil operator telefon məşğul olduğu zaman zəng yönləndirməni deaktiv etməyi  dəstəkləmir."</string>
+-    <string name="labelCFNRy" msgid="3646316323834351390">"Cavab verilməyən zaman yönləndirin"</string>
+-    <string name="messageCFNRy" msgid="672317899884380374">"Cavabsız olarkən yönləndiriləcək nömrə"</string>
+-    <string name="sum_cfnry_enabled" msgid="6955775691317662910">"<xliff:g id="PHONENUMBER">{0}</xliff:g> nömrəsinə yönləndirilir"</string>
+-    <string name="sum_cfnry_disabled" msgid="8422350929957344729">"Deaktiv"</string>
+-    <string name="disable_cfnry_forbidden" msgid="4308233959150658058">"Sizin mobil daşıyıcı telefona cavab verilmədiyi zaman zəng yönləndirməni deaktiv etməyi dəstəkləmir."</string>
+-    <string name="labelCFNRc" msgid="47183615370850000">"Əlçatmaz olarkən yönləndirin"</string>
+-    <string name="messageCFNRc" msgid="6380695421020295119">"Əlçatmaz olarkən yönləndiriləcək nömrə"</string>
+-    <string name="sum_cfnrc_enabled" msgid="7010898346095497421">"<xliff:g id="PHONENUMBER">{0}</xliff:g> nömrəsinə yönləndirilir"</string>
+-    <string name="sum_cfnrc_disabled" msgid="7222141261321276464">"Deaktiv"</string>
+-    <string name="disable_cfnrc_forbidden" msgid="5646361343094064333">"Sizin mobil daşıyıcı telefon əlçatmaz olduğu zaman zəng yönləndirməni deaktiv etməyi dəstəkləmir."</string>
+-    <string name="updating_title" msgid="6146755386174019046">"Zəng parametrləri"</string>
+-    <string name="error_updating_title" msgid="7970259216988931777">"Zəng parametrləri xətası"</string>
+-    <string name="reading_settings" msgid="1920291699287055284">"Oxuma parametrləri ..."</string>
+-    <string name="updating_settings" msgid="8171225533884883252">"Ayarlar güncəlləşdirilir…"</string>
+-    <string name="reverting_settings" msgid="4752151682666912828">"Ayarlar qaytarılır..."</string>
+-    <string name="response_error" msgid="6674110501330139405">"Şəbəkədən gözlənilməz cavab."</string>
+-    <string name="exception_error" msgid="7027667130619518211">"Şəbəkə və ya SIM kart xətası"</string>
+-    <string name="fdn_check_failure" msgid="18200614306525434">"Telefonunuzun Sabit Yığım Nömrələri parametri aktivdir. Buna görə də zəng ilə bağlı bəzi özəlliklər işləmir."</string>
+-    <string name="radio_off_error" msgid="2304459933248513376">"Bu ayarlara baxmadan öncə radionu yandırın."</string>
+-    <string name="close_dialog" msgid="2365884406356986917">"OK"</string>
+-    <string name="enable" msgid="1059008390636773574">"Aktiv edin"</string>
+-    <string name="disable" msgid="7274240979164762320">"Deaktiv et"</string>
+-    <string name="change_num" msgid="239476305819844391">"Güncəlləşdirin"</string>
+   <string-array name="clir_display_values">
+     <item msgid="5560134294467334594">"Defolt şəbəkə"</item>
+     <item msgid="7876195870037833661">"Nömrəni gizlət"</item>
+     <item msgid="1108394741608734023">"Nömrəni göstər"</item>
+   </string-array>
+-    <string name="vm_changed" msgid="380744030726254139">"Səsli poçt nömrəsi dəyişdirildi."</string>
+-    <string name="vm_change_failed" msgid="3352934863246208918">"Səsli poçt nömrəsi dəyişdirilə bilmədi.\nBu problem davam edərsə, daşıyıcınız ilə əlaqə saxlayın."</string>
+-    <string name="fw_change_failed" msgid="5298103228470214665">"Yönləndirmə nömrəsi dəyişdirilə bilmədi.\nBu problem davam edərsə, mobil daşıyıcınız ilə əlaqə saxlayın."</string>
+-    <string name="fw_get_in_vm_failed" msgid="8862896836093833973">"Hazırkı yönləndirmə nömrələri ayarları alınıb saxlana bilmədi.\nİstənilən halda yeni provayderinizə keçmək istəyirsiniz mi?"</string>
+-    <string name="no_change" msgid="3186040086622435212">"Heç bir dəyişiklik edilmədi."</string>
+-    <string name="sum_voicemail_choose_provider" msgid="59911196126278922">"Səsli poçt xidmətinizi seçin"</string>
+-    <string name="voicemail_default" msgid="5902099213882352338">"Daşıyıcım"</string>
+-    <string name="mobile_networks" msgid="5540397602919106177">"Mobil şəbəkə parametrləri"</string>
+-    <string name="label_available" msgid="1181658289009300430">"Əlçatımlı şəbəkələr"</string>
+-    <string name="load_networks_progress" msgid="5230707536168902952">"Axtarılır..."</string>
+-    <string name="empty_networks_list" msgid="4249426905018815316">"Şəbəkə tapılmadı"</string>
+-    <string name="search_networks" msgid="1601136049300882441">"Şəbəkə axtarın"</string>
+-    <string name="network_query_error" msgid="6828516148953325006">"Şəbəkə axtarışı zamanı xəta baş verdi."</string>
+-    <string name="register_on_network" msgid="9055203954040805084">"<xliff:g id="NETWORK">%s</xliff:g> şəbəkəsində qeydiyyatdan keçirilir…"</string>
+-    <string name="not_allowed" msgid="5613353860205691579">"Sizin SIM kart bu şəbəkəyə bağlantıya icazə vermir."</string>
+-    <string name="connect_later" msgid="2308119155752343975">"Hazırda bu şəbəkəyə qoşulmaq olmur. Sonra təkrar sınayın."</string>
+-    <string name="registration_done" msgid="495135664535876612">"Şəbəkədə qeydiyyatdan keçib."</string>
+-    <string name="sum_carrier_select" msgid="3494252551249882718">"Şəbəkə operatoru seçin"</string>
+-    <string name="sum_search_networks" msgid="2921092249873272715">"Bütün əlçatımlı şəbəkələri axtarın"</string>
+-    <string name="select_automatically" msgid="5628402124471810174">"Avtomatik seçin"</string>
+-    <string name="sum_select_automatically" msgid="5614890115123292400">"Tərcih olunmuş şəbəkəni avtomatik seçin"</string>
+-    <string name="register_automatically" msgid="6017849844573519637">"Avtomatik qeydiyyat ..."</string>
+-    <string name="preferred_network_mode_title" msgid="8873246565334559308">"Şəbəkə Rejimi"</string>
+-    <string name="preferred_network_mode_summary" msgid="1434820673166126609">"Şəbəkə əməliyyat rejimini dəyişin"</string>
+-    <string name="preferred_network_mode_dialogtitle" msgid="8176355237105593793">"Tərcih edilmiş şəbəkə rejimi"</string>
+-    <string name="preferred_network_mode_wcdma_perf_summary" msgid="8521677230113533809">"Tərcih edilmiş şəbəkə rejimi: WCDMA tərcih edilir"</string>
+-    <string name="preferred_network_mode_gsm_only_summary" msgid="3352445413437453511">"Tərcih edilmiş şəbəkə rejimi: Yalnız GSM"</string>
+-    <string name="preferred_network_mode_wcdma_only_summary" msgid="2836897236221063413">"Tərcih edilmiş şəbəkə rejimi: yalnız WCDMA"</string>
+-    <string name="preferred_network_mode_gsm_wcdma_summary" msgid="3161255745326408587">"Tərcih edilmiş şəbəkə rejimi: GSM / WCDMA"</string>
+-    <string name="preferred_network_mode_cdma_summary" msgid="3175690187294334241">"Tərcih edilmiş şəbəkə rejimi: CDMA"</string>
+-    <string name="preferred_network_mode_cdma_evdo_summary" msgid="8332063064712726618">"Tərcih edilmiş şəbəkə rejimi: CDMA / EvDo"</string>
+-    <string name="preferred_network_mode_cdma_only_summary" msgid="1309770926198634150">"Tərcih edilmiş şəbəkə rejimi: CDMA only"</string>
+-    <string name="preferred_network_mode_evdo_only_summary" msgid="8472220691721269155">"Tərcih edilmiş şəbəkə rejimi: yalnız EvDo"</string>
+-    <string name="preferred_network_mode_cdma_evdo_gsm_wcdma_summary" msgid="4726682079415227330">"Tərcih edilmiş şəbəkə rejimi: CDMA/EvDo/GSM/WCDMA"</string>
+-    <string name="preferred_network_mode_lte_summary" msgid="574752287596469136">"Tərcih edilmiş şəbəkə rejimi: LTE"</string>
+-    <string name="preferred_network_mode_lte_gsm_wcdma_summary" msgid="8455358514068283935">"Tərcih edilmiş şəbəkə rejimi: GSM/WCDMA/LTE"</string>
+-    <string name="preferred_network_mode_lte_cdma_evdo_summary" msgid="228702246343742853">"Tərcih edilmiş şəbəkə rejimi: CDMA+LTE/EVDO"</string>
+-    <string name="preferred_network_mode_global_summary" msgid="1633134285545730364">"Tərcih edilmiş şəbəkə rejimi: Qlobal"</string>
+-    <string name="preferred_network_mode_lte_wcdma_summary" msgid="9180775701594742750">"Tərcih edilmiş şəbəkə rejimi: LTE / WCDMA"</string>
+   <string-array name="preferred_network_mode_choices">
+     <item msgid="7886739962255042385">"LTE / WCDMA"</item>
+     <item msgid="577652050447385699">"LTE"</item>
+@@ -180,58 +76,6 @@
+     <item msgid="1524224863879435516">"Yalnız GSM"</item>
+     <item msgid="3817924849415716259">"GSM/WCDMA\'ya üstünlük verilib"</item>
+   </string-array>
+-    <string name="data_enabled" msgid="5972538663568715366">"Data aktivdir"</string>
+-    <string name="data_enable_summary" msgid="5022018967714633874">"Mobil şəbəkə üzərindən data girişini aktivləşdirin"</string>
+-    <string name="roaming" msgid="8871412572928323707">"Data rouminq"</string>
+-    <string name="roaming_enable" msgid="7331106985174381987">"Rouminq zamanı data xidmətlərinə qoşulun"</string>
+-    <string name="roaming_disable" msgid="1843417228755568110">"Rouminq zamanı data xidmətlərinə qoşulun"</string>
+-    <string name="roaming_reenable_message" msgid="8913735676127858115">"Siz deaktiv edilmiş rouminq ilə daxili şəbəkəni tərk etdiyiniz üçün data bağlantısını itirdiniz."</string>
+-    <string name="roaming_warning" msgid="7820963598559553967">"Data rouminqinə icazə verilsin? Sizdən əlavə rouminq rüsumları alına bilər!"</string>
+-    <string name="gsm_umts_options" msgid="6538311689850981686">"GSM/UMTS Seçimlər"</string>
+-    <string name="cdma_options" msgid="4016822858172249884">"CDMA Seçimlər"</string>
+-    <string name="throttle_data_usage" msgid="3715677828160555808">"Data istifadəsi"</string>
+-    <string name="throttle_current_usage" msgid="8762280193043815361">"İndi istifadə olunan data"</string>
+-    <string name="throttle_time_frame" msgid="1915198770363734685">"Data istifadə periodu"</string>
+-    <string name="throttle_rate" msgid="4710388992676803508">"Data ötürmə sürəti siyasəti"</string>
+-    <string name="throttle_help" msgid="243651091785169900">"Daha çox öyrənin"</string>
+-    <string name="throttle_status_subtext" msgid="1657318943142085170">"<xliff:g id="USED_2">%3$s</xliff:g> maksimal perioddan <xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>٪) istifadə\nNövbəti period <xliff:g id="USED_3">%4$d</xliff:g> gün ərzində başlayır (<xliff:g id="USED_4">%5$s</xliff:g>)"</string>
+-    <string name="throttle_data_usage_subtext" msgid="6029276011123694701">"<xliff:g id="USED_2">%3$s</xliff:g> maksimal perioddan <xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>٪) istifadə"</string>
+-    <string name="throttle_data_rate_reduced_subtext" msgid="7492763592720107737">"<xliff:g id="USED_0">%1$s</xliff:g> maksimal aşılıb\nData göstəricisi <xliff:g id="USED_1">%2$d</xliff:g> Kb/saniyəyə qədər azalıb"</string>
+-    <string name="throttle_time_frame_subtext" msgid="7732763021560399960">"<xliff:g id="USED_0">%1$d</xliff:g>٪ dövr keçib\nNövbəti period <xliff:g id="USED_1">%2$d</xliff:g> gün ərzində başlayır (<xliff:g id="USED_2">%3$s</xliff:g>)"</string>
+-    <string name="throttle_rate_subtext" msgid="2149102656120726855">"Əgər data istifadə limiti aşılsa, data göstəricisi <xliff:g id="USED">%1$d</xliff:g> Kb/saniyəyə qədər azalır"</string>
+-    <string name="throttle_help_subtext" msgid="5217706521499010816">"Karrierinizin mobil şəbəkə data istifadə siyasəti haqqında daha çox məlumat"</string>
+-    <string name="cell_broadcast_sms" msgid="5584192824053625842">"SMS Hücrə Yayımı"</string>
+-    <string name="enable_disable_cell_bc_sms" msgid="4851147873691392255">"Hücrə Yayım SMS"</string>
+-    <string name="cell_bc_sms_enable" msgid="6441688565738921084">"SMS Hücrə Yayımı aktivdir"</string>
+-    <string name="cell_bc_sms_disable" msgid="3398365088309408749">"SMS Hücrə Yayımı deaktivdir"</string>
+-    <string name="cb_sms_settings" msgid="651715019785107312">"Hücrə Yayımı SMS ayarları"</string>
+-    <string name="enable_disable_emergency_broadcast" msgid="2157014609041245335">"Təcili Yayım"</string>
+-    <string name="emergency_broadcast_enable" msgid="2645980025414010211">"Təcili Yayım aktivdir"</string>
+-    <string name="emergency_broadcast_disable" msgid="3665199821267569426">"Təcili Yayım deaktivdir"</string>
+-    <string name="enable_disable_administrative" msgid="6501582322182059412">"Administrativ"</string>
+-    <string name="administrative_enable" msgid="1750086122962032235">"Administrativ olaraq aktiv edilib"</string>
+-    <string name="administrative_disable" msgid="8433273857248698539">"Administrativ olaraq deaktiv edilib"</string>
+-    <string name="enable_disable_maintenance" msgid="1819693083025106678">"Texniki xidmət"</string>
+-    <string name="maintenance_enable" msgid="8566636458770971189">"Texniki Xidmət aktivdir"</string>
+-    <string name="maintenance_disable" msgid="7340189100885066077">"Texniki Xidmət deaktivdir"</string>
+-    <string name="general_news_settings" msgid="4968779723948432978">"Baş Xəbərlər"</string>
+-    <string name="bf_news_settings" msgid="3935593091894685267">"Biznes və Maliyyə Xəbərləri"</string>
+-    <string name="sports_news_settings" msgid="7649399631270052835">"İdman Xəbərləri"</string>
+-    <string name="entertainment_news_settings" msgid="5051153952959405035">"Əyləncə Xəbərləri"</string>
+-    <string name="enable_disable_local" msgid="7890281063123416120">"Yerli"</string>
+-    <string name="local_enable" msgid="6370463247609136359">"Yerli xəbərlər aktivdir"</string>
+-    <string name="local_disable" msgid="4405691986943795798">"Yerli xəbərlər deaktivdir"</string>
+-    <string name="enable_disable_regional" msgid="4905652414535565872">"Regional"</string>
+-    <string name="regional_enable" msgid="4434680415437834759">"Regional xəbərlər aktivdir"</string>
+-    <string name="regional_disable" msgid="5359325527213850077">"Regional xəbərlər deaktivdir"</string>
+-    <string name="enable_disable_national" msgid="236278090206880734">"Milli"</string>
+-    <string name="national_enable" msgid="1172443648912246952">"Milli xəbərlər aktivdir"</string>
+-    <string name="national_disable" msgid="326018148178601166">"Milli xəbərlər deaktivdir"</string>
+-    <string name="enable_disable_international" msgid="7535348799604565592">"Beynəlxalq"</string>
+-    <string name="international_enable" msgid="5855356769925044927">"Beynəlxalq xəbərlər aktivdir"</string>
+-    <string name="international_disable" msgid="2850648591041088931">"Beynəlxalq xəbərlər deaktivdir"</string>
+-    <string name="list_language_title" msgid="2841683501919760043">"Dil"</string>
+-    <string name="list_language_summary" msgid="8109546531071241601">"Xəbər dilini seçin"</string>
+   <string-array name="list_language_entries">
+     <item msgid="6137851079727305485">"İngilis"</item>
+     <item msgid="1151988412809572526">"Fransız"</item>
+@@ -250,55 +94,10 @@
+     <item msgid="5884448729274543324">"6"</item>
+     <item msgid="5511864807618312598">"7"</item>
+   </string-array>
+-    <string name="list_language_dtitle" msgid="5442908726538951934">"Dillər"</string>
+-    <string name="enable_disable_local_weather" msgid="986967454867219114">"Yerli Hava"</string>
+-    <string name="local_weather_enable" msgid="6199315114382448922">"Yerli Hava Məlumatı aktivdir"</string>
+-    <string name="local_weather_disable" msgid="2510158089142626480">"Yerli Hava Məlumatı deaktivdir"</string>
+-    <string name="enable_disable_atr" msgid="8339572391278872343">"Ərazi Trafik Raportları"</string>
+-    <string name="atr_enable" msgid="5541757457789181799">"Ərazi Trafik Raportları aktivdir"</string>
+-    <string name="atr_disable" msgid="7085558154727596455">"Ərazi Trafik Raportları deaktivdir"</string>
+-    <string name="enable_disable_lafs" msgid="668189073721277199">"Yerli Aeroport Uçuş Cədvəli"</string>
+-    <string name="lafs_enable" msgid="2791978667205137052">"Yerli Aeroport Uçuş Cədvəlləri aktivdir"</string>
+-    <string name="lafs_disable" msgid="2391212397725495350">"Yerli Aeroport Uçuş Cədvəlləri deaktivdir"</string>
+-    <string name="enable_disable_restaurants" msgid="6240381945336814024">"Restoranlar"</string>
+-    <string name="restaurants_enable" msgid="5137657479469118847">"Restoranlar aktivdir"</string>
+-    <string name="restaurants_disable" msgid="3678480270938424092">"Restoranlar deaktivdir"</string>
+-    <string name="enable_disable_lodgings" msgid="1822029172658551202">"Ev kirayəsi"</string>
+-    <string name="lodgings_enable" msgid="3230042508992850322">"Ev Kirayəsi Məlumatı aktivdir"</string>
+-    <string name="lodgings_disable" msgid="3387879742320682391">"Ev Kirayəsi Məlumatı deaktivdir"</string>
+-    <string name="enable_disable_retail_directory" msgid="1357809784475660303">"Pərakəndə Kataloq"</string>
+-    <string name="retail_directory_enable" msgid="3280626290436111496">"Pərakəndə Kataloq aktivdir"</string>
+-    <string name="retail_directory_disable" msgid="6479739816662879027">"Pərakəndə Kataloq deaktivdir"</string>
+-    <string name="enable_disable_advertisements" msgid="5999495926176182128">"Reklamlar"</string>
+-    <string name="advertisements_enable" msgid="2050305021264683786">"Reklamlar aktivdir"</string>
+-    <string name="advertisements_disable" msgid="8350985908788707935">"Reklamlar deaktivdir"</string>
+-    <string name="enable_disable_stock_quotes" msgid="6397810445293533603">"Aksiyaların Qiymətləndirilməsi"</string>
+-    <string name="stock_quotes_enable" msgid="4384802470887170543">"Aksiyaların Qiymətləndirilməsi aktivdir"</string>
+-    <string name="stock_quotes_disable" msgid="4781450084565594998">"Aksiyaların Qiymətləndirilməsi deaktivdir"</string>
+-    <string name="enable_disable_eo" msgid="4863043263443942494">"Məşğulluq İmkanları"</string>
+-    <string name="eo_enable" msgid="8623559062015685813">"Məşğulluq İmkanları aktivdir"</string>
+-    <string name="eo_disable" msgid="3863812478090907609">"Məşğulluq İmkanları deaktivdir"</string>
+-    <string name="enable_disable_mhh" msgid="908214593528968522">"Tibb, Səhiyyə və Xəstəxana"</string>
+-    <string name="mhh_enable" msgid="5544500632306446815">"Tibb, Səhiyyə və Xəstəxana məlumatları aktivdir"</string>
+-    <string name="mhh_disable" msgid="8998210550117117437">"Tibb, Səhiyyə və Xəstəxana məlumatları aktivdir"</string>
+-    <string name="enable_disable_technology_news" msgid="3517184627114999149">"Texnologiya Xəbərləri"</string>
+-    <string name="technology_news_enable" msgid="7995209394210455181">"Texnologiya Xəbərləri aktivdir"</string>
+-    <string name="technology_news_disable" msgid="5483490380561851946">"Texnologiya Xəbərləri deaktivdir"</string>
+-    <string name="enable_disable_multi_category" msgid="626771003122899280">"Multi-kateqoriya"</string>
+-    <string name="multi_category_enable" msgid="1179299804641721768">"Multi-kateqoriya aktivdir"</string>
+-    <string name="multi_category_disable" msgid="880104702904139505">"Multi-kateqoriya deaktivdir"</string>
+-    <string name="prefer_2g" msgid="8442550937280449639">"Yalnız 2G şəbəkələri istifadə edin"</string>
+-    <string name="prefer_2g_summary" msgid="1976491403210690759">"Enerjiyə qənaət edir"</string>
+-    <string name="cdma_system_select_title" msgid="5757657769327732833">"Sistem seçin"</string>
+-    <string name="cdma_system_select_summary" msgid="60460043745797517">"CDMA rouminq rejimini dəyişin"</string>
+-    <string name="cdma_system_select_dialogtitle" msgid="6083355415165359075">"Sistem seçin"</string>
+   <string-array name="cdma_system_select_choices">
+     <item msgid="176474317493999285">"Yalnız daxili"</item>
+     <item msgid="1205664026446156265">"Avtomatik"</item>
+   </string-array>
+-    <string name="cdma_subscription_title" msgid="1162564010076763284">"CDMA abunə"</string>
+-    <string name="cdma_subscription_summary" msgid="2530890766115781140">"RUIM/SIM və NV arasında seçin"</string>
+-    <string name="cdma_subscription_dialogtitle" msgid="2699527950523333110">"abunə"</string>
+   <string-array name="cdma_subscription_choices">
+     <item msgid="2258014151300708431">"RUIM/SIM"</item>
+     <item msgid="5127722015571873880">"NV"</item>
+@@ -307,81 +106,8 @@
+     <item msgid="7494167883478914080">"0"</item>
+     <item msgid="6043847456049107742">"1"</item>
+   </string-array>
+-    <string name="cdma_activate_device" msgid="3793805892364814518">"Cihazı aktivləşdirin"</string>
+-    <string name="cdma_lte_data_service" msgid="4255018217292548962">"Data xidmətini quraşdırın"</string>
+-    <string name="fdn" msgid="7878832555095183202">"Sabit Yığım Nömrələri"</string>
+-    <string name="manage_fdn_list" msgid="8777755791892122369">"FDN siyahısı"</string>
+-    <string name="fdn_activation" msgid="2156479741307463576">"FDN aktivasiya"</string>
+-    <string name="fdn_enabled" msgid="5238109009915521240">"Sabit Yığım Nömrələri aktivdir."</string>
+-    <string name="fdn_disabled" msgid="4700049736675368279">"Sabit Yığım Nömrələri deaktivdir"</string>
+-    <string name="enable_fdn" msgid="3740191529180493851">"FDN Aktivləşdirin"</string>
+-    <string name="disable_fdn" msgid="7944020890722540616">"FDN deaktiv edin"</string>
+-    <string name="change_pin2" msgid="2153563695382176676">"PIN2 kodu dəyişin"</string>
+-    <string name="enable_fdn_ok" msgid="7215588870329688132">"FDN Deaktivləşdirin"</string>
+-    <string name="disable_fdn_ok" msgid="5727046928930740173">"FDN aktiv edin"</string>
+-    <string name="sum_fdn" msgid="1959399454900272878">"Sabit Yığım Nömrələrini İdarə Edin"</string>
+-    <string name="sum_fdn_change_pin" msgid="6666549734792827932">"FDN girişi üçün PIN dəyişin"</string>
+-    <string name="sum_fdn_manage_list" msgid="8431088265332628316">"Telefon nömrəsi siyahısını idarə edin"</string>
+-    <string name="voice_privacy" msgid="3776841382844614716">"Səs konfidensiallığı"</string>
+-    <string name="voice_privacy_summary" msgid="3159383389833516214">"Geniş konfidensiallıq rejimini aktivləşdirin"</string>
+-    <string name="tty_mode_option_title" msgid="9033098925144434669">"TTY rejimi"</string>
+-    <string name="tty_mode_option_summary" msgid="1073835131534808732">"TTY rejimi ayarlayın"</string>
+-    <string name="auto_retry_mode_title" msgid="4073265511427813322">"Avtomatik yenidən sınama"</string>
+-    <string name="auto_retry_mode_summary" msgid="4973886004067532288">"Avtomatik yenidən sınama rejimini aktivləşdirin"</string>
+-    <string name="menu_add" msgid="1882023737425114762">"Kontakt əlavə edin"</string>
+-    <string name="menu_edit" msgid="7143003705504672374">"Kontakta düzəliş edin"</string>
+-    <string name="menu_delete" msgid="3977150783449642851">"Kontaktı sil"</string>
+-    <string name="get_pin2" msgid="8204677063922225311">"PIN2 daxil edin"</string>
+-    <string name="name" msgid="7329028332786872378">"Ad"</string>
+-    <string name="number" msgid="7905950798349903858">"Nömrə"</string>
+-    <string name="save" msgid="4094274636321939086">"Yadda saxla"</string>
+-    <string name="add_fdn_contact" msgid="2481915899633353976">"Sabit yığım nömrəsi əlavə edin"</string>
+-    <string name="adding_fdn_contact" msgid="7627379633721940991">"Sabit yığım nömrəsi əlavə olunur..."</string>
+-    <string name="fdn_contact_added" msgid="7458335758501736665">"Sabit yığım nömrəsi əlavə edildi."</string>
+-    <string name="edit_fdn_contact" msgid="7976936035587081480">"Sabit yığım nömrəsinə düzəliş edin"</string>
+-    <string name="updating_fdn_contact" msgid="8370929876849803600">"Sabit yığım nömrəsi güncəlləşdirilir…"</string>
+-    <string name="fdn_contact_updated" msgid="5497828782609005017">"Sabit yığım nömrəsi güncəlləşdirildi."</string>
+-    <string name="delete_fdn_contact" msgid="6668958073074151717">"Sabit yığım nömrəsini silin"</string>
+-    <string name="deleting_fdn_contact" msgid="5669163206349319969">"Sabit yığım nömrəsi silinir…"</string>
+-    <string name="fdn_contact_deleted" msgid="7154162327112259569">"Sabit yığım nömrəsi silindi."</string>
+-    <string name="pin2_invalid" msgid="5470854099230755944">"Yanlış PIN daxil etdiyiniz üçün FDN güncəlləşdirilmədi."</string>
+-    <string name="fdn_invalid_number" msgid="1494755047900009147">"FDN güncəlləşdirilmədi, çünki nömrə 20 rəqəmdən çox ola bilməz."</string>
+-    <string name="pin2_or_fdn_invalid" msgid="6025144083384701197">"FDN güncəlləşdirilmədi. PIN2 yanlış idi və ya telefon nömrəsi rədd edildi."</string>
+     <string name="simContacts_emptyLoading" msgid="2203331234764498011">"SIM kart oxunur ..."</string>
+-    <string name="simContacts_empty" msgid="5270660846489561932">"SIM kartınızda kontakt yoxdur."</string>
+     <string name="simContacts_title" msgid="1861472842524839921">"İmport üçün kontaktlar seçin"</string>
+-    <string name="simContacts_airplaneMode" msgid="1846161429087789936">"SIM kartdan kontaktları import etmək üçün, ilk olaraq Uçuş Rejimini söndürün."</string>
+-    <string name="enable_pin" msgid="5422767284133234860">"SIM PIN aktivləşdirin/deaktivləşdirin"</string>
+-    <string name="change_pin" msgid="9174186126330785343">"SIM PIN kodu dəyişin"</string>
+-    <string name="enter_pin_text" msgid="8532615714751931951">"SIM PIN:"</string>
+-    <string name="oldPinLabel" msgid="5287773661246368314">"Köhnə PIN"</string>
+-    <string name="newPinLabel" msgid="207488227285336897">"Yeni PIN"</string>
+-    <string name="confirmPinLabel" msgid="257597715098070206">"Yeni PIN təsdiq edin"</string>
+-    <string name="badPin" msgid="8955102849303984935">"Daxil etdiyiniz köhnə PIN kod yanlışdır. Yenidən sınayın."</string>
+-    <string name="mismatchPin" msgid="5923253370683071889">"Yazdığınız PIN\'lər üst-üstə düşmür. Yenidən sınayın."</string>
+-    <string name="invalidPin" msgid="5981171102258684792">"4-dən 8-ə qədər rəqəmi olan PIN yazın."</string>
+-    <string name="disable_sim_pin" msgid="3992926931620188855">"SIM PIN deaktiv edin"</string>
+-    <string name="enable_sim_pin" msgid="5803702443844458831">"SIM PIN Aktivləşdirin"</string>
+-    <string name="enable_in_progress" msgid="3695303775100109650">"Xahiş edirik, gözləyin ..."</string>
+-    <string name="enable_pin_ok" msgid="9166061915030865848">"SIM PIN aktivdir."</string>
+-    <string name="disable_pin_ok" msgid="5596999379593924850">"SIM PIN deaktivdir."</string>
+-    <string name="pin_failed" msgid="2298841192582192277">"Daxil etdiyiniz PIN yanlış idi."</string>
+-    <string name="pin_changed" msgid="4365538014588501049">"SIM PIN dəyişdirildi."</string>
+-    <string name="puk_requested" msgid="3898394204193202803">"Parol yanlışdır, SIM kilidlənib! PUK2 tələb olunur."</string>
+-    <string name="enter_pin2_text" msgid="8339444124477720345">"PIN2"</string>
+-    <string name="oldPin2Label" msgid="8559146795026261502">"Köhnə PIN2"</string>
+-    <string name="newPin2Label" msgid="4573956902204349054">"Yeni PIN2"</string>
+-    <string name="confirmPin2Label" msgid="8100319484454787708">"Yeni PIN2 təsdiq edin"</string>
+-    <string name="badPuk2" msgid="4851734468010000418">"Daxil edilmiş PUK2 kodu yanlışdır. Lütfən, yenidən sınayın."</string>
+-    <string name="badPin2" msgid="1041576234483629991">"Köhnə PIN2 doğru deyil. Lütfən, yenidən sınayın."</string>
+-    <string name="mismatchPin2" msgid="523029155918113440">"Yazdığınız PIN2 kodları üst-üstə düşmür. Yenidən sınayın."</string>
+-    <string name="invalidPin2" msgid="8237110107480395938">"4-dən 8-ə qədər rəqəmi olan PIN2 yazın."</string>
+-    <string name="invalidPuk2" msgid="1290977391033057871">"8 rəqəmli PUK2 yazın."</string>
+-    <string name="pin2_changed" msgid="1639666438836544393">"PIN2 uğurla dəyişdirildi."</string>
+-    <string name="label_puk2_code" msgid="302845876240219560">"PUK2 kodu yazın"</string>
+-    <string name="fdn_enable_puk2_requested" msgid="4262894949634885773">"Parol yanlışdır. PIN2 kodunu dəyişib təkrarlayın!"</string>
+-    <string name="puk2_requested" msgid="8909278021238716877">"Parol yanlışdır, SIM kilidlənib. PUK2 tələb olunur."</string>
+-    <string name="doneButton" msgid="2859593360997984240">"Tamam"</string>
+     <string name="caller_manage_header" msgid="3231519674734638786">"Konfrans zəngi <xliff:g id="CONF_CALL_TIME">%s</xliff:g>"</string>
+     <string name="voicemail_settings_number_label" msgid="8524164258691887790">"Səsli poçt nömrəsi"</string>
+     <string name="card_title_dialing" msgid="5769417478498348054">"Nömrə yığılır"</string>
+@@ -441,47 +167,16 @@
+     <string name="onscreenManageConferenceText" msgid="6485935856534311346">"Konfransı idarə edin"</string>
+     <string name="onscreenAudioText" msgid="1710087112800041743">"Audio"</string>
+     <string name="onscreenVideoCallText" msgid="4800924186056115442">"Video zəng"</string>
+-    <string name="importSimEntry" msgid="6614358325359736031">"İmport"</string>
+-    <string name="importAllSimEntries" msgid="1503181169636198673">"Hamısını import edin"</string>
+-    <string name="importingSimContacts" msgid="7374056215462575769">"SIM kontaktlar import edilir"</string>
+-    <string name="importToFDNfromContacts" msgid="2130620207013368580">"Kontaktlardan import edin"</string>
+-    <string name="hac_mode_title" msgid="8740268574688743289">"Eşitmə yardımı"</string>
+-    <string name="hac_mode_summary" msgid="6833851160514929341">"Eşitmə yardımı uyğunluğunu aktivləşdirin"</string>
+   <string-array name="tty_mode_entries">
+     <item msgid="512950011423868021">"TTY Deaktiv"</item>
+     <item msgid="3971695875449640648">"TTY Tam"</item>
+     <item msgid="1937509904407445684">"TTY HCO"</item>
+     <item msgid="5644925873488772224">"TTY VCO"</item>
+   </string-array>
+-    <string name="dtmf_tones_title" msgid="5163153771291340803">"DTMF tonları"</string>
+-    <string name="dtmf_tones_summary" msgid="3351820372864020331">"DTMF tonlarının uzunluğunu ayarlayın"</string>
+   <string-array name="dtmf_tone_entries">
+     <item msgid="899650777817315681">"Normal"</item>
+     <item msgid="2883365539347850535">"Uzun"</item>
+   </string-array>
+-    <string name="network_message" msgid="4483886461245213802">"Şəbəkə mesajı"</string>
+-    <string name="ota_title_activate" msgid="8616918561356194398">"Telefonunuzu aktivləşdirin"</string>
+-    <string name="ota_touch_activate" msgid="6553212803262586244">"Telefon xidmətinizi aktivləşdirmək üçün xüsusi zəngə ehtiyac var.\n\n\"Aktivləşdir\" düyməsini basandan sonra telefonunuzu aktivləşdirmək üçün təqdim olunan instruksiyaları dinləyin."</string>
+-    <string name="ota_skip_activation_dialog_title" msgid="2943366608272261306">"Aktivasiyanı ötürək?"</string>
+-    <string name="ota_skip_activation_dialog_message" msgid="2440770373498870550">"Aktivasiyanı ötürdüyünüz halda zəng edə və ya mobil data şəbəkəsinə birləşə bilməzsiniz (Wi-Fi şəbəkəsinə birləşə bilərsiniz). Telefonunuzu aktivləşdirənə kimi hər dəfə telefonunuzu yandırarkən Sizə onu aktivləşdirmək təklif olunacaq."</string>
+-    <string name="ota_skip_activation_dialog_skip_label" msgid="3458532775091563208">"Ötürün"</string>
+-    <string name="ota_activate" msgid="1368528132525626264">"Aktivləşdirin"</string>
+-    <string name="ota_title_activate_success" msgid="6570240212263372046">"Telefonunuz aktivləşdirilib."</string>
+-    <string name="ota_title_problem_with_activation" msgid="7095824491970084367">"Aktivasiya problemi"</string>
+-    <string name="ota_listen" msgid="162923839877584937">"Aktivasiyanın tamamlanmasını eşidənə kimi səslənmiş təlimatlara əməl edin."</string>
+-    <string name="ota_speaker" msgid="6904589278542719647">"Dinamik"</string>
+-    <string name="ota_progress" msgid="3420314892609254729">"Telefonunuz proqramlaşana qədər gözləyin."</string>
+-    <string name="ota_failure" msgid="4311299546379674378">"Proqramlaşdırma Uğursuz Oldu"</string>
+-    <string name="ota_successful" msgid="1880780692887077407">"Telefonunuz artıq aktivləşdirildi. Xidmətin başlanması üçün 15 dəqiqə lazım ola bilər."</string>
+-    <string name="ota_unsuccessful" msgid="8072141612635635357">"Telefonunuz aktivləşdirilmədi. \nDaha yaxşı şəbəkə əhatəsi olan ərazidə olmağınız gərəkdir (misal üçün, pəncərənin yanında, çöldə). \n\nYenidən cəhd edin və ya daha çox seçənək üçün müştəri xidmətlərinə zəng vurun."</string>
+-    <string name="ota_spc_failure" msgid="3909983542575030796">"AŞIRI SPC XƏTALAR"</string>
+-    <string name="ota_call_end" msgid="4537279738134612388">"Geri"</string>
+-    <string name="ota_try_again" msgid="7685477206465902290">"Yenidən cəhd edin"</string>
+-    <string name="ota_next" msgid="3904945374358235910">"Növbəti"</string>
+-    <string name="ecm_exit_dialog" msgid="4448531867763097533">"EcmExitDialog"</string>
+-    <string name="phone_entered_ecm_text" msgid="6266424252578731203">"Təcili Geriyə Zəng Rejimi Daxil Edildi"</string>
+-    <string name="phone_in_ecm_notification_title" msgid="3226896828951687085">"Təcisi Geriyə Zəng Rejimi"</string>
+-    <string name="phone_in_ecm_call_notification_text" msgid="4611608947314729773">"Data bağlantısı deaktiv edildi"</string>
+   <plurals name="phone_in_ecm_notification_time">
+     <item quantity="one" msgid="4866221796252472622">"<xliff:g id="COUNT">%s</xliff:g> dəqiqəlik heç bir data bağlantısı yoxdur"</item>
+     <item quantity="other" msgid="3122217344579273583">"<xliff:g id="COUNT">%s</xliff:g> dəqiqə ərzində heç bir data bağlantısı yoxdur."</item>
+@@ -494,11 +189,6 @@
+     <item quantity="one" msgid="2585506997024726599">"Seçilmiş fəaliyyət geriyə zəng rejimində əlçatımlı deyil. Telefon <xliff:g id="COUNT">%s</xliff:g> dəqiqəlik bu rejimdə olacaq. İndi çıxmaq istəyirsiniz?"</item>
+     <item quantity="other" msgid="6115622137771382224">"Seçilmiş fəaliyyət geriyə zəng rejimində əlçatımlı deyil. Telefon <xliff:g id="COUNT">%s</xliff:g> dəqiqəlik bu rejimdə olacaq. İndi çıxmaq istəyirsiniz?"</item>
+   </plurals>
+-    <string name="alert_dialog_in_ecm_call" msgid="1886723687211887104">"Seçilmiş fəaliyyət təcili zəng zamanı mümkün deyil"</string>
+-    <string name="progress_dialog_exiting_ecm" msgid="4835734101617817074">"Təcili Geriyə Zəng Rejimindən Çıxır"</string>
+-    <string name="alert_dialog_yes" msgid="6674268047820703974">"Bəli"</string>
+-    <string name="alert_dialog_no" msgid="1476091437797628703">"Xeyr"</string>
+-    <string name="alert_dialog_dismiss" msgid="2491494287075907171">"Kənarlaşdır"</string>
+     <string name="voicemail_provider" msgid="5135942703327136909">"Xidmət"</string>
+     <string name="voicemail_settings" msgid="72448049107749316">"Quraşdırma"</string>
+     <string name="voicemail_number_not_set" msgid="6724904736891087856">"&lt;Ayarlanmayıb&gt;"</string>
+@@ -507,79 +197,6 @@
+     <string name="contactPhoto" msgid="4713193418046639466">"kontakt fotosu"</string>
+     <string name="goPrivate" msgid="865837794424530980">"şəxsi rejimə keçin"</string>
+     <string name="selectContact" msgid="781975788478987237">"kontakt seçin"</string>
+-    <string name="sip_settings" msgid="6699045718560859691">"İnternet zəng ayarları"</string>
+-    <string name="sip_accounts" msgid="2097054001288457163">"İnternet zəng (SIP) hesabları"</string>
+-    <string name="sip_accounts_title" msgid="1212889069281054570">"Hesablar"</string>
+-    <string name="sip_receive_calls" msgid="5635685570889971559">"Daxil olan zəngləri qəbul et"</string>
+-    <string name="sip_receive_calls_summary" msgid="8403613238633679184">"Batareyanın ömrünü azaldır"</string>
+-    <string name="sip_call_options_title" msgid="27433718808839672">"İnternet zəng istifadə edin"</string>
+-    <string name="sip_call_options_wifi_only_title" msgid="145572394529090811">"İnternet zəngi istifadə edin (yalnız Wi-Fi)"</string>
+-    <string name="sip_call_options_entry_1" msgid="6556668894178520760">"Data şəbəkəsi əlçatımlı olanda bütün şəbəkələr üçün"</string>
+-    <string name="sip_call_options_entry_2" msgid="6789764029719494361">"Yalnız İnternet zəngləri üçün"</string>
+-    <string name="sip_call_options_entry_3" msgid="7474809001402649185">"Hər zəng üçün soruş"</string>
+-    <string name="sip_call_options_wifi_only_entry_1" msgid="7423523864471650069">"Bütün zənglər üçün"</string>
+-    <string name="pick_outgoing_call_phone_type" msgid="5622916534828338675">"Zəng edin"</string>
+-    <string name="pick_outgoing_sip_phone" msgid="7012322118236208875">"İnternet zəng hesabını istifadə edin:"</string>
+-    <string name="remember_my_choice" msgid="7058059586169290705">"İnternet zənglər etmək üçün həmişə istifadə edin"</string>
+-    <string name="reset_my_choice_hint" msgid="5523030209803567922">"Telefondan hansı internet zəng hesabının defolt olmasını seçə bilərsiniz &gt; Ayarlar &gt; İnternet zəng parametrləri &gt; Hesab ekranı"</string>
+-    <string name="pstn_phone" msgid="8782554491484326429">"Mobil telefon zəngi"</string>
+-    <string name="internet_phone" msgid="1147922660195095810">"İnternet zəng"</string>
+-    <string name="no_sip_account_found_title" msgid="6266249392379373628">"İnternet zəng hesabı yoxdur"</string>
+-    <string name="no_sip_account_found" msgid="724325811961769997">"Bu telefonda heç bir internet zəng hesabı yoxdur. Birini əlavə etmək istəyirsiniz mi?"</string>
+-    <string name="sip_menu_add" msgid="8757508498518881500">"Əlavə edin"</string>
+-    <string name="add_sip_account" msgid="5904858426290097611">"Hesab əlavə edin"</string>
+-    <string name="remove_sip_account" msgid="7645900420385682570">"Hesabı silin"</string>
+-    <string name="sip_account_list" msgid="5480058210652194306">"SIP hesabları"</string>
+-    <string name="saving_account" msgid="52903398217017954">"Hesab yadda saxlanır..."</string>
+-    <string name="removing_account" msgid="7183999896088628100">"Hesab silinir..."</string>
+-    <string name="sip_menu_save" msgid="5842531129356014943">"Yadda saxla"</string>
+-    <string name="sip_menu_discard" msgid="524075892158789701">"İmtina et"</string>
+-    <string name="alert_dialog_close" msgid="7759635137627626235">"Profili bağlayın"</string>
+-    <string name="alert_dialog_ok" msgid="3580379406983564080">"OK"</string>
+-    <string name="close_profile" msgid="6886968271423155284">"Bağla"</string>
+-    <string name="primary_account_summary_with" msgid="1633960536212343187">"İlkin hesab. <xliff:g id="REGISTRATION_STATUS">%s</xliff:g>"</string>
+-    <string name="registration_status_checking_status" msgid="3381868307694056727">"Status yoxlanılır ..."</string>
+-    <string name="registration_status_registering" msgid="4288401139400232968">"Qeydiyyatdan keçirilir..."</string>
+-    <string name="registration_status_still_trying" msgid="3185581992666091911">"Hələ də cəhd edilir..."</string>
+-    <string name="registration_status_not_receiving" msgid="4185572774980557758">"Zəngləri qəbul etmir."</string>
+-    <string name="registration_status_no_data" msgid="4901476962360656611">"İnternet bağlantısı olmadığı üçün hesab qeydiyyatı dayandırıldı."</string>
+-    <string name="registration_status_no_wifi_data" msgid="4038976374713018067">"Wi-Fi bağlantısı olmadığı üçün hesab qeydiyyatı dayandırıldı."</string>
+-    <string name="registration_status_not_running" msgid="4824867184446232131">"Hesab qeydiyyatı uğursuz oldu."</string>
+-    <string name="registration_status_done" msgid="884630717456439280">"Zəng qəbul olunur."</string>
+-    <string name="registration_status_failed_try_later" msgid="5214474354451220581">"Hesab qeydiyyatı uğursuz oldu: (<xliff:g id="REGISTRATION_ERROR_MESSAGE">%s</xliff:g>); sonra cəhd olunacaq"</string>
+-    <string name="registration_status_invalid_credentials" msgid="4908446367559341757">"Hesab qeydiyyatı alınmadı: yanlış istifadə adı və ya parol"</string>
+-    <string name="registration_status_server_unreachable" msgid="5733421582468991276">"Hesab qeydiyyatı uğursuz oldu: Server adını yoxlayın."</string>
+-    <string name="third_party_account_summary" msgid="2532526738862533028">"Bu hesab hazırda <xliff:g id="ACCOUNT_OWNER">%s</xliff:g> tətbiqi tərəfindən istifadə olunur."</string>
+-    <string name="sip_edit_title" msgid="489288416435014385">"SIP hesab detalları"</string>
+-    <string name="sip_edit_new_title" msgid="3659149255856520385">"SIP hesab detalları"</string>
+-    <string name="domain_address_title" msgid="9071787581316160480">"Server"</string>
+-    <string name="username_title" msgid="2479375923477682328">"İstifadəçi adı"</string>
+-    <string name="password_title" msgid="3323555249068171531">"Parol"</string>
+-    <string name="display_name_title" msgid="2459768196312249937">"Ad göstərin"</string>
+-    <string name="proxy_address_title" msgid="4828301345351614273">"Gedən proksi ünvan"</string>
+-    <string name="port_title" msgid="5952939408078626657">"Port nömrəsi"</string>
+-    <string name="transport_title" msgid="8253139511847746640">"Nəqliyyat növü"</string>
+-    <string name="send_keepalive_title" msgid="7533342573918645113">"Daima canlı göndərin"</string>
+-    <string name="set_primary_title" msgid="5351892327447571451">"İlkin hesab olaraq ayarla"</string>
+-    <string name="set_primary_summary" msgid="2219064654523258577">"Gedən zənglər üçün istifadə olunan"</string>
+-    <string name="advanced_settings" msgid="8350631795335495338">"Əlavə seçimlər"</string>
+-    <string name="auth_username_title" msgid="851473016307947120">"Autentifikasiya istifadəçi adı"</string>
+-    <string name="auth_username_summary" msgid="6782012405225938629">"Autentifikasiya üçün istifadə edilən istifadəçi adı"</string>
+-    <string name="default_preference_summary" msgid="868766740121667450">"&lt;Təyin edilməyib&gt;"</string>
+-    <string name="display_name_summary" msgid="8636377460518225523">"&lt;İstifadəçi adı ilə eyni&gt;"</string>
+-    <string name="optional_summary" msgid="1464058793789832411">"&lt;İstəyə görə&gt;"</string>
+-    <string name="advanced_settings_show" msgid="4668880308290857597">"Hamısını göstərmək üçün toxunun ▷"</string>
+-    <string name="advanced_settings_hide" msgid="217398292824758079">"Hamısını gizlətmək üçün toxunun ▽"</string>
+-    <string name="empty_alert" msgid="6839103946505432390">"<xliff:g id="INPUT_FIELD_NAME">%s</xliff:g> tələb olunur və boş buraxıla bilməz."</string>
+-    <string name="not_a_valid_port" msgid="4796149266434630292">"Port 1000 və 65534 arasında olmalıdır."</string>
+-    <string name="no_internet_available_title" msgid="3327109242858406165">"İnternet bağlantısı yoxdur"</string>
+-    <string name="no_wifi_available_title" msgid="747881033089378758">"Wi-Fi bağlantısı yoxdur"</string>
+-    <string name="no_internet_available" msgid="7877142631803238549">"İnternet zəngi üçün ilk olaraq internet əlaqəsini yoxlayın."</string>
+-    <string name="no_wifi_available" msgid="1225073547318465713">"İnternet zənglər etmək üçün Wi-Fi şəbəkəsinə qoşulmalısınız (Wireless &amp; Şəbəkə parametrləri istifadə edin)."</string>
+-    <string name="no_voip" msgid="8901474054537199865">"İnternet zəng dəstəklənmir"</string>
+-    <string name="sip_system_decide" msgid="368030746310423471">"Avtomatik"</string>
+-    <string name="sip_always_send_keepalive" msgid="8192080724632877132">"Həmişə göndərin"</string>
+-    <string name="not_voice_capable" msgid="2739898841461577811">"Səsli zəng dəstəklənmir"</string>
+     <string name="respond_via_sms_canned_response_1" msgid="2461606462788380215">"İndi danışmaq olmur. Nə olub?"</string>
+     <string name="respond_via_sms_canned_response_2" msgid="4074450431532859214">"Özüm zəng edəcəm."</string>
+     <string name="respond_via_sms_canned_response_3" msgid="3496079065723960450">"Özüm sonra zəng edəcəm."</string>
+diff --git a/res/values-be/strings.xml b/res/values-be/strings.xml
+index 467ae64..b42401c 100644
+--- a/res/values-be/strings.xml
++++ b/res/values-be/strings.xml
+@@ -54,117 +54,13 @@
+     <string name="pause_prompt_yes" msgid="3564467212025151797">"Так"</string>
+     <string name="pause_prompt_no" msgid="6686238803236884877">"Не"</string>
+     <string name="wild_prompt_str" msgid="5543521676355533577">"Замяніце выпадковы сімвал:"</string>
+-    <string name="no_vm_number" msgid="4164780423805688336">"Адсутнічае нумар галасавой пошты"</string>
+-    <string name="no_vm_number_msg" msgid="1300729501030053828">"На SIM-карце няма нумару галасавой пошты."</string>
+-    <string name="add_vm_number_str" msgid="4676479471644687453">"Дадаць нумар"</string>
+-    <string name="puk_unlocked" msgid="2284912838477558454">"Ваша SIM-карта была разблакаваная. Ваш тэлефон разблакоўваецца..."</string>
+-    <string name="label_ndp" msgid="780479633159517250">"PIN-код разблакавання сеткі SIM"</string>
+-    <string name="sim_ndp_unlock_text" msgid="683628237760543009">"Разблакаваць"</string>
+-    <string name="sim_ndp_dismiss_text" msgid="1604823375752456947">"Адхіліць"</string>
+-    <string name="requesting_unlock" msgid="6412629401033249351">"Запыт разблакавання сеткі..."</string>
+-    <string name="unlock_failed" msgid="6490531697031504225">"Запыт разблакавання сеткі няўдалы."</string>
+-    <string name="unlock_success" msgid="6770085622238180152">"Сетка паспяхова разблакавана."</string>
+-    <string name="labelGSMMore" msgid="5930842194056092106">"Налады выклікаў GSM"</string>
+-    <string name="labelCDMAMore" msgid="1630676740428229339">"Налады выклікаў CDMA"</string>
+-    <string name="apn_settings" msgid="9043423184895642077">"Назвы кропак доступу"</string>
+-    <string name="settings_label" msgid="3876743539816984008">"Налады сеткі"</string>
+     <string name="voicemail" msgid="8693759337917898954">"Галасавая пошта"</string>
+-    <string name="voicemail_abbreviated" msgid="2215592488517217448">"ГП:"</string>
+-    <string name="networks" msgid="8873030692174541976">"Сеткавыя аператары"</string>
+     <string name="call_settings" msgid="6112441768261754562">"Налады выклікаў"</string>
+-    <string name="additional_gsm_call_settings" msgid="1391795981938800617">"Дадатковыя налады"</string>
+-    <string name="sum_gsm_call_settings" msgid="4076647190996778012">"Дадатковыя налады выклікаў толькі для GSM"</string>
+-    <string name="additional_cdma_call_settings" msgid="8628958775721886909">"Дадатковыя налады выклікаў CDMA"</string>
+-    <string name="sum_cdma_call_settings" msgid="284753265979035549">"Дадатковыя налады толькі для выклікаў CDMA"</string>
+-    <string name="labelNwService" msgid="4699970172021870983">"Налады сеткавых паслуг"</string>
+-    <string name="labelCallerId" msgid="3888899447379069198">"АВН"</string>
+-    <string name="sum_loading_settings" msgid="1826692909391168620">"Загрузка налад..."</string>
+-    <string name="sum_hide_caller_id" msgid="1071407020290873782">"Нумар схаваны з выходных выклікаў"</string>
+-    <string name="sum_show_caller_id" msgid="6768534125447290401">"Нумар, якi паказваецца ў выходных выкліках"</string>
+-    <string name="sum_default_caller_id" msgid="1954518825510901365">"Выкарыстоўваць налады па змаўчаннi, каб аператар мог адлюстроўваць мой нумар у выходных выкліках"</string>
+-    <string name="labelCW" msgid="6120513814915920200">"Чаканне выкліку"</string>
+-    <string name="sum_cw_enabled" msgid="8083061901633671397">"Паведамляць пра ўваходныя выклікі падчас размовы"</string>
+-    <string name="sum_cw_disabled" msgid="3648693907300104575">"Паведамляць пра ўваходныя выклікі падчас размовы"</string>
+-    <string name="call_forwarding_settings" msgid="3378927671091537173">"Налады пераадрасацыі выкліку"</string>
+-    <string name="labelCF" msgid="2574386948026924737">"Пераадрасацыя выкліку"</string>
+-    <string name="labelCFU" msgid="8147177368148660600">"Заўсёды пераадрасоўваць"</string>
+-    <string name="messageCFU" msgid="3560082430662923687">"Заўсёды выкарыстоўваць гэты нумар"</string>
+-    <string name="sum_cfu_enabled_indicator" msgid="4014187342724130197">"Пераадрасацыя ўсіх выклікаў"</string>
+-    <string name="sum_cfu_enabled" msgid="2450052502198827927">"Пераадрасацыя ўсіх тэлефанаванняў на <xliff:g id="PHONENUMBER">{0}</xliff:g>"</string>
+-    <string name="sum_cfu_enabled_no_number" msgid="6591985777096823616">"Нумар недаступны"</string>
+-    <string name="sum_cfu_disabled" msgid="3698472522160364904">"Адключана"</string>
+-    <string name="labelCFB" msgid="218938523102207587">"Пераадрасацыя, калі занята"</string>
+-    <string name="messageCFB" msgid="3711089705936187129">"Нумар, калі занята"</string>
+-    <string name="sum_cfb_enabled" msgid="5984198104833116690">"Пераадрасацыя на <xliff:g id="PHONENUMBER">{0}</xliff:g>"</string>
+-    <string name="sum_cfb_disabled" msgid="227440009979537651">"Адключана"</string>
+-    <string name="disable_cfb_forbidden" msgid="3506984333877998061">"Ваш аператар не падтрымлівае адключэнне перанакіравання выклікаў, калі тэлефон заняты."</string>
+-    <string name="labelCFNRy" msgid="3646316323834351390">"Пераадрасацыя, калі няма адказу"</string>
+-    <string name="messageCFNRy" msgid="672317899884380374">"Нумар, калі няма адказу"</string>
+-    <string name="sum_cfnry_enabled" msgid="6955775691317662910">"Пераадрасацыя на <xliff:g id="PHONENUMBER">{0}</xliff:g>"</string>
+-    <string name="sum_cfnry_disabled" msgid="8422350929957344729">"Адключана"</string>
+-    <string name="disable_cfnry_forbidden" msgid="4308233959150658058">"Ваш аператар не падтрымлівае адключэнне перанакіравання выклікаў, калі тэлефон не адказвае."</string>
+-    <string name="labelCFNRc" msgid="47183615370850000">"Пераадрасоўваць, калі недаступны"</string>
+-    <string name="messageCFNRc" msgid="6380695421020295119">"Нумар, калі недаступны"</string>
+-    <string name="sum_cfnrc_enabled" msgid="7010898346095497421">"Пераадрасацыя на <xliff:g id="PHONENUMBER">{0}</xliff:g>"</string>
+-    <string name="sum_cfnrc_disabled" msgid="7222141261321276464">"Адключана"</string>
+-    <string name="disable_cfnrc_forbidden" msgid="5646361343094064333">"Ваш аператар не падтрымлівае адключэнне пераадрасацыi выклікаў, калі тэлефон недаступны."</string>
+-    <string name="updating_title" msgid="6146755386174019046">"Налады выклікаў"</string>
+-    <string name="error_updating_title" msgid="7970259216988931777">"Памылка налад выкліку"</string>
+-    <string name="reading_settings" msgid="1920291699287055284">"Чытанне налад..."</string>
+-    <string name="updating_settings" msgid="8171225533884883252">"Абнаўленне налад..."</string>
+-    <string name="reverting_settings" msgid="4752151682666912828">"Вяртанне налад..."</string>
+-    <string name="response_error" msgid="6674110501330139405">"Нечаканы адказ ад сеткі."</string>
+-    <string name="exception_error" msgid="7027667130619518211">"Памылка сеткі ці SIM-карты."</string>
+-    <string name="fdn_check_failure" msgid="18200614306525434">"Уключаны дазволеныя нумары. У выніку некаторыя функцыі адносна званкоў не працуюць."</string>
+-    <string name="radio_off_error" msgid="2304459933248513376">"Перад праглядам гэтых параметраў уключыце радыё."</string>
+-    <string name="close_dialog" msgid="2365884406356986917">"ОК"</string>
+-    <string name="enable" msgid="1059008390636773574">"Уключыць"</string>
+-    <string name="disable" msgid="7274240979164762320">"Адключыць"</string>
+-    <string name="change_num" msgid="239476305819844391">"Абнавіць"</string>
+   <string-array name="clir_display_values">
+     <item msgid="5560134294467334594">"Для сеткі па змаўчаннi"</item>
+     <item msgid="7876195870037833661">"Схаваць нумар"</item>
+     <item msgid="1108394741608734023">"Паказаць нумар"</item>
+   </string-array>
+-    <string name="vm_changed" msgid="380744030726254139">"Нумар галасавой пошты змяніўся."</string>
+-    <string name="vm_change_failed" msgid="3352934863246208918">"Не атрымалася змяніць нумар галасавой пошты.\nКалі праблема не вырашыцца, звярніцеся да свайго аператара."</string>
+-    <string name="fw_change_failed" msgid="5298103228470214665">"Не атрымалася змяніць нумар для пераадрасацыi.\nКалі гэтая праблема не вырашыцца, звярніцеся да свайго аператара."</string>
+-    <string name="fw_get_in_vm_failed" msgid="8862896836093833973">"Немагчыма атрымаць і захаваць бягучыя налады пераадрасацыі нумару.\nУсё роўна пераключыць на новага пастаўшчыка?"</string>
+-    <string name="no_change" msgid="3186040086622435212">"Змены не выкананы."</string>
+-    <string name="sum_voicemail_choose_provider" msgid="59911196126278922">"Выберыце службу галасавой пошты"</string>
+-    <string name="voicemail_default" msgid="5902099213882352338">"Мой аператар"</string>
+-    <string name="mobile_networks" msgid="5540397602919106177">"Налады мабільнай сеткі"</string>
+-    <string name="label_available" msgid="1181658289009300430">"Даступныя сеткі"</string>
+-    <string name="load_networks_progress" msgid="5230707536168902952">"Пошук..."</string>
+-    <string name="empty_networks_list" msgid="4249426905018815316">"Сеткі не знойдзены."</string>
+-    <string name="search_networks" msgid="1601136049300882441">"Шукаць сеткі"</string>
+-    <string name="network_query_error" msgid="6828516148953325006">"Памылка падчас пошуку сетак."</string>
+-    <string name="register_on_network" msgid="9055203954040805084">"Рэгістрацыя ў сетцы <xliff:g id="NETWORK">%s</xliff:g>..."</string>
+-    <string name="not_allowed" msgid="5613353860205691579">"Ваша SIM-карта не дазваляе падключацца да гэтай сеткі."</string>
+-    <string name="connect_later" msgid="2308119155752343975">"Зараз немагчыма падключыцца да гэтай сеткі. Паўтарыце спробу пазней."</string>
+-    <string name="registration_done" msgid="495135664535876612">"Зарэгістраваны ў сетцы."</string>
+-    <string name="sum_carrier_select" msgid="3494252551249882718">"Выберыце аператара сеткі"</string>
+-    <string name="sum_search_networks" msgid="2921092249873272715">"Пошук усіх даступных сетак"</string>
+-    <string name="select_automatically" msgid="5628402124471810174">"Выбраць аўтаматычна"</string>
+-    <string name="sum_select_automatically" msgid="5614890115123292400">"Аўтаматычна выбраць прыярытэтную сетку"</string>
+-    <string name="register_automatically" msgid="6017849844573519637">"Аўтаматычная рэгістрацыя..."</string>
+-    <string name="preferred_network_mode_title" msgid="8873246565334559308">"Сеткавы рэжым"</string>
+-    <string name="preferred_network_mode_summary" msgid="1434820673166126609">"Змяніць рэжым работы сеткі"</string>
+-    <string name="preferred_network_mode_dialogtitle" msgid="8176355237105593793">"Пераважны сеткавы рэжым"</string>
+-    <string name="preferred_network_mode_wcdma_perf_summary" msgid="8521677230113533809">"Пераважны рэжым сеткі: пераважна WCDMA"</string>
+-    <string name="preferred_network_mode_gsm_only_summary" msgid="3352445413437453511">"Пераважны рэжым сеткі: толькі GSM"</string>
+-    <string name="preferred_network_mode_wcdma_only_summary" msgid="2836897236221063413">"Пераважны рэжым сеткі: толькі WCDMA"</string>
+-    <string name="preferred_network_mode_gsm_wcdma_summary" msgid="3161255745326408587">"Пераважны рэжым сеткі: GSM/WCDMA"</string>
+-    <string name="preferred_network_mode_cdma_summary" msgid="3175690187294334241">"Пераважны рэжым сеткі: CDMA"</string>
+-    <string name="preferred_network_mode_cdma_evdo_summary" msgid="8332063064712726618">"Пераважны рэжым сеткі: CDMA/EvDo"</string>
+-    <string name="preferred_network_mode_cdma_only_summary" msgid="1309770926198634150">"Пераважны рэжым сеткі: толькі CDMA"</string>
+-    <string name="preferred_network_mode_evdo_only_summary" msgid="8472220691721269155">"Пераважны рэжым сеткі: толькі EvDo"</string>
+-    <string name="preferred_network_mode_cdma_evdo_gsm_wcdma_summary" msgid="4726682079415227330">"Пераважная сетка: CDMA/EvDo/GSM/WCDMA"</string>
+-    <string name="preferred_network_mode_lte_summary" msgid="574752287596469136">"Пераважная сетка: LTE"</string>
+-    <string name="preferred_network_mode_lte_gsm_wcdma_summary" msgid="8455358514068283935">"Пераважная сетка: GSM/WCDMA/LTE"</string>
+-    <string name="preferred_network_mode_lte_cdma_evdo_summary" msgid="228702246343742853">"Пераважная сетка: CDMA+LTE/EVDO"</string>
+-    <string name="preferred_network_mode_global_summary" msgid="1633134285545730364">"Пераважная сетка: глабальная"</string>
+-    <string name="preferred_network_mode_lte_wcdma_summary" msgid="9180775701594742750">"Пераважная сетка: LTE / WCDMA"</string>
+   <string-array name="preferred_network_mode_choices">
+     <item msgid="7886739962255042385">"LTE / WCDMA"</item>
+     <item msgid="577652050447385699">"LTE"</item>
+@@ -180,58 +76,6 @@
+     <item msgid="1524224863879435516">"Толькі GSM"</item>
+     <item msgid="3817924849415716259">"Пажадана GSM/WCDMA"</item>
+   </string-array>
+-    <string name="data_enabled" msgid="5972538663568715366">"Дадзеныя ўключаныя"</string>
+-    <string name="data_enable_summary" msgid="5022018967714633874">"Уключыць перадачу дадзеных праз мабільныя сеткі"</string>
+-    <string name="roaming" msgid="8871412572928323707">"Перадача дадзеных у роўмінгу"</string>
+-    <string name="roaming_enable" msgid="7331106985174381987">"Злучацца з паслугамі перадачы дадзеных ў роўмінгу"</string>
+-    <string name="roaming_disable" msgid="1843417228755568110">"Злучацца з паслугамі перадачы дадзеных у роўмінгу"</string>
+-    <string name="roaming_reenable_message" msgid="8913735676127858115">"Падлучэнне для перадачы дадзеных страчана, таму што вы выйшлі з зоны пакрыцця сваёй сеткі, а перадача дадзеных у роўмінгу адключана."</string>
+-    <string name="roaming_warning" msgid="7820963598559553967">"Дазволіць перадачу дадзеных у роўмінгу? Гэта можа прывесці да значных дадатковых выплат."</string>
+-    <string name="gsm_umts_options" msgid="6538311689850981686">"Параметры GSM/UMTS"</string>
+-    <string name="cdma_options" msgid="4016822858172249884">"Параметры CDMA"</string>
+-    <string name="throttle_data_usage" msgid="3715677828160555808">"Выкарыстанне дадзеных"</string>
+-    <string name="throttle_current_usage" msgid="8762280193043815361">"Выкарыстанне дадзеных у бягучы перыяд"</string>
+-    <string name="throttle_time_frame" msgid="1915198770363734685">"Перыяд выкарыстання дадзеных"</string>
+-    <string name="throttle_rate" msgid="4710388992676803508">"Палітыка хуткасці перадачы дадзеных"</string>
+-    <string name="throttle_help" msgid="243651091785169900">"Дадатковая iнфармацыя"</string>
+-    <string name="throttle_status_subtext" msgid="1657318943142085170">"Выкарыстана <xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>??) з максімуму перыяду <xliff:g id="USED_2">%3$s</xliff:g>\nНаступны перыяд пачнецца праз <xliff:g id="USED_3">%4$d</xliff:g> д. (<xliff:g id="USED_4">%5$s</xliff:g>)"</string>
+-    <string name="throttle_data_usage_subtext" msgid="6029276011123694701">"Выкарыстана <xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>??) з максімуму перыяду (<xliff:g id="USED_2">%3$s</xliff:g>)"</string>
+-    <string name="throttle_data_rate_reduced_subtext" msgid="7492763592720107737">"Максімум <xliff:g id="USED_0">%1$s</xliff:g> перавышаны\nХуткасць перадачы дадзеных зніжана да <xliff:g id="USED_1">%2$d</xliff:g> Кб/с"</string>
+-    <string name="throttle_time_frame_subtext" msgid="7732763021560399960">"<xliff:g id="USED_0">%1$d</xliff:g>?? цыклу прайшло\nНаступны перыяд пачнецца праз <xliff:g id="USED_1">%2$d</xliff:g> д. (<xliff:g id="USED_2">%3$s</xliff:g>)"</string>
+-    <string name="throttle_rate_subtext" msgid="2149102656120726855">"Хуткасць перадачы дадзеных зніжаецца да <xliff:g id="USED">%1$d</xliff:g> Кб/с, калі абмежаванне выкарыстання дадзеных перавышанае"</string>
+-    <string name="throttle_help_subtext" msgid="5217706521499010816">"Больш падрабязная інфармацыя аб палітыцы выкарыстання дадзеных у сетцы вашага мабільнага аператара"</string>
+-    <string name="cell_broadcast_sms" msgid="5584192824053625842">"Перадача SMS на сотавыя"</string>
+-    <string name="enable_disable_cell_bc_sms" msgid="4851147873691392255">"Перадача SMS на сотавыя"</string>
+-    <string name="cell_bc_sms_enable" msgid="6441688565738921084">"Перадача SMS на сотавыя ўключана"</string>
+-    <string name="cell_bc_sms_disable" msgid="3398365088309408749">"Перадача SMS на сотавыя адключаная"</string>
+-    <string name="cb_sms_settings" msgid="651715019785107312">"Налады перадачы SMS на сотавыя"</string>
+-    <string name="enable_disable_emergency_broadcast" msgid="2157014609041245335">"Экстраная перадача"</string>
+-    <string name="emergency_broadcast_enable" msgid="2645980025414010211">"Уключаная экстраная перадача"</string>
+-    <string name="emergency_broadcast_disable" msgid="3665199821267569426">"Экстраная перадача адключаная"</string>
+-    <string name="enable_disable_administrative" msgid="6501582322182059412">"Адміністрацыйны"</string>
+-    <string name="administrative_enable" msgid="1750086122962032235">"Адміністрацыйныя функцыi ўключаныя"</string>
+-    <string name="administrative_disable" msgid="8433273857248698539">"Адміністрацыйныя функцыi адключаны"</string>
+-    <string name="enable_disable_maintenance" msgid="1819693083025106678">"Абслугоўванне"</string>
+-    <string name="maintenance_enable" msgid="8566636458770971189">"Тэхнічнае абслугоўванне ўключана"</string>
+-    <string name="maintenance_disable" msgid="7340189100885066077">"Абслугоўванне адключана"</string>
+-    <string name="general_news_settings" msgid="4968779723948432978">"Агульныя навіны"</string>
+-    <string name="bf_news_settings" msgid="3935593091894685267">"Навіны бізнэсу і фінансаў"</string>
+-    <string name="sports_news_settings" msgid="7649399631270052835">"Навіны спорту"</string>
+-    <string name="entertainment_news_settings" msgid="5051153952959405035">"Забаўляльныя навіны"</string>
+-    <string name="enable_disable_local" msgid="7890281063123416120">"Мясцовы"</string>
+-    <string name="local_enable" msgid="6370463247609136359">"Мясцовыя навіны ўключаны"</string>
+-    <string name="local_disable" msgid="4405691986943795798">"Мясцовыя навіны адключаны"</string>
+-    <string name="enable_disable_regional" msgid="4905652414535565872">"Рэгіянальныя"</string>
+-    <string name="regional_enable" msgid="4434680415437834759">"Рэгіянальныя навіны ўключаны"</string>
+-    <string name="regional_disable" msgid="5359325527213850077">"Рэгіянальныя навіны адключаны"</string>
+-    <string name="enable_disable_national" msgid="236278090206880734">"Нацыянальны"</string>
+-    <string name="national_enable" msgid="1172443648912246952">"Нацыянальныя навіны ўключаныя"</string>
+-    <string name="national_disable" msgid="326018148178601166">"Нацыянальныя навіны адключаныя"</string>
+-    <string name="enable_disable_international" msgid="7535348799604565592">"Міжнародны"</string>
+-    <string name="international_enable" msgid="5855356769925044927">"Уключаны міжнародныя навіны"</string>
+-    <string name="international_disable" msgid="2850648591041088931">"Міжнародныя навіны адключаныя"</string>
+-    <string name="list_language_title" msgid="2841683501919760043">"Мова"</string>
+-    <string name="list_language_summary" msgid="8109546531071241601">"Выберыце мову навін"</string>
+   <string-array name="list_language_entries">
+     <item msgid="6137851079727305485">"Англійская"</item>
+     <item msgid="1151988412809572526">"Французская"</item>
+@@ -250,55 +94,10 @@
+     <item msgid="5884448729274543324">"6"</item>
+     <item msgid="5511864807618312598">"7"</item>
+   </string-array>
+-    <string name="list_language_dtitle" msgid="5442908726538951934">"Мовы"</string>
+-    <string name="enable_disable_local_weather" msgid="986967454867219114">"Мясцовае надвор\'е"</string>
+-    <string name="local_weather_enable" msgid="6199315114382448922">"Мясцовае надвор\'е ўключана"</string>
+-    <string name="local_weather_disable" msgid="2510158089142626480">"Мясцовае надвор\'е адключана"</string>
+-    <string name="enable_disable_atr" msgid="8339572391278872343">"Мясцовыя транспартныя паведамленні"</string>
+-    <string name="atr_enable" msgid="5541757457789181799">"Мясцовыя транспартныя паведамленні ўключаны"</string>
+-    <string name="atr_disable" msgid="7085558154727596455">"Мясцовыя транспартныя паведамленні адключаны"</string>
+-    <string name="enable_disable_lafs" msgid="668189073721277199">"Расклады палётаў мясцовага аэрапорту"</string>
+-    <string name="lafs_enable" msgid="2791978667205137052">"Уключаныя расклады палётаў мясцовага аэрапорта"</string>
+-    <string name="lafs_disable" msgid="2391212397725495350">"Расклады палётаў мясцовага аэрапорта адключаныя"</string>
+-    <string name="enable_disable_restaurants" msgid="6240381945336814024">"Рэстараны"</string>
+-    <string name="restaurants_enable" msgid="5137657479469118847">"Рэстараны ўключаны"</string>
+-    <string name="restaurants_disable" msgid="3678480270938424092">"Рэстараны адключаныя"</string>
+-    <string name="enable_disable_lodgings" msgid="1822029172658551202">"Жыллё"</string>
+-    <string name="lodgings_enable" msgid="3230042508992850322">"Жыллё ўключана"</string>
+-    <string name="lodgings_disable" msgid="3387879742320682391">"Жыллё адключана"</string>
+-    <string name="enable_disable_retail_directory" msgid="1357809784475660303">"Рознічны каталог"</string>
+-    <string name="retail_directory_enable" msgid="3280626290436111496">"Рознічны каталог ўключаны"</string>
+-    <string name="retail_directory_disable" msgid="6479739816662879027">"Рознічны каталог адключаны"</string>
+-    <string name="enable_disable_advertisements" msgid="5999495926176182128">"Рэклама"</string>
+-    <string name="advertisements_enable" msgid="2050305021264683786">"Рэклама ўключаная"</string>
+-    <string name="advertisements_disable" msgid="8350985908788707935">"Рэклама адключана"</string>
+-    <string name="enable_disable_stock_quotes" msgid="6397810445293533603">"Катыроўкі акцый"</string>
+-    <string name="stock_quotes_enable" msgid="4384802470887170543">"Кацiроўкі акцый уключаны"</string>
+-    <string name="stock_quotes_disable" msgid="4781450084565594998">"Кацiроўкі акцый выключаны"</string>
+-    <string name="enable_disable_eo" msgid="4863043263443942494">"Магчымасці працаўладкавання"</string>
+-    <string name="eo_enable" msgid="8623559062015685813">"Магчымасці працаўладкавання ўключаны"</string>
+-    <string name="eo_disable" msgid="3863812478090907609">"Магчымасці працаўладкавання адключаныя"</string>
+-    <string name="enable_disable_mhh" msgid="908214593528968522">"Медыцына, здароўе і бальніцы"</string>
+-    <string name="mhh_enable" msgid="5544500632306446815">"Уключаны раздзел \"Медыцына, здароўе і бальніцы\""</string>
+-    <string name="mhh_disable" msgid="8998210550117117437">"Адключаны раздзел \"Медыцына, здароўе і бальніцы\""</string>
+-    <string name="enable_disable_technology_news" msgid="3517184627114999149">"Навіны тэхналогій"</string>
+-    <string name="technology_news_enable" msgid="7995209394210455181">"Навіны тэхналогій уключаны"</string>
+-    <string name="technology_news_disable" msgid="5483490380561851946">"Навіны тэхналогій адключаны"</string>
+-    <string name="enable_disable_multi_category" msgid="626771003122899280">"Мульці-катэгорыя"</string>
+-    <string name="multi_category_enable" msgid="1179299804641721768">"Мульці-катэгорыя ўключана"</string>
+-    <string name="multi_category_disable" msgid="880104702904139505">"Мульці-катэгорыя адключаная"</string>
+-    <string name="prefer_2g" msgid="8442550937280449639">"Карыстацца толькі сеткамі 2G"</string>
+-    <string name="prefer_2g_summary" msgid="1976491403210690759">"Эканоміць батарэю"</string>
+-    <string name="cdma_system_select_title" msgid="5757657769327732833">"Выбар сістэмы"</string>
+-    <string name="cdma_system_select_summary" msgid="60460043745797517">"Змяніць рэжым роўмінгу CDMA"</string>
+-    <string name="cdma_system_select_dialogtitle" msgid="6083355415165359075">"Выбар сістэмы"</string>
+   <string-array name="cdma_system_select_choices">
+     <item msgid="176474317493999285">"Толькі галоўная"</item>
+     <item msgid="1205664026446156265">"Аўтаматычна"</item>
+   </string-array>
+-    <string name="cdma_subscription_title" msgid="1162564010076763284">"Падпіска CDMA"</string>
+-    <string name="cdma_subscription_summary" msgid="2530890766115781140">"Пераключацца паміж RUIM/SIM і NV"</string>
+-    <string name="cdma_subscription_dialogtitle" msgid="2699527950523333110">"падпіска"</string>
+   <string-array name="cdma_subscription_choices">
+     <item msgid="2258014151300708431">"RUIM/SIM"</item>
+     <item msgid="5127722015571873880">"NV"</item>
+@@ -307,81 +106,8 @@
+     <item msgid="7494167883478914080">"0"</item>
+     <item msgid="6043847456049107742">"1"</item>
+   </string-array>
+-    <string name="cdma_activate_device" msgid="3793805892364814518">"Актывацыя прылады"</string>
+-    <string name="cdma_lte_data_service" msgid="4255018217292548962">"Налады службы перад. дадзеных"</string>
+-    <string name="fdn" msgid="7878832555095183202">"Фіксаваныя нумары"</string>
+-    <string name="manage_fdn_list" msgid="8777755791892122369">"Спіс FDN"</string>
+-    <string name="fdn_activation" msgid="2156479741307463576">"Актывацыя FDN"</string>
+-    <string name="fdn_enabled" msgid="5238109009915521240">"Фіксаваныя нумары ўключаны"</string>
+-    <string name="fdn_disabled" msgid="4700049736675368279">"Фіксаваныя нумары адключаны"</string>
+-    <string name="enable_fdn" msgid="3740191529180493851">"Уключыць FDN"</string>
+-    <string name="disable_fdn" msgid="7944020890722540616">"Адключыць FDN"</string>
+-    <string name="change_pin2" msgid="2153563695382176676">"Змяніць PIN2"</string>
+-    <string name="enable_fdn_ok" msgid="7215588870329688132">"Адключыць FDN"</string>
+-    <string name="disable_fdn_ok" msgid="5727046928930740173">"Уключыць FDN"</string>
+-    <string name="sum_fdn" msgid="1959399454900272878">"Кіраванне зафіксаванымі нумарамі"</string>
+-    <string name="sum_fdn_change_pin" msgid="6666549734792827932">"Змяніць PIN-код для доступу FDN"</string>
+-    <string name="sum_fdn_manage_list" msgid="8431088265332628316">"Кіраванне спісам тэлефонных нумароў"</string>
+-    <string name="voice_privacy" msgid="3776841382844614716">"Палiтыка прыватнасцi Voice"</string>
+-    <string name="voice_privacy_summary" msgid="3159383389833516214">"Уключыць пашыраны рэжым прыватнасці"</string>
+-    <string name="tty_mode_option_title" msgid="9033098925144434669">"TTY рэжым"</string>
+-    <string name="tty_mode_option_summary" msgid="1073835131534808732">"Задаць рэжым TTY"</string>
+-    <string name="auto_retry_mode_title" msgid="4073265511427813322">"Аўтаматычны паўтор"</string>
+-    <string name="auto_retry_mode_summary" msgid="4973886004067532288">"Уключыць рэжым аўтаматычнага паўтору"</string>
+-    <string name="menu_add" msgid="1882023737425114762">"Дадаць кантакт"</string>
+-    <string name="menu_edit" msgid="7143003705504672374">"Рэдагаваць кантакт"</string>
+-    <string name="menu_delete" msgid="3977150783449642851">"Выдаліць кантакт"</string>
+-    <string name="get_pin2" msgid="8204677063922225311">"Увядзіце код PIN2"</string>
+-    <string name="name" msgid="7329028332786872378">"Імя"</string>
+-    <string name="number" msgid="7905950798349903858">"Нумар"</string>
+-    <string name="save" msgid="4094274636321939086">"Захаваць"</string>
+-    <string name="add_fdn_contact" msgid="2481915899633353976">"Дадаць дазволены нумар"</string>
+-    <string name="adding_fdn_contact" msgid="7627379633721940991">"Даданне дазволенага нумару..."</string>
+-    <string name="fdn_contact_added" msgid="7458335758501736665">"Даданы дазволены нумар."</string>
+-    <string name="edit_fdn_contact" msgid="7976936035587081480">"Змяніць дазволены нумар"</string>
+-    <string name="updating_fdn_contact" msgid="8370929876849803600">"Абнаўленне дазволенага нумару..."</string>
+-    <string name="fdn_contact_updated" msgid="5497828782609005017">"Дазволеныя нумары абноўленыя."</string>
+-    <string name="delete_fdn_contact" msgid="6668958073074151717">"Выдаліць дазволены нумар"</string>
+-    <string name="deleting_fdn_contact" msgid="5669163206349319969">"Выдаленне дазволенага нумару..."</string>
+-    <string name="fdn_contact_deleted" msgid="7154162327112259569">"Дазволены нумар выдалены."</string>
+-    <string name="pin2_invalid" msgid="5470854099230755944">"FDN не быў абноўлены, таму што вы набралі няправільны PIN-код."</string>
+-    <string name="fdn_invalid_number" msgid="1494755047900009147">"FDN не абноўлены, таму што нумар не можа бвць больш за 20 знакаў."</string>
+-    <string name="pin2_or_fdn_invalid" msgid="6025144083384701197">"Cпiс дазволеных нумароў не адноўлены. PIN2 ўведзены няправiльна, або нумар быў адхiлены."</string>
+     <string name="simContacts_emptyLoading" msgid="2203331234764498011">"Чытанне з SIM-карты..."</string>
+-    <string name="simContacts_empty" msgid="5270660846489561932">"На вашай SIM-карце няма кантактаў."</string>
+     <string name="simContacts_title" msgid="1861472842524839921">"Выберыце кантакты для імпарту"</string>
+-    <string name="simContacts_airplaneMode" msgid="1846161429087789936">"Каб імпартаваць кантакты з SIM-карты, спачатку адключыце рэжым палёту."</string>
+-    <string name="enable_pin" msgid="5422767284133234860">"Уключэнне/адключэнне PIN-коду SIM-карты"</string>
+-    <string name="change_pin" msgid="9174186126330785343">"Змена PIN-коду SIM-карты"</string>
+-    <string name="enter_pin_text" msgid="8532615714751931951">"PIN-код SIM-карты:"</string>
+-    <string name="oldPinLabel" msgid="5287773661246368314">"Стары PIN"</string>
+-    <string name="newPinLabel" msgid="207488227285336897">"Новы PIN"</string>
+-    <string name="confirmPinLabel" msgid="257597715098070206">"Пацвердзіць новы PIN"</string>
+-    <string name="badPin" msgid="8955102849303984935">"Стары PIN-код, які вы ўвялі, няправільны. Паспрабуйце яшчэ раз."</string>
+-    <string name="mismatchPin" msgid="5923253370683071889">"PIN-коды, якія вы ўвялі, не супадаюць. Паспрабуйце яшчэ раз."</string>
+-    <string name="invalidPin" msgid="5981171102258684792">"Увядзіце PIN-код, які змяшчае ад 4 да 8 лічбаў."</string>
+-    <string name="disable_sim_pin" msgid="3992926931620188855">"Адключыць PIN-код SIM-карты"</string>
+-    <string name="enable_sim_pin" msgid="5803702443844458831">"Уключыць PIN-код SIM-карты"</string>
+-    <string name="enable_in_progress" msgid="3695303775100109650">"Пачакайце..."</string>
+-    <string name="enable_pin_ok" msgid="9166061915030865848">"PIN-код SIM-карты актываваны."</string>
+-    <string name="disable_pin_ok" msgid="5596999379593924850">"PIN-код SIM-карты адключаны."</string>
+-    <string name="pin_failed" msgid="2298841192582192277">"Вы набралі няправільны PIN-код."</string>
+-    <string name="pin_changed" msgid="4365538014588501049">"PIN-код SIM-карты паспяхова зменены."</string>
+-    <string name="puk_requested" msgid="3898394204193202803">"Пароль няправільны, SIM заблакаваная! Патрабуецца PUK2."</string>
+-    <string name="enter_pin2_text" msgid="8339444124477720345">"PIN2"</string>
+-    <string name="oldPin2Label" msgid="8559146795026261502">"Стары PIN2"</string>
+-    <string name="newPin2Label" msgid="4573956902204349054">"Новы PIN2"</string>
+-    <string name="confirmPin2Label" msgid="8100319484454787708">"Пацвердзіць новы PIN2"</string>
+-    <string name="badPuk2" msgid="4851734468010000418">"Код PUK2 уведзены няправільна. Паспрабуйце яшчэ раз."</string>
+-    <string name="badPin2" msgid="1041576234483629991">"Стары код PIN2 уведзены няяправільна. Паспрабуйце яшчэ раз."</string>
+-    <string name="mismatchPin2" msgid="523029155918113440">"Коды PIN2, якія вы ўвялі, не супадаюць. Паспрабуйце яшчэ раз."</string>
+-    <string name="invalidPin2" msgid="8237110107480395938">"Увядзіце PUK2, які ўключае 4-8 лічбаў."</string>
+-    <string name="invalidPuk2" msgid="1290977391033057871">"Увядзіце PUK2, які складаецца з 8 лічбаў."</string>
+-    <string name="pin2_changed" msgid="1639666438836544393">"Код PIN2 паспяхова зменены."</string>
+-    <string name="label_puk2_code" msgid="302845876240219560">"Увядзіце PUK2-код"</string>
+-    <string name="fdn_enable_puk2_requested" msgid="4262894949634885773">"Няправільны пароль. Змяніце код PIN2 і паспрабуйце яшчэ раз."</string>
+-    <string name="puk2_requested" msgid="8909278021238716877">"Няправiльны пароль. SIM-карта заблакавана. Патрабуецца код PUK2."</string>
+-    <string name="doneButton" msgid="2859593360997984240">"Гатова"</string>
+     <string name="caller_manage_header" msgid="3231519674734638786">"Канферэнц-выклік <xliff:g id="CONF_CALL_TIME">%s</xliff:g>"</string>
+     <string name="voicemail_settings_number_label" msgid="8524164258691887790">"Нумар галасавой пошты"</string>
+     <string name="card_title_dialing" msgid="5769417478498348054">"Набор"</string>
+@@ -441,47 +167,16 @@
+     <string name="onscreenManageConferenceText" msgid="6485935856534311346">"Кірав. канферэнцыяй"</string>
+     <string name="onscreenAudioText" msgid="1710087112800041743">"Аўдыё"</string>
+     <string name="onscreenVideoCallText" msgid="4800924186056115442">"Відэавыклік"</string>
+-    <string name="importSimEntry" msgid="6614358325359736031">"Імпартаваць"</string>
+-    <string name="importAllSimEntries" msgid="1503181169636198673">"Імпартаваць усе"</string>
+-    <string name="importingSimContacts" msgid="7374056215462575769">"Імпартаванне кантактаў з SIM-карты"</string>
+-    <string name="importToFDNfromContacts" msgid="2130620207013368580">"Імпартаваць з кантактаў"</string>
+-    <string name="hac_mode_title" msgid="8740268574688743289">"Слыхавы апарат"</string>
+-    <string name="hac_mode_summary" msgid="6833851160514929341">"Уключыць функцыю сумяшчальнасці са слыхавым апаратам"</string>
+   <string-array name="tty_mode_entries">
+     <item msgid="512950011423868021">"TTY адключаны"</item>
+     <item msgid="3971695875449640648">"TTY поўны"</item>
+     <item msgid="1937509904407445684">"TTY HCO"</item>
+     <item msgid="5644925873488772224">"TTY VCO"</item>
+   </string-array>
+-    <string name="dtmf_tones_title" msgid="5163153771291340803">"Сігналы DTMF"</string>
+-    <string name="dtmf_tones_summary" msgid="3351820372864020331">"Задаць даўжыню тонаў DTMF"</string>
+   <string-array name="dtmf_tone_entries">
+     <item msgid="899650777817315681">"Звычайны"</item>
+     <item msgid="2883365539347850535">"Доўгі"</item>
+   </string-array>
+-    <string name="network_message" msgid="4483886461245213802">"Паведамленне сеткі"</string>
+-    <string name="ota_title_activate" msgid="8616918561356194398">"Актываваць тэлефон"</string>
+-    <string name="ota_touch_activate" msgid="6553212803262586244">"Каб актываваць абслугоўванне вашага тэлефона, трэба выканаць спецыяльны выклік. \n\nНацісніце \"Актываваць\" і слухайце інструкцыі, неабходныя для актывацыі тэлефона."</string>
+-    <string name="ota_skip_activation_dialog_title" msgid="2943366608272261306">"Прапусціць актывацыю?"</string>
+-    <string name="ota_skip_activation_dialog_message" msgid="2440770373498870550">"Калі прапусціць актывацыю, вы не зможаце здзяйсняць званкі або падлучэнні да мабільных сетак перадачы дадзеных (хаця вы зможаце падлучыцца да Wi-Fi). Кожны раз пры ўключэнні тэлефона вам будзе прапанавана актываваць яго."</string>
+-    <string name="ota_skip_activation_dialog_skip_label" msgid="3458532775091563208">"Прапусціць"</string>
+-    <string name="ota_activate" msgid="1368528132525626264">"Актываваць"</string>
+-    <string name="ota_title_activate_success" msgid="6570240212263372046">"Тэлефон актываваны."</string>
+-    <string name="ota_title_problem_with_activation" msgid="7095824491970084367">"Праблема з актывацыяй"</string>
+-    <string name="ota_listen" msgid="162923839877584937">"Выконвайце гукавыя інструкцыі, пакуль не пачуеце, што актывацыя завершаная."</string>
+-    <string name="ota_speaker" msgid="6904589278542719647">"Дынамік"</string>
+-    <string name="ota_progress" msgid="3420314892609254729">"Пачакайце, пакуль ваш тэлефон праграмуецца."</string>
+-    <string name="ota_failure" msgid="4311299546379674378">"Няўдалае праграмаванне"</string>
+-    <string name="ota_successful" msgid="1880780692887077407">"Цяпер тэлефон актываваны. Запуск службы можа заняць да 15 хвілін."</string>
+-    <string name="ota_unsuccessful" msgid="8072141612635635357">"Ваш тэлефон не актываваны. \nМагчыма, вам спатрэбіцца знайсці вобласць з лепшым пакрыццём (каля акна ці на вуліцы). \n\nПаўтарыце спробу ці звярнiцеся ў цэнтр абслугоўвання кліентаў, каб атрымаць дадатковую інфармацыю."</string>
+-    <string name="ota_spc_failure" msgid="3909983542575030796">"ПАМЫЛКІ ПЕРАВЫШЭННЯ SPC"</string>
+-    <string name="ota_call_end" msgid="4537279738134612388">"Назад"</string>
+-    <string name="ota_try_again" msgid="7685477206465902290">"Паспрабаваць яшчэ раз"</string>
+-    <string name="ota_next" msgid="3904945374358235910">"Далей"</string>
+-    <string name="ecm_exit_dialog" msgid="4448531867763097533">"EcmExitDialog"</string>
+-    <string name="phone_entered_ecm_text" msgid="6266424252578731203">"У рэжыме аварыйнага зваротнага выкліку"</string>
+-    <string name="phone_in_ecm_notification_title" msgid="3226896828951687085">"Рэжым аварыйнага зваротнага выкліку"</string>
+-    <string name="phone_in_ecm_call_notification_text" msgid="4611608947314729773">"Падлучэнне для перадачы дадзеных адключана"</string>
+   <plurals name="phone_in_ecm_notification_time">
+     <item quantity="one" msgid="4866221796252472622">"Няма злучэння, каб перадаць дадзеныя, на працягу <xliff:g id="COUNT">%s</xliff:g> хв."</item>
+     <item quantity="other" msgid="3122217344579273583">"Няма злучэння для перадачы дадзеных на працягу <xliff:g id="COUNT">%s</xliff:g> хв."</item>
+@@ -494,11 +189,6 @@
+     <item quantity="one" msgid="2585506997024726599">"Выбранае дзеянне недаступнае падчас экстранага выкліку. Тэлефон будзе ў гэтым рэжыме на працягу <xliff:g id="COUNT">%s</xliff:g> хв. Выйсці зараз?"</item>
+     <item quantity="other" msgid="6115622137771382224">"Выбранае дзеянне недаступнае падчас экстранага выкліку. Тэлефон будзе ў гэтым рэжыме на працягу наступнай колькасці хвілін: <xliff:g id="COUNT">%s</xliff:g>. Выйсці зараз?"</item>
+   </plurals>
+-    <string name="alert_dialog_in_ecm_call" msgid="1886723687211887104">"Выбранае дзеянне недаступнае падчас экстранага выкліку."</string>
+-    <string name="progress_dialog_exiting_ecm" msgid="4835734101617817074">"Выхад з рэжыму экстранага выкліку"</string>
+-    <string name="alert_dialog_yes" msgid="6674268047820703974">"Так"</string>
+-    <string name="alert_dialog_no" msgid="1476091437797628703">"Не"</string>
+-    <string name="alert_dialog_dismiss" msgid="2491494287075907171">"Скасаваць"</string>
+     <string name="voicemail_provider" msgid="5135942703327136909">"Служба"</string>
+     <string name="voicemail_settings" msgid="72448049107749316">"Налады"</string>
+     <string name="voicemail_number_not_set" msgid="6724904736891087856">"&lt;Не заданы&gt;"</string>
+@@ -507,79 +197,6 @@
+     <string name="contactPhoto" msgid="4713193418046639466">"фатаграфія кантакта"</string>
+     <string name="goPrivate" msgid="865837794424530980">"перайсці да прыватнай гаворкі"</string>
+     <string name="selectContact" msgid="781975788478987237">"выбраць кантакт"</string>
+-    <string name="sip_settings" msgid="6699045718560859691">"Налады iнтэрнэт-выклікаў"</string>
+-    <string name="sip_accounts" msgid="2097054001288457163">"Уліковыя запісы iнтэрнэт-тэлефаніі (SIP)"</string>
+-    <string name="sip_accounts_title" msgid="1212889069281054570">"Уліковыя запісы"</string>
+-    <string name="sip_receive_calls" msgid="5635685570889971559">"Прыём уваходных выклікаў"</string>
+-    <string name="sip_receive_calls_summary" msgid="8403613238633679184">"Зніжае тэрмін службы батарэі"</string>
+-    <string name="sip_call_options_title" msgid="27433718808839672">"Выкарыстанне iнтэрнэт-тэлефаніі"</string>
+-    <string name="sip_call_options_wifi_only_title" msgid="145572394529090811">"Выкарыстанне iнтэрнэт-тэлефаніі (толькі Wi-Fi)"</string>
+-    <string name="sip_call_options_entry_1" msgid="6556668894178520760">"Для ўсіх выклікаў, калі маецца сетка перадачы дадзеных"</string>
+-    <string name="sip_call_options_entry_2" msgid="6789764029719494361">"Толькі для iнтэрнэт-выклікаў"</string>
+-    <string name="sip_call_options_entry_3" msgid="7474809001402649185">"Пытацца для кожнага выкліку"</string>
+-    <string name="sip_call_options_wifi_only_entry_1" msgid="7423523864471650069">"Для ўсіх выклікаў"</string>
+-    <string name="pick_outgoing_call_phone_type" msgid="5622916534828338675">"Размясціць выклік"</string>
+-    <string name="pick_outgoing_sip_phone" msgid="7012322118236208875">"Выкарыстоўваць уліковы запіс iнтэрнэт-тэлефаніі:"</string>
+-    <string name="remember_my_choice" msgid="7058059586169290705">"Заўсёды выкарыстоўваць, каб рабіць iнтэрнэт-выклікі"</string>
+-    <string name="reset_my_choice_hint" msgid="5523030209803567922">"Вы можаце змяніць уліковы запіс iнтэрнэт-тэлефаніі, які выкарыстоўваецца па змаўчанні, у раздзеле \"Тэлефон &gt; Налады &gt; Налады iнтэрнэт-тэлефаніі\", на экране \"Ўліковыя запісы\"."</string>
+-    <string name="pstn_phone" msgid="8782554491484326429">"Выклік з сотавага тэлефона"</string>
+-    <string name="internet_phone" msgid="1147922660195095810">"Інтэрнэт-выклік"</string>
+-    <string name="no_sip_account_found_title" msgid="6266249392379373628">"Няма ўліковага запісу iнтэрнэт-тэлефаніі"</string>
+-    <string name="no_sip_account_found" msgid="724325811961769997">"На гэтым тэлефоне няма выклікаў праз уліковыя запісы iнтэрнэт-тэлефаніі. Дадаць такі ўліковы запіс зараз?"</string>
+-    <string name="sip_menu_add" msgid="8757508498518881500">"Дадаць"</string>
+-    <string name="add_sip_account" msgid="5904858426290097611">"Дадаць уліковы запіс"</string>
+-    <string name="remove_sip_account" msgid="7645900420385682570">"Выдаліць уліковы запіс"</string>
+-    <string name="sip_account_list" msgid="5480058210652194306">"Уліковыя запісы SIP"</string>
+-    <string name="saving_account" msgid="52903398217017954">"Захаванне ўліковага запісу..."</string>
+-    <string name="removing_account" msgid="7183999896088628100">"Выдаленне ўліковага запісу..."</string>
+-    <string name="sip_menu_save" msgid="5842531129356014943">"Захаваць"</string>
+-    <string name="sip_menu_discard" msgid="524075892158789701">"Адхіліць"</string>
+-    <string name="alert_dialog_close" msgid="7759635137627626235">"Закрыць профіль"</string>
+-    <string name="alert_dialog_ok" msgid="3580379406983564080">"ОК"</string>
+-    <string name="close_profile" msgid="6886968271423155284">"Закрыць"</string>
+-    <string name="primary_account_summary_with" msgid="1633960536212343187">"Першасны ўліковы запіс. <xliff:g id="REGISTRATION_STATUS">%s</xliff:g>"</string>
+-    <string name="registration_status_checking_status" msgid="3381868307694056727">"Правяраецца стан..."</string>
+-    <string name="registration_status_registering" msgid="4288401139400232968">"Рэгістрацыя..."</string>
+-    <string name="registration_status_still_trying" msgid="3185581992666091911">"Спроба рэгістрацыі..."</string>
+-    <string name="registration_status_not_receiving" msgid="4185572774980557758">"Выклікі не прымаюцца."</string>
+-    <string name="registration_status_no_data" msgid="4901476962360656611">"Рэгістрацыя ўліковага запісу спынена, таму што няма падключэння да Інтэрнэту."</string>
+-    <string name="registration_status_no_wifi_data" msgid="4038976374713018067">"Рэгістрацыя ўліковага запісу спынена, таму што няма падлучэння да Wi-Fi."</string>
+-    <string name="registration_status_not_running" msgid="4824867184446232131">"Няўдалая рэгістрацыя ўліковага запісу."</string>
+-    <string name="registration_status_done" msgid="884630717456439280">"Прыём выклікаў."</string>
+-    <string name="registration_status_failed_try_later" msgid="5214474354451220581">"Няўдалая рэгістрацыя ўліковага запісу: (<xliff:g id="REGISTRATION_ERROR_MESSAGE">%s</xliff:g>). Спроба будзе паўтораная пазней"</string>
+-    <string name="registration_status_invalid_credentials" msgid="4908446367559341757">"Няўдалая рэгістрацыя ўліковага запісу: няправільнае імя карыстальніка або пароль."</string>
+-    <string name="registration_status_server_unreachable" msgid="5733421582468991276">"Няўдалая рэгістрацыя ўліковага запісу: праверце імя сервера."</string>
+-    <string name="third_party_account_summary" msgid="2532526738862533028">"Гэты ўліковы запіс зараз выкарыстоўваецца прыкладаннем <xliff:g id="ACCOUNT_OWNER">%s</xliff:g>."</string>
+-    <string name="sip_edit_title" msgid="489288416435014385">"Інфармацыя ўліковага запісу SIP"</string>
+-    <string name="sip_edit_new_title" msgid="3659149255856520385">"Інфармацыя ўліковага запісу SIP"</string>
+-    <string name="domain_address_title" msgid="9071787581316160480">"Сервер"</string>
+-    <string name="username_title" msgid="2479375923477682328">"Імя карыстальніка"</string>
+-    <string name="password_title" msgid="3323555249068171531">"Пароль"</string>
+-    <string name="display_name_title" msgid="2459768196312249937">"Адлюстроўваць імя"</string>
+-    <string name="proxy_address_title" msgid="4828301345351614273">"Адрас выходнага проксі"</string>
+-    <string name="port_title" msgid="5952939408078626657">"Нумар порта"</string>
+-    <string name="transport_title" msgid="8253139511847746640">"Тып транспарту"</string>
+-    <string name="send_keepalive_title" msgid="7533342573918645113">"Адправіць Keep-Alive"</string>
+-    <string name="set_primary_title" msgid="5351892327447571451">"Усталяваць у якасці першаснага ўліковага запісу"</string>
+-    <string name="set_primary_summary" msgid="2219064654523258577">"Выкарыстоўваецца для выходных выклікаў"</string>
+-    <string name="advanced_settings" msgid="8350631795335495338">"Дадатковыя налады"</string>
+-    <string name="auth_username_title" msgid="851473016307947120">"Імя карыстальніка для праверкі сапраўднасці"</string>
+-    <string name="auth_username_summary" msgid="6782012405225938629">"Імя карыстальніка, якое выкарыстоўваецца для праверкі сапраўднасці"</string>
+-    <string name="default_preference_summary" msgid="868766740121667450">"&lt;не заданы&gt;"</string>
+-    <string name="display_name_summary" msgid="8636377460518225523">"&lt;Такі ж, як імя карыстальніка&gt;"</string>
+-    <string name="optional_summary" msgid="1464058793789832411">"Дадатковы"</string>
+-    <string name="advanced_settings_show" msgid="4668880308290857597">"... Націсніце, каб паказаць усё"</string>
+-    <string name="advanced_settings_hide" msgid="217398292824758079">"... Дакраніцеся, каб схаваць усё"</string>
+-    <string name="empty_alert" msgid="6839103946505432390">"Поле <xliff:g id="INPUT_FIELD_NAME">%s</xliff:g> з\'яўляецца абавязковым для запаўнення, яго нельга пакідаць пустым."</string>
+-    <string name="not_a_valid_port" msgid="4796149266434630292">"Порт павінен мець нумар ад 1000 да 65534"</string>
+-    <string name="no_internet_available_title" msgid="3327109242858406165">"Няма падключэння да Інтэрнэту"</string>
+-    <string name="no_wifi_available_title" msgid="747881033089378758">"Няма падключэння да Wi-Fi"</string>
+-    <string name="no_internet_available" msgid="7877142631803238549">"Каб зрабіць iнтэрнэт-выклік, спачатку праверце падключэнне да Інтэрнэту."</string>
+-    <string name="no_wifi_available" msgid="1225073547318465713">"Каб рабіць iнтэрнэт-выклікі, вы павінны падключыцца да сеткі Wi-Fi (скарыстайцеся раздзелам \"Бесправадныя сеткі i налады\")."</string>
+-    <string name="no_voip" msgid="8901474054537199865">"Інтэрнэт-тэлефанія не падтрымліваецца"</string>
+-    <string name="sip_system_decide" msgid="368030746310423471">"Аўтаматычна"</string>
+-    <string name="sip_always_send_keepalive" msgid="8192080724632877132">"Заўсёды адсылаць"</string>
+-    <string name="not_voice_capable" msgid="2739898841461577811">"Галасавы выклік не падтрымліваецца"</string>
+     <string name="respond_via_sms_canned_response_1" msgid="2461606462788380215">"Не магу размаўляць. У чым справа?"</string>
+     <string name="respond_via_sms_canned_response_2" msgid="4074450431532859214">"Я ператэлефаную."</string>
+     <string name="respond_via_sms_canned_response_3" msgid="3496079065723960450">"Я патэлефаную пазней."</string>
+diff --git a/res/values-ne-rNP/strings.xml b/res/values-ne-rNP/strings.xml
+index 73ef9ae..ef0a2f2 100644
+--- a/res/values-ne-rNP/strings.xml
++++ b/res/values-ne-rNP/strings.xml
+@@ -54,117 +54,13 @@
+     <string name="pause_prompt_yes" msgid="3564467212025151797">"हो"</string>
+     <string name="pause_prompt_no" msgid="6686238803236884877">"होइन"</string>
+     <string name="wild_prompt_str" msgid="5543521676355533577">"यससँग वाइल्ड अक्षर बदल्नुहोस्"</string>
+-    <string name="no_vm_number" msgid="4164780423805688336">"भ्वाइसमेल नम्बर हराइरहेको छ"</string>
+-    <string name="no_vm_number_msg" msgid="1300729501030053828">"SIM कार्डमा कुनै पनि भ्वाइसमेल नम्बर भण्डारण भएको छैन।"</string>
+-    <string name="add_vm_number_str" msgid="4676479471644687453">"नम्बर थप्नुहोस्"</string>
+-    <string name="puk_unlocked" msgid="2284912838477558454">"तपाईँको SIM कार्ड अनब्लक गरिएको छ। तपाईँको फोन अनलक हुँदैछ ..."</string>
+-    <string name="label_ndp" msgid="780479633159517250">"SIM नेटवर्क अनलक PIN"</string>
+-    <string name="sim_ndp_unlock_text" msgid="683628237760543009">"अनलोक गर्नुहोस्"</string>
+-    <string name="sim_ndp_dismiss_text" msgid="1604823375752456947">"खारेज गर्नुहोस्"</string>
+-    <string name="requesting_unlock" msgid="6412629401033249351">"नेटवर्क अनलक गर्न अनुरोध गर्दै..."</string>
+-    <string name="unlock_failed" msgid="6490531697031504225">"नेटवर्क अनलक अनुरोध असफल"</string>
+-    <string name="unlock_success" msgid="6770085622238180152">"नेटवर्क अनलक सफल।"</string>
+-    <string name="labelGSMMore" msgid="5930842194056092106">"GSM कल सेटिङहरू"</string>
+-    <string name="labelCDMAMore" msgid="1630676740428229339">"CDMA कल सेटिङहरू"</string>
+-    <string name="apn_settings" msgid="9043423184895642077">"प्वाइन्ट नामहरू पहुँच गर्नुहोस्"</string>
+-    <string name="settings_label" msgid="3876743539816984008">"नेटवर्क सेटिङहरू"</string>
+     <string name="voicemail" msgid="8693759337917898954">"भ्वाइसमेल"</string>
+-    <string name="voicemail_abbreviated" msgid="2215592488517217448">"VM:"</string>
+-    <string name="networks" msgid="8873030692174541976">"नेटवर्क संचालकहरू"</string>
+     <string name="call_settings" msgid="6112441768261754562">"कल सेटिङहरू"</string>
+-    <string name="additional_gsm_call_settings" msgid="1391795981938800617">"अतिरिक्त सेटिङहरू"</string>
+-    <string name="sum_gsm_call_settings" msgid="4076647190996778012">"अतिरिक्त GSM का मात्र कल सेटिङहरू"</string>
+-    <string name="additional_cdma_call_settings" msgid="8628958775721886909">"अतिरिक्त CDMA कल सेटिङहरू"</string>
+-    <string name="sum_cdma_call_settings" msgid="284753265979035549">"अतिरिक्त CDMA कल सेटिङहरू मात्र"</string>
+-    <string name="labelNwService" msgid="4699970172021870983">"नेटवर्क सेवा सेटिङहरू"</string>
+-    <string name="labelCallerId" msgid="3888899447379069198">"कलर ID"</string>
+-    <string name="sum_loading_settings" msgid="1826692909391168620">"सेटिङहरू लोड हुँदै..."</string>
+-    <string name="sum_hide_caller_id" msgid="1071407020290873782">"बहिर्गमन कलहरूमा नम्बर लुके"</string>
+-    <string name="sum_show_caller_id" msgid="6768534125447290401">"बहिर्गमन कलहरूमा प्रदर्शित नम्बर"</string>
+-    <string name="sum_default_caller_id" msgid="1954518825510901365">"बहिर्गमन कलमा मेरो नम्बर देखाउन पूर्वनिर्धारित अपरेटर सेटिङहरू प्रयोग गर्नुहोस्"</string>
+-    <string name="labelCW" msgid="6120513814915920200">"कल प्रतिक्षा गर्दै"</string>
+-    <string name="sum_cw_enabled" msgid="8083061901633671397">"कल गरेको बखत मलाई आगमन कलको जानकारी गराउनुहोस्"</string>
+-    <string name="sum_cw_disabled" msgid="3648693907300104575">"कल गरेको बेलामा आगमन कलहरूको बारेमा मलाई जानकारी गराउनुहोस्"</string>
+-    <string name="call_forwarding_settings" msgid="3378927671091537173">"कल फर्वार्डिङ सेटिङहरू"</string>
+-    <string name="labelCF" msgid="2574386948026924737">"कल फर्वार्ड गर्दै"</string>
+-    <string name="labelCFU" msgid="8147177368148660600">"सधैँ फर्वार्ड गर्नुहोस्"</string>
+-    <string name="messageCFU" msgid="3560082430662923687">"सधैँ यो नम्बर प्रयोग गर्नुहोस्"</string>
+-    <string name="sum_cfu_enabled_indicator" msgid="4014187342724130197">"सबै कलहरू फर्वाड गर्दै"</string>
+-    <string name="sum_cfu_enabled" msgid="2450052502198827927">"सम्पूर्ण कलहरू <xliff:g id="PHONENUMBER">{0}</xliff:g>मा फर्वार्ड गरिदै"</string>
+-    <string name="sum_cfu_enabled_no_number" msgid="6591985777096823616">"नम्बर उपलब्ध छैन"</string>
+-    <string name="sum_cfu_disabled" msgid="3698472522160364904">"असक्षम पारियो"</string>
+-    <string name="labelCFB" msgid="218938523102207587">"व्यस्त हुँदा फर्वार्ड गर्नुहोस्"</string>
+-    <string name="messageCFB" msgid="3711089705936187129">"व्यस्त हुँदा नम्बर"</string>
+-    <string name="sum_cfb_enabled" msgid="5984198104833116690">"<xliff:g id="PHONENUMBER">{0}</xliff:g> मा फर्वाड गर्दै"</string>
+-    <string name="sum_cfb_disabled" msgid="227440009979537651">"असक्षम पारियो"</string>
+-    <string name="disable_cfb_forbidden" msgid="3506984333877998061">"तपाईंको फोन व्यस्त रहँदा तपाईंको अपरेटरले कल-फर्वार्डिङ असक्षम बनाउँदा समर्थन गर्दैन।"</string>
+-    <string name="labelCFNRy" msgid="3646316323834351390">"उत्तर नआएमा फर्वार्ड गर्नुहोस्"</string>
+-    <string name="messageCFNRy" msgid="672317899884380374">"अनुत्तरित हुँदाको नम्बर"</string>
+-    <string name="sum_cfnry_enabled" msgid="6955775691317662910">"<xliff:g id="PHONENUMBER">{0}</xliff:g> मा फर्वाड गर्दै"</string>
+-    <string name="sum_cfnry_disabled" msgid="8422350929957344729">"असक्षम पारियो"</string>
+-    <string name="disable_cfnry_forbidden" msgid="4308233959150658058">"तपाईंको फोनले जवाफ नदिँदा तपाईंको अपरेटरले कल-फर्वार्डिङ असक्षम बनाउँदा समर्थन गर्दैन।"</string>
+-    <string name="labelCFNRc" msgid="47183615370850000">"पहुँचयोग्य नहुँदा फर्वार्ड गर्नुहोस्"</string>
+-    <string name="messageCFNRc" msgid="6380695421020295119">"पहुँचयोग्य हुँदाको नम्बर"</string>
+-    <string name="sum_cfnrc_enabled" msgid="7010898346095497421">"<xliff:g id="PHONENUMBER">{0}</xliff:g> मा फर्वाड गर्दै"</string>
+-    <string name="sum_cfnrc_disabled" msgid="7222141261321276464">"असक्षम पारियो"</string>
+-    <string name="disable_cfnrc_forbidden" msgid="5646361343094064333">"तपाईंको फोन पहुँचयोग्य नहुँदा तपाईंको केरियरले कल-फर्वार्डिङ असक्षम बनाउँदा समर्थन गर्दैन।"</string>
+-    <string name="updating_title" msgid="6146755386174019046">"कल सेटिङहरू"</string>
+-    <string name="error_updating_title" msgid="7970259216988931777">"कल सेटिङ त्रुटि"</string>
+-    <string name="reading_settings" msgid="1920291699287055284">"पाठ सेटिङहरू..."</string>
+-    <string name="updating_settings" msgid="8171225533884883252">"सेटिङहरू अद्यावधिक गर्दै..."</string>
+-    <string name="reverting_settings" msgid="4752151682666912828">"सेटिङहरू उल्टाउँदै..."</string>
+-    <string name="response_error" msgid="6674110501330139405">"नेटवर्कबाट अप्रत्याशित प्रतिक्रिया।"</string>
+-    <string name="exception_error" msgid="7027667130619518211">"नेटवर्क वा SIM कार्ड त्रुटि।"</string>
+-    <string name="fdn_check_failure" msgid="18200614306525434">"तपाईंको फोन अनुप्रयोग स्थिर डायल गर्ने नम्बर सेटिङहरू खोलिएको छ। केही कल-सम्बन्धित विशेषताहरूले कार्य गरिरहेका छैनन्।"</string>
+-    <string name="radio_off_error" msgid="2304459933248513376">"यी सेटिङहरू हेर्नु पहिले रेडियो खोल्नुहोस्।"</string>
+-    <string name="close_dialog" msgid="2365884406356986917">"ठिक छ"</string>
+-    <string name="enable" msgid="1059008390636773574">"सक्षम पार्नुहोस्"</string>
+-    <string name="disable" msgid="7274240979164762320">"असक्षम पार्नुहोस्"</string>
+-    <string name="change_num" msgid="239476305819844391">"अपडेट गर्नुहोस्"</string>
+   <string-array name="clir_display_values">
+     <item msgid="5560134294467334594">"नेटवर्क पूर्वनिर्धारित"</item>
+     <item msgid="7876195870037833661">"सङ्ख्या लुकाउनुहोस्"</item>
+     <item msgid="1108394741608734023">"सङ्ख्या देखाउनुहोस्"</item>
+   </string-array>
+-    <string name="vm_changed" msgid="380744030726254139">"भ्वाइसमेल नम्बर परिवर्तन भयो।"</string>
+-    <string name="vm_change_failed" msgid="3352934863246208918">"भ्वाइसमेल नम्बर परिवर्तन हुन सकेन। \n यदि यो समस्या आइरहन्छ भने तपाईँको केरियरसँग सम्पर्क गर्नुहोस्।"</string>
+-    <string name="fw_change_failed" msgid="5298103228470214665">"फर्वार्डिङ नम्बर परिवर्तन हुन सकेन । \n यदि यो समस्या रहिरहन्छ भने तपाईंको केरियरसँग सम्पर्क गर्नुहोस्।"</string>
+-    <string name="fw_get_in_vm_failed" msgid="8862896836093833973">"हालका फर्वार्ड गर्ने संख्या सेटिङहरू पुनःप्राप्त र बचत गर्न सकिंदैन। \n नयाँ प्रदायकमा स्विच गर्न चाहनु हुन्छ?"</string>
+-    <string name="no_change" msgid="3186040086622435212">"केही पनि फेरबदल गरिएन।"</string>
+-    <string name="sum_voicemail_choose_provider" msgid="59911196126278922">"भ्वाइसमेल सेवा छान्नुहोस्"</string>
+-    <string name="voicemail_default" msgid="5902099213882352338">"मेरो केरियर"</string>
+-    <string name="mobile_networks" msgid="5540397602919106177">"मोबाइल नेटवर्क सेटिहरू"</string>
+-    <string name="label_available" msgid="1181658289009300430">"उपलब्ध नेटवर्कहरू"</string>
+-    <string name="load_networks_progress" msgid="5230707536168902952">"खोजी गर्दै..."</string>
+-    <string name="empty_networks_list" msgid="4249426905018815316">"कुनै नेटवर्कहरू भेटिएनन्।"</string>
+-    <string name="search_networks" msgid="1601136049300882441">"नेटवर्कहरू खोज्नुहोस्"</string>
+-    <string name="network_query_error" msgid="6828516148953325006">"नेटवर्कको लागि खोजी कार्य गर्दा त्रुटि"</string>
+-    <string name="register_on_network" msgid="9055203954040805084">"<xliff:g id="NETWORK">%s</xliff:g> मा दर्ता गर्दै..."</string>
+-    <string name="not_allowed" msgid="5613353860205691579">"तपाईंको SIM कार्डले यो नेटवर्कको लागि जडान अनुमति दिँदैन।"</string>
+-    <string name="connect_later" msgid="2308119155752343975">"यो नेटवर्कमा अहिले जडान हुन सक्दैन। पछि प्रयास गर्नुहोस्।"</string>
+-    <string name="registration_done" msgid="495135664535876612">"नेटवर्कमा दर्ता भयो।"</string>
+-    <string name="sum_carrier_select" msgid="3494252551249882718">"नेटवर्क संचालक रोज्नुहोस्"</string>
+-    <string name="sum_search_networks" msgid="2921092249873272715">"सम्पूर्ण उपलब्ध नेटवर्कहरूको खोजी कार्य गर्नुहोस्"</string>
+-    <string name="select_automatically" msgid="5628402124471810174">"स्वतः छनौट गर्नुहोस्"</string>
+-    <string name="sum_select_automatically" msgid="5614890115123292400">"स्वचालित रूपले रुचाइएका नेटवर्क छान्नुहोस्"</string>
+-    <string name="register_automatically" msgid="6017849844573519637">"स्वतः दर्ता..."</string>
+-    <string name="preferred_network_mode_title" msgid="8873246565334559308">"नेटवर्क मोड"</string>
+-    <string name="preferred_network_mode_summary" msgid="1434820673166126609">"नेटवर्क संचालन मोड परिवर्तन गर्नुहोस्"</string>
+-    <string name="preferred_network_mode_dialogtitle" msgid="8176355237105593793">"रुचाइएको नेटवर्क मोड"</string>
+-    <string name="preferred_network_mode_wcdma_perf_summary" msgid="8521677230113533809">"रुचाइएको नेटवर्क मोड: WCDMA रुचाइएको"</string>
+-    <string name="preferred_network_mode_gsm_only_summary" msgid="3352445413437453511">"रुचाइएको नेटवर्क मोड: GSM मात्र"</string>
+-    <string name="preferred_network_mode_wcdma_only_summary" msgid="2836897236221063413">"रुचाइएको नेटवर्क मोड: WCDMA मात्र"</string>
+-    <string name="preferred_network_mode_gsm_wcdma_summary" msgid="3161255745326408587">"चाहनु भएको नेटवर्क मोड: GSM/WCDMA"</string>
+-    <string name="preferred_network_mode_cdma_summary" msgid="3175690187294334241">"रुचाइएको नेटवर्क मोड: CDMA"</string>
+-    <string name="preferred_network_mode_cdma_evdo_summary" msgid="8332063064712726618">"रुचाइएको नेटवर्क मोड: CDMA/EvDo"</string>
+-    <string name="preferred_network_mode_cdma_only_summary" msgid="1309770926198634150">"रुचाइएको नेटवर्क मोड: CDMA मात्र"</string>
+-    <string name="preferred_network_mode_evdo_only_summary" msgid="8472220691721269155">"चाहनु भएको नेटवर्क मोड: EvDo मात्र"</string>
+-    <string name="preferred_network_mode_cdma_evdo_gsm_wcdma_summary" msgid="4726682079415227330">"रुचाइएको नेटवर्क मोड: CDMA/EvDo/GSM/WCDMA"</string>
+-    <string name="preferred_network_mode_lte_summary" msgid="574752287596469136">"रुचाइएको नेटवर्क मोड: LTE"</string>
+-    <string name="preferred_network_mode_lte_gsm_wcdma_summary" msgid="8455358514068283935">"रुचाइएको नेटवर्क मोड: GSM/WCDMA/LTE"</string>
+-    <string name="preferred_network_mode_lte_cdma_evdo_summary" msgid="228702246343742853">"रुचाइएको नेटवर्क मोड: CDMA+LTE/EVDO"</string>
+-    <string name="preferred_network_mode_global_summary" msgid="1633134285545730364">"रुचाइएको नेटवर्क मोड: विश्वव्यापी"</string>
+-    <string name="preferred_network_mode_lte_wcdma_summary" msgid="9180775701594742750">"रुचाइएको नेटवर्क मोड: LTE/WCDMA"</string>
+   <string-array name="preferred_network_mode_choices">
+     <item msgid="7886739962255042385">"LTE/WCDMA"</item>
+     <item msgid="577652050447385699">"LTE"</item>
+@@ -180,58 +76,6 @@
+     <item msgid="1524224863879435516">"GSM मात्र"</item>
+     <item msgid="3817924849415716259">"GSM/WCDMA रुचाइएका"</item>
+   </string-array>
+-    <string name="data_enabled" msgid="5972538663568715366">"डेटा सक्षम भयो"</string>
+-    <string name="data_enable_summary" msgid="5022018967714633874">"मोबाइल नेटवर्कमा डेटा पहुँच सक्षम पार्नुहोस्"</string>
+-    <string name="roaming" msgid="8871412572928323707">"डेटा रोमिङ"</string>
+-    <string name="roaming_enable" msgid="7331106985174381987">"रोमिङको समयमा डेटा सेवामा जडान गर्नुहोस्"</string>
+-    <string name="roaming_disable" msgid="1843417228755568110">"रोमिङको समयमा डेटा सेवा जडान गर्नुहोस्"</string>
+-    <string name="roaming_reenable_message" msgid="8913735676127858115">"तपाईँले डेटा गुमाउनु भएको छ किनभने तपाईँले डेटासहितको घर नेटवर्क रोमिङ बन्द गरेर छोड्नुभएको छ।"</string>
+-    <string name="roaming_warning" msgid="7820963598559553967">"डेटा रोमिङ अनुमति दिने हो? तपाईंलाई महत्त्वपूर्ण रोमिङ शुल्क लाग्न सक्तछ!"</string>
+-    <string name="gsm_umts_options" msgid="6538311689850981686">"GSM/UMTS  विकल्पहरू"</string>
+-    <string name="cdma_options" msgid="4016822858172249884">"CDMA विकल्पहरू"</string>
+-    <string name="throttle_data_usage" msgid="3715677828160555808">"डेटा उपयोग"</string>
+-    <string name="throttle_current_usage" msgid="8762280193043815361">"हालको अवधिमा प्रयोग भएको डेटा"</string>
+-    <string name="throttle_time_frame" msgid="1915198770363734685">"डेटा प्रयोग अवधि"</string>
+-    <string name="throttle_rate" msgid="4710388992676803508">"डेटा दर नीति"</string>
+-    <string name="throttle_help" msgid="243651091785169900">"बढी सिक्नुहोस्"</string>
+-    <string name="throttle_status_subtext" msgid="1657318943142085170">"<xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>٪) को <xliff:g id="USED_2">%3$s</xliff:g> अवधि अधिकतम\nअर्को अवधिले <xliff:g id="USED_3">%4$d</xliff:g> दिनमा सुरु गर्दछ (<xliff:g id="USED_4">%5$s</xliff:g>)"</string>
+-    <string name="throttle_data_usage_subtext" msgid="6029276011123694701">"<xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>٪) को <xliff:g id="USED_2">%3$s</xliff:g> अवधि अधिकतम"</string>
+-    <string name="throttle_data_rate_reduced_subtext" msgid="7492763592720107737">"<xliff:g id="USED_0">%1$s</xliff:g> अधिकतम बढीमा \n डेटा दरमा कम <xliff:g id="USED_1">%2$d</xliff:g> KB /s"</string>
+-    <string name="throttle_time_frame_subtext" msgid="7732763021560399960">"<xliff:g id="USED_0">%1$d</xliff:g>٪ को चक्र बितेको \nअर्को समय <xliff:g id="USED_1">%2$d</xliff:g> दिनमा सुरु हुन्छ (<xliff:g id="USED_2">%3$s</xliff:g>)"</string>
+-    <string name="throttle_rate_subtext" msgid="2149102656120726855">"यदि डेटा प्रयोग गर्न सिमित पार भएको छ भने  <xliff:g id="USED">%1$d</xliff:g> Kb/s मा डेटा दर घटेको छ"</string>
+-    <string name="throttle_help_subtext" msgid="5217706521499010816">"तपाईंको केरियरको मोबाइल नेटवर्क डेटा प्रयोग नीतिको बारेमा अधिक जानकारी"</string>
+-    <string name="cell_broadcast_sms" msgid="5584192824053625842">"सेल प्रसारण SMS"</string>
+-    <string name="enable_disable_cell_bc_sms" msgid="4851147873691392255">"सेल प्रसारण SMS"</string>
+-    <string name="cell_bc_sms_enable" msgid="6441688565738921084">"सेल प्रसारण SMS सक्षम"</string>
+-    <string name="cell_bc_sms_disable" msgid="3398365088309408749">"सेल प्रसारण SMS अक्षम"</string>
+-    <string name="cb_sms_settings" msgid="651715019785107312">"सेल प्रसारण SMS सेटिङहरू"</string>
+-    <string name="enable_disable_emergency_broadcast" msgid="2157014609041245335">"आपतकालीन प्रसारण"</string>
+-    <string name="emergency_broadcast_enable" msgid="2645980025414010211">"आपतकालीन प्रसारण सक्षम भयो"</string>
+-    <string name="emergency_broadcast_disable" msgid="3665199821267569426">"आपतकालीन प्रसारण अक्षम भयो"</string>
+-    <string name="enable_disable_administrative" msgid="6501582322182059412">"प्रशासकीय"</string>
+-    <string name="administrative_enable" msgid="1750086122962032235">"प्रशासनिक सक्षम"</string>
+-    <string name="administrative_disable" msgid="8433273857248698539">"प्रशासनिक असक्षम"</string>
+-    <string name="enable_disable_maintenance" msgid="1819693083025106678">"मर्मतसम्भार"</string>
+-    <string name="maintenance_enable" msgid="8566636458770971189">"मर्मत सक्षम भयो"</string>
+-    <string name="maintenance_disable" msgid="7340189100885066077">"मर्मत अक्षम भयो"</string>
+-    <string name="general_news_settings" msgid="4968779723948432978">"सामान्य समाचार"</string>
+-    <string name="bf_news_settings" msgid="3935593091894685267">"व्यापार र वित्तीय समाचार"</string>
+-    <string name="sports_news_settings" msgid="7649399631270052835">"खेलकुद समाचार"</string>
+-    <string name="entertainment_news_settings" msgid="5051153952959405035">"मनोरन्जन समाचार"</string>
+-    <string name="enable_disable_local" msgid="7890281063123416120">"स्थानीय"</string>
+-    <string name="local_enable" msgid="6370463247609136359">"स्थानीय समाचार सक्षम भयो"</string>
+-    <string name="local_disable" msgid="4405691986943795798">"स्थानीय समाचार अक्षम भयो"</string>
+-    <string name="enable_disable_regional" msgid="4905652414535565872">"क्षेत्रीय"</string>
+-    <string name="regional_enable" msgid="4434680415437834759">"क्षेत्रीय समाचार सक्षम भयो"</string>
+-    <string name="regional_disable" msgid="5359325527213850077">"क्षेत्रीय समाचार अक्षम भयो"</string>
+-    <string name="enable_disable_national" msgid="236278090206880734">"राष्ट्रिय"</string>
+-    <string name="national_enable" msgid="1172443648912246952">"राष्ट्रिय समाचार सक्षम भयो"</string>
+-    <string name="national_disable" msgid="326018148178601166">"राष्ट्रिय समाचार असक्षम भयो"</string>
+-    <string name="enable_disable_international" msgid="7535348799604565592">"अन्तर्राष्ट्रिय"</string>
+-    <string name="international_enable" msgid="5855356769925044927">"अन्तर्राष्ट्रिय समाचार सक्षम भयो"</string>
+-    <string name="international_disable" msgid="2850648591041088931">"अन्तर्राष्ट्रिय समाचार अक्षम भयो"</string>
+-    <string name="list_language_title" msgid="2841683501919760043">"भाषा"</string>
+-    <string name="list_language_summary" msgid="8109546531071241601">"खबर भाषा चयन  गर्नुहोस्"</string>
+   <string-array name="list_language_entries">
+     <item msgid="6137851079727305485">"अंग्रेजी"</item>
+     <item msgid="1151988412809572526">"फ्रान्सेली"</item>
+@@ -250,55 +94,10 @@
+     <item msgid="5884448729274543324">"६"</item>
+     <item msgid="5511864807618312598">"७"</item>
+   </string-array>
+-    <string name="list_language_dtitle" msgid="5442908726538951934">"भाषाहरू"</string>
+-    <string name="enable_disable_local_weather" msgid="986967454867219114">"स्थानीय मौसम"</string>
+-    <string name="local_weather_enable" msgid="6199315114382448922">"स्थानीय मौसम सक्षम भयो"</string>
+-    <string name="local_weather_disable" msgid="2510158089142626480">"स्थानीय मौसम अक्षम भयो"</string>
+-    <string name="enable_disable_atr" msgid="8339572391278872343">"क्षेत्र ट्राफिक रिपोर्टहरू"</string>
+-    <string name="atr_enable" msgid="5541757457789181799">"क्षेत्र ट्राफिक रिपोर्टहरू सक्षम भए"</string>
+-    <string name="atr_disable" msgid="7085558154727596455">"क्षेत्र ट्राफिक रिपोर्टहरू अक्षम भए"</string>
+-    <string name="enable_disable_lafs" msgid="668189073721277199">"स्थानीय विमानास्थल उडान तालिकाहरू"</string>
+-    <string name="lafs_enable" msgid="2791978667205137052">"स्थानीय विमानास्थल उडान समय तालिका सक्षम भयो"</string>
+-    <string name="lafs_disable" msgid="2391212397725495350">"स्थानीय विमानस्थल उडान समय तालिका अक्षम भयो"</string>
+-    <string name="enable_disable_restaurants" msgid="6240381945336814024">"रेस्टुरेन्टहरू"</string>
+-    <string name="restaurants_enable" msgid="5137657479469118847">"रेस्टुरेन्टहरू सक्षम भए"</string>
+-    <string name="restaurants_disable" msgid="3678480270938424092">"रेस्टुरेन्टहरू अक्षम भए"</string>
+-    <string name="enable_disable_lodgings" msgid="1822029172658551202">"लजिङहरू"</string>
+-    <string name="lodgings_enable" msgid="3230042508992850322">"लजिङहरू सक्षम भए"</string>
+-    <string name="lodgings_disable" msgid="3387879742320682391">"लजिङहरू अक्षम भए"</string>
+-    <string name="enable_disable_retail_directory" msgid="1357809784475660303">"खुद्रा निर्देशिका"</string>
+-    <string name="retail_directory_enable" msgid="3280626290436111496">"खुद्रा निर्देशिका सक्षम भयो"</string>
+-    <string name="retail_directory_disable" msgid="6479739816662879027">"खुद्रा निर्देशिका असक्षम भयो"</string>
+-    <string name="enable_disable_advertisements" msgid="5999495926176182128">"विज्ञापनहरू"</string>
+-    <string name="advertisements_enable" msgid="2050305021264683786">"विज्ञापनहरू सक्षम भए"</string>
+-    <string name="advertisements_disable" msgid="8350985908788707935">"विज्ञापनहरू अक्षम भए"</string>
+-    <string name="enable_disable_stock_quotes" msgid="6397810445293533603">"थोक उद्धरण"</string>
+-    <string name="stock_quotes_enable" msgid="4384802470887170543">"स्टक भाव सक्षम भयो"</string>
+-    <string name="stock_quotes_disable" msgid="4781450084565594998">"स्टक उद्धरण असक्षम भयो"</string>
+-    <string name="enable_disable_eo" msgid="4863043263443942494">"रोजगारका अवसरहरू"</string>
+-    <string name="eo_enable" msgid="8623559062015685813">"रोजगारका अवसरहरू सक्षम भए"</string>
+-    <string name="eo_disable" msgid="3863812478090907609">"रोजगारका अवसर अक्षम भए"</string>
+-    <string name="enable_disable_mhh" msgid="908214593528968522">"चिकित्सा, स्वास्थ्य, र अस्पताल"</string>
+-    <string name="mhh_enable" msgid="5544500632306446815">"चिकित्सा, स्वास्थ्य, र अस्पताल सक्षम भए"</string>
+-    <string name="mhh_disable" msgid="8998210550117117437">"चिकित्सा, स्वास्थ्य, र अस्पताल असक्षम भए"</string>
+-    <string name="enable_disable_technology_news" msgid="3517184627114999149">"प्रविधि समाचार"</string>
+-    <string name="technology_news_enable" msgid="7995209394210455181">"प्राविधिक समाचार सक्षम भयो"</string>
+-    <string name="technology_news_disable" msgid="5483490380561851946">"प्राविधिक समाचार असक्षम भयो"</string>
+-    <string name="enable_disable_multi_category" msgid="626771003122899280">"बहु-श्रेणी"</string>
+-    <string name="multi_category_enable" msgid="1179299804641721768">"बहु-कोटी सक्षम भयो"</string>
+-    <string name="multi_category_disable" msgid="880104702904139505">"बहु-कोटी अक्षम भयो"</string>
+-    <string name="prefer_2g" msgid="8442550937280449639">"2G नेटवर्क मात्र प्रयोग गर्नुहोस्"</string>
+-    <string name="prefer_2g_summary" msgid="1976491403210690759">"ब्याट्रि बचत गर्छ"</string>
+-    <string name="cdma_system_select_title" msgid="5757657769327732833">"प्रणाली चयन गर्नुहोस्"</string>
+-    <string name="cdma_system_select_summary" msgid="60460043745797517">"CDMA रोमिङ मोडलाई परिवर्तन गर्नुहोस्"</string>
+-    <string name="cdma_system_select_dialogtitle" msgid="6083355415165359075">"प्रणाली चयन गर्नुहोस्"</string>
+   <string-array name="cdma_system_select_choices">
+     <item msgid="176474317493999285">"घर मात्र"</item>
+     <item msgid="1205664026446156265">"स्वतः"</item>
+   </string-array>
+-    <string name="cdma_subscription_title" msgid="1162564010076763284">"CDMA सदस्यता"</string>
+-    <string name="cdma_subscription_summary" msgid="2530890766115781140">"RUIM/SIM र NV का बिच परिवर्तन गर्नुहोस्"</string>
+-    <string name="cdma_subscription_dialogtitle" msgid="2699527950523333110">"सदस्यता"</string>
+   <string-array name="cdma_subscription_choices">
+     <item msgid="2258014151300708431">"RUIM/SIM"</item>
+     <item msgid="5127722015571873880">"NV"</item>
+@@ -307,81 +106,8 @@
+     <item msgid="7494167883478914080">"०"</item>
+     <item msgid="6043847456049107742">"१"</item>
+   </string-array>
+-    <string name="cdma_activate_device" msgid="3793805892364814518">"उपकरण सक्रिय बनाउनुहोस्"</string>
+-    <string name="cdma_lte_data_service" msgid="4255018217292548962">"सेटअप डेटा सेवा"</string>
+-    <string name="fdn" msgid="7878832555095183202">"स्थिर डायल गर्ने नम्बर"</string>
+-    <string name="manage_fdn_list" msgid="8777755791892122369">"FDN सूची"</string>
+-    <string name="fdn_activation" msgid="2156479741307463576">"FDN सक्रियता"</string>
+-    <string name="fdn_enabled" msgid="5238109009915521240">"स्थिर डायल गर्ने नम्बर सक्षम छन्"</string>
+-    <string name="fdn_disabled" msgid="4700049736675368279">"स्थिर डायल गर्ने नम्बरहरू असक्षम छन्"</string>
+-    <string name="enable_fdn" msgid="3740191529180493851">"FDN सक्षम गर्नुहोस्"</string>
+-    <string name="disable_fdn" msgid="7944020890722540616">"FDN अक्षम बनाउनुहोस्"</string>
+-    <string name="change_pin2" msgid="2153563695382176676">"PIN2 परिवर्तन गर्नुहोस्"</string>
+-    <string name="enable_fdn_ok" msgid="7215588870329688132">"FDN अक्षम गर्नुहोस्"</string>
+-    <string name="disable_fdn_ok" msgid="5727046928930740173">"FDN सक्षम बनाउनुहोस्"</string>
+-    <string name="sum_fdn" msgid="1959399454900272878">"स्थिर डायल गर्ने नम्बरहरू प्रबन्ध गर्नुहोस्"</string>
+-    <string name="sum_fdn_change_pin" msgid="6666549734792827932">"FDN पहुँचको लागि PIN परिवर्तन गर्नुहोस्"</string>
+-    <string name="sum_fdn_manage_list" msgid="8431088265332628316">"फोन नम्बर सूची प्रबन्ध गर्नुहोस्"</string>
+-    <string name="voice_privacy" msgid="3776841382844614716">"भ्वाइस गोपनीयता"</string>
+-    <string name="voice_privacy_summary" msgid="3159383389833516214">"परिस्कृत प्राइभेसी मोड सक्षम पार्नुहोस्"</string>
+-    <string name="tty_mode_option_title" msgid="9033098925144434669">"TTY मोड"</string>
+-    <string name="tty_mode_option_summary" msgid="1073835131534808732">"TTY मोड सेट गर्नुहोस्"</string>
+-    <string name="auto_retry_mode_title" msgid="4073265511427813322">"स्वतः पुनः प्रयास गर्नुहोस्"</string>
+-    <string name="auto_retry_mode_summary" msgid="4973886004067532288">"स्वतः-पुनः प्रयास मोड सक्षम गर्नुहोस्"</string>
+-    <string name="menu_add" msgid="1882023737425114762">"सम्पर्क थप्नुहोस्"</string>
+-    <string name="menu_edit" msgid="7143003705504672374">"सम्पर्क सम्पादन गर्नुहोस्"</string>
+-    <string name="menu_delete" msgid="3977150783449642851">"सम्पर्क मेटाउनुहोस्"</string>
+-    <string name="get_pin2" msgid="8204677063922225311">"PIN2 प्रकार"</string>
+-    <string name="name" msgid="7329028332786872378">"नाम"</string>
+-    <string name="number" msgid="7905950798349903858">"संख्या"</string>
+-    <string name="save" msgid="4094274636321939086">"बचत गर्नुहोस्"</string>
+-    <string name="add_fdn_contact" msgid="2481915899633353976">"स्थिर डायलिङ नम्बर थप्नुहोस्"</string>
+-    <string name="adding_fdn_contact" msgid="7627379633721940991">"स्थिर डायलिङ सम्पर्क थप्दै..."</string>
+-    <string name="fdn_contact_added" msgid="7458335758501736665">"स्थिर डायल गर्ने नम्बर थपियो।"</string>
+-    <string name="edit_fdn_contact" msgid="7976936035587081480">"स्थिर डायल गर्ने नम्बर सम्पादन गर्नुहोस्"</string>
+-    <string name="updating_fdn_contact" msgid="8370929876849803600">"स्थिर डायलिङ नम्बर अद्यावधिक गर्दै ..."</string>
+-    <string name="fdn_contact_updated" msgid="5497828782609005017">"स्थिर डायल गर्ने नम्बर अद्यावधिक गरियो।"</string>
+-    <string name="delete_fdn_contact" msgid="6668958073074151717">"स्थिर डायल गर्ने नम्बर मेट्नुहोस्"</string>
+-    <string name="deleting_fdn_contact" msgid="5669163206349319969">"स्थिर डायल गर्ने नम्बर मेट्दै..."</string>
+-    <string name="fdn_contact_deleted" msgid="7154162327112259569">"स्थिर डायल गर्ने नम्बर मेटियो।"</string>
+-    <string name="pin2_invalid" msgid="5470854099230755944">"FDN अद्यावधिक भएको थिएन किनकि तपाईंले गलत PIN टाइप गर्नुभयो।"</string>
+-    <string name="fdn_invalid_number" msgid="1494755047900009147">"FDN अद्यावधिक गरिएन किनकि नम्बर २० अङ्कभन्दा माथि हुन सक्दैन।"</string>
+-    <string name="pin2_or_fdn_invalid" msgid="6025144083384701197">"FDN अद्यावधिक भएको थिएन। PIN2 गलत थियो वा फोन नम्बर अस्वीकार भएको थियो।"</string>
+     <string name="simContacts_emptyLoading" msgid="2203331234764498011">"SIM कार्ड पढ्दै..."</string>
+-    <string name="simContacts_empty" msgid="5270660846489561932">"तपाईँको SIM कार्डमा कुनै पनि सम्पर्क छैन।"</string>
+     <string name="simContacts_title" msgid="1861472842524839921">"सम्पर्कहरू आयात गर्न चयन गर्नुहोस्"</string>
+-    <string name="simContacts_airplaneMode" msgid="1846161429087789936">"SIM कार्डबाट सम्पर्क आयात गर्न पहिले हवाइजहाज मोड बन्द गर्नुहोस्।"</string>
+-    <string name="enable_pin" msgid="5422767284133234860">"SIM PIN सक्षम/अक्षम गर्नुहोस्"</string>
+-    <string name="change_pin" msgid="9174186126330785343">"SIM PIN परिवर्तन गर्नुहोस्"</string>
+-    <string name="enter_pin_text" msgid="8532615714751931951">"SIM PIN:"</string>
+-    <string name="oldPinLabel" msgid="5287773661246368314">"पुरानो PIN"</string>
+-    <string name="newPinLabel" msgid="207488227285336897">"नयाँ PIN"</string>
+-    <string name="confirmPinLabel" msgid="257597715098070206">"नयाँ PIN निश्चित गर्नुहोस्"</string>
+-    <string name="badPin" msgid="8955102849303984935">"तपाईंले टाइप गर्नुभएको पुरानो PIN सही छैन। पुनः प्रयास गर्नुहोस्।"</string>
+-    <string name="mismatchPin" msgid="5923253370683071889">"तपाईंले टाइप गर्नुभएको PINs मेल खाएनन्। फेरि प्रयास गर्नुहोस्।"</string>
+-    <string name="invalidPin" msgid="5981171102258684792">"४ देखि ८ अङ्कको PIN टाइप गर्नुहोस्।"</string>
+-    <string name="disable_sim_pin" msgid="3992926931620188855">"SIM PIN अक्षम बनाउनुहोस्"</string>
+-    <string name="enable_sim_pin" msgid="5803702443844458831">"SIM PIN सक्षम गर्नुहोस्"</string>
+-    <string name="enable_in_progress" msgid="3695303775100109650">"कृपया प्रतीक्षा गर्नुहोस्..."</string>
+-    <string name="enable_pin_ok" msgid="9166061915030865848">"SIM PIN सक्षम भयो।"</string>
+-    <string name="disable_pin_ok" msgid="5596999379593924850">"SIM PIN अक्षम भयो।"</string>
+-    <string name="pin_failed" msgid="2298841192582192277">"तपाईंले टा[प गर्नुभएको PIN गलत थियो"</string>
+-    <string name="pin_changed" msgid="4365538014588501049">"SIM PIN सफलतापूर्वक परिवर्तन गरियो।"</string>
+-    <string name="puk_requested" msgid="3898394204193202803">"गलत पासवर्ड, SIM लक भयो! PUK2 अनुरोध गरियो।"</string>
+-    <string name="enter_pin2_text" msgid="8339444124477720345">"PIN2"</string>
+-    <string name="oldPin2Label" msgid="8559146795026261502">"पुरानो PIN2"</string>
+-    <string name="newPin2Label" msgid="4573956902204349054">"नयाँ PIN2"</string>
+-    <string name="confirmPin2Label" msgid="8100319484454787708">"नयाँ PIN2 निश्चित गर्नुहोस्"</string>
+-    <string name="badPuk2" msgid="4851734468010000418">"तपाईंले टाइप गर्नुभएको PUK2 सही छैन। पुनः प्रयास गर्नुहोस्।"</string>
+-    <string name="badPin2" msgid="1041576234483629991">"तपाईंले टाइप गर्नुभएको पुरानो PIN2 सही छैन। पुनः प्रयास गर्नुहोस्।"</string>
+-    <string name="mismatchPin2" msgid="523029155918113440">"तपाईंले टाइप गर्नुभएको PIN2s मेल खाएनन्। फेरि प्रयास गर्नुहोस्।"</string>
+-    <string name="invalidPin2" msgid="8237110107480395938">"४ देखि ८ नम्बर सम्मको PIN2 टाइप गर्नुहोस्।"</string>
+-    <string name="invalidPuk2" msgid="1290977391033057871">"८ नम्बरको PUK2 टाइप गर्नुहोस्।"</string>
+-    <string name="pin2_changed" msgid="1639666438836544393">"PIN2 सफलतापूर्वक परिवर्तन गरियो।"</string>
+-    <string name="label_puk2_code" msgid="302845876240219560">"प्रकार PUK2 कोड"</string>
+-    <string name="fdn_enable_puk2_requested" msgid="4262894949634885773">"पासवर्ड गलत। PIN2 परिवर्तन गर्नुहोस् र पुनः प्रयास गर्नुहोस्।"</string>
+-    <string name="puk2_requested" msgid="8909278021238716877">"गलत पासवर्ड, SIM लक भयो। PUK2 अनुरोध गरियो।"</string>
+-    <string name="doneButton" msgid="2859593360997984240">"सम्पन्न भयो"</string>
+     <string name="caller_manage_header" msgid="3231519674734638786">"सम्मेलन कल <xliff:g id="CONF_CALL_TIME">%s</xliff:g>"</string>
+     <string name="voicemail_settings_number_label" msgid="8524164258691887790">"भ्वाइसमेल सङ्ख्या"</string>
+     <string name="card_title_dialing" msgid="5769417478498348054">"डायल गर्दै"</string>
+@@ -441,47 +167,16 @@
+     <string name="onscreenManageConferenceText" msgid="6485935856534311346">"सम्मेलन प्रबन्ध गर्नुहोस्"</string>
+     <string name="onscreenAudioText" msgid="1710087112800041743">"अडियो"</string>
+     <string name="onscreenVideoCallText" msgid="4800924186056115442">"भिडियो कल"</string>
+-    <string name="importSimEntry" msgid="6614358325359736031">"आयात गर्नुहोस्"</string>
+-    <string name="importAllSimEntries" msgid="1503181169636198673">"सबै आयात गर्नुहोस्"</string>
+-    <string name="importingSimContacts" msgid="7374056215462575769">"SIM सम्पर्कहरू आयात गर्दै"</string>
+-    <string name="importToFDNfromContacts" msgid="2130620207013368580">"सम्पर्कहरूबाट आयात गर्नुहोस्"</string>
+-    <string name="hac_mode_title" msgid="8740268574688743289">"श्रवण सहयोगी"</string>
+-    <string name="hac_mode_summary" msgid="6833851160514929341">"श्रवण सहायता अनुकूलता खोल्नुहोस्"</string>
+   <string-array name="tty_mode_entries">
+     <item msgid="512950011423868021">"TTY बन्द"</item>
+     <item msgid="3971695875449640648">"TTY भरी"</item>
+     <item msgid="1937509904407445684">"TTY HCO"</item>
+     <item msgid="5644925873488772224">"TTY VCO"</item>
+   </string-array>
+-    <string name="dtmf_tones_title" msgid="5163153771291340803">"DTMF टोनहरू"</string>
+-    <string name="dtmf_tones_summary" msgid="3351820372864020331">"DTMF टोनहरूको लम्बाइ निर्धारण गर्नुहोस्"</string>
+   <string-array name="dtmf_tone_entries">
+     <item msgid="899650777817315681">"साधारण"</item>
+     <item msgid="2883365539347850535">"लामो"</item>
+   </string-array>
+-    <string name="network_message" msgid="4483886461245213802">"नेटवर्क सन्देश"</string>
+-    <string name="ota_title_activate" msgid="8616918561356194398">"तपाईंको फोन सक्रिय गर्नुहोस्"</string>
+-    <string name="ota_touch_activate" msgid="6553212803262586244">"विशेष कललाई तपाईंको फोन सेवा सक्रिय गर्न जरुरी हुन्छ। \n \n \"सक्रिय\" थिचेर तपाईंको फोन  सक्रिय गर्न दिएका निर्देशनहरू सुन्नुहोस्।"</string>
+-    <string name="ota_skip_activation_dialog_title" msgid="2943366608272261306">"सक्रिया गर्ने काम छोड्ने हो?"</string>
+-    <string name="ota_skip_activation_dialog_message" msgid="2440770373498870550">"यदि तपाईं सक्रियता छोड्नुहुन्छ भने तपाईं कल वा मोबाइल डेटा नेटवर्क (तपाईं वाइ-फाइ नेटवर्क जडान गर्न सक्नु हुन्छ) बाट जडान गर्न सक्नु हुन्छ। तपाईंले आफ्नो फोनलाई सक्रिय गर्ने बेलासम्म तपाईं यसलाई हरेक पटक खोल्ने गर्नुहोस्।"</string>
+-    <string name="ota_skip_activation_dialog_skip_label" msgid="3458532775091563208">"छोड्नुहोस्"</string>
+-    <string name="ota_activate" msgid="1368528132525626264">"सक्रिय बनाउनुहोस्"</string>
+-    <string name="ota_title_activate_success" msgid="6570240212263372046">"फोन सक्रिय भएको छ।"</string>
+-    <string name="ota_title_problem_with_activation" msgid="7095824491970084367">"सक्रिय पार्दा समस्या"</string>
+-    <string name="ota_listen" msgid="162923839877584937">"तपाईंलाई सक्रियता पुरा भएको सुन्नुभयो भने बोलिएका निर्देशनहरूको पालना गर्नुहोस्।"</string>
+-    <string name="ota_speaker" msgid="6904589278542719647">"स्पिकर"</string>
+-    <string name="ota_progress" msgid="3420314892609254729">"तपाईंको फोनमा प्रोग्राम गरून्जेलसम्म प्रतिक्षा गर्नुहोस्।"</string>
+-    <string name="ota_failure" msgid="4311299546379674378">"प्रोग्रामिङ असफलता"</string>
+-    <string name="ota_successful" msgid="1880780692887077407">"तपाईंको फोन अहिले सक्रिय गरिएको छ। यसलाई सेवा सुरु गर्नको लागि १५ मिनटसम्म लाग्न सक्दछ।"</string>
+-    <string name="ota_unsuccessful" msgid="8072141612635635357">"तपाईंको फोन सक्रिय गरिएको छैन। \n तपाईंले राम्रो प्रसारणक्षेत्र (झ्यालको नजिक वा बाहिर पट्टि) का साथ  क्षेत्र खोजी गर्न आवश्यकता हुन सक्दछ। \n \n पुनःप्रयास गर्नुहोस् वा अधिक विकल्पहरूका लागि ग्राहक सेवामा कल गर्नुहोस्।"</string>
+-    <string name="ota_spc_failure" msgid="3909983542575030796">"अति विशेष सुविधाहरू"</string>
+-    <string name="ota_call_end" msgid="4537279738134612388">"पछाडि जानुहोस्"</string>
+-    <string name="ota_try_again" msgid="7685477206465902290">"फेरि प्रयास गर्नुहोस्"</string>
+-    <string name="ota_next" msgid="3904945374358235910">"अर्को"</string>
+-    <string name="ecm_exit_dialog" msgid="4448531867763097533">"EcmExitDialog"</string>
+-    <string name="phone_entered_ecm_text" msgid="6266424252578731203">"आपतकालीन कलब्याक मोड प्रविष्टि गरियो"</string>
+-    <string name="phone_in_ecm_notification_title" msgid="3226896828951687085">"आपतकालीन कलब्याक मोड"</string>
+-    <string name="phone_in_ecm_call_notification_text" msgid="4611608947314729773">"डेटा जडान अक्षम भयो"</string>
+   <plurals name="phone_in_ecm_notification_time">
+     <item quantity="one" msgid="4866221796252472622">"<xliff:g id="COUNT">%s</xliff:g> मिनेटका लागि कुनै पनि डेटा सम्पर्क उपलब्ध छैन"</item>
+     <item quantity="other" msgid="3122217344579273583">"<xliff:g id="COUNT">%s</xliff:g> मिनटका लागि डेटा जडान छैन"</item>
+@@ -494,11 +189,6 @@
+     <item quantity="one" msgid="2585506997024726599">"चयन कार्य आपतकालिन कलब्याक मोडमा हुँदा यो उपलब्ध हुँदैन। फोन <xliff:g id="COUNT">%s</xliff:g> मिनटका लागि आपतकालिन कलब्याक मोडमा हुने छ। के तपाईं अहिले निस्कन चाहनु हुन्छ?"</item>
+     <item quantity="other" msgid="6115622137771382224">"चयन कार्य आपतकालिन कलब्याक मोडमा हुँदा यो उपलब्ध हुँदैन। फोन <xliff:g id="COUNT">%s</xliff:g> मिनटका लागि आपतकालिन कलब्याक मोडमा हुने छ। के तपाईं अहिले निस्कन चाहनुहुन्छ?"</item>
+   </plurals>
+-    <string name="alert_dialog_in_ecm_call" msgid="1886723687211887104">"आपतकालीन कल हुँदा चयन भएको कार्य उपलब्ध हुँदैन।"</string>
+-    <string name="progress_dialog_exiting_ecm" msgid="4835734101617817074">"आपतकालीन कलब्याक मोडबाट निस्कदै"</string>
+-    <string name="alert_dialog_yes" msgid="6674268047820703974">"हो"</string>
+-    <string name="alert_dialog_no" msgid="1476091437797628703">"होइन"</string>
+-    <string name="alert_dialog_dismiss" msgid="2491494287075907171">"खारेज गर्नुहोस्"</string>
+     <string name="voicemail_provider" msgid="5135942703327136909">"सेवा"</string>
+     <string name="voicemail_settings" msgid="72448049107749316">"सेटअप"</string>
+     <string name="voicemail_number_not_set" msgid="6724904736891087856">"सेट गरेको छैन"</string>
+@@ -507,79 +197,6 @@
+     <string name="contactPhoto" msgid="4713193418046639466">"सम्पर्क फोटो"</string>
+     <string name="goPrivate" msgid="865837794424530980">"निजी जानुहोस्"</string>
+     <string name="selectContact" msgid="781975788478987237">"सम्पर्क चयन गर्नुहोस्"</string>
+-    <string name="sip_settings" msgid="6699045718560859691">"इन्टरनेट कल सेटिङहरू"</string>
+-    <string name="sip_accounts" msgid="2097054001288457163">"इन्टरनेट कल गर्ने (SIP) खाताहरू"</string>
+-    <string name="sip_accounts_title" msgid="1212889069281054570">"लेखाहरू"</string>
+-    <string name="sip_receive_calls" msgid="5635685570889971559">"आगमन कलहरू प्राप्त गर्नुहोस्"</string>
+-    <string name="sip_receive_calls_summary" msgid="8403613238633679184">"ब्याट्रिको जीवन घटाउँछ"</string>
+-    <string name="sip_call_options_title" msgid="27433718808839672">"इन्टरनेट कल गर्न प्रयोग गर्नुहोस्"</string>
+-    <string name="sip_call_options_wifi_only_title" msgid="145572394529090811">"इन्टरनेट कल गर्न (वाइ-फाइ मात्र)को उपयोग गर्नुहोस्"</string>
+-    <string name="sip_call_options_entry_1" msgid="6556668894178520760">"डेटा नेटवर्क उपलब्ध हुँदा सबै कलहरूको लागि"</string>
+-    <string name="sip_call_options_entry_2" msgid="6789764029719494361">"इन्टरनेट कलहरूको लागि मात्र"</string>
+-    <string name="sip_call_options_entry_3" msgid="7474809001402649185">"प्रत्येक कलको लागि सोध्नुहोस्"</string>
+-    <string name="sip_call_options_wifi_only_entry_1" msgid="7423523864471650069">"सबै कलहरूको लागि"</string>
+-    <string name="pick_outgoing_call_phone_type" msgid="5622916534828338675">"कल राख्नुहोस्"</string>
+-    <string name="pick_outgoing_sip_phone" msgid="7012322118236208875">"इन्टरनेट कल गर्ने खाता प्रयोग गर्नुहोस्:"</string>
+-    <string name="remember_my_choice" msgid="7058059586169290705">"इन्टरनेट कलहरू राख्न सधैँ प्रयोग गर्नुहोस्"</string>
+-    <string name="reset_my_choice_hint" msgid="5523030209803567922">"तपाईं फोनको पूर्वनिर्धारितको प्रयोगद्वारा सेटिङहरू, इन्टरनेट कल सेटिङहरू, खाता स्क्रिन परिवर्तन गर्न सक्नु हुन्छ।"</string>
+-    <string name="pstn_phone" msgid="8782554491484326429">"सेल फोन कल"</string>
+-    <string name="internet_phone" msgid="1147922660195095810">"इन्टरनेट कल"</string>
+-    <string name="no_sip_account_found_title" msgid="6266249392379373628">"इन्टरनेट कल गर्ने खाता छैन"</string>
+-    <string name="no_sip_account_found" msgid="724325811961769997">"यो फोनमा कुनै इन्टरनेट कल गर्ने खाता छैन। तपाईं अब  एउटा खाता थप्न चाहनु हुन्छ?"</string>
+-    <string name="sip_menu_add" msgid="8757508498518881500">"थप्नुहोस्"</string>
+-    <string name="add_sip_account" msgid="5904858426290097611">"खाता थप गर्नुहोस्"</string>
+-    <string name="remove_sip_account" msgid="7645900420385682570">"खाता हटाउनुहोस्"</string>
+-    <string name="sip_account_list" msgid="5480058210652194306">"SIP खाताहरू"</string>
+-    <string name="saving_account" msgid="52903398217017954">"खाता बचत गर्दै..."</string>
+-    <string name="removing_account" msgid="7183999896088628100">"खाता हटाउँदै..."</string>
+-    <string name="sip_menu_save" msgid="5842531129356014943">"बचत गर्नुहोस्"</string>
+-    <string name="sip_menu_discard" msgid="524075892158789701">"त्याग्नुहोस्"</string>
+-    <string name="alert_dialog_close" msgid="7759635137627626235">"प्रोफाइल बन्द गर्नुहोस्"</string>
+-    <string name="alert_dialog_ok" msgid="3580379406983564080">"ठिक छ"</string>
+-    <string name="close_profile" msgid="6886968271423155284">"बन्द गर्नुहोस्"</string>
+-    <string name="primary_account_summary_with" msgid="1633960536212343187">"प्राथमिक खाता <xliff:g id="REGISTRATION_STATUS">%s</xliff:g>"</string>
+-    <string name="registration_status_checking_status" msgid="3381868307694056727">"स्थिति जाँच गर्दै..."</string>
+-    <string name="registration_status_registering" msgid="4288401139400232968">"दर्ता गर्दै..."</string>
+-    <string name="registration_status_still_trying" msgid="3185581992666091911">"अहिले पनि प्रयास गर्दै..."</string>
+-    <string name="registration_status_not_receiving" msgid="4185572774980557758">"कलहरू प्राप्त भैरहेका छैनन्"</string>
+-    <string name="registration_status_no_data" msgid="4901476962360656611">"खाता दर्ता प्रक्रिया रोकियो किनकि इन्टरनेट जडान छैन"</string>
+-    <string name="registration_status_no_wifi_data" msgid="4038976374713018067">"खाता दर्ता रोकियो किनकि वाइफाइ जडान छैन।"</string>
+-    <string name="registration_status_not_running" msgid="4824867184446232131">"खाता दर्ता विफल"</string>
+-    <string name="registration_status_done" msgid="884630717456439280">"कलहरू प्राप्त गर्दै"</string>
+-    <string name="registration_status_failed_try_later" msgid="5214474354451220581">"खाता दर्ता विफल: ( <xliff:g id="REGISTRATION_ERROR_MESSAGE">%s</xliff:g> ), पछि प्रयास गर्नुहोस्"</string>
+-    <string name="registration_status_invalid_credentials" msgid="4908446367559341757">"खाता दर्ता प्रक्रिया असफल: गलत प्रयोगकर्ता नाम वा पासवर्ड।"</string>
+-    <string name="registration_status_server_unreachable" msgid="5733421582468991276">"खाता दर्ता असफल: सर्भर नाम जाँच गर्नुहोस्।"</string>
+-    <string name="third_party_account_summary" msgid="2532526738862533028">"<xliff:g id="ACCOUNT_OWNER">%s</xliff:g> अनुप्रयोगद्वारा यो खाता हाल प्रयोगमा छ।"</string>
+-    <string name="sip_edit_title" msgid="489288416435014385">"SIP खाता विवरणहरू"</string>
+-    <string name="sip_edit_new_title" msgid="3659149255856520385">"SIP खाता विवरण"</string>
+-    <string name="domain_address_title" msgid="9071787581316160480">"सर्भर"</string>
+-    <string name="username_title" msgid="2479375923477682328">"प्रयोगकर्ता नाम"</string>
+-    <string name="password_title" msgid="3323555249068171531">"पासवर्ड:"</string>
+-    <string name="display_name_title" msgid="2459768196312249937">"नाम प्रदर्शन गर्नुहोस्"</string>
+-    <string name="proxy_address_title" msgid="4828301345351614273">"बाहिरका प्रोक्सी ठेगाना"</string>
+-    <string name="port_title" msgid="5952939408078626657">"पोर्ट सङ्ख्या"</string>
+-    <string name="transport_title" msgid="8253139511847746640">"यातायात प्रकार"</string>
+-    <string name="send_keepalive_title" msgid="7533342573918645113">"सुरक्षित राख्नको लागि पठाउनुहोस्"</string>
+-    <string name="set_primary_title" msgid="5351892327447571451">"प्राथमिक खाताको रूपमा सेट गर्नुहोस्"</string>
+-    <string name="set_primary_summary" msgid="2219064654523258577">"बहिर्गमन कलको लागि प्रयोग भएको"</string>
+-    <string name="advanced_settings" msgid="8350631795335495338">"वैकल्पिक सेटिङहरू"</string>
+-    <string name="auth_username_title" msgid="851473016307947120">"प्रमाणीकरण प्रयोगकर्ता नाम"</string>
+-    <string name="auth_username_summary" msgid="6782012405225938629">"प्रमाणीकरणको लागि प्रयोगकर्ता नाम प्रयोग भएको"</string>
+-    <string name="default_preference_summary" msgid="868766740121667450">"&lt;सेट गरेको छैन&gt;"</string>
+-    <string name="display_name_summary" msgid="8636377460518225523">"&lt;प्रयोगकर्ता नाम जस्तै&gt;"</string>
+-    <string name="optional_summary" msgid="1464058793789832411">"वैकल्पिक"</string>
+-    <string name="advanced_settings_show" msgid="4668880308290857597">"▷ सबै देखाउन छुनुहोस्"</string>
+-    <string name="advanced_settings_hide" msgid="217398292824758079">"▽ सबै लुकाउन छुनुहोस्"</string>
+-    <string name="empty_alert" msgid="6839103946505432390">"<xliff:g id="INPUT_FIELD_NAME">%s</xliff:g> लाई चाहिन्छ र खाली छोड्न सकिँदैन।"</string>
+-    <string name="not_a_valid_port" msgid="4796149266434630292">"पोर्ट संख्या १००० र  ६५५३४को बीचमा हुनुपर्छ।"</string>
+-    <string name="no_internet_available_title" msgid="3327109242858406165">"कुनै इन्टरनेट जडान छैन"</string>
+-    <string name="no_wifi_available_title" msgid="747881033089378758">"वाइ-फाइ जडान छैन"</string>
+-    <string name="no_internet_available" msgid="7877142631803238549">"इन्टरनेट कल राख्नको लागि पहिले तपाईंको इन्टरनेट जडानको जाँच गर्नुहोस्"</string>
+-    <string name="no_wifi_available" msgid="1225073547318465713">"तपाईंलाई इन्टरनेट कलहरू(वायरलेस र नेटवर्क सेटिहरूको प्रयोग)को लागि वाइ-फाइ नेटवर्क जडान गर्न जरुरत हुन्छ।"</string>
+-    <string name="no_voip" msgid="8901474054537199865">"इन्टरनेट कल गर्ने समर्थित छैन"</string>
+-    <string name="sip_system_decide" msgid="368030746310423471">"स्वचालित"</string>
+-    <string name="sip_always_send_keepalive" msgid="8192080724632877132">"सधैँ पठाउनुहोस्"</string>
+-    <string name="not_voice_capable" msgid="2739898841461577811">"भ्वाइस कल गर्ने समर्थित छैन"</string>
+     <string name="respond_via_sms_canned_response_1" msgid="2461606462788380215">"अहिले कुरा गर्न मिल्दैन। के भइरहेको छ?"</string>
+     <string name="respond_via_sms_canned_response_2" msgid="4074450431532859214">"मैले तपाईंलाई तुरुन्तै कल गर्ने छु।"</string>
+     <string name="respond_via_sms_canned_response_3" msgid="3496079065723960450">"म तपाईंलाई पछि कल गर्ने छु।"</string>
+diff --git a/res/values-si-rLK/strings.xml b/res/values-si-rLK/strings.xml
+index c779481..4c89408 100644
+--- a/res/values-si-rLK/strings.xml
++++ b/res/values-si-rLK/strings.xml
+@@ -54,117 +54,13 @@
+     <string name="pause_prompt_yes" msgid="3564467212025151797">"ඔව්"</string>
+     <string name="pause_prompt_no" msgid="6686238803236884877">"නැත"</string>
+     <string name="wild_prompt_str" msgid="5543521676355533577">"අක්ෂරය ප්‍රතිස්ථාපනය කරන්නේ"</string>
+-    <string name="no_vm_number" msgid="4164780423805688336">"හඬ තැපැල් අංකය නැත"</string>
+-    <string name="no_vm_number_msg" msgid="1300729501030053828">"SIM කාඩ් පතෙහි හඬ තැපැල් අංකයක් ආචිත වී නැත."</string>
+-    <string name="add_vm_number_str" msgid="4676479471644687453">"අංකයක් එක් කරන්න"</string>
+-    <string name="puk_unlocked" msgid="2284912838477558454">"ඔබගේ SIM කාඩ්පත අඟුළු හැර තිබේ. ඔබගේ දුරකතනයේ අඟුළු හරිමින්…"</string>
+-    <string name="label_ndp" msgid="780479633159517250">"SIM ජාල අඟුළු හැරීමේ PIN"</string>
+-    <string name="sim_ndp_unlock_text" msgid="683628237760543009">"අඟුල අරින්න"</string>
+-    <string name="sim_ndp_dismiss_text" msgid="1604823375752456947">"ඉවතලන්න"</string>
+-    <string name="requesting_unlock" msgid="6412629401033249351">"ජාල අඟුළු ඇරීමක් ඉල්ලුම් කරමින්…"</string>
+-    <string name="unlock_failed" msgid="6490531697031504225">"ජාලය අඟුළු හැරීමේ ඉල්ලීම අසාර්ථකයි."</string>
+-    <string name="unlock_success" msgid="6770085622238180152">"ජාලය අඟුළු හරිම සාර්ථකයි."</string>
+-    <string name="labelGSMMore" msgid="5930842194056092106">"GSM ඇමතුම් සැකසුම්"</string>
+-    <string name="labelCDMAMore" msgid="1630676740428229339">"CDMA ඇමතුම් සැකසුම්"</string>
+-    <string name="apn_settings" msgid="9043423184895642077">"ප්‍රවේශ ලක්ෂ්‍ය නම්"</string>
+-    <string name="settings_label" msgid="3876743539816984008">"ජාල සැකසුම්"</string>
+     <string name="voicemail" msgid="8693759337917898954">"හඬ තැපෑල"</string>
+-    <string name="voicemail_abbreviated" msgid="2215592488517217448">"VM:"</string>
+-    <string name="networks" msgid="8873030692174541976">"ජාල ක්‍රියාකරුවන්"</string>
+     <string name="call_settings" msgid="6112441768261754562">"ඇමතුම් සැකසුම්"</string>
+-    <string name="additional_gsm_call_settings" msgid="1391795981938800617">"අමතර සැකසීම්"</string>
+-    <string name="sum_gsm_call_settings" msgid="4076647190996778012">"අමතර GSM පමණක් ඇමතුම් සැකසුම්"</string>
+-    <string name="additional_cdma_call_settings" msgid="8628958775721886909">"අමතර CDMA ඇමතුම් සැකසුම්"</string>
+-    <string name="sum_cdma_call_settings" msgid="284753265979035549">"අමතර CDMA පමණක් ඇමතුම් සැකසුම්"</string>
+-    <string name="labelNwService" msgid="4699970172021870983">"ජාල සේවා සැකසුම්"</string>
+-    <string name="labelCallerId" msgid="3888899447379069198">"අමතුම්කරු ගේ ID"</string>
+-    <string name="sum_loading_settings" msgid="1826692909391168620">"සැකසුම් පුර්ණය කරමින්…"</string>
+-    <string name="sum_hide_caller_id" msgid="1071407020290873782">"පිටතට යන ඇමතුම් වල අංකය සැඟවී ඇත"</string>
+-    <string name="sum_show_caller_id" msgid="6768534125447290401">"පිටතට යන ඇමතුම් වල අංකය පෙන්වයි"</string>
+-    <string name="sum_default_caller_id" msgid="1954518825510901365">"මගේ අංකය පිටතට යන ඇමතුම් වල දර්ශනය කිරීමට සුපුරුදු ක්‍රියාකරු සැකසුම් භාවිතා කරන්න"</string>
+-    <string name="labelCW" msgid="6120513814915920200">"ඇමතුම රැඳීම"</string>
+-    <string name="sum_cw_enabled" msgid="8083061901633671397">"ඇමතුමක් අතරතුර, පැමිණෙන ඇමතුම් පිලිබඳ දැනුම්දීමක් කරන්න"</string>
+-    <string name="sum_cw_disabled" msgid="3648693907300104575">"ඇමතුමක් අතරතුර, පැමිණෙන ඇමතුම් පිලිබඳ දැනුම්දීමක් කරන්න"</string>
+-    <string name="call_forwarding_settings" msgid="3378927671091537173">"ඇමතුම ඉදිරියට ගෙන යාමේ සැකසුම්"</string>
+-    <string name="labelCF" msgid="2574386948026924737">"ඇමතුම ඉදිරියට යැවීම"</string>
+-    <string name="labelCFU" msgid="8147177368148660600">"සැමවිටම ඉදිරියට ගෙන යන්න"</string>
+-    <string name="messageCFU" msgid="3560082430662923687">"සෑමවිටම මෙම අංකය භාවිතා කරන්න"</string>
+-    <string name="sum_cfu_enabled_indicator" msgid="4014187342724130197">"සියලුම ඇමතුම් ඉදිරියට යවමින්"</string>
+-    <string name="sum_cfu_enabled" msgid="2450052502198827927">"සියලුම ඇමතුම් <xliff:g id="PHONENUMBER">{0}</xliff:g> වෙත ඉදිරියට ගෙන යන්න"</string>
+-    <string name="sum_cfu_enabled_no_number" msgid="6591985777096823616">"අංකය නොමැත"</string>
+-    <string name="sum_cfu_disabled" msgid="3698472522160364904">"අබලයි"</string>
+-    <string name="labelCFB" msgid="218938523102207587">"කාර්යබහුල විට ඉදිරියට ගෙන යන්න"</string>
+-    <string name="messageCFB" msgid="3711089705936187129">"කාර්යබහුල විට අංකය"</string>
+-    <string name="sum_cfb_enabled" msgid="5984198104833116690">"<xliff:g id="PHONENUMBER">{0}</xliff:g> වෙත ඉදිරියට යවමින්"</string>
+-    <string name="sum_cfb_disabled" msgid="227440009979537651">"අබලයි"</string>
+-    <string name="disable_cfb_forbidden" msgid="3506984333877998061">"ඔබගේ ක්‍රියාකරු ඔබගේ දුරකථනය කාර්ය බහුල විට ඇමතුම් ඉදිරියට ගෙනයාම අබල කිරීමට සහාය නොදක්වයි."</string>
+-    <string name="labelCFNRy" msgid="3646316323834351390">"පිළිතුරු නොදුන්විට ඉදිරියට ගෙන යන්න"</string>
+-    <string name="messageCFNRy" msgid="672317899884380374">"පිළිතුරු නොදෙන විට අංකය"</string>
+-    <string name="sum_cfnry_enabled" msgid="6955775691317662910">"<xliff:g id="PHONENUMBER">{0}</xliff:g> වෙත ඉදිරියට යවමින්"</string>
+-    <string name="sum_cfnry_disabled" msgid="8422350929957344729">"අබලයි"</string>
+-    <string name="disable_cfnry_forbidden" msgid="4308233959150658058">"ඔබගේ ක්‍රියාකරු ඔබගේ දුරකථනය පිළිතුරු නොදෙන විට ඇමතුම් ඉදිරියට ගෙනයාම අබල කිරීමට සහාය නොදක්වයි."</string>
+-    <string name="labelCFNRc" msgid="47183615370850000">"ළඟා විය නොහැකි විට ඉදිරියට ගෙන යන්න"</string>
+-    <string name="messageCFNRc" msgid="6380695421020295119">"ළඟා විය නොහැකි විට අංකය"</string>
+-    <string name="sum_cfnrc_enabled" msgid="7010898346095497421">"<xliff:g id="PHONENUMBER">{0}</xliff:g> වෙත ඉදිරියට යවමින්"</string>
+-    <string name="sum_cfnrc_disabled" msgid="7222141261321276464">"අබලයි"</string>
+-    <string name="disable_cfnrc_forbidden" msgid="5646361343094064333">"ඔබගේ වාහකය ඔබගේ දුරකථනය ළඟා විය නොහැකි විට ඇමතුම් ඉදිරියට ගෙනයාම අබල කිරීමට සහාය නොදක්වයි."</string>
+-    <string name="updating_title" msgid="6146755386174019046">"ඇමතුම් සැකසීම්"</string>
+-    <string name="error_updating_title" msgid="7970259216988931777">"ඇමතුම් සැකසුම් දෝෂය"</string>
+-    <string name="reading_settings" msgid="1920291699287055284">"සැකසුම් කියවමින්…"</string>
+-    <string name="updating_settings" msgid="8171225533884883252">"සැකසුම් යාවත් කාලින කරමින්…"</string>
+-    <string name="reverting_settings" msgid="4752151682666912828">"සැකසුම් ප්‍රතිවර්තනය කරමින්…"</string>
+-    <string name="response_error" msgid="6674110501330139405">"ජාලයෙන් බලාපොරොත්තු නොවූ ප්‍රතිචාරයක්."</string>
+-    <string name="exception_error" msgid="7027667130619518211">"ජාලයේ හෝ SIM කාඩ්පතෙහි දෝෂයක්."</string>
+-    <string name="fdn_check_failure" msgid="18200614306525434">"ඔබගේ දුරකතනයේ යෙදුමෙහි ස්ථිර ඇමතුම් අංක සක්‍රීයයි. ප්‍රතිඑලයක් ලෙස, සමහර ඇමතුම් හා සම්බන්ධ විශේෂාංග ක්‍රියා නොකරයි."</string>
+-    <string name="radio_off_error" msgid="2304459933248513376">"මෙම සැකසුම් බැලීමට පෙර රේඩියෝව ක්‍රියා කරන්න."</string>
+-    <string name="close_dialog" msgid="2365884406356986917">"හරි"</string>
+-    <string name="enable" msgid="1059008390636773574">"සක්‍රීය කරන්න"</string>
+-    <string name="disable" msgid="7274240979164762320">"අබල කරන්න"</string>
+-    <string name="change_num" msgid="239476305819844391">"යාවත්කාලීන කරන්න"</string>
+   <string-array name="clir_display_values">
+     <item msgid="5560134294467334594">"ජාල සුපුරුදු"</item>
+     <item msgid="7876195870037833661">"අංකය සඟවන්න"</item>
+     <item msgid="1108394741608734023">"අංකය පෙන්වන්න"</item>
+   </string-array>
+-    <string name="vm_changed" msgid="380744030726254139">"හඬතැපැල් අංකය වෙනස්විය."</string>
+-    <string name="vm_change_failed" msgid="3352934863246208918">"හඬ තැපැල් අංකය වෙනස් කළ නොහැකි විය.\nමෙම ගැටලුව දිගටම පවතී නම් ඔබගේ ක්‍රියාකරු සම්බන්ධ කරගන්න."</string>
+-    <string name="fw_change_failed" msgid="5298103228470214665">"ඉදිරියට ගෙන යාමේ අංකය වෙනස් කළ නොහැකි විය.\nමෙම ගැටලුව දිගටම පවතී නම් ඔබගේ ක්‍රියාකරු සම්බන්ධ කරගන්න."</string>
+-    <string name="fw_get_in_vm_failed" msgid="8862896836093833973">"වත්මන් ඉදිරියට ගෙන යාමේ අංක සැකසුම් ලබාගැනීමට හෝ සුරැකීමට නොහැකි විය.\nකෙසේ නමුත් නව සැපයුම්කරු වෙත මාරුවන්නද?"</string>
+-    <string name="no_change" msgid="3186040086622435212">"කිසිඳු වෙනස්කමක් සිදු නොකෙරුණි."</string>
+-    <string name="sum_voicemail_choose_provider" msgid="59911196126278922">"හඬ තැපැල් සේවාව තෝරන්න"</string>
+-    <string name="voicemail_default" msgid="5902099213882352338">"මාගේ ක්‍රියාකරු"</string>
+-    <string name="mobile_networks" msgid="5540397602919106177">"ජංගම ජාල සැකසුම්"</string>
+-    <string name="label_available" msgid="1181658289009300430">"තිබෙන ජාල"</string>
+-    <string name="load_networks_progress" msgid="5230707536168902952">"සොයමින්..."</string>
+-    <string name="empty_networks_list" msgid="4249426905018815316">"කිසිඳු ජාලයක් සොයාගත නොහැකි විය."</string>
+-    <string name="search_networks" msgid="1601136049300882441">"ජාල සොයන්න"</string>
+-    <string name="network_query_error" msgid="6828516148953325006">"ජාල සඳහා සොයන අතරතුර දෝෂය."</string>
+-    <string name="register_on_network" msgid="9055203954040805084">"<xliff:g id="NETWORK">%s</xliff:g> මත ලියාපදිංචි වෙමින්…"</string>
+-    <string name="not_allowed" msgid="5613353860205691579">"ඔබගේ SIM කාඩ් පත මෙම ජාලයට සම්බන්ධතාවයකට අවසර නොදේ."</string>
+-    <string name="connect_later" msgid="2308119155752343975">"මෙම අවස්ථාවේදී මෙම ජාලයට සම්බන්ධ විය නොහැක. පසුව යළි උත්සාහ කරන්න."</string>
+-    <string name="registration_done" msgid="495135664535876612">"ජාලය මත ලියාපදිංචි වෙමින්."</string>
+-    <string name="sum_carrier_select" msgid="3494252551249882718">"ජාල ක්‍රියාකරවන්නෙකු තෝරන්න"</string>
+-    <string name="sum_search_networks" msgid="2921092249873272715">"සියලුම තිබෙන ජාල සොයන්න"</string>
+-    <string name="select_automatically" msgid="5628402124471810174">"ස්වයංක්‍රීයව තෝරන්න"</string>
+-    <string name="sum_select_automatically" msgid="5614890115123292400">"ස්වයංක්‍රීයව ප්‍රිය ජාල තෝරන්න"</string>
+-    <string name="register_automatically" msgid="6017849844573519637">"ස්වයංක්‍රීය ලියාපදිංචිය..."</string>
+-    <string name="preferred_network_mode_title" msgid="8873246565334559308">"ජාල ආකාරය"</string>
+-    <string name="preferred_network_mode_summary" msgid="1434820673166126609">"ජාල මෙහෙයුම් ආකාරය වෙනස් කරන්න"</string>
+-    <string name="preferred_network_mode_dialogtitle" msgid="8176355237105593793">"ප්‍රිය ජාල ආකාරය"</string>
+-    <string name="preferred_network_mode_wcdma_perf_summary" msgid="8521677230113533809">"ප්‍රිය ජාල ආකාරය: WCDMA කැමතියි"</string>
+-    <string name="preferred_network_mode_gsm_only_summary" msgid="3352445413437453511">"ප්‍රිය ජාල ආකාරය: GSM පමණි"</string>
+-    <string name="preferred_network_mode_wcdma_only_summary" msgid="2836897236221063413">"ප්‍රිය ජාල ආකාරය: WCDMA පමණි"</string>
+-    <string name="preferred_network_mode_gsm_wcdma_summary" msgid="3161255745326408587">"ප්‍රියකරන ජාල ආකාරය: GSM / WCDMA"</string>
+-    <string name="preferred_network_mode_cdma_summary" msgid="3175690187294334241">"ප්‍රිය ජාල ආකාරය: CDMA"</string>
+-    <string name="preferred_network_mode_cdma_evdo_summary" msgid="8332063064712726618">"ප්‍රිය ජාල ආකාරය: CDMA / EvDo"</string>
+-    <string name="preferred_network_mode_cdma_only_summary" msgid="1309770926198634150">"ප්‍රිය ජාල ආකාරය: CDMA පමණි"</string>
+-    <string name="preferred_network_mode_evdo_only_summary" msgid="8472220691721269155">"ප්‍රියකරන ජාල ආකාරය: EvDo පමණි"</string>
+-    <string name="preferred_network_mode_cdma_evdo_gsm_wcdma_summary" msgid="4726682079415227330">"ප්‍රිය ජාල ආකාරය: CDMA/EvDo/GSM/WCDMA"</string>
+-    <string name="preferred_network_mode_lte_summary" msgid="574752287596469136">"ප්‍රිය ජාල ආකාරය: LTE"</string>
+-    <string name="preferred_network_mode_lte_gsm_wcdma_summary" msgid="8455358514068283935">"ප්‍රිය ජාල ආකාරය: GSM/WCDMA/LTE"</string>
+-    <string name="preferred_network_mode_lte_cdma_evdo_summary" msgid="228702246343742853">"ප්‍රිය ජාල ආකාරය: CDMA+LTE/EVDO"</string>
+-    <string name="preferred_network_mode_global_summary" msgid="1633134285545730364">"ප්‍රිය ජාල ආකාරය: ගෝලීය"</string>
+-    <string name="preferred_network_mode_lte_wcdma_summary" msgid="9180775701594742750">"ප්‍රිය ජාල ආකාරය: LTE / WCDMA"</string>
+   <string-array name="preferred_network_mode_choices">
+     <item msgid="7886739962255042385">"LTE / WCDMA"</item>
+     <item msgid="577652050447385699">"LTE"</item>
+@@ -180,58 +76,6 @@
+     <item msgid="1524224863879435516">"GSM පමණි"</item>
+     <item msgid="3817924849415716259">"GSM/WCDMA කැමතියි"</item>
+   </string-array>
+-    <string name="data_enabled" msgid="5972538663568715366">"දත්ත සබලයි"</string>
+-    <string name="data_enable_summary" msgid="5022018967714633874">"ජංගම ජාල ඔස්සේ දත්ත ප්‍රවේශය සබල කරන්න"</string>
+-    <string name="roaming" msgid="8871412572928323707">"දත්ත රෝමින්"</string>
+-    <string name="roaming_enable" msgid="7331106985174381987">"රෝමින් අතරතුර දත්ත සේවා වෙත සම්බන්ධ වන්න"</string>
+-    <string name="roaming_disable" msgid="1843417228755568110">"රෝමින් අතරතුර දත්ත සේවා වෙත සම්බන්ධ වන්න"</string>
+-    <string name="roaming_reenable_message" msgid="8913735676127858115">"ඔබගේ නිවාස ජාලය ඔබ හැර ගිය විට දත්ත රෝමින් අක්‍රිය වන බැවින් දත්ත සම්බන්ධතාවය ඔබට නැති වෙයි"</string>
+-    <string name="roaming_warning" msgid="7820963598559553967">"දත්ත රෝමිං වෙත අවසර දෙන්නද? ඔබට සැලකිය යුතු රෝමිං ගාස්තු දැරීමට සිදු වනු ඇත!"</string>
+-    <string name="gsm_umts_options" msgid="6538311689850981686">"GSM/UMTS විකල්ප"</string>
+-    <string name="cdma_options" msgid="4016822858172249884">"CDMA විකල්ප"</string>
+-    <string name="throttle_data_usage" msgid="3715677828160555808">"දත්ත භාවිතය"</string>
+-    <string name="throttle_current_usage" msgid="8762280193043815361">"වත්මන් කාල සීමාව තුළ භාවිතා කරන ලද දත්ත"</string>
+-    <string name="throttle_time_frame" msgid="1915198770363734685">"දත්ත භාවිතා කාල සීමාව"</string>
+-    <string name="throttle_rate" msgid="4710388992676803508">"දත්ත ඇගයිමේ ප්‍රතිපත්තිය"</string>
+-    <string name="throttle_help" msgid="243651091785169900">"තව දැනගන්න"</string>
+-    <string name="throttle_status_subtext" msgid="1657318943142085170">"<xliff:g id="USED_2">%3$s</xliff:g> ගෙන් <xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>٪) කාල සිමාවේ උපරිමය\nඊළඟ සීමාව ආරම්භ වන්නේ දින <xliff:g id="USED_3">%4$d</xliff:g> කිනි(<xliff:g id="USED_4">%5$s</xliff:g>)"</string>
+-    <string name="throttle_data_usage_subtext" msgid="6029276011123694701">"<xliff:g id="USED_2">%3$s</xliff:g> ගෙන් <xliff:g id="USED_0">%1$s</xliff:g> (<xliff:g id="USED_1">%2$d</xliff:g>٪) කාල සිමාව තුළ උපරිමව"</string>
+-    <string name="throttle_data_rate_reduced_subtext" msgid="7492763592720107737">"<xliff:g id="USED_0">%1$s</xliff:g> උපරිමය ඉක්මවා ඇත\nදත්ත සිඝ්‍රතාවය <xliff:g id="USED_1">%2$d</xliff:g> Kb/s වෙත අඩු කෙරෙන ලදි"</string>
+-    <string name="throttle_time_frame_subtext" msgid="7732763021560399960">"<xliff:g id="USED_0">%1$d</xliff:g>٪ චක්‍ර ඉක්ම ගොස්ය\nඊළඟ සීමාව ආරම්භ වන්නේ දින <xliff:g id="USED_1">%2$d</xliff:g> කිනි (<xliff:g id="USED_2">%3$s</xliff:g>)"</string>
+-    <string name="throttle_rate_subtext" msgid="2149102656120726855">"දත්ත භාවිතා සීමාව ඉක්මවුවහොත් දත්ත සිඝ්‍රතාවය <xliff:g id="USED">%1$d</xliff:g> Kb/s වෙත අඩුවේ"</string>
+-    <string name="throttle_help_subtext" msgid="5217706521499010816">"ඔබගේ ක්‍රියාකරුගේ ජංගම ජාලය දත්ත භාවිත ප්‍රතිපත්තිය පිලිබඳ තවත් තොරතුරු"</string>
+-    <string name="cell_broadcast_sms" msgid="5584192824053625842">"සෙල් විකාශන SMS"</string>
+-    <string name="enable_disable_cell_bc_sms" msgid="4851147873691392255">"සෙල් විකාශන SMS"</string>
+-    <string name="cell_bc_sms_enable" msgid="6441688565738921084">"සෙල් විකාශන SMS සබලයි"</string>
+-    <string name="cell_bc_sms_disable" msgid="3398365088309408749">"සෙල් විකාශන SMS අබලයි"</string>
+-    <string name="cb_sms_settings" msgid="651715019785107312">"සෙල් විකාශන SMS සැකසුම්"</string>
+-    <string name="enable_disable_emergency_broadcast" msgid="2157014609041245335">"හදිසි විකාශනය"</string>
+-    <string name="emergency_broadcast_enable" msgid="2645980025414010211">"හදිසි විකාශනය සබලයි"</string>
+-    <string name="emergency_broadcast_disable" msgid="3665199821267569426">"හදිසි විකාශනය අබලයි"</string>
+-    <string name="enable_disable_administrative" msgid="6501582322182059412">"පරිපාලන"</string>
+-    <string name="administrative_enable" msgid="1750086122962032235">"පරිපාලන සබලයි"</string>
+-    <string name="administrative_disable" msgid="8433273857248698539">"පරිපාලන අබලයි"</string>
+-    <string name="enable_disable_maintenance" msgid="1819693083025106678">"නඩත්තු කිරීම"</string>
+-    <string name="maintenance_enable" msgid="8566636458770971189">"නඩත්තු කිරීම් සබලයි"</string>
+-    <string name="maintenance_disable" msgid="7340189100885066077">"නඩත්තු කිරීම් අබලයි"</string>
+-    <string name="general_news_settings" msgid="4968779723948432978">"සාමාන්‍ය පුවත්"</string>
+-    <string name="bf_news_settings" msgid="3935593091894685267">"ව්‍යාපාරික සහ මුල්‍යමය පුවත්"</string>
+-    <string name="sports_news_settings" msgid="7649399631270052835">"ක්‍රීඩා පුවත්"</string>
+-    <string name="entertainment_news_settings" msgid="5051153952959405035">"විනෝදාත්මක පුවත්"</string>
+-    <string name="enable_disable_local" msgid="7890281063123416120">"දේශීය"</string>
+-    <string name="local_enable" msgid="6370463247609136359">"දේශීය පුවත් සබලයි"</string>
+-    <string name="local_disable" msgid="4405691986943795798">"දේශීය පුවත් අබලයි"</string>
+-    <string name="enable_disable_regional" msgid="4905652414535565872">"ප්‍රදේශික"</string>
+-    <string name="regional_enable" msgid="4434680415437834759">"ප්‍රදේශික පුවත් සබලයි"</string>
+-    <string name="regional_disable" msgid="5359325527213850077">"ප්‍රදේශික පුවත් අබලයි"</string>
+-    <string name="enable_disable_national" msgid="236278090206880734">"ජාතික"</string>
+-    <string name="national_enable" msgid="1172443648912246952">"ජාතික පුවත් සබලයි"</string>
+-    <string name="national_disable" msgid="326018148178601166">"ජාතික පුවත් අබලයි"</string>
+-    <string name="enable_disable_international" msgid="7535348799604565592">"අන්තර්ජාතික"</string>
+-    <string name="international_enable" msgid="5855356769925044927">"අන්තර්ජාතික පුවත් සබලයි"</string>
+-    <string name="international_disable" msgid="2850648591041088931">"අන්තර්ජාතික පුවත් අබලයි"</string>
+-    <string name="list_language_title" msgid="2841683501919760043">"භාෂාව"</string>
+-    <string name="list_language_summary" msgid="8109546531071241601">"පුවත් භාෂාව තෝරන්න"</string>
+   <string-array name="list_language_entries">
+     <item msgid="6137851079727305485">"ඉංග්‍රීසි"</item>
+     <item msgid="1151988412809572526">"ප්‍රංශ"</item>
+@@ -250,55 +94,10 @@
+     <item msgid="5884448729274543324">"6"</item>
+     <item msgid="5511864807618312598">"7"</item>
+   </string-array>
+-    <string name="list_language_dtitle" msgid="5442908726538951934">"භාෂා"</string>
+-    <string name="enable_disable_local_weather" msgid="986967454867219114">"දේශීය කාලගුණය"</string>
+-    <string name="local_weather_enable" msgid="6199315114382448922">"දේශීය කාලගුණය සබලයි"</string>
+-    <string name="local_weather_disable" msgid="2510158089142626480">"දේශීය කාලගුණය අබලයි"</string>
+-    <string name="enable_disable_atr" msgid="8339572391278872343">"ප්‍රාදේශීය මාර්ග තදබද වාර්තා"</string>
+-    <string name="atr_enable" msgid="5541757457789181799">"ප්‍රාදේශීය මාර්ග තදබද වාර්තා සබලයි"</string>
+-    <string name="atr_disable" msgid="7085558154727596455">"ප්‍රාදේශීය මාර්ග තදබද වාර්තා අබලයි"</string>
+-    <string name="enable_disable_lafs" msgid="668189073721277199">"දේශීය ගුවන් තොටුපල ගුවන් ගමන් කාල සටහන්"</string>
+-    <string name="lafs_enable" msgid="2791978667205137052">"දේශීය ගුවන් තොටුපල ගුවන් ගමන් කාල සටහන් සබලයි"</string>
+-    <string name="lafs_disable" msgid="2391212397725495350">"දේශීය ගුවන් තොටුපල ගුවන් ගමන් කාල සටහන් අබලයි"</string>
+-    <string name="enable_disable_restaurants" msgid="6240381945336814024">"අවන්හල්"</string>
+-    <string name="restaurants_enable" msgid="5137657479469118847">"අවන්හල් සබලයි"</string>
+-    <string name="restaurants_disable" msgid="3678480270938424092">"අවන්හල් අබලයි"</string>
+-    <string name="enable_disable_lodgings" msgid="1822029172658551202">"නවාතැන්"</string>
+-    <string name="lodgings_enable" msgid="3230042508992850322">"නවාතැන් සබලයි"</string>
+-    <string name="lodgings_disable" msgid="3387879742320682391">"නවාතැන් අබලයි"</string>
+-    <string name="enable_disable_retail_directory" msgid="1357809784475660303">"සිල්ලර නාමාවලිය"</string>
+-    <string name="retail_directory_enable" msgid="3280626290436111496">"සිල්ලර නාමාවලිය සබලයි"</string>
+-    <string name="retail_directory_disable" msgid="6479739816662879027">"සිල්ලර නාමාවලිය අබලයි"</string>
+-    <string name="enable_disable_advertisements" msgid="5999495926176182128">"වෙළඳ දැන්වීම්"</string>
+-    <string name="advertisements_enable" msgid="2050305021264683786">"වෙළඳ දැන්වීම් සබලයි"</string>
+-    <string name="advertisements_disable" msgid="8350985908788707935">"වෙළඳ දැන්වීම් අබලයි"</string>
+-    <string name="enable_disable_stock_quotes" msgid="6397810445293533603">"සඳහන් තොග"</string>
+-    <string name="stock_quotes_enable" msgid="4384802470887170543">"සඳහන් තොග සබලයි"</string>
+-    <string name="stock_quotes_disable" msgid="4781450084565594998">"සඳහන් තොග අබලයි"</string>
+-    <string name="enable_disable_eo" msgid="4863043263443942494">"රැකියා අවස්ථා"</string>
+-    <string name="eo_enable" msgid="8623559062015685813">"රැකියා අවස්ථා සබලයි"</string>
+-    <string name="eo_disable" msgid="3863812478090907609">"රැකියා අවස්ථා අබලයි"</string>
+-    <string name="enable_disable_mhh" msgid="908214593528968522">"වෛද්‍ය, සෞඛ්‍ය, සහ රෝහල"</string>
+-    <string name="mhh_enable" msgid="5544500632306446815">"වෛද්‍ය, සෞඛ්‍ය, සහ රෝහල සබලයි"</string>
+-    <string name="mhh_disable" msgid="8998210550117117437">"වෛද්‍ය, සෞඛ්‍ය, සහ රෝහල අබලයි"</string>
+-    <string name="enable_disable_technology_news" msgid="3517184627114999149">"තාක්ෂණික පුවත්"</string>
+-    <string name="technology_news_enable" msgid="7995209394210455181">"තාක්ෂණික පුවත් සබලයි"</string>
+-    <string name="technology_news_disable" msgid="5483490380561851946">"තාක්ෂණික පුවත් අබලයි"</string>
+-    <string name="enable_disable_multi_category" msgid="626771003122899280">"බහු-ප්‍රවර්ග"</string>
+-    <string name="multi_category_enable" msgid="1179299804641721768">"බහු-ප්‍රවර්ග සබලයි"</string>
+-    <string name="multi_category_disable" msgid="880104702904139505">"බහු-ප්‍රවර්ග අබලයි"</string>
+-    <string name="prefer_2g" msgid="8442550937280449639">"2G ජාල පමණක භාවිතා කරන්න"</string>
+-    <string name="prefer_2g_summary" msgid="1976491403210690759">"බැටරි සුරකියි"</string>
+-    <string name="cdma_system_select_title" msgid="5757657769327732833">"පද්ධතිය තේරුම"</string>
+-    <string name="cdma_system_select_summary" msgid="60460043745797517">"CDMA රෝමින් ආකාරය වෙනස් කරන්න"</string>
+-    <string name="cdma_system_select_dialogtitle" msgid="6083355415165359075">"පද්ධතිය තේරුම"</string>
+   <string-array name="cdma_system_select_choices">
+     <item msgid="176474317493999285">"නිවසේ පමණි"</item>
+     <item msgid="1205664026446156265">"ස්වයංක්‍රිය"</item>
+   </string-array>
+-    <string name="cdma_subscription_title" msgid="1162564010076763284">"CDMA දායකත්වය"</string>
+-    <string name="cdma_subscription_summary" msgid="2530890766115781140">"RUIM/SIM සහ NV අතර වෙනස් කරන්න"</string>
+-    <string name="cdma_subscription_dialogtitle" msgid="2699527950523333110">"දායකත්වය"</string>
+   <string-array name="cdma_subscription_choices">
+     <item msgid="2258014151300708431">"RUIM/SIM"</item>
+     <item msgid="5127722015571873880">"NV"</item>
+@@ -307,81 +106,8 @@
+     <item msgid="7494167883478914080">"0"</item>
+     <item msgid="6043847456049107742">"1"</item>
+   </string-array>
+-    <string name="cdma_activate_device" msgid="3793805892364814518">"උපාංගය සක්‍රිය කරන්න"</string>
+-    <string name="cdma_lte_data_service" msgid="4255018217292548962">"දත්ත සේවාව සකසන්න"</string>
+-    <string name="fdn" msgid="7878832555095183202">"ස්ථිර ඇමතුම් අංක"</string>
+-    <string name="manage_fdn_list" msgid="8777755791892122369">"FDN ලැයිස්තුව"</string>
+-    <string name="fdn_activation" msgid="2156479741307463576">"FDN සක්‍රිය කිරීම"</string>
+-    <string name="fdn_enabled" msgid="5238109009915521240">"ස්ථාවර ඇමතුම් අංක සබලයි"</string>
+-    <string name="fdn_disabled" msgid="4700049736675368279">"ස්ථාවර ඇමතුම් අංක අබලයි"</string>
+-    <string name="enable_fdn" msgid="3740191529180493851">"FDN සබල කරන්න"</string>
+-    <string name="disable_fdn" msgid="7944020890722540616">"FDN අබල කරන්න"</string>
+-    <string name="change_pin2" msgid="2153563695382176676">"PIN2 වෙනස් කරන්න"</string>
+-    <string name="enable_fdn_ok" msgid="7215588870329688132">"FDN අබල කරන්න"</string>
+-    <string name="disable_fdn_ok" msgid="5727046928930740173">"FDN සබල කරන්න"</string>
+-    <string name="sum_fdn" msgid="1959399454900272878">"ස්ථිර ඇමතුම් අංක කළමනාකරණය කරන්න"</string>
+-    <string name="sum_fdn_change_pin" msgid="6666549734792827932">"FDN ප්‍රවේශය සඳහා PIN වෙනස් කරන්න"</string>
+-    <string name="sum_fdn_manage_list" msgid="8431088265332628316">"දුරකථන අංක ලැයිස්තුව කළමනාකරණය කරන්න"</string>
+-    <string name="voice_privacy" msgid="3776841382844614716">"හඬ පෞද්ගලිකත්වය"</string>
+-    <string name="voice_privacy_summary" msgid="3159383389833516214">"දියුණු කරන ලද පෞද්ගලිකත්ව ආකාරය සබල කරන්න"</string>
+-    <string name="tty_mode_option_title" msgid="9033098925144434669">"TTY ආකාරය"</string>
+-    <string name="tty_mode_option_summary" msgid="1073835131534808732">"TTY ආකාරය සකසන්න"</string>
+-    <string name="auto_retry_mode_title" msgid="4073265511427813322">"ස්වයංක්‍රීය නැවත උත්සාහ කිරීම"</string>
+-    <string name="auto_retry_mode_summary" msgid="4973886004067532288">"ස්වයංක්‍රීය නැවත උත්සාහ කිරීමේ ආකාරය සබල කරන්න"</string>
+-    <string name="menu_add" msgid="1882023737425114762">"සම්බන්ධතාවය එක් කරන්න"</string>
+-    <string name="menu_edit" msgid="7143003705504672374">"සම්බන්ධතාව සංස්කරණය කරන්න"</string>
+-    <string name="menu_delete" msgid="3977150783449642851">"සම්බන්ධතාවය මකා දමන්න"</string>
+-    <string name="get_pin2" msgid="8204677063922225311">"PIN2 ටයිප් කරන්න"</string>
+-    <string name="name" msgid="7329028332786872378">"නම‍"</string>
+-    <string name="number" msgid="7905950798349903858">"අංකය"</string>
+-    <string name="save" msgid="4094274636321939086">"සුරකින්න"</string>
+-    <string name="add_fdn_contact" msgid="2481915899633353976">"ස්ථිර ඇමතුම් අංකය එක් කරන්න"</string>
+-    <string name="adding_fdn_contact" msgid="7627379633721940991">"ස්ථිර ඇමතුම් අංකය එක් කරමින්..."</string>
+-    <string name="fdn_contact_added" msgid="7458335758501736665">"ස්ථිර ඇමතුම් අංකය එක් කරන ලදි."</string>
+-    <string name="edit_fdn_contact" msgid="7976936035587081480">"ස්ථිර ඇමතුම් අංකය සංස්කරණය කරන්න"</string>
+-    <string name="updating_fdn_contact" msgid="8370929876849803600">"ස්ථිර ඇමතුම් අංකය යාවත්කාලීන කරමින්..."</string>
+-    <string name="fdn_contact_updated" msgid="5497828782609005017">"ස්ථාවර ඇමතුම් අංකය යාවත්කාල කරන ලදි."</string>
+-    <string name="delete_fdn_contact" msgid="6668958073074151717">"ස්ථිර ඇමතුම් අංකය මකන්න"</string>
+-    <string name="deleting_fdn_contact" msgid="5669163206349319969">"ස්ථිර ඇමතුම් අංකය මකමින්..."</string>
+-    <string name="fdn_contact_deleted" msgid="7154162327112259569">"ස්ථාවර ඇමතුම් අංකය මකන ලදි."</string>
+-    <string name="pin2_invalid" msgid="5470854099230755944">"ඔබ වැරදි PIN එකක් ඇතුලත් කළ බැවින් FDN යාවත්කාලින නොවුණි."</string>
+-    <string name="fdn_invalid_number" msgid="1494755047900009147">"අංකය ඉලක්කම් 20 ඉක්මවිය නොහැකි බැවින් FDN යාවත්කාල නොවුණි."</string>
+-    <string name="pin2_or_fdn_invalid" msgid="6025144083384701197">"FDN යාවත්කාලින නොවුණි. PIN2 වැරදියි, නැති නම් දුරකථන අංකය ප්‍රතික්ෂේප විය."</string>
+     <string name="simContacts_emptyLoading" msgid="2203331234764498011">"SIM කාඩ් පතෙන් කියවමින්…"</string>
+-    <string name="simContacts_empty" msgid="5270660846489561932">"ඔබගේ SIM පතෙහි සම්බන්ධතා නොමැත."</string>
+     <string name="simContacts_title" msgid="1861472842524839921">"ආයාත කිරීමට සම්බන්ධතා තෝරන්න"</string>
+-    <string name="simContacts_airplaneMode" msgid="1846161429087789936">"SIM කාඩ් පත වෙතින් සම්බන්ධතා ආයාත කිරීමට, මුලින්ම ගුවන්යානා ආකාරය අක්‍රිය කරන්න."</string>
+-    <string name="enable_pin" msgid="5422767284133234860">"SIM PIN සබල/අබල කරන්න"</string>
+-    <string name="change_pin" msgid="9174186126330785343">"SIM PIN වෙනස් කරන්න"</string>
+-    <string name="enter_pin_text" msgid="8532615714751931951">"SIM PIN:"</string>
+-    <string name="oldPinLabel" msgid="5287773661246368314">"පැරණි PIN"</string>
+-    <string name="newPinLabel" msgid="207488227285336897">"නව PIN"</string>
+-    <string name="confirmPinLabel" msgid="257597715098070206">"නව PIN තහවුරු කරන්න"</string>
+-    <string name="badPin" msgid="8955102849303984935">"ඔබ ටයිප් කරන ලද පරණ PIN එක වැරදිය. යළි උත්සාහ කරන්න."</string>
+-    <string name="mismatchPin" msgid="5923253370683071889">"ඔබ ටයිප් කළ PIN නොගැලපේ. යළි උත්සාහ කරන්න."</string>
+-    <string name="invalidPin" msgid="5981171102258684792">"අංක 4 සිට 8 අතර වන PIN එකක් ටයිප් කරන්න."</string>
+-    <string name="disable_sim_pin" msgid="3992926931620188855">"SIM PIN අබල කරන්න"</string>
+-    <string name="enable_sim_pin" msgid="5803702443844458831">"SIM PIN සබල කරන්න"</string>
+-    <string name="enable_in_progress" msgid="3695303775100109650">"කරුණාකර රැඳී සිටින්න..."</string>
+-    <string name="enable_pin_ok" msgid="9166061915030865848">"SIM PIN සබලයි."</string>
+-    <string name="disable_pin_ok" msgid="5596999379593924850">"SIM PIN අබලයි."</string>
+-    <string name="pin_failed" msgid="2298841192582192277">"ඔබ ටයිප් කළ PIN එක වැරදියි."</string>
+-    <string name="pin_changed" msgid="4365538014588501049">"SIM PIN සාර්ථකව වෙනස් කෙරුණි."</string>
+-    <string name="puk_requested" msgid="3898394204193202803">"මුරපදය වැරදියි, SIM එක අඟුළු වැටී ඇත! PUK2 ඉල්ලා ඇත."</string>
+-    <string name="enter_pin2_text" msgid="8339444124477720345">"PIN2"</string>
+-    <string name="oldPin2Label" msgid="8559146795026261502">"පැරණි PIN2"</string>
+-    <string name="newPin2Label" msgid="4573956902204349054">"නව PIN2"</string>
+-    <string name="confirmPin2Label" msgid="8100319484454787708">"නව PIN2 තහවුරු කරන්න"</string>
+-    <string name="badPuk2" msgid="4851734468010000418">"ඔබ ටයිප් කළ PUK2 එක වැරදිය. නැවත උත්සහ කරන්න"</string>
+-    <string name="badPin2" msgid="1041576234483629991">"ඔබ ටයිප් කළ පැරණි PIN2 එක වැරදිය. නැවත උත්සහ කරන්න"</string>
+-    <string name="mismatchPin2" msgid="523029155918113440">"ඔබ ටයිප් කළ PIN2 නොගැලපේ. යළි උත්සාහ කරන්න."</string>
+-    <string name="invalidPin2" msgid="8237110107480395938">"අංක 4 සිට 8 අතර වන PIN2 එකක් ටයිප් කරන්න."</string>
+-    <string name="invalidPuk2" msgid="1290977391033057871">"අංක 8 ක PUK2 එකක් ටයිප් කරන්න."</string>
+-    <string name="pin2_changed" msgid="1639666438836544393">"PIN2 සාර්ථකව වෙනස් කෙරුණි."</string>
+-    <string name="label_puk2_code" msgid="302845876240219560">"PUK2 කේතය ටයිප් කරන්න"</string>
+-    <string name="fdn_enable_puk2_requested" msgid="4262894949634885773">"මුරපදය වැරදියි. PIN2 වෙනස් කර යළි උත්සාහ කරන්න."</string>
+-    <string name="puk2_requested" msgid="8909278021238716877">"මුරපදය වැරදියි, SIM එක අඟුළු වැටී ඇත. PUK2 ඉල්ලා ඇත."</string>
+-    <string name="doneButton" msgid="2859593360997984240">"හරි"</string>
+     <string name="caller_manage_header" msgid="3231519674734638786">"සම්මන්ත්‍රණ ඇමතුම <xliff:g id="CONF_CALL_TIME">%s</xliff:g>"</string>
+     <string name="voicemail_settings_number_label" msgid="8524164258691887790">"හඬ තැපැල් අංකය"</string>
+     <string name="card_title_dialing" msgid="5769417478498348054">"අමතමින්"</string>
+@@ -441,47 +167,16 @@
+     <string name="onscreenManageConferenceText" msgid="6485935856534311346">"සම්මන්ත්‍රණය කළමනාකරණය කරන්න"</string>
+     <string name="onscreenAudioText" msgid="1710087112800041743">"ශ්‍රව්‍ය"</string>
+     <string name="onscreenVideoCallText" msgid="4800924186056115442">"වීඩියෝ ඇමතුම"</string>
+-    <string name="importSimEntry" msgid="6614358325359736031">"ආයාත කරන්න"</string>
+-    <string name="importAllSimEntries" msgid="1503181169636198673">"සියල්ල ආයාත කරන්න"</string>
+-    <string name="importingSimContacts" msgid="7374056215462575769">"SIM සම්බන්ධතා ආයාත කරමින්"</string>
+-    <string name="importToFDNfromContacts" msgid="2130620207013368580">"සම්බන්ධතා වෙතින් ආයාත කරන්න"</string>
+-    <string name="hac_mode_title" msgid="8740268574688743289">"ඇසීමේ සහාය"</string>
+-    <string name="hac_mode_summary" msgid="6833851160514929341">"ඇසීමේ සහාය සඳහා ගැලපීම සක්‍රිය කරන්න"</string>
+   <string-array name="tty_mode_entries">
+     <item msgid="512950011423868021">"TTY අක්‍රියයි"</item>
+     <item msgid="3971695875449640648">"TTY පුර්ණයි"</item>
+     <item msgid="1937509904407445684">"TTY HCO"</item>
+     <item msgid="5644925873488772224">"TTY VCO"</item>
+   </string-array>
+-    <string name="dtmf_tones_title" msgid="5163153771291340803">"DTMF හඬ"</string>
+-    <string name="dtmf_tones_summary" msgid="3351820372864020331">"DTMF නාදවල දිග ප්‍රමාණය සකසන්න"</string>
+   <string-array name="dtmf_tone_entries">
+     <item msgid="899650777817315681">"සාමාන්‍ය"</item>
+     <item msgid="2883365539347850535">"දීර්ඝ"</item>
+   </string-array>
+-    <string name="network_message" msgid="4483886461245213802">"ජාල පණිවිඩය"</string>
+-    <string name="ota_title_activate" msgid="8616918561356194398">"ඔබගේ දුරකථනය සක්‍රිය කරන්න"</string>
+-    <string name="ota_touch_activate" msgid="6553212803262586244">"ඔබගේ දුරකථන සේවාව සක්‍රිය කිරීමට විශේෂ ඇමතුමක් ලබා ගත යුතුවේ. \n\n“සක්‍රිය කරන්න” එබීමෙන් පසු, ඔබගේ දුරකථනය සක්‍රිය කිරීමට ලබා දෙන උපදෙස් පිළිපදින්න."</string>
+-    <string name="ota_skip_activation_dialog_title" msgid="2943366608272261306">"සක්‍රිය කිරීම මග හරින්නද?"</string>
+-    <string name="ota_skip_activation_dialog_message" msgid="2440770373498870550">"ඔබ සක්‍රිය කිරීම මඟ හරියේ නම්, ඔබට ඇමතුම් ගැනීම හෝ ජංගම දත්ත ජාල වෙත සම්බන්ධ වීමට නොහැක (ඔබට Wi-Fi ජාල වෙත සම්බන්ධ විය හැකි වුවද). ඔබ දුරකථනය සක්‍රිය කරන තෙක්, ඔබ එය ආරම්භ කරන සෑම විටම සක්‍රිය කිරීමට අසනු ඇත."</string>
+-    <string name="ota_skip_activation_dialog_skip_label" msgid="3458532775091563208">"මඟ හරින්න"</string>
+-    <string name="ota_activate" msgid="1368528132525626264">"සක්‍රිය කරන්න"</string>
+-    <string name="ota_title_activate_success" msgid="6570240212263372046">"දුරකථනය සක්‍රියයි."</string>
+-    <string name="ota_title_problem_with_activation" msgid="7095824491970084367">"සක්‍රිය කිරීමේ ගැටලුවක්"</string>
+-    <string name="ota_listen" msgid="162923839877584937">"සක්‍රිය කිරීම අවසන් බව ඇසෙන තෙක් කථානාද උපදෙස් අනුගමනය කරන්න."</string>
+-    <string name="ota_speaker" msgid="6904589278542719647">"නාදකය"</string>
+-    <string name="ota_progress" msgid="3420314892609254729">"ඔබගේ දුරකථනය වැඩසටහන්කරණය වන අතරතුර රැඳී සිටින්න."</string>
+-    <string name="ota_failure" msgid="4311299546379674378">"වැඩසටහන්කරණය අසාර්ථකයි"</string>
+-    <string name="ota_successful" msgid="1880780692887077407">"ඔබගේ දුරකථනය දැන් සක්‍රිය කර ඇත. සේවාව ආරම්භ වීමට මිනිත්තු 15 පමණ ගතවනු ඇත."</string>
+-    <string name="ota_unsuccessful" msgid="8072141612635635357">"ඔබගේ දුරකතය සක්‍රිය නොවුණි. \nඔබට මිට වඩා හොඳ ආවරණයක් සහිත ප්‍රදේශයක් සොයාගත යුතු වේ (කවුළුවක් අසල, හෝ පිටත). \n\nයළි උත්සාහ කරන්න නැති නම් තවත් විකල්ප සඳහා පාරිභෝගික සේවා අමතන්න."</string>
+-    <string name="ota_spc_failure" msgid="3909983542575030796">"අතිරික්ත SPC බිඳවැටීම්"</string>
+-    <string name="ota_call_end" msgid="4537279738134612388">"ආපසු"</string>
+-    <string name="ota_try_again" msgid="7685477206465902290">"නැවත උත්සාහ කරන්න"</string>
+-    <string name="ota_next" msgid="3904945374358235910">"මීලඟ"</string>
+-    <string name="ecm_exit_dialog" msgid="4448531867763097533">"EcmExitDialog"</string>
+-    <string name="phone_entered_ecm_text" msgid="6266424252578731203">"හදිසි ආපසු ඇමතුම් ආකාරයට ඇතුලත් විණි"</string>
+-    <string name="phone_in_ecm_notification_title" msgid="3226896828951687085">"හදිසි ආපසු ඇමතුම් ආකාරය"</string>
+-    <string name="phone_in_ecm_call_notification_text" msgid="4611608947314729773">"දත්ත සම්බන්ධතාවය අබලයි"</string>
+   <plurals name="phone_in_ecm_notification_time">
+     <item quantity="one" msgid="4866221796252472622">"මිනිත්තු <xliff:g id="COUNT">%s</xliff:g> සඳහා කිසිඳු දත්ත සම්බන්ධතාවයක් නොමැත"</item>
+     <item quantity="other" msgid="3122217344579273583">"මිනිත්තු <xliff:g id="COUNT">%s</xliff:g> සඳහා කිසිඳු දත්ත සම්බන්ධතාවයක් නොමැත"</item>
+@@ -494,11 +189,6 @@
+     <item quantity="one" msgid="2585506997024726599">"හදිසි පසු ඇමතුම් ආකාරයේ සිටින විට තෝරා ඇති ක්‍රියාව නොමැත. දුරකථනය මිනිත්තු <xliff:g id="COUNT">%s</xliff:g> කට මෙම ආකාරයට පත්වේ. ඔබ දැන් පිටවීමට අවශ්‍යද?"</item>
+     <item quantity="other" msgid="6115622137771382224">"හදිසි පසු ඇමතුම් ආකාරයේ සිටින විට තෝරා ඇති ක්‍රියාව නොමැත. දුරකථනය මිනිත්තු <xliff:g id="COUNT">%s</xliff:g> කට මෙම ආකාරයට පත්වේ. ඔබ දැන් පිටවීමට අවශ්‍යද?"</item>
+   </plurals>
+-    <string name="alert_dialog_in_ecm_call" msgid="1886723687211887104">"හදිසි ඇමතුමක් අතර තුර තෝරන ලද ක්‍රියාව ලබාගත නොහැක."</string>
+-    <string name="progress_dialog_exiting_ecm" msgid="4835734101617817074">"හදිසි ආපසු ඇමතුම් ආකාරයෙන් පිට වෙමින්"</string>
+-    <string name="alert_dialog_yes" msgid="6674268047820703974">"ඔව්"</string>
+-    <string name="alert_dialog_no" msgid="1476091437797628703">"නැත"</string>
+-    <string name="alert_dialog_dismiss" msgid="2491494287075907171">"ඉවතලන්න"</string>
+     <string name="voicemail_provider" msgid="5135942703327136909">"සේවාව"</string>
+     <string name="voicemail_settings" msgid="72448049107749316">"ස්ථාපනය කරන්න"</string>
+     <string name="voicemail_number_not_set" msgid="6724904736891087856">"&lt;පිහිටුවා නැත&gt;"</string>
+@@ -507,79 +197,6 @@
+     <string name="contactPhoto" msgid="4713193418046639466">"සම්බන්ධතා ඡායාරූපය"</string>
+     <string name="goPrivate" msgid="865837794424530980">"පොද්ගලික බවට යන්න"</string>
+     <string name="selectContact" msgid="781975788478987237">"සම්බන්ධතාවය තෝරාගන්න"</string>
+-    <string name="sip_settings" msgid="6699045718560859691">"අන්තර්ජාල ඇමතුම් සැකසුම්"</string>
+-    <string name="sip_accounts" msgid="2097054001288457163">"අන්තර්ජාල ඇමතීමේ (SIP) ගිණුම්"</string>
+-    <string name="sip_accounts_title" msgid="1212889069281054570">"ගිණුම්"</string>
+-    <string name="sip_receive_calls" msgid="5635685570889971559">"ලේබන ඇමතුම් ලබා ගන්න"</string>
+-    <string name="sip_receive_calls_summary" msgid="8403613238633679184">"බැටරි ආයු කාලය අඩුකරයි"</string>
+-    <string name="sip_call_options_title" msgid="27433718808839672">"අන්තර්ජාල ඇමතීම භාවිතා කරන්න"</string>
+-    <string name="sip_call_options_wifi_only_title" msgid="145572394529090811">"අන්තර්ජාල ඇමතීම භාවිතා කරන්න (Wi-Fi පමණි)"</string>
+-    <string name="sip_call_options_entry_1" msgid="6556668894178520760">"දත්ත ජාලය තිබෙන විට සියලුම ඇමතුම් සඳහා"</string>
+-    <string name="sip_call_options_entry_2" msgid="6789764029719494361">"අන්තර්ජාල ඇමතුම් සඳහා පමණි"</string>
+-    <string name="sip_call_options_entry_3" msgid="7474809001402649185">"සෑම ඇමතුමකටම අසන්න"</string>
+-    <string name="sip_call_options_wifi_only_entry_1" msgid="7423523864471650069">"සියලුම ඇමතුම් සඳහා"</string>
+-    <string name="pick_outgoing_call_phone_type" msgid="5622916534828338675">"ඇමතුම ලබා ගන්න"</string>
+-    <string name="pick_outgoing_sip_phone" msgid="7012322118236208875">"අන්තර්ජාල ඇමතුම් ගිණුම භාවිතා කරන්න:"</string>
+-    <string name="remember_my_choice" msgid="7058059586169290705">"අන්තර්ජාල ඇමතුම් ලබාගැනීමට සැමවිටම භාවිතා කරන්න"</string>
+-    <string name="reset_my_choice_hint" msgid="5523030209803567922">"දුරකතනයෙන් සුපුරුදු ලෙස භාවිතා කළ යුත්තේ කුමන අන්තර්ජාල ඇමතුම් ගිනුමදැයි වෙනස් කළ හැක &gt; සැකසුම් &gt; අන්තර්ජාල ඇමතුම් සැකසුම් &gt; ගිණුම් තිරය."</string>
+-    <string name="pstn_phone" msgid="8782554491484326429">"සෙල් දුරකථන ඇමතුම"</string>
+-    <string name="internet_phone" msgid="1147922660195095810">"අන්තර්ජාල ඇමතුම"</string>
+-    <string name="no_sip_account_found_title" msgid="6266249392379373628">"අන්තර්ජාල ඇමතුම් ගිණුමක් නොමැත"</string>
+-    <string name="no_sip_account_found" msgid="724325811961769997">"මෙම දුරකථනයෙහි අන්තර්ජාල ඇමතුම් ගිණුම් නොමැත. එකක් එක් කිරීමට ඔබට අවශ්‍යද?"</string>
+-    <string name="sip_menu_add" msgid="8757508498518881500">"එක් කරන්න"</string>
+-    <string name="add_sip_account" msgid="5904858426290097611">"ගිණුමක් එකතු කරන්න"</string>
+-    <string name="remove_sip_account" msgid="7645900420385682570">"ගිණුම ඉවත් කරන්න"</string>
+-    <string name="sip_account_list" msgid="5480058210652194306">"SIP ගිණුම්"</string>
+-    <string name="saving_account" msgid="52903398217017954">"ගිණුම සුරකිමින්..."</string>
+-    <string name="removing_account" msgid="7183999896088628100">"ගිණුම ඉවත් කරමින්…"</string>
+-    <string name="sip_menu_save" msgid="5842531129356014943">"සුරකින්න"</string>
+-    <string name="sip_menu_discard" msgid="524075892158789701">"ඉවත ලන්න"</string>
+-    <string name="alert_dialog_close" msgid="7759635137627626235">"පැතිකඩ වසන්න"</string>
+-    <string name="alert_dialog_ok" msgid="3580379406983564080">"හරි"</string>
+-    <string name="close_profile" msgid="6886968271423155284">"වසන්න"</string>
+-    <string name="primary_account_summary_with" msgid="1633960536212343187">"මුලික ගිණුම. <xliff:g id="REGISTRATION_STATUS">%s</xliff:g>"</string>
+-    <string name="registration_status_checking_status" msgid="3381868307694056727">"තත්වය පිරික්සමින්..."</string>
+-    <string name="registration_status_registering" msgid="4288401139400232968">"ලියාපදිංචි වෙමින්..."</string>
+-    <string name="registration_status_still_trying" msgid="3185581992666091911">"තවමත් උත්සාහ කරමින්..."</string>
+-    <string name="registration_status_not_receiving" msgid="4185572774980557758">"ලැබෙන ඇමතුම් නොවේ."</string>
+-    <string name="registration_status_no_data" msgid="4901476962360656611">"අන්තර්ජාල සම්බන්ධතාවක් නොමැතී බැවින් ගිණුම් ලියාපදිංචිය නතර විය."</string>
+-    <string name="registration_status_no_wifi_data" msgid="4038976374713018067">"Wi-Fi සම්බන්ධතාවයක් නොමැති බැවින් ගිණුම් ලියාපදිංචි කිරීම නැවතිණි."</string>
+-    <string name="registration_status_not_running" msgid="4824867184446232131">"ගිණුම් ලියාපදිංචිය අසාර්ථකයි."</string>
+-    <string name="registration_status_done" msgid="884630717456439280">"ඇමතුම් ලබමින්."</string>
+-    <string name="registration_status_failed_try_later" msgid="5214474354451220581">"ගිණුම් ලියාපදිංචිය අසාර්ථක විය: (<xliff:g id="REGISTRATION_ERROR_MESSAGE">%s</xliff:g>); පසුව යළි උත්සාහ කරන්නම්"</string>
+-    <string name="registration_status_invalid_credentials" msgid="4908446367559341757">"ගිණුම ලියාපදිංචි කිරීම අසාර්ථකයි: වැරදි පරිශීලක නාමයක් හෝ මුරපදයකි"</string>
+-    <string name="registration_status_server_unreachable" msgid="5733421582468991276">"ගිණුම් ලියාපදිංචිය අසාර්ථකයි: සේවාදායකයේ නම පරික්ෂා කර බලන්න."</string>
+-    <string name="third_party_account_summary" msgid="2532526738862533028">"මෙම ගිණුම දැනට <xliff:g id="ACCOUNT_OWNER">%s</xliff:g> යෙදුම විසින් භාවිතා කරයි."</string>
+-    <string name="sip_edit_title" msgid="489288416435014385">"SIP ගිණුම් විස්තර"</string>
+-    <string name="sip_edit_new_title" msgid="3659149255856520385">"SIP ගිණුම් විස්තර"</string>
+-    <string name="domain_address_title" msgid="9071787581316160480">"සේවාදායකය"</string>
+-    <string name="username_title" msgid="2479375923477682328">"පරිශීලක නාමය"</string>
+-    <string name="password_title" msgid="3323555249068171531">"මුරපදය"</string>
+-    <string name="display_name_title" msgid="2459768196312249937">"දර්ශනය කරන නම"</string>
+-    <string name="proxy_address_title" msgid="4828301345351614273">"පිටතට යන ප්‍රොක්සි ලිපිනය"</string>
+-    <string name="port_title" msgid="5952939408078626657">"කවුළුවේ අංකය"</string>
+-    <string name="transport_title" msgid="8253139511847746640">"ගමනාගමන වර්ගය"</string>
+-    <string name="send_keepalive_title" msgid="7533342573918645113">"සජීවී-තබාගන්නා යවන්න"</string>
+-    <string name="set_primary_title" msgid="5351892327447571451">"මුලික ගිණුම ලෙස සකසන්න"</string>
+-    <string name="set_primary_summary" msgid="2219064654523258577">"පිටතට යන ඇමතුම් සඳහා භාවිතා කෙරේ"</string>
+-    <string name="advanced_settings" msgid="8350631795335495338">"වෛකල්පිත සැකසුම්"</string>
+-    <string name="auth_username_title" msgid="851473016307947120">"සත්‍යාපන පරිශීලක නාමය"</string>
+-    <string name="auth_username_summary" msgid="6782012405225938629">"සත්‍යාපනය සඳහා භාවිතා වන පරිශීලක නාමය"</string>
+-    <string name="default_preference_summary" msgid="868766740121667450">"&lt;පිහිටුවා නැත&gt;"</string>
+-    <string name="display_name_summary" msgid="8636377460518225523">"&lt;පරිශීලක නාමය වාගේම&gt;"</string>
+-    <string name="optional_summary" msgid="1464058793789832411">"&lt;වෛකල්පිත&gt;"</string>
+-    <string name="advanced_settings_show" msgid="4668880308290857597">"▷ සියල්ල පෙන්වීමට ස්පර්ශ කරන්න"</string>
+-    <string name="advanced_settings_hide" msgid="217398292824758079">"▽ සියල්ල සැඟවීමට ස්පර්ශ කරන්න"</string>
+-    <string name="empty_alert" msgid="6839103946505432390">"<xliff:g id="INPUT_FIELD_NAME">%s</xliff:g> අවශ්‍ය වන අතර හිස්ව තැබිය නොහැක."</string>
+-    <string name="not_a_valid_port" msgid="4796149266434630292">"කවුළුවේ අංකය 1000 ත් 65534 ත් අතර විය යුතුය."</string>
+-    <string name="no_internet_available_title" msgid="3327109242858406165">"අන්තර්ජාල සම්බන්ධතාවක් නොමැත"</string>
+-    <string name="no_wifi_available_title" msgid="747881033089378758">"Wi-Fi සම්බන්ධතාවයක් නොමැත"</string>
+-    <string name="no_internet_available" msgid="7877142631803238549">"අන්තර්ජාල ඇමතුමක් ගැනීමට, මුලින්ම ඔබගේ අන්තර්ජාල සම්බන්ධතාවය පරික්ෂා කර බලන්න."</string>
+-    <string name="no_wifi_available" msgid="1225073547318465713">"අන්තර්ජාල ඇමතුම් සඳහා ඔබ Wi-Fi ජාලයකට සම්බන්ධ විය යුතුය (රැහැන් රහිත සහ ජාල සැකසුම් භාවිතා කරන්න)"</string>
+-    <string name="no_voip" msgid="8901474054537199865">"අන්තර්ජාල ඇමතීම සඳහා සහාය නොදක්වයි"</string>
+-    <string name="sip_system_decide" msgid="368030746310423471">"ස්වයංක්‍රිය"</string>
+-    <string name="sip_always_send_keepalive" msgid="8192080724632877132">"සැමවිටම යවන්න"</string>
+-    <string name="not_voice_capable" msgid="2739898841461577811">"හඬ ඇමතීම සඳහා සහාය නොදක්වයි"</string>
+     <string name="respond_via_sms_canned_response_1" msgid="2461606462788380215">"දැන් කතාකරන්න බැහැ. මොකද වෙලා තියෙන්නෙ?"</string>
+     <string name="respond_via_sms_canned_response_2" msgid="4074450431532859214">"මම ඔබට දැන්ම ඇමතුමක් ගන්න."</string>
+     <string name="respond_via_sms_canned_response_3" msgid="3496079065723960450">"මම ඔබට පසුව අමතන්නම්."</string>
+-- 
+2.7.4
+

@@ -1,0 +1,57 @@
+From 219c54ac3a47b9b5ccc869910b2526c03950161f Mon Sep 17 00:00:00 2001
+From: Andreas Blaesius <skate4life@gmx.de>
+Date: Sun, 15 Oct 2017 16:25:20 +0200
+Subject: [PATCH 3/5] Camera2: fix more aapt warnings
+
+Switch to pref_camera_picturesize_entry_4mp_wide because pref_camera_picturesize_entry_4mp isn't used
+ - aapt: warning: string 'pref_camera_picturesize_entry_4mp' has no default translation in packages/apps/Camera2/res; found: az_AZ ne_NP si_LK
+
+Change-Id: I28309c1cc055b16bd4cea3b2482584d066881b3f
+---
+ res/values-az-rAZ/strings.xml | 2 +-
+ res/values-ne-rNP/strings.xml | 2 +-
+ res/values-si-rLK/strings.xml | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/res/values-az-rAZ/strings.xml b/res/values-az-rAZ/strings.xml
+index c47c0cf..517a68c 100644
+--- a/res/values-az-rAZ/strings.xml
++++ b/res/values-az-rAZ/strings.xml
+@@ -117,7 +117,7 @@
+     <string name="pref_camera_picturesize_entry_13mp" msgid="3084140665950405601">"13N piksel"</string>
+     <string name="pref_camera_picturesize_entry_8mp" msgid="6497793506352769366">"8M piksel"</string>
+     <string name="pref_camera_picturesize_entry_5mp" msgid="8813718385379530965">"5M Piksel"</string>
+-    <string name="pref_camera_picturesize_entry_4mp" msgid="8546276478576735924">"4M piksel"</string>
++    <string name="pref_camera_picturesize_entry_4mp_wide" msgid="3338812763544573634">"4M piksel (16:9)"</string>
+     <string name="pref_camera_picturesize_entry_3mp" msgid="6233692859150247237">"3M piksel"</string>
+     <string name="pref_camera_picturesize_entry_2mp" msgid="542341433431186453">"2M piksel"</string>
+     <string name="pref_camera_picturesize_entry_2mp_wide" msgid="607495602129189476">"2M piksel (16:9)"</string>
+diff --git a/res/values-ne-rNP/strings.xml b/res/values-ne-rNP/strings.xml
+index 3674d07..4fe42dc 100644
+--- a/res/values-ne-rNP/strings.xml
++++ b/res/values-ne-rNP/strings.xml
+@@ -120,7 +120,7 @@
+     <string name="pref_camera_picturesize_entry_13mp" msgid="3084140665950405601">"13M पिक्सेल"</string>
+     <string name="pref_camera_picturesize_entry_8mp" msgid="6497793506352769366">"8M पिक्सल"</string>
+     <string name="pref_camera_picturesize_entry_5mp" msgid="8813718385379530965">"5M पिक्सेल"</string>
+-    <string name="pref_camera_picturesize_entry_4mp" msgid="8546276478576735924">"4M पिक्सेल"</string>
++    <string name="pref_camera_picturesize_entry_4mp_wide" msgid="3338812763544573634">"4M पिक्सेल (16:9)"</string>
+     <string name="pref_camera_picturesize_entry_3mp" msgid="6233692859150247237">"3M पिक्सल"</string>
+     <string name="pref_camera_picturesize_entry_2mp" msgid="542341433431186453">"२ मेगा पिक्सेल"</string>
+     <string name="pref_camera_picturesize_entry_2mp_wide" msgid="607495602129189476">"2M पिक्सेल (16:9)"</string>
+diff --git a/res/values-si-rLK/strings.xml b/res/values-si-rLK/strings.xml
+index 5c26948..ac7de03 100644
+--- a/res/values-si-rLK/strings.xml
++++ b/res/values-si-rLK/strings.xml
+@@ -117,7 +117,7 @@
+     <string name="pref_camera_picturesize_entry_13mp" msgid="3084140665950405601">"පික්සල් 13M"</string>
+     <string name="pref_camera_picturesize_entry_8mp" msgid="6497793506352769366">"පික්සල 8M"</string>
+     <string name="pref_camera_picturesize_entry_5mp" msgid="8813718385379530965">"පික්සල 5M"</string>
+-    <string name="pref_camera_picturesize_entry_4mp" msgid="8546276478576735924">"4M පික්සල්"</string>
++    <string name="pref_camera_picturesize_entry_4mp_wide" msgid="3338812763544573634">"4M පික්සල් (16:9)"</string>
+     <string name="pref_camera_picturesize_entry_3mp" msgid="6233692859150247237">"පික්සල 3M"</string>
+     <string name="pref_camera_picturesize_entry_2mp" msgid="542341433431186453">"පික්සල 2M"</string>
+     <string name="pref_camera_picturesize_entry_2mp_wide" msgid="607495602129189476">"2M පික්සල් (16:9)"</string>
+-- 
+2.7.4
+

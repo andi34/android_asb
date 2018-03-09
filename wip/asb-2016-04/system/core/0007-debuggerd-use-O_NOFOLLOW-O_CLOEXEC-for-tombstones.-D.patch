@@ -1,0 +1,40 @@
+From e448b2635212efd5f8eb844da98f3325f1dafb0b Mon Sep 17 00:00:00 2001
+From: Josh Gao <jmgao@google.com>
+Date: Tue, 16 Feb 2016 14:24:50 -0800
+Subject: [PATCH 07/20] debuggerd: use O_NOFOLLOW|O_CLOEXEC for tombstones. DO
+ NOT MERGE
+
+Effectively a cherry-pick of 04f9b2a.
+
+Bug: http://b/26403620
+Change-Id: I0437fdc774501f428d8b4f8dd7682b32eaa29cef
+(cherry picked from commit 9515c23e1655849496b34c6265c485fb20d5487f)
+---
+ debuggerd/tombstone.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/debuggerd/tombstone.c b/debuggerd/tombstone.c
+index 7009a8e..29cd76c 100644
+--- a/debuggerd/tombstone.c
++++ b/debuggerd/tombstone.c
+@@ -759,7 +759,7 @@ static char* find_and_open_tombstone(int* fd)
+         if (errno != ENOENT)
+             continue;
+ 
+-        *fd = open(path, O_CREAT | O_EXCL | O_WRONLY, 0600);
++        *fd = open(path, O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW | O_CLOEXEC, 0600);
+         if (*fd < 0)
+             continue;   /* raced ? */
+ 
+@@ -769,7 +769,7 @@ static char* find_and_open_tombstone(int* fd)
+ 
+     /* we didn't find an available file, so we clobber the oldest one */
+     snprintf(path, sizeof(path), TOMBSTONE_DIR"/tombstone_%02d", oldest);
+-    *fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0600);
++    *fd = open(path, O_CREAT | O_TRUNC | O_WRONLY | O_NOFOLLOW | O_CLOEXEC, 0600);
+     if (*fd < 0) {
+         LOG("failed to open tombstone file '%s': %s\n", path, strerror(errno));
+         return NULL;
+-- 
+2.7.4
+

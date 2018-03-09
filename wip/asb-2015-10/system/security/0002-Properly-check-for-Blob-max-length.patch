@@ -1,0 +1,38 @@
+From 269371019ffb84c353e874fd616a884c9e4e6d4b Mon Sep 17 00:00:00 2001
+From: Chad Brubaker <cbrubaker@google.com>
+Date: Wed, 12 Aug 2015 13:40:31 -0700
+Subject: [PATCH 2/2] Properly check for Blob max length
+
+sizeof(mBlob.value) is incorrect because writeBlob pads up to the next
+AES_BLOCK_SIZE
+
+Bug:22802399
+Change-Id: I377edca2c7ea2cf4455f22f5f927fdad79893729
+---
+ keystore/keystore.cpp | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/keystore/keystore.cpp b/keystore/keystore.cpp
+index 031f4c8..64809ad 100644
+--- a/keystore/keystore.cpp
++++ b/keystore/keystore.cpp
+@@ -412,12 +412,12 @@ class Blob {
+ public:
+     Blob(const uint8_t* value, size_t valueLength, const uint8_t* info, uint8_t infoLength,
+             BlobType type) {
+-        if (valueLength > sizeof(mBlob.value)) {
+-            valueLength = sizeof(mBlob.value);
++        if (valueLength > VALUE_SIZE) {
++            valueLength = VALUE_SIZE;
+             ALOGW("Provided blob length too large");
+         }
+-        if (infoLength + valueLength > sizeof(mBlob.value)) {
+-            infoLength = sizeof(mBlob.value) - valueLength;
++        if (infoLength + valueLength > VALUE_SIZE) {
++            infoLength = VALUE_SIZE - valueLength;
+             ALOGW("Provided info length too large");
+         }
+         mBlob.length = valueLength;
+-- 
+2.7.4
+

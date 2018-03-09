@@ -1,0 +1,34 @@
+From a7e8c2e166508334c6de25a1da0dfeba343d7497 Mon Sep 17 00:00:00 2001
+From: "Tadashi G. Takaoka" <takaoka@google.com>
+Date: Fri, 16 Sep 2016 12:00:57 +0900
+Subject: [PATCH 30/46] DO NOT MERGE: Catch all exceptions when parsing IME
+ meta data
+
+Bug: 30568284
+Change-Id: I0b613f8ce0f014320c5ac1bf445699ea2702a0a2
+(manually cherry picked from 9b2997d22e6ce2a15065d8e7608dd77b316c2065)
+(cherry picked from commit f71d2cddf1780dbfca14039d791813145bd2f1d6)
+---
+ services/java/com/android/server/InputMethodManagerService.java | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/services/java/com/android/server/InputMethodManagerService.java b/services/java/com/android/server/InputMethodManagerService.java
+index a996dbd..7e581a2 100644
+--- a/services/java/com/android/server/InputMethodManagerService.java
++++ b/services/java/com/android/server/InputMethodManagerService.java
+@@ -2542,10 +2542,8 @@ public class InputMethodManagerService extends IInputMethodManager.Stub
+                     Slog.d(TAG, "Found an input method " + p);
+                 }
+ 
+-            } catch (XmlPullParserException e) {
+-                Slog.w(TAG, "Unable to load input method " + compName, e);
+-            } catch (IOException e) {
+-                Slog.w(TAG, "Unable to load input method " + compName, e);
++            } catch (Exception e) {
++                Slog.wtf(TAG, "Unable to load input method " + compName, e);
+             }
+         }
+ 
+-- 
+2.7.4
+

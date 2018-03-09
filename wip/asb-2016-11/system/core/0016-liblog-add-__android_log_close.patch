@@ -1,0 +1,81 @@
+From 9e5ac06dc6053ff7591f38e45165038726eb6c8b Mon Sep 17 00:00:00 2001
+From: Mark Salyzyn <salyzyn@google.com>
+Date: Tue, 23 Aug 2016 10:23:36 -0700
+Subject: [PATCH 16/20] liblog: add __android_log_close()
+
+Bug: 30963384
+
+(cherry picked from commit df7a4c6bae5f85532d79a93b7d9197a2aab17825)
+
+Change-Id: Iff0634a66c4b690331f5da66f7a6c2364b64480e
+(cherry picked from commit c68706fe49258f24c9a29f20eb0c8efc2eab0465)
+---
+ include/android/log.h |  5 +++++
+ liblog/logd_write.c   | 35 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 40 insertions(+)
+
+diff --git a/include/android/log.h b/include/android/log.h
+index 0ea4c29..cf00a76 100644
+--- a/include/android/log.h
++++ b/include/android/log.h
+@@ -89,6 +89,11 @@ typedef enum android_LogPriority {
+ } android_LogPriority;
+ 
+ /*
++ * Release any logger resources (a new log write will immediately re-acquire)
++ */
++void __android_log_close();
++
++/*
+  * Send a simple string to the log.
+  */
+ int __android_log_write(int prio, const char *tag, const char *text);
+diff --git a/liblog/logd_write.c b/liblog/logd_write.c
+index fff7cc4..430c276 100644
+--- a/liblog/logd_write.c
++++ b/liblog/logd_write.c
+@@ -95,6 +95,41 @@ static int __write_to_log_kernel(log_id_t log_id, struct iovec *vec, size_t nr)
+     return ret;
+ }
+ 
++/*
++ * Release any logger resources. A new log write will immediately re-acquire.
++ */
++void __android_log_close()
++{
++#ifdef HAVE_PTHREADS
++    pthread_mutex_lock(&log_init_lock);
++#endif
++
++    write_to_log = __write_to_log_init;
++
++    /*
++     * Threads that are actively writing at this point are not held back
++     * by a lock and are at risk of dropping the messages with a return code
++     * -EBADF. Prefer to return error code than add the overhead of a lock to
++     * each log writing call to guarantee delivery. In addition, anyone
++     * calling this is doing so to release the logging resources and shut down,
++     * for them to do so with outstanding log requests in other threads is a
++     * disengenuous use of this function.
++     */
++
++    log_close(log_fds[LOG_ID_MAIN]);
++    log_fds[LOG_ID_MAIN] = -1;
++    log_close(log_fds[LOG_ID_RADIO]);
++    log_fds[LOG_ID_RADIO] = -1;
++    log_close(log_fds[LOG_ID_EVENTS]);
++    log_fds[LOG_ID_EVENTS] = -1;
++    log_close(log_fds[LOG_ID_SYSTEM]);
++    log_fds[LOG_ID_SYSTEM] = -1;
++
++#ifdef HAVE_PTHREADS
++    pthread_mutex_unlock(&log_init_lock);
++#endif
++}
++
+ static int __write_to_log_init(log_id_t log_id, struct iovec *vec, size_t nr)
+ {
+ #ifdef HAVE_PTHREADS
+-- 
+2.7.4
+

@@ -1,0 +1,52 @@
+From 69cb28519ec91013037684f17e51424ec36690b9 Mon Sep 17 00:00:00 2001
+From: Michael Lentine <mlentine@google.com>
+Date: Fri, 31 Oct 2014 15:25:03 -0700
+Subject: [PATCH 02/18] Fix for corruption when numFds or numInts is too large.
+
+Bug: 18076253
+Change-Id: I4c5935440013fc755e1d123049290383f4659fb6
+---
+ libs/ui/GraphicBuffer.cpp | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/libs/ui/GraphicBuffer.cpp b/libs/ui/GraphicBuffer.cpp
+index 0ecd3d9..03b4109 100644
+--- a/libs/ui/GraphicBuffer.cpp
++++ b/libs/ui/GraphicBuffer.cpp
+@@ -251,10 +251,19 @@ status_t GraphicBuffer::unflatten(
+     const size_t numFds  = buf[6];
+     const size_t numInts = buf[7];
+ 
++    const size_t maxNumber = UINT_MAX / sizeof(int);
++    if (numFds >= maxNumber || numInts >= (maxNumber - 8)) {
++        width = height = stride = format = usage = 0;
++        handle = NULL;
++        ALOGE("unflatten: numFds or numInts is too large: %d, %d",
++                numFds, numInts);
++        return BAD_VALUE;
++    }
++
+     const size_t sizeNeeded = (8 + numInts) * sizeof(int);
+     if (size < sizeNeeded) return NO_MEMORY;
+ 
+-    size_t fdCountNeeded = 0;
++    size_t fdCountNeeded = numFds;
+     if (count < fdCountNeeded) return NO_MEMORY;
+ 
+     if (handle) {
+@@ -269,6 +278,12 @@ status_t GraphicBuffer::unflatten(
+         format = buf[4];
+         usage  = buf[5];
+         native_handle* h = native_handle_create(numFds, numInts);
++        if (!h) {
++            width = height = stride = format = usage = 0;
++            handle = NULL;
++            ALOGE("unflatten: native_handle_create failed");
++            return NO_MEMORY;
++        }
+         memcpy(h->data,          fds,     numFds*sizeof(int));
+         memcpy(h->data + numFds, &buf[8], numInts*sizeof(int));
+         handle = h;
+-- 
+2.7.4
+

@@ -1,0 +1,28 @@
+From b016f87553bb4deaa88da924782f144ad9c16c11 Mon Sep 17 00:00:00 2001
+From: Pablo Ceballos <pceballos@google.com>
+Date: Sat, 20 Feb 2016 11:30:43 -0800
+Subject: [PATCH 11/18] Merge conflict--DO NOT MERGE Add SN logging
+
+Bug 27046057
+
+Change-Id: I942876c09fdbe841c19807e463f5426287e07803
+---
+ libs/gui/BufferQueue.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libs/gui/BufferQueue.cpp b/libs/gui/BufferQueue.cpp
+index 5240a61..2f75fe7 100644
+--- a/libs/gui/BufferQueue.cpp
++++ b/libs/gui/BufferQueue.cpp
+@@ -781,6 +781,8 @@ void BufferQueue::dump(String8& result, const char* prefix) const {
+             "android.permission.DUMP"), pid, uid)) {
+         result.appendFormat("Permission Denial: can't dump BufferQueueConsumer "
+                 "from pid=%d, uid=%d\n", pid, uid);
++
++        android_errorWriteWithInfoLog(0x534e4554, "27046057", uid, NULL, 0);
+         return;
+     }
+     Mutex::Autolock _l(mMutex);
+-- 
+2.7.4
+

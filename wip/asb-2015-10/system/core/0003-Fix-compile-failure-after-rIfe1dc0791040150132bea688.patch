@@ -1,0 +1,29 @@
+From e5a4c59786aef6fecd1ac0564f1be73e9cc957cb Mon Sep 17 00:00:00 2001
+From: Abhishek Arya <aarya@google.com>
+Date: Thu, 20 Aug 2015 17:38:16 -0700
+Subject: [PATCH 03/20] Fix compile failure after
+ rIfe1dc0791040150132bea6884f1e6c8d31972d1b
+
+Bug: 23290056
+Change-Id: If6e22b0159de6635a8ca5305895b7718f15becc7
+---
+ libutils/String8.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/libutils/String8.cpp b/libutils/String8.cpp
+index e5a48e5..bb06825 100644
+--- a/libutils/String8.cpp
++++ b/libutils/String8.cpp
+@@ -14,6 +14,9 @@
+  * limitations under the License.
+  */
+ 
++#define __STDC_LIMIT_MACROS
++#include <stdint.h>
++
+ #include <utils/String8.h>
+ 
+ #include <utils/Log.h>
+-- 
+2.7.4
+

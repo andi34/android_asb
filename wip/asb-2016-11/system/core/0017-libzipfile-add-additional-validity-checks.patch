@@ -1,0 +1,163 @@
+From 4a4004ca9f4d75f5af0b4c7941929d6a70e22504 Mon Sep 17 00:00:00 2001
+From: Narayan Kamath <narayan@google.com>
+Date: Tue, 13 Sep 2016 15:31:56 +0100
+Subject: [PATCH 17/20] libzipfile: add additional validity checks.
+
+- Make sure the start and end of the data for a given entry are
+  within the allocated buffer.
+- Make sure all central directory entries start and end within the
+  central directory buffer.
+- Reject zip file entries that have no filenames.
+
+bug: 30916186
+test: test_zipfile with known bad zip files.
+Change-Id: Ibf3f6469e60c85ec1608f5ce613d40867d2d09b7
+(cherry picked from commit a1ec23634ab0f4f9cba8788b728d869007cd6ff7)
+---
+ libzipfile/centraldir.c   | 60 +++++++++++++++++++++++++++++++++++++++++++----
+ libzipfile/test_zipfile.c |  1 -
+ 2 files changed, 56 insertions(+), 5 deletions(-)
+
+diff --git a/libzipfile/centraldir.c b/libzipfile/centraldir.c
+index 911e2b9..20f5d41 100644
+--- a/libzipfile/centraldir.c
++++ b/libzipfile/centraldir.c
+@@ -60,16 +60,20 @@ read_central_dir_values(Zipfile* file, const unsigned char* buf, int len)
+     return 0;
+ }
+ 
++static const int kCompressionStored = 0x0;
++static const int kCompressionDeflate = 0x8;
++
+ static int
+ read_central_directory_entry(Zipfile* file, Zipentry* entry,
+                 const unsigned char** buf, ssize_t* len)
+ {
+     const unsigned char* p;
++    size_t remaining;
++    const unsigned char* bufLimit;
+ 
+     unsigned short  versionMadeBy;
+     unsigned short  versionToExtract;
+     unsigned short  gpBitFlag;
+-    unsigned short  compressionMethod;
+     unsigned short  lastModFileTime;
+     unsigned short  lastModFileDate;
+     unsigned long   crc32;
+@@ -84,8 +88,9 @@ read_central_directory_entry(Zipfile* file, Zipentry* entry,
+     unsigned int dataOffset;
+     unsigned short lfhExtraFieldSize;
+ 
+-
+     p = *buf;
++    remaining = *len;
++    bufLimit = file->buf + file->bufsize;
+ 
+     if (*len < ENTRY_LEN) {
+         fprintf(stderr, "cde entry not large enough\n");
+@@ -115,41 +120,88 @@ read_central_directory_entry(Zipfile* file, Zipentry* entry,
+     localHeaderRelOffset = read_le_int(&p[0x2a]);
+ 
+     p += ENTRY_LEN;
++    remaining -= ENTRY_LEN;
+ 
+     // filename
+     if (entry->fileNameLength != 0) {
++        if (entry->fileNameLength > remaining) {
++            fprintf(stderr, "cde entry not large enough for file name.\n");
++            return 1;
++        }
++
+         entry->fileName = p;
+     } else {
+-        entry->fileName = NULL;
++        fprintf(stderr, "cde entry does not contain a file name.\n");
++        return 1;
+     }
+     p += entry->fileNameLength;
++    remaining -= entry->fileNameLength;
+ 
+-    // extra field
++    // extra field, if any
+     if (extraFieldLength != 0) {
++        if (extraFieldLength > remaining) {
++            fprintf(stderr, "cde entry not large enough for extra field.\n");
++            return 1;
++        }
++
+         extraField = p;
+     } else {
+         extraField = NULL;
+     }
+     p += extraFieldLength;
++    remaining -= extraFieldLength;
+ 
+     // comment, if any
+     if (fileCommentLength != 0) {
++        if (fileCommentLength > remaining) {
++            fprintf(stderr, "cde entry not large enough for file comment.\n");
++            return 1;
++        }
++
+         fileComment = p;
+     } else {
+         fileComment = NULL;
+     }
+     p += fileCommentLength;
++    remaining -= fileCommentLength;
+ 
+     *buf = p;
++    *len = remaining;
+ 
+     // the size of the extraField in the central dir is how much data there is,
+     // but the one in the local file header also contains some padding.
+     p = file->buf + localHeaderRelOffset;
++    if (p >= bufLimit) {
++      fprintf(stderr, "Invalid local header offset for entry.\n");
++      return 1;
++    }
++
+     extraFieldLength = read_le_short(&p[0x1c]);
+ 
+     dataOffset = localHeaderRelOffset + LFH_SIZE
+         + entry->fileNameLength + extraFieldLength;
+     entry->data = file->buf + dataOffset;
++    // Sanity check: make sure that the start of the entry data is within
++    // our allocated buffer.
++    if ((entry->data < file->buf) || (entry->data >= bufLimit)) {
++      fprintf(stderr, "Invalid data offset for entry.\n");
++      return 1;
++    }
++
++    // Sanity check: make sure that the end of the entry data is within
++    // our allocated buffer. We need to look at the uncompressedSize for
++    // stored entries and the compressed size for deflated entries.
++    if ((entry->compressionMethod == kCompressionStored) &&
++        (entry->uncompressedSize > (unsigned int) (bufLimit - entry->data))) {
++      fprintf(stderr, "Invalid uncompressed size for stored entry.\n");
++      return 1;
++    }
++    if ((entry->compressionMethod == kCompressionDeflate) &&
++        (entry->compressedSize > (unsigned int) (bufLimit - entry->data))) {
++      fprintf(stderr, "Invalid uncompressed size for deflated entry.\n");
++      return 1;
++    }
++
+ #if 0
+     printf("file->buf=%p entry->data=%p dataOffset=%x localHeaderRelOffset=%d "
+            "entry->fileNameLength=%d extraFieldLength=%d\n",
+diff --git a/libzipfile/test_zipfile.c b/libzipfile/test_zipfile.c
+index 1aaa913..a2f6bc7 100644
+--- a/libzipfile/test_zipfile.c
++++ b/libzipfile/test_zipfile.c
+@@ -75,7 +75,6 @@ main(int argc, char** argv)
+             unsize = get_zipentry_size(entry);
+             size = unsize * 1.001;
+             scratch = malloc(size);
+-            printf("scratch=%p\n", scratch);
+             err = decompress_zipentry(entry, scratch, size);
+             if (err != 0) {
+                 fprintf(stderr, "error decompressing file\n");
+-- 
+2.7.4
+

@@ -1,0 +1,35 @@
+From 405a53dc00057d29ea5284c8df6455790bd9ff6b Mon Sep 17 00:00:00 2001
+From: Adam Lesinski <adamlesinski@google.com>
+Date: Sat, 12 Sep 2015 15:08:27 +0200
+Subject: [PATCH 18/18] Verify that the native handle was created
+
+The inputs to native_handle_create can cause an overflowed allocation,
+so check the return value of native_handle_create before accessing
+the memory it returns.
+
+CVE-2015-1528: Elevation of Privilege Vulnerability in Binder
+
+Bug:19334482
+Change-Id: I1f489382776c2a1390793a79dc27ea17baa9b2a2
+---
+ libs/binder/Parcel.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index 4f754f9..613c5c4 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -1144,6 +1144,10 @@ native_handle* Parcel::readNativeHandle() const
+     if (err != NO_ERROR) return 0;
+ 
+     native_handle* h = native_handle_create(numFds, numInts);
++    if (!h) {
++         return 0;
++    }
++
+     for (int i=0 ; err==NO_ERROR && i<numFds ; i++) {
+         h->data[i] = dup(readFileDescriptor());
+         if (h->data[i] < 0) {
+-- 
+2.7.4
+

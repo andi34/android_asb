@@ -1,0 +1,33 @@
+From ed8ff813b04b592251e0987472cf80fde9783762 Mon Sep 17 00:00:00 2001
+From: Andreas Schneider <asn@cryptomilk.org>
+Date: Thu, 21 Nov 2013 11:16:59 +0100
+Subject: [PATCH] util: Fix build of LinkNode.java.
+
+If you compile with JDK 1.7 you get the following error:
+
+mNext has private access in LinkedNode
+return T node.mNext == mHead ? null : node.mNext;
+
+Change-Id: Ic1e60f76461da3e75b4ca8402622251e63569beb
+---
+ src/com/android/gallery3d/util/LinkedNode.java | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/com/android/gallery3d/util/LinkedNode.java b/src/com/android/gallery3d/util/LinkedNode.java
+index 4cfc3cd..9018ba9 100644
+--- a/src/com/android/gallery3d/util/LinkedNode.java
++++ b/src/com/android/gallery3d/util/LinkedNode.java
+@@ -18,8 +18,8 @@ package com.android.gallery3d.util;
+ 
+ 
+ public class LinkedNode {
+-    private LinkedNode mPrev;
+-    private LinkedNode mNext;
++    protected LinkedNode mPrev;
++    protected LinkedNode mNext;
+ 
+     public LinkedNode() {
+         mPrev = mNext = this;
+-- 
+2.7.4
+

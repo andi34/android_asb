@@ -1,0 +1,46 @@
+From 268ddaee773b908b7abb10bf19165125bb479fd3 Mon Sep 17 00:00:00 2001
+From: Shreyas Basarge <snb@google.com>
+Date: Thu, 18 Feb 2016 11:56:05 +0000
+Subject: [PATCH 07/46] NPE fix for SyncStorageEngine read authority
+
+Add a null check after an authority is read
+from disk.
+
+Bug: 26513719
+Change-Id: I18f01828141110e776cc96f3b3be3d80125e70c1
+(cherry picked from commit a962d9eba7a8f741ed149964126fb08fe4fd7128)
+---
+ .../java/com/android/server/content/SyncStorageEngine.java     | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/services/java/com/android/server/content/SyncStorageEngine.java b/services/java/com/android/server/content/SyncStorageEngine.java
+index 781280e..d9af7ca 100644
+--- a/services/java/com/android/server/content/SyncStorageEngine.java
++++ b/services/java/com/android/server/content/SyncStorageEngine.java
+@@ -41,6 +41,7 @@ import android.util.Log;
+ import android.util.Pair;
+ import android.util.SparseArray;
+ import android.util.Xml;
++import android.util.EventLog;
+ 
+ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.util.ArrayUtils;
+@@ -1738,8 +1739,13 @@ public class SyncStorageEngine extends Handler {
+                             if ("authority".equals(tagName)) {
+                                 authority = parseAuthority(parser, version);
+                                 periodicSync = null;
+-                                if (authority.ident > highestAuthorityId) {
+-                                    highestAuthorityId = authority.ident;
++                                if (authority != null) {
++                                    if (authority.ident > highestAuthorityId) {
++                                        highestAuthorityId = authority.ident;
++                                    }
++                                } else {
++                                    EventLog.writeEvent(0x534e4554, "26513719", -1,
++                                            "Malformed authority");
+                                 }
+                             } else if (XML_TAG_LISTEN_FOR_TICKLES.equals(tagName)) {
+                                 parseListenForTickles(parser);
+-- 
+2.7.4
+

@@ -1,0 +1,61 @@
+From b95ecf042defec737259a783bdedc16785f160cb Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Mon, 12 Jun 2017 17:33:07 -0600
+Subject: [PATCH 37/46] DO NOT MERGE. KEY_INTENT shouldn't grant permissions.
+
+KEY_INTENT has no business granting any Uri permissions, so remove
+any grant flags that malicious apps may have tried sneaking in.
+
+Also fix ordering bug in general-purpose security check that was
+allowing FLAG_GRANT_PERSISTABLE to bypass it.
+
+Test: builds, boots
+Bug: 32990341, 32879915
+Change-Id: I657455a770c81f045ccce6abbd2291407a1cfb42
+(cherry picked from commit d722e780bac7685e8a012b5f479eba8c348c3c53)
+---
+ .../com/android/server/accounts/AccountManagerService.java  |  3 +++
+ .../java/com/android/server/am/ActivityManagerService.java  | 13 +++++++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/services/java/com/android/server/accounts/AccountManagerService.java b/services/java/com/android/server/accounts/AccountManagerService.java
+index aa9849e..f46b5f9 100644
+--- a/services/java/com/android/server/accounts/AccountManagerService.java
++++ b/services/java/com/android/server/accounts/AccountManagerService.java
+@@ -2189,6 +2189,9 @@ public class AccountManagerService
+             Intent intent = null;
+             if (result != null
+                     && (intent = result.getParcelable(AccountManager.KEY_INTENT)) != null) {
++                intent.setFlags(intent.getFlags() & ~(Intent.FLAG_GRANT_READ_URI_PERMISSION
++                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
++                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION));
+                 /*
+                  * The Authenticator API allows third party authenticators to
+                  * supply arbitrary intents to other apps that they can run,
+diff --git a/services/java/com/android/server/am/ActivityManagerService.java b/services/java/com/android/server/am/ActivityManagerService.java
+index d3871ec..9f902c5 100644
+--- a/services/java/com/android/server/am/ActivityManagerService.java
++++ b/services/java/com/android/server/am/ActivityManagerService.java
+@@ -5984,6 +5984,19 @@ public final class ActivityManagerService extends ActivityManagerNative
+             return -1;
+         }
+ 
++        // Bail early if system is trying to hand out permissions directly; it
++        // must always grant permissions on behalf of someone explicit.
++        final int callingAppId = UserHandle.getAppId(callingUid);
++        if (callingAppId == Process.SYSTEM_UID) {
++            if ("com.android.settings.files".equals(uri.getAuthority())) {
++                // Exempted authority for cropping user photos in Settings app
++            } else {
++                Slog.w(TAG, "For security reasons, the system cannot issue a Uri permission" +
++                       " grant to " + uri.getAuthority() + "; use startActivityAsCaller() instead");
++                return -1;
++            }
++        }
++
+         final String authority = uri.getAuthority();
+         final ProviderInfo pi = getProviderInfoLocked(authority, UserHandle.getUserId(callingUid));
+         if (pi == null) {
+-- 
+2.7.4
+

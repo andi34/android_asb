@@ -1,0 +1,61 @@
+From 47bc99aa2d624a7ac4b61a2010bc4c08c1385008 Mon Sep 17 00:00:00 2001
+From: "Philip P. Moltmann" <moltmann@google.com>
+Date: Fri, 9 Dec 2016 14:11:08 -0800
+Subject: [PATCH] Prioritize package installer intent filter
+
+Package Installer intent should always be handled by the package
+installer. Only privilegded apps can have a priority > 0.
+
+The K version is I79fd77b12bad9b79d1a53d08629a2b07919aad2c
+The L version is I27611baae21c3820f594e8f58aec34fc4d0b1ffb
+The M version is I7f1726fc9665e57ec63c966570169216eb2e0764
+
+Bug: 32553261
+Change-Id: I3d9054ddd475c7e77e1696e31285a6b47d59fa2a
+(cherry picked from commit 540a404bd489d65feca8dbd85216891300e0fcfc)
+---
+ AndroidManifest.xml | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 8b04c7f..8e234e1 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -19,14 +19,14 @@
+         <activity android:name=".PackageInstallerActivity"
+                 android:configChanges="orientation|keyboardHidden|screenSize"
+                 android:excludeFromRecents="true">
+-            <intent-filter>
++            <intent-filter android:priority="1">
+                 <action android:name="android.intent.action.VIEW" />
+                 <action android:name="android.intent.action.INSTALL_PACKAGE" />
+                 <category android:name="android.intent.category.DEFAULT" />
+                 <data android:scheme="file" />
+                 <data android:mimeType="application/vnd.android.package-archive" />
+             </intent-filter>
+-            <intent-filter>
++            <intent-filter android:priority="1">
+                 <action android:name="android.intent.action.INSTALL_PACKAGE" />
+                 <category android:name="android.intent.category.DEFAULT" />
+                 <data android:scheme="file" />
+@@ -40,7 +40,7 @@
+                 android:configChanges="orientation|keyboardHidden|screenSize"
+                 android:excludeFromRecents="true"
+                 android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar">
+-            <intent-filter>
++            <intent-filter android:priority="1">
+                 <action android:name="android.intent.action.DELETE" />
+                 <action android:name="android.intent.action.UNINSTALL_PACKAGE" />
+                 <category android:name="android.intent.category.DEFAULT" />
+@@ -54,7 +54,7 @@
+                   android:configChanges="orientation|keyboardHidden|screenSize"
+                   android:excludeFromRecents="true"
+                   android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar">
+-            <intent-filter>
++            <intent-filter android:priority="1">
+                 <action android:name="android.content.pm.action.REQUEST_PERMISSION" />
+                 <category android:name="android.intent.category.DEFAULT" />
+             </intent-filter>
+-- 
+2.7.4
+

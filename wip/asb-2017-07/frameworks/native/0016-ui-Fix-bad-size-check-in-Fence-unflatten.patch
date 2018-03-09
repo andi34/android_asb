@@ -1,0 +1,33 @@
+From 3a7ede0ea53587a54aa2231def6c50cf670c0e10 Mon Sep 17 00:00:00 2001
+From: Chris Forbes <chrisforbes@google.com>
+Date: Wed, 10 May 2017 13:12:00 -0700
+Subject: [PATCH 16/18] ui: Fix bad size check in Fence::unflatten
+
+Differs slightly from mnc+ patch: GetFlattenedSize was fixed in mnc.
+
+Test: Boot device, run poc from bug, observe no longer crashes
+Bug: 37285689
+AOSP-Change-Id: Id8b851733b088cce0d07493fbf76e7e24f9299ad
+(cherry picked from commit 9809602ac32dcb7bceaa5bc34df5b7fb68aacd38)
+
+Change-Id: I82dd3b0504763c9213ca56b33790b7faa17bb9ad
+---
+ libs/ui/Fence.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libs/ui/Fence.cpp b/libs/ui/Fence.cpp
+index 93ec0ce..f94be35 100644
+--- a/libs/ui/Fence.cpp
++++ b/libs/ui/Fence.cpp
+@@ -152,7 +152,7 @@ status_t Fence::unflatten(void const*& buffer, size_t& size, int const*& fds, si
+         return INVALID_OPERATION;
+     }
+ 
+-    if (size < 1) {
++    if (size < getFlattenedSize()) {
+         return NO_MEMORY;
+     }
+ 
+-- 
+2.7.4
+

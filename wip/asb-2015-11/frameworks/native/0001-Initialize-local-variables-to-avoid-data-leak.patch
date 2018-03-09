@@ -1,0 +1,47 @@
+From ed3f1eeb347b51cad61020f6d49301dbfc20b9db Mon Sep 17 00:00:00 2001
+From: Naveen Leekha <leekha@google.com>
+Date: Tue, 22 Sep 2015 17:58:21 -0700
+Subject: [PATCH 01/18] Initialize local variables to avoid data leak
+
+The uninitialized local variables pick up
+whatever the memory content was there on stack.
+This data gets sent to the remote process in
+case of a failed transaction, which is a security
+issue. Fixed.
+
+(Manual merge of master change
+ 12ba0f57d028a9c8f4eb3afddc326b70677d1e0c )
+
+For b/23696300
+
+Change-Id: I665212d10da56f0803b5bb772d14c77e632ba2ab
+(cherry picked from commit c1e6fbb52c3f85cc7610d1d07d12be38f70b4ed4)
+---
+ libs/gui/IGraphicBufferProducer.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libs/gui/IGraphicBufferProducer.cpp b/libs/gui/IGraphicBufferProducer.cpp
+index fc86e60..b73e69e 100644
+--- a/libs/gui/IGraphicBufferProducer.cpp
++++ b/libs/gui/IGraphicBufferProducer.cpp
+@@ -201,7 +201,7 @@ status_t BnGraphicBufferProducer::onTransact(
+             uint32_t h      = data.readInt32();
+             uint32_t format = data.readInt32();
+             uint32_t usage  = data.readInt32();
+-            int buf;
++            int buf = 0;
+             sp<Fence> fence;
+             int result = dequeueBuffer(&buf, &fence, async, w, h, format, usage);
+             reply->writeInt32(buf);
+@@ -233,7 +233,7 @@ status_t BnGraphicBufferProducer::onTransact(
+         } break;
+         case QUERY: {
+             CHECK_INTERFACE(IGraphicBufferProducer, data, reply);
+-            int value;
++            int value = 0;
+             int what = data.readInt32();
+             int res = query(what, &value);
+             reply->writeInt32(value);
+-- 
+2.7.4
+

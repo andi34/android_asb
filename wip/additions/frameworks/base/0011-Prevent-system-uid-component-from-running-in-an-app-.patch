@@ -1,0 +1,40 @@
+From d1cf7a6e8e865bd85a8bbc80a82172fd8e6c5964 Mon Sep 17 00:00:00 2001
+From: Wale Ogunwale <ogunwale@google.com>
+Date: Thu, 11 Jun 2015 12:44:47 -0700
+Subject: [PATCH 11/46] Prevent system uid component from running in an app
+ process
+
+CVE-2015-3844
+
+Bug: 21669445
+Change-Id: I11d0bc5301d7e2a64972221f54f3cbd611f8e404
+(cherry picked from commit 44368567f840e3469b5fd2c9399ed444b6f46ebf)
+---
+ .../java/com/android/server/am/ActivityManagerService.java    | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/services/java/com/android/server/am/ActivityManagerService.java b/services/java/com/android/server/am/ActivityManagerService.java
+index e2050fc..b5dd0d8 100644
+--- a/services/java/com/android/server/am/ActivityManagerService.java
++++ b/services/java/com/android/server/am/ActivityManagerService.java
+@@ -2526,9 +2526,14 @@ public final class ActivityManagerService extends ActivityManagerNative
+             // should never happen).
+             SparseArray<ProcessRecord> procs = mProcessNames.getMap().get(processName);
+             if (procs == null) return null;
+-            final int N = procs.size();
+-            for (int i = 0; i < N; i++) {
+-                if (UserHandle.isSameUser(procs.keyAt(i), uid)) return procs.valueAt(i);
++            final int procCount = procs.size();
++            for (int i = 0; i < procCount; i++) {
++                final int procUid = procs.keyAt(i);
++                if (UserHandle.isApp(procUid) || !UserHandle.isSameUser(procUid, uid)) {
++                    // Don't use an app process or different user process for system component.
++                    continue;
++                }
++                return procs.valueAt(i);
+             }
+         }
+         ProcessRecord proc = mProcessNames.get(processName, uid);
+-- 
+2.7.4
+

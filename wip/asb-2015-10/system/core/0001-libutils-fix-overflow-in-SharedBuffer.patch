@@ -1,0 +1,160 @@
+From 62b0ab500bb42c6ea0282dd023f76a253520669c Mon Sep 17 00:00:00 2001
+From: Sergio Giro <sgiro@google.com>
+Date: Tue, 18 Aug 2015 17:36:50 +0100
+Subject: [PATCH 01/20] libutils: fix overflow in SharedBuffer
+
+See
+https://code.google.com/p/android/issues/detail?id=181910
+
+Bug: 22952485
+(cherry picked from commit 7987b83553804156aeca61b4c111c2b983c4c551)
+
+Change-Id: I3cac87185f209dc79678ae702aa18afbdf4190df
+---
+ libutils/Android.mk           | 13 ++++++++++
+ libutils/SharedBuffer.cpp     | 15 ++++++++++-
+ libutils/SharedBufferTest.cpp | 58 +++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 85 insertions(+), 1 deletion(-)
+ create mode 100644 libutils/SharedBufferTest.cpp
+
+diff --git a/libutils/Android.mk b/libutils/Android.mk
+index 720443e..039ac1b 100644
+--- a/libutils/Android.mk
++++ b/libutils/Android.mk
+@@ -138,6 +138,19 @@ include $(BUILD_SHARED_LIBRARY)
+ 
+ # Include subdirectory makefiles
+ # ============================================================
++include $(CLEAR_VARS)
++LOCAL_MODULE := SharedBufferTest
++LOCAL_STATIC_LIBRARIES := libutils libcutils
++LOCAL_SHARED_LIBRARIES := liblog
++LOCAL_SRC_FILES := SharedBufferTest.cpp
++include $(BUILD_NATIVE_TEST)
++
++include $(CLEAR_VARS)
++LOCAL_MODULE := SharedBufferTest
++LOCAL_STATIC_LIBRARIES := libutils libcutils
++LOCAL_SHARED_LIBRARIES := liblog
++LOCAL_SRC_FILES := SharedBufferTest.cpp
++include $(BUILD_HOST_NATIVE_TEST)
+ 
+ # If we're building with ONE_SHOT_MAKEFILE (mm, mmm), then what the framework
+ # team really wants is to build the stuff defined by this makefile.
+diff --git a/libutils/SharedBuffer.cpp b/libutils/SharedBuffer.cpp
+index 3555fb7..947551a 100644
+--- a/libutils/SharedBuffer.cpp
++++ b/libutils/SharedBuffer.cpp
+@@ -14,9 +14,12 @@
+  * limitations under the License.
+  */
+ 
++#define __STDC_LIMIT_MACROS
++#include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#include <log/log.h>
+ #include <utils/SharedBuffer.h>
+ #include <utils/Atomic.h>
+ 
+@@ -26,6 +29,11 @@ namespace android {
+ 
+ SharedBuffer* SharedBuffer::alloc(size_t size)
+ {
++    // Don't overflow if the combined size of the buffer / header is larger than
++    // size_max.
++    LOG_ALWAYS_FATAL_IF((size >= (SIZE_MAX - sizeof(SharedBuffer))),
++                        "Invalid buffer size %zu", size);
++
+     SharedBuffer* sb = static_cast<SharedBuffer *>(malloc(sizeof(SharedBuffer) + size));
+     if (sb) {
+         sb->mRefs = 1;
+@@ -52,7 +60,7 @@ SharedBuffer* SharedBuffer::edit() const
+         memcpy(sb->data(), data(), size());
+         release();
+     }
+-    return sb;    
++    return sb;
+ }
+ 
+ SharedBuffer* SharedBuffer::editResize(size_t newSize) const
+@@ -60,6 +68,11 @@ SharedBuffer* SharedBuffer::editResize(size_t newSize) const
+     if (onlyOwner()) {
+         SharedBuffer* buf = const_cast<SharedBuffer*>(this);
+         if (buf->mSize == newSize) return buf;
++        // Don't overflow if the combined size of the new buffer / header is larger than
++        // size_max.
++        LOG_ALWAYS_FATAL_IF((newSize >= (SIZE_MAX - sizeof(SharedBuffer))),
++                            "Invalid buffer size %zu", newSize);
++
+         buf = (SharedBuffer*)realloc(buf, sizeof(SharedBuffer) + newSize);
+         if (buf != NULL) {
+             buf->mSize = newSize;
+diff --git a/libutils/SharedBufferTest.cpp b/libutils/SharedBufferTest.cpp
+new file mode 100644
+index 0000000..d88fbf3
+--- /dev/null
++++ b/libutils/SharedBufferTest.cpp
+@@ -0,0 +1,58 @@
++/*
++ * Copyright (C) 2015 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#define __STDC_LIMIT_MACROS
++
++#include <utils/SharedBuffer.h>
++
++#include <gtest/gtest.h>
++
++#include <memory>
++#include <stdint.h>
++
++TEST(SharedBufferTest, TestAlloc) {
++  EXPECT_DEATH(android::SharedBuffer::alloc(SIZE_MAX), "");
++  EXPECT_DEATH(android::SharedBuffer::alloc(SIZE_MAX - sizeof(android::SharedBuffer)), "");
++
++  // Make sure we don't die here.
++  // Check that null is returned, as we are asking for the whole address space.
++  android::SharedBuffer* buf =
++      android::SharedBuffer::alloc(SIZE_MAX - sizeof(android::SharedBuffer) - 1);
++  ASSERT_TRUE(NULL == buf);
++
++  buf = android::SharedBuffer::alloc(0);
++  ASSERT_FALSE(NULL == buf);
++  ASSERT_EQ(0U, buf->size());
++  buf->release();
++}
++
++TEST(SharedBufferTest, TestEditResize) {
++  android::SharedBuffer* buf = android::SharedBuffer::alloc(10);
++  EXPECT_DEATH(buf->editResize(SIZE_MAX - sizeof(android::SharedBuffer)), "");
++  buf = android::SharedBuffer::alloc(10);
++  EXPECT_DEATH(buf->editResize(SIZE_MAX), "");
++
++  buf = android::SharedBuffer::alloc(10);
++  // Make sure we don't die here.
++  // Check that null is returned, as we are asking for the whole address space.
++  buf = buf->editResize(SIZE_MAX - sizeof(android::SharedBuffer) - 1);
++  ASSERT_TRUE(NULL == buf);
++
++  buf = android::SharedBuffer::alloc(10);
++  buf = buf->editResize(0);
++  ASSERT_EQ(0U, buf->size());
++  buf->release();
++}
+-- 
+2.7.4
+

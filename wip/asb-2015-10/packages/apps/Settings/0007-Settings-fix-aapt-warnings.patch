@@ -1,0 +1,1061 @@
+From 3223bfc23b9266c052fa6f75a508d54859b36abc Mon Sep 17 00:00:00 2001
+From: Andreas Blaesius <skate4life@gmx.de>
+Date: Sun, 15 Oct 2017 18:05:37 +0200
+Subject: [PATCH 7/8] Settings: fix aapt warnings
+
+- remove not existing strings from translations
+- follwoing strings are marked as translatable=false :
+    wifi_display_autonomous_go
+    wifi_display_certification_heading
+    wifi_display_listen_channel
+    wifi_display_listen_mode
+    wifi_display_operating_channel
+    wifi_display_pause
+    wifi_display_resume
+    wifi_display_session_info
+    wifi_display_wps_config
+
+Change-Id: Iacf657163fe5898fb32a31ee91cea6ce50b250bf
+---
+ res/values-az-rAZ/strings.xml | 29 -----------------------------
+ res/values-az/strings.xml     | 18 ------------------
+ res/values-et/strings.xml     | 18 ------------------
+ res/values-hy/strings.xml     | 18 ------------------
+ res/values-ka/strings.xml     | 18 ------------------
+ res/values-km/strings.xml     | 18 ------------------
+ res/values-lo/strings.xml     | 18 ------------------
+ res/values-mn/strings.xml     | 18 ------------------
+ res/values-ms/strings.xml     | 18 ------------------
+ res/values-ne-rNP/strings.xml | 29 -----------------------------
+ res/values-ne/strings.xml     | 18 ------------------
+ res/values-si-rLK/strings.xml | 29 -----------------------------
+ res/values-si/strings.xml     | 18 ------------------
+ 13 files changed, 267 deletions(-)
+
+diff --git a/res/values-az-rAZ/strings.xml b/res/values-az-rAZ/strings.xml
+index 78c447d..66a3c02 100644
+--- a/res/values-az-rAZ/strings.xml
++++ b/res/values-az-rAZ/strings.xml
+@@ -509,36 +509,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"Musiqi və media üçün"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"Ayarları yadda saxlayın"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"Simsiz ekran"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"Cihazları görmək üçün simsiz displeyi aktiv edin."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Wi-Fi sönülü olduğu üçün Simsiz displey deaktiv edilir."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"Displeyləri axtar"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"Axtarır..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"Yaxınlıqda simsiz bağlantı tapılmadı."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"Qoşalaşmış görüntülər"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"Əlçatımlı cihazlar"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"Qoşulur..."</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"Qoşulu"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"Mövcud"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"İstifadə olunur"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"Ayarları göstər"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"Ayrılsın?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"Sizin bununla bağlantınızı kəsəcək:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"Simsiz displey seçimləri"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"Unudun"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"Tamam"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"Ad"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"Açıq"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"Deaktiv"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"Deaktiv"</string>
+-    <string name="wifi_display_certification_heading" msgid="3125105883233765652">"Sertifikatlaşma"</string>
+-    <string name="wifi_display_session_info" msgid="4733627902691604836">"Sessiya məlumatı"</string>
+-    <string name="wifi_display_listen_mode" msgid="2962301785910874273">"Dinləmə rejimini aktivləşdirin"</string>
+-    <string name="wifi_display_autonomous_go" msgid="140864379216673466">"Avtonom GO aktivləşdirin"</string>
+-    <string name="wifi_display_pause" msgid="6037110530682927245">"Pauza"</string>
+-    <string name="wifi_display_resume" msgid="8195590160258469425">"Davam edin"</string>
+-    <string name="wifi_display_wps_config" msgid="7566565571340705772">"WPS konfiqurasiyası"</string>
+-    <string name="wifi_display_listen_channel" msgid="4146320990898147857">"Kanalı dinləyin"</string>
+-    <string name="wifi_display_operating_channel" msgid="233535284689144515">"Əməliyyat kanalı"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"Planşetin başqa cihaza toxunması zamanı data mübadiləsinə icazə verin"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"Telefon digər cihazla əlaqədə olduqda data mübadiləsinə icazə verin"</string>
+@@ -1006,7 +985,6 @@
+     <string name="location_mode_location_off_title" msgid="2829713015012529465">"Məkan deaktiv"</string>
+     <string name="location_category_recent_location_requests" msgid="1938721350424447421">"Son məkan sorğuları"</string>
+     <string name="location_no_recent_apps" msgid="2800907699722178041">"Son vaxtlar heç bir tətbiq tərəfindən məkan sorğusu olmayıb"</string>
+-    <string name="location_category_app_settings" msgid="46434611182743486">"Tətbiq ayarları"</string>
+     <string name="location_high_battery_use" msgid="517199943258508020">"Çox batareya istifadəsi"</string>
+     <string name="location_low_battery_use" msgid="8602232529541903596">"Az batareya istifadəsi"</string>
+     <string name="location_mode_screen_title" msgid="4528716772270246542">"Məkan rejimi"</string>
+@@ -1441,7 +1419,6 @@
+     <string name="print_menu_item_add_service" msgid="3811645167869797802">"Xidmət əlavə et"</string>
+     <string name="print_menu_item_add_printer" msgid="8251218970577291032">"Printer əlavə edin"</string>
+     <string name="print_menu_item_search" msgid="7025589328240514553">"Axtarış"</string>
+-    <string name="category_printers" msgid="4345417708283144981">"Printerlər"</string>
+     <string name="power_usage_summary_title" msgid="7190304207330319919">"Batareya"</string>
+     <string name="power_usage_summary" msgid="7237084831082848168">"Nə batareya işlədir"</string>
+     <string name="power_usage_not_available" msgid="3214000535532434353">"Batareya istifadə datası əlçatımlı deyil."</string>
+@@ -1523,7 +1500,6 @@
+     <string name="app_memory_use" msgid="7849258480392171939">"Yaddaş istifadəsi"</string>
+     <string name="process_stats_total_duration" msgid="663196332079061529">"<xliff:g id="TIME">%1$s</xliff:g> sonrası statistika"</string>
+     <string name="process_stats_memory_status" msgid="4251599550196193093">"Cari cihaz yaddaşı: <xliff:g id="MEMSTATE">%1$s</xliff:g>"</string>
+-    <string name="process_stats_ram_use" msgid="1271366870003042708">"Orta RAM istifadəsi"</string>
+     <string name="process_stats_run_time" msgid="6520628955709369115">"İşləmə müddəti"</string>
+     <string name="services_subtitle" msgid="4296402367067266425">"Xidmətlər"</string>
+     <string name="voice_input_output_settings" msgid="1336135218350444783">"Səs girişi və çıxışı"</string>
+@@ -1734,7 +1710,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"Əl vasitəsi ilə sinxronizasiya alınmır"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"Bu element üçün sinxronlaşma hazırda deaktiv edilibş Bu ayarı dəyişmək üçün müvəqqəti olaraq fon datasını və avtomatik sinxronlaşmanı aktivləşdirin."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G parametrləri"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G şəbəkə və modemi qurun və idarə edin"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC ünvanı"</string>
+     <string name="enter_password" msgid="4131758584074246224">"Yaddaşı deşifrə etmək üçün parol daxil edin"</string>
+     <string name="try_again" msgid="4272075051293936921">"Yenidən cəhd edin."</string>
+@@ -1795,8 +1770,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"Fon prosesi limiti"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"Bütün ANRları göstər"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"Arxa tətbiqlər dialoquna cavab verməyən tətbiqi göstər"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"Eksperimental VebGörüntü istifadə edin"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"Tətbiq ən yeni WebView istifadə edəcək"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"Data istifadəsi"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"Data istifadə dövrü"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"Data rominq"</string>
+@@ -1970,7 +1943,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"Dili dəyişin"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"Şriftin ölçüsünü dəyiş"</string>
+     <string name="nfc_payment_settings_title" msgid="1121386157283141856">"Ödənişlər"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"Hər zaman soruş"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"Tərcihiniz olsun?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"Məhdudiyyətlər"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"Məhdudiyyətləri silin"</string>
+@@ -1980,7 +1952,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"Məzmun üçün hesab"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"Foto ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"Şəbəkə yayımları"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"Görüntüləmək üçün təcili siqnal növlərini seçin."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"Tətbiq və kontent məhdudiyyətləri"</string>
+     <string name="user_rename" msgid="8523499513614655279">"ADI DƏYİŞDİRİN"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"Tətbiq məhdudiyyətləri təyin edin"</string>
+diff --git a/res/values-az/strings.xml b/res/values-az/strings.xml
+index 473ade0..f33f76b 100644
+--- a/res/values-az/strings.xml
++++ b/res/values-az/strings.xml
+@@ -511,27 +511,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"Musiqi və media üçün"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"Ayarları yadda saxlayın"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"Simsiz ekran"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"Cihazları görmək üçün simsiz displeyi aktiv edin."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Wi-Fi sönülü olduğu üçün Simsiz displey deaktiv edilir."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"Displeyləri axtar"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"Axtarır..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"Yaxınlıqda simsiz bağlantı tapılmadı."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"Qoşalaşmış görüntülər"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"Əlçatımlı cihazlar"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"Qoşulur..."</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"Qoşulu"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"Mövcud"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"İstifadə olunur"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"Ayarları göstər"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"Ayrılsın?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"Sizin bununla bağlantınızı kəsəcək:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"Simsiz displey seçimləri"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"Unudun"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"Tamam"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"Ad"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"Açıq"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"Deaktiv"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"Deaktiv"</string>
+     <!-- no translation found for wifi_display_certification_heading (3125105883233765652) -->
+     <skip />
+     <!-- no translation found for wifi_display_session_info (4733627902691604836) -->
+@@ -1442,7 +1430,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"Parametrlər"</string>
+     <string name="print_settings" msgid="4742428530112487843">"Çap"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"Çap ayarları"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"Xidmətlər"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"<xliff:g id="SERVICE">%1$s</xliff:g> xidmətindən istifadə edilsin?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g> çap etdiyiniz sənədləri qəbul edə bilər. Belə sənədlər konfidensial məlumatlardan ibarət ola bilər."</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"Heç bir xidmət quraşdırılmayıb"</string>
+@@ -1739,7 +1726,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"Əl vasitəsi ilə sinxronizasiya alınmır"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"Bu element üçün sinxronlaşma hazırda deaktiv edilibş Bu ayarı dəyişmək üçün müvəqqəti olaraq fon datasını və avtomatik sinxronlaşmanı aktivləşdirin."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G parametrləri"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G şəbəkə və modemi qurun və idarə edin"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC ünvanı"</string>
+     <string name="enter_password" msgid="4131758584074246224">"Yaddaşı deşifrə etmək üçün parol daxil edin"</string>
+     <string name="try_again" msgid="4272075051293936921">"Yenidən cəhd edin."</string>
+@@ -1800,8 +1786,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"Fon prosesi limiti"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"Bütün ANRları göstər"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"Arxa tətbiqlər dialoquna cavab verməyən tətbiqi göstər"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"Eksperimental VebGörüntü istifadə edin"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"Tətbiq ən yeni WebView istifadə edəcək"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"Data istifadəsi"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"Data istifadə dövrü"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"Data rominq"</string>
+@@ -1975,7 +1959,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"Dili dəyişin"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"Şriftin ölçüsünü dəyiş"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"Tıklayaraq Ödə"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"Hər zaman soruş"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"Tərcihiniz olsun?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"Məhdudiyyətlər"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"Məhdudiyyətləri silin"</string>
+@@ -1985,7 +1968,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"Məzmun üçün hesab"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"Foto ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"Şəbəkə yayımları"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"Görüntüləmək üçün təcili siqnal növlərini seçin."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"Tətbiq və kontent məhdudiyyətləri"</string>
+     <string name="user_rename" msgid="8523499513614655279">"ADI DƏYİŞDİRİN"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"Tətbiq məhdudiyyətləri təyin edin"</string>
+diff --git a/res/values-et/strings.xml b/res/values-et/strings.xml
+index 70734fa..716aa97 100644
+--- a/res/values-et/strings.xml
++++ b/res/values-et/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"Muusika ja meediumi jaoks"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"Jäta seaded meelde"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"Juhtmeta ekraaniühendus"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"Seadmete nägemiseks lülitage juhtmeta ekraaniühendus sisse."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Juhtmeta ekraaniühendus on keelatud, sest WiFi on välja lülitatud."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"Ekraanide otsimine"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"Otsimine …"</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"Ei leitud WiFi-ekraane."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"Seotud ekraanid"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"Saadaval seadmed"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"Ühendamine"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"Ühendatud"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"Saadaval"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"Kasutusel"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"Kuvaseaded"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"Kas katkestada ühendus?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"See lõpetab teie ühenduse seadmega:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"Juhtmeta ekraaniühenduse valikud"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"Unusta"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"Valmis"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"Nimi"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"Sees"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"Väljas"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"Keelatud"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"Lubab andmete vahetust, kui tahvelarvuti puudutab teist seadet"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"Lubab andmete vahetust, kui telefon puudutab teist seadet"</string>
+@@ -1419,7 +1407,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"Seaded"</string>
+     <string name="print_settings" msgid="4742428530112487843">"Printimine"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"Prindiseaded"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"Teenused"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"Kas soovite kasutada teenust <xliff:g id="SERVICE">%1$s</xliff:g>?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g> saab teie prinditavaid dokumente vastu võtta. Sellised dokumendid võivad sisaldada tundlikku teavet."</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"Ühtki teenust pole installitud"</string>
+@@ -1716,7 +1703,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"Ei saa käsitsi sünkroonida"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"Selle üksuse sünkroonimine on praegu keelatud. Seade muutmiseks lülitage ajutiselt sisse taustaandmed ja automaatne sünkroonimine."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G seaded"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"Seadistage ja hallake 4G võrku ning modemit"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC-aadress"</string>
+     <string name="enter_password" msgid="4131758584074246224">"Mälu dekrüpteerimiseks sisestage parool"</string>
+     <string name="try_again" msgid="4272075051293936921">"Proovige uuesti."</string>
+@@ -1777,8 +1763,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"Taustaprotsesside piir"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"Näita kõiki ANR-e"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"Kuva taustarakendustele dial. Rakendus ei reageeri"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"Kasuta katselist WebView\'d"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"Rakendused kasutavad uusimat (beetaversioonis) WebView\'d"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"Andmekasutus"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"Andmete kasutamistsükkel"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"Andmerändlus"</string>
+@@ -1952,7 +1936,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"Muuda keelt"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"Fondi suuruse muutmine"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"Puuduta ja maksa"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"Küsi iga kord"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"Kas määrata eelistuseks?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"Piirangud"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"Eemalda piirangud"</string>
+@@ -1962,7 +1945,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"Sisu konto"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"Foto ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"Kärjeteated"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"Valige kuvamiseks hädaolukorra märguannete tüübid."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"Rakenduste ja sisu piirangud"</string>
+     <string name="user_rename" msgid="8523499513614655279">"NIMETA ÜMBER"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"Rakendusele piirangute määramine"</string>
+diff --git a/res/values-hy/strings.xml b/res/values-hy/strings.xml
+index 83fea87..d1f7dec 100644
+--- a/res/values-hy/strings.xml
++++ b/res/values-hy/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"Երաժշտության և մեդիայի համար"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"Հիշել կարգավորումները"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"Անլար էկրան"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"Սարքերը տեսնելու համար միացրեք անլար էկրանը:"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Անլար ցուցադրումը կասեցված է, քանի որ Wi‑Fi-ը անջատված է:"</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"Որոնել ցուցադրումներ"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"Որոնում..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"Մոտակայքում անլար ցուցադրիչներ չեն գտնվել:"</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"Զուգավորված ցուցադրիչներ"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"Հասանելի սարքեր"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"Միանում է"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"Միացված է"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"Հասանելի"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"Արդեն օգտագործվում է"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"Ցուցադրել կարգավորումները"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"Անջատե՞լ:"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"Սա կավարտի կապը &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;-ի հետ"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"Անլար ցուցադրվող ընտրանքներ"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"Մոռանալ"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"Կատարված է"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"Անուն"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"Միացված"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"Անջատել"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"Անջատված է"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"Թույլատրել տվյալների փոխանակումը, երբ գրասալիկը հպում է այլ սարքի"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"Թույլատրել տվյալների փոխանակումը, երբ հեռախոսը հպում է մեկ այլ սարքի"</string>
+@@ -1418,7 +1406,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"Կարգավորումներ"</string>
+     <string name="print_settings" msgid="4742428530112487843">"Տպում"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"Տպման կարգավորումներ"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"Ծառայություններ"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"Օգտագործե՞լ <xliff:g id="SERVICE">%1$s</xliff:g>-ը:"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g>-ը կարող է ստանալ ձեր տպած փաստաթղթերը: Այդ փաստաթղթերը հնարավոր է՝ պարունակեն գաղտնի տվյալներ:"</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"Տեղադրված ծառայաթյուններ չկան"</string>
+@@ -1715,7 +1702,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"Հնարավոր չէ ձեռքով համաժամեցնել"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"Համաժամեցումը այս տարրի համար այժմ անջատված է: Այս կարգավորումը փոխելու համար ժամանակավորապես միացրեք հետնաշերտի տվյալները և ինքնահամաժամեցումը:"</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G կարգավորումներ"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"Կարգավորել &amp; կառավարել 4G ցանցը և մոդեմը"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC հասցե"</string>
+     <string name="enter_password" msgid="4131758584074246224">"Մուտքագրեք գաղտնաբառը՝ պահոցը ապակոդավելու համար"</string>
+     <string name="try_again" msgid="4272075051293936921">"Կրկին փորձեք:"</string>
+@@ -1776,8 +1762,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"Հետնաշերտի գործընթացի սահմանաչափ"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"Ցույց տալ բոլոր ANR-երը"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"Ցուցադրել այն ծրագիրը, որը չի արձագանքում երկխոսությունը հետնաշերտի ծրագրերի համար"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"Օգտագործել փորձնական WebView"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"Հավելվածները կօգտագործեն նորագույն (Բետա) WebView"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"Տվյալների օգտագործում"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"Տվյալների օգտագործման աշխատաշրջան"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"Տվյալների ռոումինգ"</string>
+@@ -1951,7 +1935,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"Փոխել լեզուն"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"Փոխել տառաչափը"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"Հպել և վճարել"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"Հարցնել ամեն անգամ"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"Սահմանե՞լ որպես նախընտրանք"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"Սահմանափակումներ"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"Հանել սահմանափակումները"</string>
+@@ -1961,7 +1944,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"Հաշիվ բովանդակության համար"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"Լուսանկար ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"Բջջային հեռարձակումներ"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"Ընտրել արտակարգ իրավիճակների զանգերի ցուցադրման տեսակները:"</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"Ծրագրի և բովանդակության սահմանափակումներ"</string>
+     <string name="user_rename" msgid="8523499513614655279">"Վերանվանել"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"Սահմանել ծրագրային սահմանափակումներ"</string>
+diff --git a/res/values-ka/strings.xml b/res/values-ka/strings.xml
+index 6708f4e..b28a975 100644
+--- a/res/values-ka/strings.xml
++++ b/res/values-ka/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"მუსიკისა და მულტიმედიისათვის"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"პარამეტრების დამახსოვრება"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"უსადენო ეკრანი"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"მოწყობილობის სანახავად ჩართეთ უკაბელო ეკრანი."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"უსადენო ეკრანი გამორთულია, რადგან გათიშულია Wi-Fi."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"ეკრანების ძიება"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"ძებნა…"</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"ახლომახლო უსადენო ეკრანები ვერ მოიძებნა."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"დაწყვილებული ინტერფეისები"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"ხელმისაწვდომი მოწყობილობები"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"მიმდინარეობს დაკავშირება"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"დაკავშირებულია"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"ხელმისაწვდომი"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"გამოიყენება"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"ეკრანის პარამეტრები"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"გავწყვიტო კავშირი?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"ეს დაასრულებს თქვენს კავშირს :&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>-თან&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"უსადენო ინტერფეისის პარამეტრები"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"დავიწყება"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"დასრულდა"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"სახელი"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"ჩართული"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"გამორთულია"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"გამორთული"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"ტაბლეტის სხვა მოწყობილობასთან შეხებისას მონაცემთა გაცვლის საშუალება"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"მონაცემთა გაცვლის უფლების მიცემა ტელეფონის სხვა მოწყობილობასთან შეხებისას"</string>
+@@ -1419,7 +1407,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"პარამეტრები"</string>
+     <string name="print_settings" msgid="4742428530112487843">"ბეჭდვა"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"ბეჭდვის პარამეტრები"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"სერვისები"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"გსურთ <xliff:g id="SERVICE">%1$s</xliff:g>-ის გამოყენება?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g>-ს შეუძლია თქვენ მიერ დაბეჭდილი დოკუმენტების მიღება. ამგვარი დოკუმენტები შესაძლოა სენსიტიურ მონაცემებს შეიცავდეს."</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"სერვისები დაყენებული არ არის"</string>
+@@ -1716,7 +1703,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"შეუძლებელია ერთობლივი სინქრონიზაცია"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"სინქრონიზაცია გამორთულია. პარამეტრების შესაცვლელად დროებით ჩართეთ მონაცემების ფონური და ავტომატური სინქრონიზაცია."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G პარამეტრები"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G ქსელისა და მოდემის პარამეტრების დაყენება და მართვა"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC მისამართი"</string>
+     <string name="enter_password" msgid="4131758584074246224">"საცავის გასაშიფრად აკრიფეთ პაროლი"</string>
+     <string name="try_again" msgid="4272075051293936921">"სცადეთ ხელახლა."</string>
+@@ -1777,8 +1763,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"ფონური პროცესების ლიმიტი"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"ყველა ANR-ის ჩვენება"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"შეტყობინების ჩვენება, როცა ფონური აპლიკაცია არ პასუხობს"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"ექსპერიმენტული WebView-ს გამოყენება"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"აპები გამოიყენებს უახლეს (ბეტა) WebView-ს"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"მონაცემთა გადაცემის მოხმარება"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"მონაცემების გამოყენების ციკლი"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"ინტერნეტ როუმინგი"</string>
+@@ -1952,7 +1936,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"ენის შეცვლა"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"შრიფტის ზომის შეცვლა"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"შეეხეთ და გადაიხადეთ"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"მკითხე ყოველ ჯერზე"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"დაყენდეს, როგორც უპირატესი?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"შეზღუდვები"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"შეზღუდვების მოშორება"</string>
+@@ -1962,7 +1945,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"ანგარიში კონტენტისთვის"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"ფოტოს ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"მობილური ოპერატორები"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"გადაუდებელი გაფრთხილებების ტიპების არჩევა საჩვენებლად."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"აპლიკაციისა და კონტენტის შეზღუდვები"</string>
+     <string name="user_rename" msgid="8523499513614655279">"გადარქმევა"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"აპის შეზღუდვების დაყენება"</string>
+diff --git a/res/values-km/strings.xml b/res/values-km/strings.xml
+index c1cfc71..5d4597d 100644
+--- a/res/values-km/strings.xml
++++ b/res/values-km/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"សម្រាប់​តន្ត្រី និង​មេឌៀ"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"ចងចាំ​ការ​កំណត់"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"ការ​បង្ហាញ​ឥត​ខ្សែ"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"ដើម្បី​មើល​ឧបករណ៍ បើក​ការ​បង្ហាញ​បណ្ដាញ​ឥត​ខ្សែ។"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"បាន​បិទ​ការ​បង្ហាញ​បណ្ដាញ​ឥត​ខ្សែ ព្រោះ​បាន​បិទ​វ៉ាយហ្វាយ។"</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"ស្វែងរក​ការ​បង្ហាញ"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"កំពុង​​ស្វែងរក..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"រក​មិន​ឃើញ​ការ​បង្ហាញ​បណ្ដាញ​ឥត​ខ្សែ​នៅ​ជិត​នេះ​ទេ"</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"បង្ហាញ​ឧបករណ៍​បាន​ផ្គូផ្គង"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"ឧបករណ៍​អាច​ប្រើ​បាន"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"តភ្ជាប់"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"បាន​តភ្ជាប់"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"អាច​​ប្រើ​បាន"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"កំពុង​ប្រើ"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"កំណត់​ការ​បង្ហាញ"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"ផ្ដាច់?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"វា​នឹង​បញ្ចប់​ការ​តភ្ជាប់​របស់​អ្នក​​ជា​មួយ៖&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"ជម្រើស​បង្ហាញ​បណ្ដាញ​ឥតខ្សែ"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"ភ្លេច"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"រួចរាល់"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"ឈ្មោះ"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"បើក"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"បិទ"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"បិទ"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"ឲ្យ​ប្ដូរ​ទិន្នន័យ​ ពេល​កុំព្យូទ័រ​បន្ទះ​ប៉ះ​ឧបករណ៍​ផ្សេង"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"ឲ្យ​ប្ដូរ​ទិន្នន័យ​ពេល​ទូរស័ព្ទ​ប៉ះ​ឧបករណ៍​ផ្សេង"</string>
+@@ -1419,7 +1407,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"ការ​កំណត់"</string>
+     <string name="print_settings" msgid="4742428530112487843">"ការ​បោះពុម្ព"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"ការ​កំណត់​បោះពុម្ព"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"សេវាកម្ម"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"ប្រើ <xliff:g id="SERVICE">%1$s</xliff:g>?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g> អាច​ទទួល​ឯកសារ​ដែល​អ្នក​បោះពុម្ព។ ឯកសារ​បែប​នេះ​អាច​មាន​ទិន្នន័យ​ច្បាស់លាស់។"</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"គ្មាន​សេវាកម្ម​បាន​ដំឡើង"</string>
+@@ -1716,7 +1703,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"មិន​អាច​ធ្វើ​សម​កាល​កម្ម​ដោយ​ដៃ"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"បច្ចុប្បន្ន​បាន​បិទ​ការ​ធ្វើ​សម​កាល​កម្ម​សម្រាប់​​ធាតុ​នេះ។ ដើម្បី​ប្ដូរ​ការ​កំណត់​នេះ បើក​ទិន្នន័យ​​ផ្ទៃ​ខាង​ក្រោយ និង​ធ្វើ​សម​កាល​កម្ម​​ស្វ័យ​ប្រវត្តិ​ជា​បណ្ដោះអាសន្ន។"</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"ការកំណត់ 4G"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"រៀបចំ &amp; គ្រប់គ្រង​បណ្ដាញ 4G និង​ម៉ូដឹម"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"អាសយដ្ឋាន 4G MAC"</string>
+     <string name="enter_password" msgid="4131758584074246224">"បញ្ចូល​ពាក្យ​សម្ងាត់ ដើម្បី​ដោះ​លេខ​កូដ​ឧបករណ៍​ផ្ទុក"</string>
+     <string name="try_again" msgid="4272075051293936921">"ព្យាយាម​ម្ដង​ទៀត។"</string>
+@@ -1777,8 +1763,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"ដែន​កំណត់​ដំណើរការ​ក្នុង​ផ្ទៃ​ខាង​ក្រោយ"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"បង្ហាញ ANRs ទាំងអស់"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"បង្ហាញ​ប្រអប់​កម្មវិធី​មិន​ឆ្លើយតប​សម្រាប់​កម្មវិធី​ផ្ទៃ​ខាង​ក្រោយ"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"ប្រើ WebView ពិសោធន៍"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"កម្មវិធី​នឹង​ប្រើ​​ WebView (beta) ថ្មី​បំផុត"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"ការ​ប្រើ​ទិន្នន័យ"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"ខួប​​ប្រើ​ទិន្នន័យ"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"ការ​រ៉ូមីង​ទិន្នន័យ"</string>
+@@ -1952,7 +1936,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"ប្ដូរ​ភាសា"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"ប្ដូរ​ទំហំ​ពុម្ពអក្សរ"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"ប៉ះ និង​ចាក់"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"សួរ​រាល់​ពេល"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"កំណត់​ជា​ចំណូលចិត្ត​របស់​អ្នក?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"ការ​ដាក់​កម្រិត"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"យក​ការ​ដាក់កម្រិត​ចេញ"</string>
+@@ -1962,7 +1945,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"គណនី​សម្រាប់​មាតិកា"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"លេខ​សម្គាល់​រូបថត"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"ការ​ផ្សាយ​ចល័ត"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"ជ្រើស​ប្រភេទ​ការ​ជូន​ដំណឹង​ពេល​អាសន្ន​ត្រូវ​បង្ហាញ"</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"ការ​ដាក់​កម្រិត​កម្មវិធី និង​មាតិកា"</string>
+     <string name="user_rename" msgid="8523499513614655279">"ប្ដូរ​ឈ្មោះ"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"កំណត់​ការ​ដាក់កម្រិត​កម្មវិធី"</string>
+diff --git a/res/values-lo/strings.xml b/res/values-lo/strings.xml
+index bdb74de..9cc8e34 100644
+--- a/res/values-lo/strings.xml
++++ b/res/values-lo/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"ສຳລັບເພງ ແລະສື່"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"ຈື່ການຕັ້ງຄ່າ"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"ການສະແດງຜົນໄຮ້ສາຍ"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"ເພື່ອເບິ່ງລາຍຊື່ອຸປະກອນ, ໃຫ້ເປີດການສະແດງຜົນໄຮ້ສາຍ."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"ການສະແດງຜົນໄຮ້ສາຍຖືກປິດເນື່ອງຈາກ Wi-Fi ບໍ່ໄດ້ເປີດ."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"ຊອກຫາການສະແດງຜົນ"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"ກຳລັງຊອກຫາ..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"ບໍ່ພົບເຄືອຂ່າຍໄຮ້ສາຍໃນບໍລິເວນໃກ້ຄຽງ."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"ຈໍສະແດງຜົນທີ່ຈັບຄູ່ກັນ"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"ອຸປະກອນທີ່ສາມາດໃຊ້ໄດ້"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"ກຳລັງເຊື່ອມຕໍ່"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"ເຊື່ອມ​ຕໍ່ແລ້ວ"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"ສາມາດໃຊ້ໄດ້"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"ກຳລັງນຳໃຊ້"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"ການຕັ້ງຄ່າສະແດງຜົນ"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"ຕັດການເຊື່ອມຕໍ່?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"ນີ້ຈະເປັນການສິ້ນສຸດການເຊື່ອມຕໍ່ກັບ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"ໂຕເລືອກການສະແດງຜົນໄຮ້ສາຍ"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"ລືມເຄືອຂ່າຍນີ້"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"ແລ້ວໆ"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"ຊື່"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"ເປີດ"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"ປິດ"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"ປິດການນຳໃຊ້"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"ອະນຸຍາດໃຫ້ແລກປ່ຽນຂໍ້ມູນເມື່ອນຳແທັບເລັດ ໄປແຕະໃສ່ອຸປະກອນອື່ນ"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"ອະນຸຍາດໃຫ້ມີການແລກປ່ຽນຂໍ້ມູນເມື່ອ ໂທລະສັບແຕະກັບອຸປະກອນອື່ນ"</string>
+@@ -1419,7 +1407,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"ການຕັ້ງຄ່າ"</string>
+     <string name="print_settings" msgid="4742428530112487843">"ການ​ພິມ"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"ຕັ້ງຄ່າການ​ພິມ"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"ບໍລິການ"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"ໃຊ້ <xliff:g id="SERVICE">%1$s</xliff:g>?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g> ສາ​ມາດ​ຮັບ​ເອ​ກະ​ສານ​ທີ່​ທ່ານ​ພິມ​. ເອ​ກະ​ສານ​ດັ່ງ​ກ່າວ​ອາດ​ຈະ​ບັນ​ຈຸ​ຂໍ້​ມູນ​ທີ່​ລະ​ອຽດ​ອ່ອນ​."</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"ບໍ່ມີບໍລິການຖືກຕິດຕັ້ງເທື່ອ"</string>
+@@ -1716,7 +1703,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"ບໍ່ສາມາດຊິ້ງຂໍ້ມູນເອງໄດ້"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"ການຊິ້ງຂໍ້ມູນຂອງລາຍການນີ້ຖືກປິດຢູ່. ເພື່ອປ່ຽນການຕັ້ງຄ່ານີ້, ໃຫ້ເປິດການນຳໃຊ້ຂໍ້ມູນພື້ນຫຼັງ ແລະການຊິ້ງຂໍ້ມູນອັດຕະໂນມັດຊົ່ວຄາວ."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"ຕັ້ງຄ່າ 4G"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"ຕັ້ງຄ່າ &amp; ຈັດການເຄືອຂ່າຍ ແລະໂມເດັມ 4G"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC address"</string>
+     <string name="enter_password" msgid="4131758584074246224">"ພິມລະຫັດຜ່ານເພື່ອຖອດລະຫັດບ່ອນຈັດເກັບຂໍ້ມູນ"</string>
+     <string name="try_again" msgid="4272075051293936921">"ລອງໃໝ່ອີກຄັ້ງ."</string>
+@@ -1777,8 +1763,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"ການຈຳກັດໂປຣເຊສໃນພື້ນຫຼັງ"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"ສະ​ແດງ ANRs ທັງ​ຫມົດ"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"ສະແດງໜ້າຈໍແອັບຯທີ່ບໍ່ຕອບສະໜອງສຳລັບແອັບຯພື້ນຫຼັງ"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"ໃຊ້ WebView ຮຸ່ນທົດລອງ"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"ແອັບຯຕ່າງໆຈະໃຊ້ WebView ໂຕໃໝ່ຫຼ້າສຸດ (beta)"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"ການນຳໃຊ້ຂໍ້ມູນ"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"ຮອບການໃຊ້ຂໍ້ມູນ"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"ການໂຣມມິງຂໍ້ມູນ"</string>
+@@ -1952,7 +1936,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"ປ່ຽນພາສາ"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"ປ່ຽນຂະໜາດໂຕອັກສອນ"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"ແຕະແລະຈ່າຍ"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"ຖາມທຸກຄັ້ງ"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"ກຳນົດເປັນຄ່າທີ່ທ່ານຕ້ອງການ?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"ການ​ຈໍາ​ກັດ"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"ລຶບການຈຳກັດ"</string>
+@@ -1962,7 +1945,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"ບັນຊີສຳລັບເນື້ອຫາ"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"ຮູບປະຈຳໂຕ"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"ການກະຈາຍສັນຍານໂທລະສັບ"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"ເລືອກປະເພດການແຈ້ງເຕືອນສຸກເສີນເພື່ອສະແດງ."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"ການຈຳກັດແອັບພລິເຄຊັນ ແລະ ເນື້ອຫາ"</string>
+     <string name="user_rename" msgid="8523499513614655279">"ປ່ຽນຊື່"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"ກໍາ​ນົດ​ຂໍ້​ຈໍາ​ກັດແອັບຯ"</string>
+diff --git a/res/values-mn/strings.xml b/res/values-mn/strings.xml
+index 1a847e2..bec19fa 100644
+--- a/res/values-mn/strings.xml
++++ b/res/values-mn/strings.xml
+@@ -511,27 +511,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"Хөгжим болон медианд зориулсан"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"Тохиргоог сануулах"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"Утасгүй дэлгэц"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"Төхөөрөмжүүдийг харахын тулд утасгүй дэлгэцийг асаана уу."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Wi-Fi хаалттай байгаа учир утасгүй дэлгэцийг идэвхгүйжүүлсэн."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"Дэлгэц хайх"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"Хайж байна..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"Ойролцоо утасгүй дэлгэц олдсонгүй."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"Хослуулсан дэлгэцүүд"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"Боломжит төхөөрөмжүүд"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"Холбогдож байна"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"Холбогдсон"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"Боломжтой"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"Ашиглаж байгаа"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"Дэлгэцийн тохиргоо"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"Салгах уу?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"Энэ таныг дараах холболтоос салгах болно:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"Утасгүй дэлгэцний тохируулга"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"Мартах"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"Дууссан"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"Нэр"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"Идэвхтэй"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"Идэвхгүй"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"Идэвхгүйжүүлсэн"</string>
+     <!-- no translation found for wifi_display_certification_heading (3125105883233765652) -->
+     <skip />
+     <!-- no translation found for wifi_display_session_info (4733627902691604836) -->
+@@ -1442,7 +1430,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"Тохиргоо"</string>
+     <string name="print_settings" msgid="4742428530112487843">"Хэвлэлт"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"Хэвлэлтийн тохиргоо"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"Үйлчилгээнүүд"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"<xliff:g id="SERVICE">%1$s</xliff:g>-г ашиглах уу?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g> таны хэвлэх документуудыг хүлээн авч чадна. Тийм документуудад нууц дата агуулагдаж байж болзошгүй."</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"Үйлчилгээ суулгагдаагүй байна"</string>
+@@ -1739,7 +1726,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"Гараар синк хийх боломжгүй"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"Энэ зүйлийн синкийг одоогоор идэвхгүйжүүлсэн байна. Тохиргоог өөрчлөхийн тулд далд дата болон автомат синкийг түр идэвхжүүлнэ үү."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G тохиргоо"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G сүлжээ болон модемыг тохируулах &amp; удирдах"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC хаяг"</string>
+     <string name="enter_password" msgid="4131758584074246224">"Сангийн шифрийг тайлахын тулд нууц үг бичнэ үү"</string>
+     <string name="try_again" msgid="4272075051293936921">"Дахин оролдно уу."</string>
+@@ -1800,8 +1786,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"Далд процессын хязгаар"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"Бүх ANRs харуулах"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"Далд апп-уудад Апп Хариу Өгөхгүй байна гэснийг харуулах"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"Туршилтын ВэбХарах-г ашиглах"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"Апп-ууд хамгийн шинэхэн (туршилтын) WebView-г ашиглах болно"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"Дата ашиглалт"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"Дата ашиглалтын цикль"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"Дата роуминг"</string>
+@@ -1975,7 +1959,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"Хэл солих"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"Фонтын хэмжээг өөрчлөх"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"Товшоод төлөөрэй"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"Тухай бүрт асуух"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"Таны тохируулга болгох уу?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"Хязгаарлалтууд"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"Хязгаарлалтыг арилгах"</string>
+@@ -1985,7 +1968,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"Контентын акаунт"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"Зургийн ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"Үүрэн нэвтрүүлэг"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"Харуулах яаралтай сэрэмжлүүлгийн төрлийг сонгоно уу."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"Аппликешн болон контентын хязгаарлалт"</string>
+     <string name="user_rename" msgid="8523499513614655279">"НЭР ӨӨРЧЛӨХ"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"Апп хязгаарлалт тохируулах"</string>
+diff --git a/res/values-ms/strings.xml b/res/values-ms/strings.xml
+index 1ad36c9..5789182 100644
+--- a/res/values-ms/strings.xml
++++ b/res/values-ms/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"Untuk muzik dan media"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"Ingat tetapan"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"Paparan wayarles"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"Untuk melihat peranti, hidupkan paparan wayarles."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Paparan wayarles dilumpuhkan kerana Wi-Fi dimatikan."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"Carian untuk paparan"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"Mencari..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"Tiada paparan wayarles berhampiran ditemui."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"Paparan berpasangan"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"Peranti tersedia"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"Menyambung"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"Bersambung"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"Tersedia"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"Sedang digunakan"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"Tetapan paparan"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"Putuskan sambungan WiFi?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"Ini akan menamatkan sambungan anda dengan:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"Pilihan paparan wayarles"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"Lupakan"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"Selesai"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"Nama"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"Hidup"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"Matikan"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"Dilumpuhkan"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"Benarkan pertukaran data apabila tablet menyentuh peranti lain"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"Benarkan pertukaran data apabila telefon menyentuh peranti lain"</string>
+@@ -1419,7 +1407,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"Tetapan"</string>
+     <string name="print_settings" msgid="4742428530112487843">"Pencetakan"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"Tetapan pencetakan"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"Perkhidmatan"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"Gunakan <xliff:g id="SERVICE">%1$s</xliff:g>?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g> boleh menerima dokumen yang anda cetak. Dokumen seperti itu mungkin mengandungi data sensitif."</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"Tiada perkhidmatan dipasangkan"</string>
+@@ -1716,7 +1703,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"Tidak boleh menyegerakkan secara manual"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"Penyegerakan untuk item ini dilumpuhkan pada masa ini. Untuk menukar tetapan ini, hidupkan data latar belakang dan penyegerakan automatik buat sementara waktu."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"Tetapan 4G"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"Menetapkan &amp; menguruskan rangkaian dan modem 4G"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"Alamat MAC 4G"</string>
+     <string name="enter_password" msgid="4131758584074246224">"Taip kata laluan untuk menyahsulit storan"</string>
+     <string name="try_again" msgid="4272075051293936921">"Cuba lagi."</string>
+@@ -1777,8 +1763,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"Had proses latar belakang"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"Tunjukkan semua ANR"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"Tunjukkan dialog Aplikasi Tidak Memberi Maklum Balas untuk aplikasi latar belakang"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"Gunakn WebView Eksperimen"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"Apl akan menggunakan WebView (beta) terbaharu"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"Penggunaan data"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"Kitaran penggunaan data"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"Perayauan data"</string>
+@@ -1952,7 +1936,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"Tukar bahasa"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"Tukar saiz fon"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"Ketik dan Bayar"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"Tanya setiap kali"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"Jadikan sebagai pilihan anda?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"Sekatan"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"Alih keluar sekatan"</string>
+@@ -1962,7 +1945,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"Akaun untuk kandungan"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"ID Berfoto"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"Siaran sel"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"Pilih jenis amaran kecemasan untuk dipaparkan."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"Sekatan aplikasi dan kandungan"</string>
+     <string name="user_rename" msgid="8523499513614655279">"NAMAKAN SEMULA"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"Tetapkan sekatan apl"</string>
+diff --git a/res/values-ne-rNP/strings.xml b/res/values-ne-rNP/strings.xml
+index 923762a..502618a 100644
+--- a/res/values-ne-rNP/strings.xml
++++ b/res/values-ne-rNP/strings.xml
+@@ -509,36 +509,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"संगीत र मिडियाका लागि"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"सेटिङहरू सम्झनुहोस्"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"ताररहित प्रदर्शन"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"उपकरणहरू हेर्न ताररहित प्रदर्शन सक्रिय पार्नुहोस्।"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"ताररहित प्रदर्शन असक्षम पारिएको छ किनकि वाइ-फाइ बन्द छ।"</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"प्रदर्शनहरूको खोजी गर्नुहोस्"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"खोजी कार्य गर्दै..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"कुनै पनि ताररहित प्रदर्शनहरू नजिकमा पाइएनन्।"</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"जोडी भएका प्रदर्शनहरू"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"उपलब्ध उपकरणहरू"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"जडान हुँदै"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"जडान गरिएको"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"उपलब्ध"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"प्रयोगमा छ"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"सेटिङहरू प्रदर्शन गर्नुहोस्"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"जडान टुटाउने हो?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"&lt;br&gt; &lt;b&gt;: यसले<xliff:g id="DEVICE_NAME">%1$s</xliff:g>सँगको जडान सामप्त गर्दछ। &lt;/ b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"ताररहित प्रदर्शन विकल्पहरू"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"बिर्सनुहोस्"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"सम्पन्न भयो"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"नाम"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"खुल्ला"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"बन्द"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"असक्षम पारियो"</string>
+-    <string name="wifi_display_certification_heading" msgid="3125105883233765652">"प्रमाणीकरण"</string>
+-    <string name="wifi_display_session_info" msgid="4733627902691604836">"सत्रको जानकारी"</string>
+-    <string name="wifi_display_listen_mode" msgid="2962301785910874273">"सुन्ने मोड सक्षक पार्नुहोस्"</string>
+-    <string name="wifi_display_autonomous_go" msgid="140864379216673466">"स्वतन्त्र GO सक्षम पार्नुहोस्"</string>
+-    <string name="wifi_display_pause" msgid="6037110530682927245">"रोक्नुहोस्"</string>
+-    <string name="wifi_display_resume" msgid="8195590160258469425">"पुनःसुरु गर्नुहोस्"</string>
+-    <string name="wifi_display_wps_config" msgid="7566565571340705772">"WPS कन्फिगरेसन"</string>
+-    <string name="wifi_display_listen_channel" msgid="4146320990898147857">"च्यानल सुन्नुहोस्"</string>
+-    <string name="wifi_display_operating_channel" msgid="233535284689144515">"च्यानल संचलान हुँदै"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"ट्याब्लेटले कुनै अन्य उपकरणलाई छुँदा डेटा विनिमयको अनुमति दिनुहोस्।"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"फोनले अर्को उपकरणलाई छुँदा डेटा विनिमयलाई अनुमति दिनुहोस्"</string>
+@@ -1007,7 +986,6 @@
+     <string name="location_mode_location_off_title" msgid="2829713015012529465">"स्थान बन्द छ"</string>
+     <string name="location_category_recent_location_requests" msgid="1938721350424447421">"हालका स्थान अनुरोधहरू"</string>
+     <string name="location_no_recent_apps" msgid="2800907699722178041">"हाल कुनै पनि अनुप्रयोगहरूले स्थान अनुरोध गरिएका छैनन्"</string>
+-    <string name="location_category_app_settings" msgid="46434611182743486">"अनुप्रयोग सेटिङहरू"</string>
+     <string name="location_high_battery_use" msgid="517199943258508020">"उच्च ब्याट्री प्रयोग"</string>
+     <string name="location_low_battery_use" msgid="8602232529541903596">"कम ब्याट्री प्रयोग"</string>
+     <string name="location_mode_screen_title" msgid="4528716772270246542">"स्थान मोड"</string>
+@@ -1442,7 +1420,6 @@
+     <string name="print_menu_item_add_service" msgid="3811645167869797802">"सेवा थप्नुहोस्"</string>
+     <string name="print_menu_item_add_printer" msgid="8251218970577291032">"प्रिन्टर थप्नुहोस्"</string>
+     <string name="print_menu_item_search" msgid="7025589328240514553">"खोज्नुहोस्"</string>
+-    <string name="category_printers" msgid="4345417708283144981">"प्रिन्टरहरू"</string>
+     <string name="power_usage_summary_title" msgid="7190304207330319919">"ब्याट्रि"</string>
+     <string name="power_usage_summary" msgid="7237084831082848168">"ब्याट्रि केले प्रयोग गरिरहेको छ"</string>
+     <string name="power_usage_not_available" msgid="3214000535532434353">"ब्याट्रि प्रयोग डेटा उपलब्ध छैन।"</string>
+@@ -1524,7 +1501,6 @@
+     <string name="app_memory_use" msgid="7849258480392171939">"मेमोरी प्रयोग"</string>
+     <string name="process_stats_total_duration" msgid="663196332079061529">"<xliff:g id="TIME">%1$s</xliff:g> अवधिको तथ्याङ्क"</string>
+     <string name="process_stats_memory_status" msgid="4251599550196193093">"उपकरण स्मृति वर्तमान <xliff:g id="MEMSTATE">%1$s</xliff:g> मा छ"</string>
+-    <string name="process_stats_ram_use" msgid="1271366870003042708">"औसत RAM उपयोग"</string>
+     <string name="process_stats_run_time" msgid="6520628955709369115">"चालु समय"</string>
+     <string name="services_subtitle" msgid="4296402367067266425">"सेवाहरू"</string>
+     <string name="voice_input_output_settings" msgid="1336135218350444783">"आवाज इनपुट र आउटपुट"</string>
+@@ -1735,7 +1711,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"आफैँ सिङ्क गर्न सकेन।"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"हालका लागि यस वस्तुको सिङ्क असक्षम पारिएको छ। यस सेटिङलाई परिवर्तन गर्न अस्थायी रूपमा पृष्ठभूमि डेटा र स्वचालित सिङ्क सक्रिय पार्नुहोस्।"</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G सेटिङहरू"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G नेटवर्क र मोडेम सेटअप र प्रबन्ध गर्नुहोस्"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC ठेगाना"</string>
+     <string name="enter_password" msgid="4131758584074246224">"भण्डारण डिक्रिप्ट गर्न पासवर्ड टाइप गर्नुहोस्"</string>
+     <string name="try_again" msgid="4272075051293936921">"फेरि प्रयोग गर्नुहोस्।"</string>
+@@ -1796,8 +1771,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"पृष्ठभूमि प्रक्रिया सीमा"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"सबै ANRs देखाउनुहोस्"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"पृष्ठभूमि अनुप्रयोगका लागि जवाफ नदिइरहेका अनुप्रयोगहरू देखाउनुहोस्"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"प्रायोगात्मक WebView प्रयोग गर्नुहोस्"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"अनुप्रयोगहरूले नयाँ (बेटा) वेबभ्युको उपयोग गर्छन्"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"डेटा प्रयोग"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"डेटा प्रयोग चक्र"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"डेटा रोमिङ"</string>
+@@ -1971,7 +1944,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"भाषा परिवर्तन गर्नुहोस्"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"फन्ट साइज परिवर्तन गर्नुहोस्"</string>
+     <string name="nfc_payment_settings_title" msgid="1121386157283141856">"भुक्तानी"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"प्रत्येक चोटि सोध्नुहोस्"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"तपाईँको प्राथमिकताको रूपमा सेट गर्ने हो?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"प्रतिबन्धहरू"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"प्रतिबन्धहरू हटाउनुहोस्"</string>
+@@ -1981,7 +1953,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"सामग्रीको लागि खाता"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"फोटो ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"सेल प्रसारणहरू"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"प्रदर्शन गर्न आपतकालीन अलर्टहरूको प्रकार चयन गर्नुहोस्।"</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"अनुप्रयोग र सामग्रीमा प्रतिबन्धहरू"</string>
+     <string name="user_rename" msgid="8523499513614655279">"पुनःनामाकरण गर्नुहोस्"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"अनुप्रयोग प्रतिबन्धहरू सेट गर्नुहोस्"</string>
+diff --git a/res/values-ne/strings.xml b/res/values-ne/strings.xml
+index 140ef69..e1987c9 100644
+--- a/res/values-ne/strings.xml
++++ b/res/values-ne/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"संगीत र मिडियाका लागि"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"सेटिङहरू सम्झनुहोस्"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"ताररहित प्रदर्शन"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"उपकरणहरू हेर्न ताररहित प्रदर्शन सक्रिय पार्नुहोस्।"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"ताररहित प्रदर्शन असक्षम पारिएको छ किनकि वाइ-फाइ बन्द छ।"</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"प्रदर्शनहरूको खोजी गर्नुहोस्"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"खोजी कार्य गर्दै..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"कुनै पनि ताररहित प्रदर्शनहरू नजिकमा पाइएनन्।"</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"जोडी भएका प्रदर्शनहरू"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"उपलब्ध उपकरणहरू"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"जडान हुँदै"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"जडान गरिएको"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"उपलब्ध"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"प्रयोगमा छ"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"सेटिङहरू प्रदर्शन गर्नुहोस्"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"जडान टुटाउने हो?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"&lt;br&gt; &lt;b&gt;: यसले<xliff:g id="DEVICE_NAME">%1$s</xliff:g>सँगको जडान सामप्त गर्दछ। &lt;/ b&gt;"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"ताररहित प्रदर्शन विकल्पहरू"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"बिर्सनुहोस्"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"सम्पन्न भयो"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"नाम"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"खुल्ला"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"बन्द"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"असक्षम पारियो"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"ट्याब्लेटले कुनै अन्य उपकरणलाई छुँदा डेटा विनिमयको अनुमति दिनुहोस्।"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"फोनले अर्को उपकरणलाई छुँदा डेटा विनिमयलाई अनुमति दिनुहोस्"</string>
+@@ -1419,7 +1407,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"सेटिङहरू"</string>
+     <string name="print_settings" msgid="4742428530112487843">"मुद्रण"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"मुद्रण सेटिङहरू"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"सेवाहरू"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"<xliff:g id="SERVICE">%1$s</xliff:g>प्रयोग गर्ने हो?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"<xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g>ले तपाईँले छापेका कागजातहरू प्राप्त गर्न सक्छ। त्यस्ता कागजातहरूमा संवेदनशील डेटाहरू हुन सक्छन्।"</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"कुनै पनि सेवाहरू स्थापित छैनन्"</string>
+@@ -1716,7 +1703,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"आफैँ सिङ्क गर्न सकेन।"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"हालका लागि यस वस्तुको सिङ्क असक्षम पारिएको छ। यस सेटिङलाई परिवर्तन गर्न अस्थायी रूपमा पृष्ठभूमि डेटा र स्वचालित सिङ्क सक्रिय पार्नुहोस्।"</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G सेटिङहरू"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G नेटवर्क र मोडेम सेटअप र प्रबन्ध गर्नुहोस्"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC ठेगाना"</string>
+     <string name="enter_password" msgid="4131758584074246224">"भण्डारण डिक्रिप्ट गर्न पासवर्ड टाइप गर्नुहोस्"</string>
+     <string name="try_again" msgid="4272075051293936921">"फेरि प्रयोग गर्नुहोस्।"</string>
+@@ -1777,8 +1763,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"पृष्ठभूमि प्रक्रिया सीमा"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"सबै ANRs देखाउनुहोस्"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"पृष्ठभूमि अनुप्रयोगका लागि जवाफ नदिइरहेका अनुप्रयोगहरू देखाउनुहोस्"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"प्रायोगात्मक WebView प्रयोग गर्नुहोस्"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"अनुप्रयोगहरूले नयाँ (बेटा) वेबभ्युको उपयोग गर्छन्"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"डेटा प्रयोग"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"डेटा प्रयोग चक्र"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"डेटा रोमिङ"</string>
+@@ -1952,7 +1936,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"भाषा परिवर्तन गर्नुहोस्"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"फन्ट साइज परिवर्तन गर्नुहोस्"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"ट्याप गर्नुहोस् र भुक्तान गर्नुहोस्"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"प्रत्येक चोटि सोध्नुहोस्"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"तपाईँको प्राथमिकताको रूपमा सेट गर्ने हो?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"प्रतिबन्धहरू"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"प्रतिबन्धहरू हटाउनुहोस्"</string>
+@@ -1962,7 +1945,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"सामग्रीको लागि खाता"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"फोटो ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"सेल प्रसारणहरू"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"प्रदर्शन गर्न आपतकालीन अलर्टहरूको प्रकार चयन गर्नुहोस्।"</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"अनुप्रयोग र सामग्रीमा प्रतिबन्धहरू"</string>
+     <string name="user_rename" msgid="8523499513614655279">"पुनःनामाकरण गर्नुहोस्"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"अनुप्रयोग प्रतिबन्धहरू सेट गर्नुहोस्"</string>
+diff --git a/res/values-si-rLK/strings.xml b/res/values-si-rLK/strings.xml
+index cc4bb3f..ed1050f 100644
+--- a/res/values-si-rLK/strings.xml
++++ b/res/values-si-rLK/strings.xml
+@@ -509,36 +509,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"සංගීතය සහ මාධ්‍යය සඳහා"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"සැකසීම් මතක තබාගන්න"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"රැහැන් රහිත දර්ශනය"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"උපාංග බැලීමට, රැහැන් රහිත දර්ශනය සක්‍රිය කරන්න."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Wi-Fi අක්‍රිය බැවින් රැහැන් රහිත දර්ශනය අබලයි."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"දර්ශන සඳහා සෙවුම"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"සොයමින්..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"අවට නොරැහැන් දර්ශන සොයා නොගත්තේය."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"යුගල කළ තිර"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"පවතින උපාංග"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"සම්බන්ධ වෙමින්"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"සම්බන්ධිත"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"ලබා ගත හැක"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"භාවිතයේ ඇත"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"දර්ශනය සැකසීම්"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"විසන්ධි කරන්නද?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"මෙය &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt; සමඟ ඔබගේ සම්බන්ධය අවසන් කරනු ඇත"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"රැහැන් රහිත දර්ශන විකල්ප"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"අමතක කරන්න"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"හරි"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"නම‍"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"සක්‍රීයයි"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"අක්‍රියයි"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"අබල කර ඇත"</string>
+-    <string name="wifi_display_certification_heading" msgid="3125105883233765652">"සහතිකය"</string>
+-    <string name="wifi_display_session_info" msgid="4733627902691604836">"සැසියේ තොරතුරු"</string>
+-    <string name="wifi_display_listen_mode" msgid="2962301785910874273">"අහන ආකාරය සබල කරන්න"</string>
+-    <string name="wifi_display_autonomous_go" msgid="140864379216673466">"ස්වයංපාලක GO සබල කරන්න"</string>
+-    <string name="wifi_display_pause" msgid="6037110530682927245">"විරාම කරන්න"</string>
+-    <string name="wifi_display_resume" msgid="8195590160258469425">"නැවත පටන්ගන්න"</string>
+-    <string name="wifi_display_wps_config" msgid="7566565571340705772">"WPS වින්‍යාස කිරීම"</string>
+-    <string name="wifi_display_listen_channel" msgid="4146320990898147857">"අහන නාලිකාව"</string>
+-    <string name="wifi_display_operating_channel" msgid="233535284689144515">"මෙහෙයවීමේ නාලිකාව"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"ටැබ්ලටය වෙනත් උපාංගයක් ස්පර්ශ කළ විට දත්ත හුවමාරුවට අවසර දෙන්න"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"දුරකථනය වෙනත් උපාංගයක් ස්පර්ශ කරන විට දත්ත හුවමාරුවට අවසර දෙන්න"</string>
+@@ -1009,7 +988,6 @@
+     <string name="location_mode_location_off_title" msgid="2829713015012529465">"ස්ථානය අක්‍රියයි"</string>
+     <string name="location_category_recent_location_requests" msgid="1938721350424447421">"මෑත කාලීන ස්ථාන ඉල්ලීම්"</string>
+     <string name="location_no_recent_apps" msgid="2800907699722178041">"මෑතකදී යෙදුම් කිසිවක් ස්ථානය ඉල්ලා නැත"</string>
+-    <string name="location_category_app_settings" msgid="46434611182743486">"යෙදුම් සැකසීම්"</string>
+     <string name="location_high_battery_use" msgid="517199943258508020">"ඉහළ බැටරි භාවිතය"</string>
+     <string name="location_low_battery_use" msgid="8602232529541903596">"අඩු බැටරි භාවිතය"</string>
+     <string name="location_mode_screen_title" msgid="4528716772270246542">"ස්ථාන ආකාරය"</string>
+@@ -1444,7 +1422,6 @@
+     <string name="print_menu_item_add_service" msgid="3811645167869797802">"සේවාව එක් කිරීම"</string>
+     <string name="print_menu_item_add_printer" msgid="8251218970577291032">"මුද්‍රණ යන්ත්‍ර එකතු කරන්න"</string>
+     <string name="print_menu_item_search" msgid="7025589328240514553">"සෙවීම"</string>
+-    <string name="category_printers" msgid="4345417708283144981">"මුද්‍රණ යන්ත්‍ර"</string>
+     <string name="power_usage_summary_title" msgid="7190304207330319919">"බැටරිය"</string>
+     <string name="power_usage_summary" msgid="7237084831082848168">"බැටරිය භාවිතා කර ඇත්තේ කුමක්ද"</string>
+     <string name="power_usage_not_available" msgid="3214000535532434353">"බැටරි භාවිතා දත්ත ලබාගත නොහැක."</string>
+@@ -1526,7 +1503,6 @@
+     <string name="app_memory_use" msgid="7849258480392171939">"මතක භාවිතය"</string>
+     <string name="process_stats_total_duration" msgid="663196332079061529">"<xliff:g id="TIME">%1$s</xliff:g> සමග සංඛ්‍යා ලේඛන"</string>
+     <string name="process_stats_memory_status" msgid="4251599550196193093">"වර්තමානයේදී උපාංග මතකය <xliff:g id="MEMSTATE">%1$s</xliff:g>"</string>
+-    <string name="process_stats_ram_use" msgid="1271366870003042708">"සාමාන්‍ය RAM භාවිතය"</string>
+     <string name="process_stats_run_time" msgid="6520628955709369115">"ධාවන කාලය"</string>
+     <string name="services_subtitle" msgid="4296402367067266425">"සේවා"</string>
+     <string name="voice_input_output_settings" msgid="1336135218350444783">"හඬ ආදානය සහ ප්‍රතිදානය"</string>
+@@ -1737,7 +1713,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"අතින් සමමුහුර්ත කළ නොහැක"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"මෙම අයිතමය සඳහා සමමුර්ත කිරීම දැනට අබල කර ඇත. මෙම සැකසීම් වෙනස් කිරීමට, තාවකාලිකව පසුබිම් දත්ත සහ ස්වයංක්‍රිය සමමුහුර්තකරණය සක්‍රිය කරන්න."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G සැකසීම්"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G ජාලය සහ මොඩමය සකසන්න සහ කළමනාකරණය කරන්න"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC ලිපිනය"</string>
+     <string name="enter_password" msgid="4131758584074246224">"ආචයනය විසංකේතනය කිරීමට මුරපදය ටයිප් කරන්න"</string>
+     <string name="try_again" msgid="4272075051293936921">"නැවත උත්සාහ කරන්න."</string>
+@@ -1798,8 +1773,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"පසුබිම් ක්‍රියාවලි සීමාව"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"සියලුම ANR පෙන්වන්න"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"පසුබිම් යෙදුම් වලට යෙදුම ප්‍රතිචාර නොදක්වයි කවුළුව පෙන්වන්න"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"පරික්ෂණාත්මක වෙබ් දර්ශනය භාවිත කරන්න"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"යෙදුම නව තම (බීටා) වෙබ්වීව් භාවිතා කරනු ඇත"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"දත්ත භාවිතය"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"දත්ත භාවිතා චක්‍රය"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"දත්ත රෝමින්"</string>
+@@ -1973,7 +1946,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"භාෂාව වෙනස් කරන්න"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"අකුරු ප්‍රමාණය වෙනස් කරන්න"</string>
+     <string name="nfc_payment_settings_title" msgid="1121386157283141856">"ගෙවීම්"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"සෑම වේලාවේම අසන්න"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"ඔබගේ මනාපය ලෙස සකසන්නද?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"සිමා"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"සිමා ඉවත් කරන්න"</string>
+@@ -1983,7 +1955,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"අන්තර්ගතය සඳහා ගිණුම"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"ඡායාරූප ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"සෙල් විකාශකයින්"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"පෙන්වීමට අවශ්‍ය හදිසි සංඥා වර්ග තෝරන්න."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"යෙදුම් සහ අන්තර්ගත සීමා"</string>
+     <string name="user_rename" msgid="8523499513614655279">"නැවත නම් කරන්න"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"යෙදුම් සීමා සකසන්න"</string>
+diff --git a/res/values-si/strings.xml b/res/values-si/strings.xml
+index e4a5eeb..7b25235 100644
+--- a/res/values-si/strings.xml
++++ b/res/values-si/strings.xml
+@@ -507,27 +507,15 @@
+     <string name="bluetooth_dock_settings_a2dp" msgid="8791004998846630574">"සංගීතය සහ මාධ්‍යය සඳහා"</string>
+     <string name="bluetooth_dock_settings_remember" msgid="5551459057010609115">"සැකසීම් මතක තබාගන්න"</string>
+     <string name="wifi_display_settings_title" msgid="564299108014609382">"රැහැන් රහිත දර්ශනය"</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_off" msgid="1225626898926363100">"උපාංග බැලීමට, රැහැන් රහිත දර්ශනය සක්‍රිය කරන්න."</string>
+-    <string name="wifi_display_settings_empty_list_wifi_display_disabled" msgid="1336244693183075466">"Wi-Fi අක්‍රිය බැවින් රැහැන් රහිත දර්ශනය අබලයි."</string>
+-    <string name="wifi_display_search_for_devices" msgid="5065526281193354502">"දර්ශන සඳහා සෙවුම"</string>
+-    <string name="wifi_display_searching_for_devices" msgid="5172373825348672137">"සොයමින්..."</string>
+     <string name="wifi_display_no_devices_found" msgid="8180582698282377626">"අවට නොරැහැන් දර්ශන සොයා නොගත්තේය."</string>
+-    <string name="wifi_display_paired_devices" msgid="7395326840730024303">"යුගල කළ තිර"</string>
+-    <string name="wifi_display_available_devices" msgid="4558314642853513487">"පවතින උපාංග"</string>
+     <string name="wifi_display_status_connecting" msgid="5688608834000748607">"සම්බන්ධ වෙමින්"</string>
+     <string name="wifi_display_status_connected" msgid="8364125226376985558">"සම්බන්ධිත"</string>
+-    <string name="wifi_display_status_available" msgid="1924167525172207067">"ලබා ගත හැක"</string>
+     <string name="wifi_display_status_in_use" msgid="8556830875615434792">"භාවිතයේ ඇත"</string>
+     <string name="wifi_display_details" msgid="7791118209992162698">"දර්ශනය සැකසීම්"</string>
+-    <string name="wifi_display_disconnect_title" msgid="1543715924639003599">"විසන්ධි කරන්නද?"</string>
+-    <string name="wifi_display_disconnect_text" msgid="4824860802264489088">"මෙය &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt; සමඟ ඔබගේ සම්බන්ධය අවසන් කරනු ඇත"</string>
+     <string name="wifi_display_options_title" msgid="5740656401635054838">"රැහැන් රහිත දර්ශන විකල්ප"</string>
+     <string name="wifi_display_options_forget" msgid="9119048225398894580">"අමතක කරන්න"</string>
+     <string name="wifi_display_options_done" msgid="5703116500357822557">"හරි"</string>
+     <string name="wifi_display_options_name" msgid="4756080222307467898">"නම‍"</string>
+-    <string name="wifi_display_summary_on" msgid="3695429596604962531">"සක්‍රීයයි"</string>
+-    <string name="wifi_display_summary_off" msgid="2445210133184740611">"අක්‍රියයි"</string>
+-    <string name="wifi_display_summary_disabled" msgid="5318394806146587849">"අබල කර ඇත"</string>
+     <string name="nfc_quick_toggle_title" msgid="6769159366307299004">"NFC"</string>
+     <string name="nfc_quick_toggle_summary" product="tablet" msgid="8302974395787498915">"ටැබ්ලටය වෙනත් උපාංගයක් ස්පර්ශ කළ විට දත්ත හුවමාරුවට අවසර දෙන්න"</string>
+     <string name="nfc_quick_toggle_summary" product="default" msgid="5237208142892767592">"දුරකථනය වෙනත් උපාංගයක් ස්පර්ශ කරන විට දත්ත හුවමාරුවට අවසර දෙන්න"</string>
+@@ -1421,7 +1409,6 @@
+     <string name="settings_button" msgid="3006713718908152930">"සැකසීම්"</string>
+     <string name="print_settings" msgid="4742428530112487843">"මුද්‍රණය වෙමින්"</string>
+     <string name="print_settings_title" msgid="4911263339115736689">"මුද්‍රණ සැකසීම්"</string>
+-    <string name="print_services_title" msgid="1088097751249445946">"සේවා"</string>
+     <string name="print_service_security_warning_title" msgid="2338435517408144841">"<xliff:g id="SERVICE">%1$s</xliff:g> භාවිත කරන්න ද?"</string>
+     <string name="print_service_security_warning_summary" msgid="919299459931111450">"ඔබ මුද්‍රණය කරන ලේඛන <xliff:g id="PRINT_SERVICE_NAME">%1$s</xliff:g> වෙත ලැබේ. එවැනි ලේඛන සතුව සංවේදී දත්ත තිබිය හැක."</string>
+     <string name="print_no_services_installed" msgid="8443039625463872294">"සේවා ස්ථාපනය කර නැත"</string>
+@@ -1718,7 +1705,6 @@
+     <string name="cant_sync_dialog_title" msgid="8923508322291625282">"අතින් සමමුහුර්ත කළ නොහැක"</string>
+     <string name="cant_sync_dialog_message" msgid="1938380442159016449">"මෙම අයිතමය සඳහා සමමුර්ත කිරීම දැනට අබල කර ඇත. මෙම සැකසීම් වෙනස් කිරීමට, තාවකාලිකව පසුබිම් දත්ත සහ ස්වයංක්‍රිය සමමුහුර්තකරණය සක්‍රිය කරන්න."</string>
+     <string name="wimax_settings" msgid="1574837328738396794">"4G සැකසීම්"</string>
+-    <string name="wimax_settings_summary" msgid="3207355006084135453">"4G ජාලය සහ මොඩමය සකසන්න සහ කළමනාකරණය කරන්න"</string>
+     <string name="status_wimax_mac_address" msgid="8390791848661413416">"4G MAC ලිපිනය"</string>
+     <string name="enter_password" msgid="4131758584074246224">"ආචයනය විසංකේතනය කිරීමට මුරපදය ටයිප් කරන්න"</string>
+     <string name="try_again" msgid="4272075051293936921">"නැවත උත්සාහ කරන්න."</string>
+@@ -1779,8 +1765,6 @@
+     <string name="app_process_limit_title" msgid="4280600650253107163">"පසුබිම් ක්‍රියාවලි සීමාව"</string>
+     <string name="show_all_anrs" msgid="28462979638729082">"සියලුම ANR පෙන්වන්න"</string>
+     <string name="show_all_anrs_summary" msgid="641908614413544127">"පසුබිම් යෙදුම් වලට යෙදුම ප්‍රතිචාර නොදක්වයි කවුළුව පෙන්වන්න"</string>
+-    <string name="experimental_webview" msgid="4492200819033780927">"පරික්ෂණාත්මක වෙබ් දර්ශනය භාවිත කරන්න"</string>
+-    <string name="experimental_webview_summary" msgid="3431620080869482446">"යෙදුම නව තම (බීටා) වෙබ්වීව් භාවිතා කරනු ඇත"</string>
+     <string name="data_usage_summary_title" msgid="3804110657238092929">"දත්ත භාවිතය"</string>
+     <string name="data_usage_cycle" msgid="5652529796195787949">"දත්ත භාවිතා චක්‍රය"</string>
+     <string name="data_usage_menu_roaming" msgid="8042359966835203296">"දත්ත රෝමින්"</string>
+@@ -1954,7 +1938,6 @@
+     <string name="global_locale_change_title" msgid="5956281361384221451">"භාෂාව වෙනස් කරන්න"</string>
+     <string name="global_font_change_title" msgid="1887126466191012035">"අකුරු ප්‍රමාණය වෙනස් කරන්න"</string>
+     <string name="nfc_payment_settings_title" msgid="4226098386809754689">"තට්ටු කර ගෙවන්න"</string>
+-    <string name="nfc_payment_ask" msgid="1061129391464251903">"සෑම වේලාවේම අසන්න"</string>
+     <string name="nfc_payment_set_default" msgid="1583397933053078296">"ඔබගේ මනාපය ලෙස සකසන්නද?"</string>
+     <string name="restriction_settings_title" msgid="4233515503765879736">"සිමා"</string>
+     <string name="restriction_menu_reset" msgid="2067644523489568173">"සිමා ඉවත් කරන්න"</string>
+@@ -1964,7 +1947,6 @@
+     <string name="user_account_title" msgid="1127193807312271167">"අන්තර්ගතය සඳහා ගිණුම"</string>
+     <string name="user_picture_title" msgid="7297782792000291692">"ඡායාරූප ID"</string>
+     <string name="cell_broadcast_settings" msgid="8415582011920085222">"සෙල් විකාශකයින්"</string>
+-    <string name="cell_broadcast_settings_summary" msgid="3301339398950905913">"පෙන්වීමට අවශ්‍ය හදිසි සංඥා වර්ග තෝරන්න."</string>
+     <string name="user_restrictions_title" msgid="7745810037152772035">"යෙදුම් සහ අන්තර්ගත සීමා"</string>
+     <string name="user_rename" msgid="8523499513614655279">"නැවත නම් කරන්න"</string>
+     <string name="app_restrictions_custom_label" msgid="6160672982086584261">"යෙදුම් සීමා සකසන්න"</string>
+-- 
+2.7.4
+

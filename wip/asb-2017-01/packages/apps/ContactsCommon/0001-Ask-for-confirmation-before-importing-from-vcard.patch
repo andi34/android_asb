@@ -1,0 +1,329 @@
+From a4d49bcf318f3976750dc170049dcf1bb8385ff6 Mon Sep 17 00:00:00 2001
+From: Walter Jang <wjang@google.com>
+Date: Tue, 25 Oct 2016 15:42:33 -0700
+Subject: [PATCH] Ask for confirmation before importing from vcard
+
+But only when vcard import is started from outside
+the contacts application itself.
+
+Test: Manually confirmed the following behavior
+
+1. When there is 0 or 1 writable contacts providing
+   account on the device:
+  - Importing contacts from the contacts app itself
+    DOES NOT SHOW the new confirmation dialog.
+  - Sending a vcard to contacts from another application
+    DOES SHOW the new confirmation dialog.
+
+2. When there are 2 or more writable contacts providing
+   accounts on the device:
+  - Importing contacts from the contacts app itself
+    DOES NOT SHOW the new confirmation dialog, instead the
+    existing account picker dialog is displayed.
+  - Sending a vcard to contacts from another application
+    DOES NOT SHOW the new confirmation dialog, instead the
+    existing account picker dialog is displayed.
+
+Bug: 32219099
+Change-Id: Ia57ae539112e752fe4fd1f01407b7905f1bc02fa
+(cherry picked from commit 0b6c338eb238a4ca061372874e5213205d5ea1b1)
+---
+ res/values/strings.xml                             |  3 +
+ .../contacts/common/util/AccountSelectionUtil.java | 41 ++++++------
+ .../contacts/common/vcard/ImportVCardActivity.java | 36 +++++++++-
+ .../common/vcard/ImportVCardDialogFragment.java    | 76 ++++++++++++++++++++++
+ 4 files changed, 135 insertions(+), 21 deletions(-)
+ create mode 100644 src/com/android/contacts/common/vcard/ImportVCardDialogFragment.java
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index c63fb33..5f277aa 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -421,6 +421,9 @@ a        ren't members of any other group. [CHAR LIMIT=25] -->
+     <!-- Action string for selecting (USB) storage for importing contacts [CHAR LIMIT=30] -->
+     <string name="import_from_sdcard" product="default">Import from storage</string>
+ 
++    <!-- Dialog message asking the user for confirmation before starting to import contacts from a .vcf file. [CHAR LIMIT=NONE] -->
++    <string name="import_from_vcf_file_confirmation_message" product="default">Import contacts from vCard?</string>
++
+     <!-- Message shown in a Dialog confirming a user's cancel request toward existing vCard import.
+          The argument is file name for the vCard import the user wants to cancel.
+          [CHAR LIMIT=128] -->
+diff --git a/src/com/android/contacts/common/util/AccountSelectionUtil.java b/src/com/android/contacts/common/util/AccountSelectionUtil.java
+index ab32736..52b789d 100644
+--- a/src/com/android/contacts/common/util/AccountSelectionUtil.java
++++ b/src/com/android/contacts/common/util/AccountSelectionUtil.java
+@@ -16,6 +16,7 @@
+ 
+ package com.android.contacts.common.util;
+ 
++import android.app.Activity;
+ import android.app.AlertDialog;
+ import android.app.Dialog;
+ import android.content.Context;
+@@ -52,44 +53,44 @@ public class AccountSelectionUtil {
+     public static class AccountSelectedListener
+             implements DialogInterface.OnClickListener {
+ 
+-        final private Context mContext;
++        final private Activity mActivity;
+         final private int mResId;
+ 
+         final protected List<AccountWithDataSet> mAccountList;
+ 
+-        public AccountSelectedListener(Context context, List<AccountWithDataSet> accountList,
++        public AccountSelectedListener(Activity activity, List<AccountWithDataSet> accountList,
+                 int resId) {
+             if (accountList == null || accountList.size() == 0) {
+                 Log.e(LOG_TAG, "The size of Account list is 0.");
+             }
+-            mContext = context;
++            mActivity = activity;
+             mAccountList = accountList;
+             mResId = resId;
+         }
+ 
+         public void onClick(DialogInterface dialog, int which) {
+             dialog.dismiss();
+-            doImport(mContext, mResId, mAccountList.get(which));
++            doImport(mActivity, mResId, mAccountList.get(which));
+         }
+     }
+ 
+-    public static Dialog getSelectAccountDialog(Context context, int resId) {
+-        return getSelectAccountDialog(context, resId, null, null);
++    public static Dialog getSelectAccountDialog(Activity activity, int resId) {
++        return getSelectAccountDialog(activity, resId, null, null);
+     }
+ 
+-    public static Dialog getSelectAccountDialog(Context context, int resId,
++    public static Dialog getSelectAccountDialog(Activity activity, int resId,
+             DialogInterface.OnClickListener onClickListener) {
+-        return getSelectAccountDialog(context, resId, onClickListener, null);
++        return getSelectAccountDialog(activity, resId, onClickListener, null);
+     }
+ 
+     /**
+      * When OnClickListener or OnCancelListener is null, uses a default listener.
+      * The default OnCancelListener just closes itself with {@link Dialog#dismiss()}.
+      */
+-    public static Dialog getSelectAccountDialog(Context context, int resId,
++    public static Dialog getSelectAccountDialog(Activity activity, int resId,
+             DialogInterface.OnClickListener onClickListener,
+             DialogInterface.OnCancelListener onCancelListener) {
+-        final AccountTypeManager accountTypes = AccountTypeManager.getInstance(context);
++        final AccountTypeManager accountTypes = AccountTypeManager.getInstance(activity);
+         final List<AccountWithDataSet> writableAccountList = accountTypes.getAccounts(true);
+ 
+         Log.i(LOG_TAG, "The number of available accounts: " + writableAccountList.size());
+@@ -98,11 +99,11 @@ public class AccountSelectionUtil {
+ 
+         // Wrap our context to inflate list items using correct theme
+         final Context dialogContext = new ContextThemeWrapper(
+-                context, android.R.style.Theme_Light);
++                activity, android.R.style.Theme_Light);
+         final LayoutInflater dialogInflater = (LayoutInflater)dialogContext
+                 .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+         final ArrayAdapter<AccountWithDataSet> accountAdapter =
+-            new ArrayAdapter<AccountWithDataSet>(context, android.R.layout.simple_list_item_2,
++            new ArrayAdapter<AccountWithDataSet>(activity, android.R.layout.simple_list_item_2,
+                     writableAccountList) {
+ 
+             @Override
+@@ -133,7 +134,7 @@ public class AccountSelectionUtil {
+ 
+         if (onClickListener == null) {
+             AccountSelectedListener accountSelectedListener =
+-                new AccountSelectedListener(context, writableAccountList, resId);
++                new AccountSelectedListener(activity, writableAccountList, resId);
+             onClickListener = accountSelectedListener;
+         }
+         if (onCancelListener == null) {
+@@ -143,21 +144,21 @@ public class AccountSelectionUtil {
+                 }
+             };
+         }
+-        return new AlertDialog.Builder(context)
++        return new AlertDialog.Builder(activity)
+             .setTitle(R.string.dialog_new_contact_account)
+             .setSingleChoiceItems(accountAdapter, 0, onClickListener)
+             .setOnCancelListener(onCancelListener)
+             .create();
+     }
+ 
+-    public static void doImport(Context context, int resId, AccountWithDataSet account) {
++    public static void doImport(Activity activity, int resId, AccountWithDataSet account) {
+         switch (resId) {
+             case R.string.import_from_sim: {
+-                doImportFromSim(context, account);
++                doImportFromSim(activity, account);
+                 break;
+             }
+             case R.string.import_from_sdcard: {
+-                doImportFromSdCard(context, account);
++                doImportFromSdCard(activity, account);
+                 break;
+             }
+         }
+@@ -175,8 +176,8 @@ public class AccountSelectionUtil {
+         context.startActivity(importIntent);
+     }
+ 
+-    public static void doImportFromSdCard(Context context, AccountWithDataSet account) {
+-        Intent importIntent = new Intent(context, ImportVCardActivity.class);
++    public static void doImportFromSdCard(Activity activity, AccountWithDataSet account) {
++        Intent importIntent = new Intent(activity, ImportVCardActivity.class);
+         if (account != null) {
+             importIntent.putExtra("account_name", account.name);
+             importIntent.putExtra("account_type", account.type);
+@@ -189,6 +190,6 @@ public class AccountSelectionUtil {
+         }
+         mVCardShare = false;
+         mPath = null;
+-        context.startActivity(importIntent);
++        activity.startActivityForResult(importIntent, 0);
+     }
+ }
+diff --git a/src/com/android/contacts/common/vcard/ImportVCardActivity.java b/src/com/android/contacts/common/vcard/ImportVCardActivity.java
+index 70c9821..7d7e468 100644
+--- a/src/com/android/contacts/common/vcard/ImportVCardActivity.java
++++ b/src/com/android/contacts/common/vcard/ImportVCardActivity.java
+@@ -85,7 +85,7 @@ import java.util.Vector;
+  * any Dialog in the instance. So this code is careless about the management around managed
+  * dialogs stuffs (like how onCreateDialog() is used).
+  */
+-public class ImportVCardActivity extends Activity {
++public class ImportVCardActivity extends Activity implements ImportVCardDialogFragment.Listener {
+     private static final String LOG_TAG = "VCardImport";
+ 
+     private static final int SELECT_ACCOUNT = 0;
+@@ -854,10 +854,44 @@ public class ImportVCardActivity extends Activity {
+             }
+         }
+ 
++        if (isCallerSelf(this)) {
++            startImport();
++        } else {
++            ImportVCardDialogFragment.show(this);
++        }
++    }
++
++    private static boolean isCallerSelf(Activity activity) {
++        // {@link Activity#getCallingActivity()} is a safer alternative to
++        // {@link Activity#getCallingPackage()} that works around a
++        // framework bug where getCallingPackage() can sometimes return null even when the
++        // current activity *was* in fact launched via a startActivityForResult() call.
++        //
++        // (The bug happens if the task stack needs to be re-created by the framework after
++        // having been killed due to memory pressure or by the "Don't keep activities"
++        // developer option; see bug 7494866 for the full details.)
++        //
++        // Turns out that {@link Activity#getCallingActivity()} *does* return correct info
++        // even in the case where getCallingPackage() is broken, so the workaround is simply
++        // to get the package name from getCallingActivity().getPackageName() instead.
++        final ComponentName callingActivity = activity.getCallingActivity();
++        if (callingActivity == null) return false;
++        final String packageName = callingActivity.getPackageName();
++        if (packageName == null) return false;
++        return packageName.equals(activity.getApplicationContext().getPackageName());
++    }
++
++    @Override
++    public void onImportVCardConfirmed() {
+         startImport();
+     }
+ 
+     @Override
++    public void onImportVCardDenied() {
++        finish();
++    }
++
++    @Override
+     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+         if (requestCode == SELECT_ACCOUNT) {
+             if (resultCode == Activity.RESULT_OK) {
+diff --git a/src/com/android/contacts/common/vcard/ImportVCardDialogFragment.java b/src/com/android/contacts/common/vcard/ImportVCardDialogFragment.java
+new file mode 100644
+index 0000000..ae8ebbc
+--- /dev/null
++++ b/src/com/android/contacts/common/vcard/ImportVCardDialogFragment.java
+@@ -0,0 +1,76 @@
++/*
++ * Copyright (C) 2016 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package com.android.contacts.common.vcard;
++
++import android.app.Activity;
++import android.app.AlertDialog;
++import android.app.Dialog;
++import android.app.DialogFragment;
++import android.content.DialogInterface;
++import android.os.Bundle;
++
++import com.android.contacts.common.R;
++
++/** Asks for confirmation before importing contacts from a vcard. */
++public class ImportVCardDialogFragment extends DialogFragment {
++
++    /** Callbacks for hosts of the {@link ImportVCardDialogFragment}. */
++    public interface Listener {
++
++        /** Invoked after the user has confirmed that contacts should be imported. */
++        void onImportVCardConfirmed();
++
++        /** Invoked after the user has rejected importing contacts. */
++        void onImportVCardDenied();
++    }
++
++    /** Displays the dialog asking for confirmation before importing contacts. */
++    public static void show(Activity activity) {
++        if (!(activity instanceof Listener)) {
++            throw new IllegalArgumentException(
++                    "Activity must implement " + Listener.class.getName());
++        }
++
++        final ImportVCardDialogFragment dialog = new ImportVCardDialogFragment();
++        dialog.show(activity.getFragmentManager(), "importVCardDialogFragment");
++    }
++
++    @Override
++    public Dialog onCreateDialog(Bundle savedInstanceState) {
++        return new AlertDialog.Builder(getActivity())
++                .setIconAttribute(android.R.attr.alertDialogIcon)
++                .setMessage(R.string.import_from_vcf_file_confirmation_message)
++                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
++                    @Override
++                    public void onClick(DialogInterface dialog, int whichButton) {
++                        final Listener listener = (Listener) getActivity();
++                        if (listener != null) {
++                            listener.onImportVCardConfirmed();
++                        }
++                    }
++                })
++                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
++                    @Override
++                    public void onClick(DialogInterface dialog, int whichButton) {
++                        final Listener listener = (Listener) getActivity();
++                        if (listener != null) {
++                            listener.onImportVCardDenied();
++                        }
++                    }
++                })
++                .create();
++    }
++}
+-- 
+2.7.4
+

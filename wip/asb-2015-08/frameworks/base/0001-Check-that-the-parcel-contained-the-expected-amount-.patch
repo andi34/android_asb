@@ -1,0 +1,37 @@
+From f0bc716d958ce6d528ad59e6c9d4833b3b9b7878 Mon Sep 17 00:00:00 2001
+From: Leon Scroggins III <scroggo@google.com>
+Date: Sat, 12 Sep 2015 15:23:48 +0200
+Subject: [PATCH 01/46] Check that the parcel contained the expected amount of
+ region data.
+
+CVE-2015-3849: Elevation of Privilege Vulnerability in Region
+
+Bug:20883006
+Change-Id: Ib47a8ec8696dbc37e958b8dbceb43fcbabf6605b
+---
+ core/jni/android/graphics/Region.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/core/jni/android/graphics/Region.cpp b/core/jni/android/graphics/Region.cpp
+index f0a7baf..1e0cf96 100644
+--- a/core/jni/android/graphics/Region.cpp
++++ b/core/jni/android/graphics/Region.cpp
+@@ -175,9 +175,13 @@ static SkRegion* Region_createFromParcel(JNIEnv* env, jobject clazz, jobject par
+ 
+     android::Parcel* p = android::parcelForJavaObject(env, parcel);
+ 
++    const size_t size = p->readInt32();
++    const void* regionData = p->readInplace(size);
++    if (regionData == NULL) {
++        return NULL;
++    }
+     SkRegion* region = new SkRegion;
+-    size_t size = p->readInt32();
+-    region->readFromMemory(p->readInplace(size), size);
++    region->readFromMemory(regionData, size);
+ 
+     return region;
+ }
+-- 
+2.7.4
+

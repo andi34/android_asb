@@ -1,0 +1,27 @@
+From f2257548676c91b1fac2361dc7a3d461dfe085be Mon Sep 17 00:00:00 2001
+From: Jeff Vander Stoep <jeffv@google.com>
+Date: Wed, 10 Sep 2014 14:20:14 -0700
+Subject: [PATCH 12/46] Change permission guard on bindBackupAgent()
+
+Bug: 15829193
+Change-Id: I6c1c39923b7b1a9f528f97da10913cb7f2d7e8f9
+---
+ services/java/com/android/server/am/ActivityManagerService.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/services/java/com/android/server/am/ActivityManagerService.java b/services/java/com/android/server/am/ActivityManagerService.java
+index b5dd0d8..be37b01 100644
+--- a/services/java/com/android/server/am/ActivityManagerService.java
++++ b/services/java/com/android/server/am/ActivityManagerService.java
+@@ -12825,7 +12825,7 @@ public final class ActivityManagerService extends ActivityManagerNative
+     // activity manager to announce its creation.
+     public boolean bindBackupAgent(ApplicationInfo app, int backupMode) {
+         if (DEBUG_BACKUP) Slog.v(TAG, "bindBackupAgent: app=" + app + " mode=" + backupMode);
+-        enforceCallingPermission("android.permission.BACKUP", "bindBackupAgent");
++        enforceCallingPermission("android.permission.CONFIRM_FULL_BACKUP", "bindBackupAgent");
+ 
+         synchronized(this) {
+             // !!! TODO: currently no check here that we're already bound
+-- 
+2.7.4
+

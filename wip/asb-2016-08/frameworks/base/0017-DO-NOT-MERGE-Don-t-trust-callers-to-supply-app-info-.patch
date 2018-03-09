@@ -1,0 +1,114 @@
+From 3e7694c595b496ca586df72ffc668cb652165be2 Mon Sep 17 00:00:00 2001
+From: Christopher Tate <ctate@google.com>
+Date: Fri, 10 Jun 2016 17:59:44 -0700
+Subject: [PATCH 17/46] DO NOT MERGE: Don't trust callers to supply app info to
+ bindBackupAgent()
+
+Get the canonical identity and metadata about the package from the
+Package Manager at time of usage rather than rely on the caller to
+have gotten things right, even when the caller has the system uid.
+
+Bug 28795098
+
+Change-Id: I62710b15bb601fdfedd68e32349168c10725eb45
+(cherry picked from commit d85a4ed28323d9a72179ff17a6d928f43096e407)
+---
+ core/java/android/app/ActivityManagerNative.java         | 10 ++++++----
+ core/java/android/app/IActivityManager.java              |  2 +-
+ .../java/com/android/server/BackupManagerService.java    |  3 ++-
+ .../com/android/server/am/ActivityManagerService.java    | 16 ++++++++++++++--
+ 4 files changed, 23 insertions(+), 8 deletions(-)
+
+diff --git a/core/java/android/app/ActivityManagerNative.java b/core/java/android/app/ActivityManagerNative.java
+index 74266cc..be204c1 100644
+--- a/core/java/android/app/ActivityManagerNative.java
++++ b/core/java/android/app/ActivityManagerNative.java
+@@ -1434,9 +1434,10 @@ public abstract class ActivityManagerNative extends Binder implements IActivityM
+         
+         case START_BACKUP_AGENT_TRANSACTION: {
+             data.enforceInterface(IActivityManager.descriptor);
+-            ApplicationInfo info = ApplicationInfo.CREATOR.createFromParcel(data);
++            String packageName = data.readString();
+             int backupRestoreMode = data.readInt();
+-            boolean success = bindBackupAgent(info, backupRestoreMode);
++            int userId = data.readInt();
++            boolean success = bindBackupAgent(packageName, backupRestoreMode, userId);
+             reply.writeNoException();
+             reply.writeInt(success ? 1 : 0);
+             return true;
+@@ -3125,13 +3126,14 @@ class ActivityManagerProxy implements IActivityManager
+         return binder;
+     }
+ 
+-    public boolean bindBackupAgent(ApplicationInfo app, int backupRestoreMode)
++    public boolean bindBackupAgent(String packageName, int backupRestoreMode, int userId)
+             throws RemoteException {
+         Parcel data = Parcel.obtain();
+         Parcel reply = Parcel.obtain();
+         data.writeInterfaceToken(IActivityManager.descriptor);
+-        app.writeToParcel(data, 0);
++        data.writeString(packageName);
+         data.writeInt(backupRestoreMode);
++        data.writeInt(userId);
+         mRemote.transact(START_BACKUP_AGENT_TRANSACTION, data, reply, 0);
+         reply.readException();
+         boolean success = reply.readInt() != 0;
+diff --git a/core/java/android/app/IActivityManager.java b/core/java/android/app/IActivityManager.java
+index 77c2ea0..8c174c8 100644
+--- a/core/java/android/app/IActivityManager.java
++++ b/core/java/android/app/IActivityManager.java
+@@ -163,7 +163,7 @@ public interface IActivityManager extends IInterface {
+             int res) throws RemoteException;
+     public IBinder peekService(Intent service, String resolvedType) throws RemoteException;
+ 
+-    public boolean bindBackupAgent(ApplicationInfo appInfo, int backupRestoreMode)
++    public boolean bindBackupAgent(String packageName, int backupRestoreMode, int userId)
+             throws RemoteException;
+     public void clearPendingBackup() throws RemoteException;
+     public void backupAgentCreated(String packageName, IBinder agent) throws RemoteException;
+diff --git a/services/java/com/android/server/BackupManagerService.java b/services/java/com/android/server/BackupManagerService.java
+index 6d65a70..9acd8f6 100644
+--- a/services/java/com/android/server/BackupManagerService.java
++++ b/services/java/com/android/server/BackupManagerService.java
+@@ -1780,7 +1780,8 @@ class BackupManagerService extends IBackupManager.Stub {
+             mConnecting = true;
+             mConnectedAgent = null;
+             try {
+-                if (mActivityManager.bindBackupAgent(app, mode)) {
++                if (mActivityManager.bindBackupAgent(app.packageName, mode,
++                        UserHandle.USER_OWNER)) {
+                     Slog.d(TAG, "awaiting agent for " + app);
+ 
+                     // success; wait for the agent to arrive
+diff --git a/services/java/com/android/server/am/ActivityManagerService.java b/services/java/com/android/server/am/ActivityManagerService.java
+index be37b01..0c229d9 100644
+--- a/services/java/com/android/server/am/ActivityManagerService.java
++++ b/services/java/com/android/server/am/ActivityManagerService.java
+@@ -12823,10 +12823,22 @@ public final class ActivityManagerService extends ActivityManagerNative
+     // Cause the target app to be launched if necessary and its backup agent
+     // instantiated.  The backup agent will invoke backupAgentCreated() on the
+     // activity manager to announce its creation.
+-    public boolean bindBackupAgent(ApplicationInfo app, int backupMode) {
+-        if (DEBUG_BACKUP) Slog.v(TAG, "bindBackupAgent: app=" + app + " mode=" + backupMode);
++    public boolean bindBackupAgent(String packageName, int backupMode, int userId) {
++        if (DEBUG_BACKUP) Slog.v(TAG, "bindBackupAgent: app=" + packageName + " mode=" + backupMode);
+         enforceCallingPermission("android.permission.CONFIRM_FULL_BACKUP", "bindBackupAgent");
+ 
++        IPackageManager pm = AppGlobals.getPackageManager();
++        ApplicationInfo app = null;
++        try {
++            app = pm.getApplicationInfo(packageName, 0, userId);
++        } catch (RemoteException e) {
++            // can't happen; package manager is process-local
++        }
++        if (app == null) {
++            Slog.w(TAG, "Unable to bind backup agent for " + packageName);
++            return false;
++        }
++
+         synchronized(this) {
+             // !!! TODO: currently no check here that we're already bound
+             BatteryStatsImpl.Uid.Pkg.Serv ss = null;
+-- 
+2.7.4
+

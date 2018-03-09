@@ -1,0 +1,140 @@
+From 812499f85999e18e161a78e2627562b666d4c9b1 Mon Sep 17 00:00:00 2001
+From: Juffin Alex Varghese <jalex@codeaurora.org>
+Date: Thu, 13 Feb 2014 20:35:54 +0530
+Subject: [PATCH 5/6] Bluetooth-OPP: Remove hashmap entry after Tx complete
+
+This will ensure after OPP Tx is complete, hasmap entry for each
+entry will be removed. Otherwise, if files are q'd after hashmap is full
+subsequent Tx will fail.
+
+CRs-Fixed: 611861
+Change-Id: Ic5b3706644a417cae2491d1df9588a22344f1711
+---
+ .../android/bluetooth/opp/BluetoothOppManager.java | 28 +++++++++++++---------
+ .../opp/BluetoothOppTransferActivity.java          |  6 +++++
+ .../android/bluetooth/opp/BluetoothOppUtility.java | 22 ++++++++++++++++-
+ 3 files changed, 44 insertions(+), 12 deletions(-)
+
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppManager.java b/src/com/android/bluetooth/opp/BluetoothOppManager.java
+index 5a8589b..c70428d 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppManager.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppManager.java
+@@ -251,11 +251,13 @@ public class BluetoothOppManager {
+         synchronized (BluetoothOppManager.this) {
+             mMultipleFlag = false;
+             mMimeTypeOfSendingFile = mimeType;
+-            mUriOfSendingFile = uriString;
+             mIsHandoverInitiated = isHandover;
+             Uri uri = Uri.parse(uriString);
+-            BluetoothOppUtility.putSendFileInfo(uri,
+-                    BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType));
++            BluetoothOppSendFileInfo sendFileInfo =
++                BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType);
++            uri = BluetoothOppUtility.generateUri(uri, sendFileInfo);
++            BluetoothOppUtility.putSendFileInfo(uri, sendFileInfo);
++            mUriOfSendingFile = uri.toString();
+             storeApplicationData();
+         }
+     }
+@@ -264,11 +266,14 @@ public class BluetoothOppManager {
+         synchronized (BluetoothOppManager.this) {
+             mMultipleFlag = true;
+             mMimeTypeOfSendingFiles = mimeType;
+-            mUrisOfSendingFiles = uris;
++            mUrisOfSendingFiles = new ArrayList<Uri>();
+             mIsHandoverInitiated = isHandover;
+             for (Uri uri : uris) {
+-                BluetoothOppUtility.putSendFileInfo(uri,
+-                        BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType));
++                BluetoothOppSendFileInfo sendFileInfo =
++                    BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType);
++                uri = BluetoothOppUtility.generateUri(uri, sendFileInfo);
++                mUrisOfSendingFiles.add(uri);
++                BluetoothOppUtility.putSendFileInfo(uri, sendFileInfo);
+             }
+             storeApplicationData();
+         }
+@@ -427,17 +432,18 @@ public class BluetoothOppManager {
+             Long ts = System.currentTimeMillis();
+             for (int i = 0; i < count; i++) {
+                 Uri fileUri = mUris.get(i);
++
++                BluetoothOppSendFileInfo fileInfo = BluetoothOppUtility.getSendFileInfo(fileUri);
++                ContentValues values = new ContentValues();
++                values.put(BluetoothShare.URI, fileUri.toString());
++
+                 ContentResolver contentResolver = mContext.getContentResolver();
++                fileUri = BluetoothOppUtility.originalUri(fileUri);
+                 String contentType = contentResolver.getType(fileUri);
+                 if (V) Log.v(TAG, "Got mimetype: " + contentType + "  Got uri: " + fileUri);
+                 if (TextUtils.isEmpty(contentType)) {
+                     contentType = mTypeOfMultipleFiles;
+                 }
+-
+-                BluetoothOppSendFileInfo fileInfo = BluetoothOppSendFileInfo.generateFileInfo(
+-                mContext, fileUri, contentType);
+-                ContentValues values = new ContentValues();
+-                values.put(BluetoothShare.URI, fileUri.toString());
+                 values.put(BluetoothShare.MIMETYPE, contentType);
+                 values.put(BluetoothShare.DESTINATION, mRemoteDevice.getAddress());
+                 values.put(BluetoothShare.TIMESTAMP, ts);
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java b/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java
+index 993dc0b..c394634 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java
+@@ -371,6 +371,12 @@ public class BluetoothOppTransferActivity extends AlertActivity implements
+                             .cancel(mTransInfo.mID);
+ 
+                     // retry the failed transfer
++                    Uri uri = BluetoothOppUtility.originalUri(Uri.parse(mTransInfo.mFileUri));
++                    BluetoothOppSendFileInfo sendFileInfo =
++                        BluetoothOppSendFileInfo.generateFileInfo(this, uri, mTransInfo.mFileType);
++                    uri = BluetoothOppUtility.generateUri(uri, sendFileInfo);
++                    BluetoothOppUtility.putSendFileInfo(uri, sendFileInfo);
++                    mTransInfo.mFileUri = uri.toString();
+                     BluetoothOppUtility.retryTransfer(this, mTransInfo);
+ 
+                     BluetoothDevice remoteDevice = mAdapter.getRemoteDevice(mTransInfo.mDestAddr);
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppUtility.java b/src/com/android/bluetooth/opp/BluetoothOppUtility.java
+index 24b7606..1a42133 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppUtility.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppUtility.java
+@@ -97,7 +97,7 @@ public class BluetoothOppUtility {
+                 info.mFileUri = cursor.getString(cursor.getColumnIndexOrThrow(BluetoothShare.URI));
+ 
+                 if (info.mFileUri != null) {
+-                    Uri u = Uri.parse(info.mFileUri);
++                    Uri u = originalUri(Uri.parse(info.mFileUri));
+                     info.mFileType = context.getContentResolver().getType(u);
+                 } else {
+                     Uri u = Uri.parse(info.mFileName);
+@@ -308,6 +308,26 @@ public class BluetoothOppUtility {
+                 transInfo.mDeviceName);
+     }
+ 
++    static Uri originalUri(Uri uri) {
++        String mUri = uri.toString();
++        int atIndex = mUri.lastIndexOf("@");
++        if (atIndex != -1) {
++            mUri = mUri.substring(0, atIndex);
++            uri = Uri.parse(mUri);
++        }
++        if (V) Log.v(TAG, "originalUri: " + uri);
++        return uri;
++    }
++
++    static Uri generateUri(Uri uri, BluetoothOppSendFileInfo sendFileInfo) {
++        String fileInfo = sendFileInfo.toString();
++        int atIndex = fileInfo.lastIndexOf("@");
++        fileInfo = fileInfo.substring(atIndex);
++        uri = Uri.parse(uri + fileInfo);
++        if (V) Log.v(TAG, "generateUri: " + uri);
++        return uri;
++    }
++
+     static void putSendFileInfo(Uri uri, BluetoothOppSendFileInfo sendFileInfo) {
+         if (D) Log.d(TAG, "putSendFileInfo: uri=" + uri + " sendFileInfo=" + sendFileInfo);
+         sSendFileMap.put(uri, sendFileInfo);
+-- 
+2.7.4
+

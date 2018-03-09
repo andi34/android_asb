@@ -1,0 +1,2614 @@
+From 714660326101973757ede60dfea5c927123aa9ed Mon Sep 17 00:00:00 2001
+From: Narayan Kamath <narayan@google.com>
+Date: Fri, 28 Aug 2015 12:59:48 +0100
+Subject: [PATCH 04/20] libutils: Fix integer overflows in VectorImpl. DO NOT
+ MERGE
+
+Use external/safe-iop to check for overflows on arithmetic
+operations.
+
+Also remove an unnecessary copy of Vector/SharedBuffer from
+codeflinger and use the copy from libutils instead.
+
+Note that some of the unit tests are somewhat useless due to
+test-runner limitations : gtest's ability to filter on abort message
+doesn't work when combined with messages formatted by android's logging
+system.
+
+bug: 22953624
+
+(cherry picked from commit c609c31fb56ae434caa2d0153cd0a2f74a715071)
+
+Change-Id: I673b7ab142bed4fcba9159a00a65cf6bca6b1f6c
+---
+ charger/Android.mk                                 |   2 +-
+ libpixelflinger/Android.mk                         |   4 +-
+ libpixelflinger/codeflinger/ARMAssembler.h         |   4 +-
+ libpixelflinger/codeflinger/CodeCache.h            |   2 +-
+ libpixelflinger/codeflinger/MIPSAssembler.h        |   4 +-
+ libpixelflinger/codeflinger/tinyutils/Errors.h     |  48 --
+ .../codeflinger/tinyutils/KeyedVector.h            | 203 --------
+ .../codeflinger/tinyutils/SharedBuffer.cpp         | 115 -----
+ .../codeflinger/tinyutils/SharedBuffer.h           | 148 ------
+ .../codeflinger/tinyutils/SortedVector.h           | 284 -----------
+ .../codeflinger/tinyutils/TypeHelpers.h            | 256 ----------
+ libpixelflinger/codeflinger/tinyutils/Vector.h     | 353 -------------
+ .../codeflinger/tinyutils/VectorImpl.cpp           | 555 ---------------------
+ libpixelflinger/codeflinger/tinyutils/VectorImpl.h | 195 --------
+ libutils/Android.mk                                |   4 +
+ libutils/VectorImpl.cpp                            |  82 ++-
+ libutils/tests/Android.mk                          |   8 +
+ libutils/tests/Vector_test.cpp                     |  75 +++
+ 18 files changed, 154 insertions(+), 2188 deletions(-)
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/Errors.h
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/KeyedVector.h
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/SharedBuffer.cpp
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/SharedBuffer.h
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/SortedVector.h
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/TypeHelpers.h
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/Vector.h
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/VectorImpl.cpp
+ delete mode 100644 libpixelflinger/codeflinger/tinyutils/VectorImpl.h
+
+diff --git a/charger/Android.mk b/charger/Android.mk
+index b9d3473..c63542c 100644
+--- a/charger/Android.mk
++++ b/charger/Android.mk
+@@ -28,7 +28,7 @@ LOCAL_STATIC_LIBRARIES := libminui libpixelflinger_static libpng
+ ifeq ($(strip $(BOARD_CHARGER_ENABLE_SUSPEND)),true)
+ LOCAL_STATIC_LIBRARIES += libsuspend
+ endif
+-LOCAL_STATIC_LIBRARIES += libz libstdc++ libcutils liblog libm libc
++LOCAL_STATIC_LIBRARIES += libz libstdc++ libcutils liblog libm libc libutils
+ 
+ include $(BUILD_EXECUTABLE)
+ 
+diff --git a/libpixelflinger/Android.mk b/libpixelflinger/Android.mk
+index 7f20e5b..a9057d7 100644
+--- a/libpixelflinger/Android.mk
++++ b/libpixelflinger/Android.mk
+@@ -16,8 +16,6 @@ PIXELFLINGER_SRC_FILES:= \
+     codeflinger/blending.cpp \
+     codeflinger/texturing.cpp \
+     codeflinger/disassem.c \
+-	codeflinger/tinyutils/SharedBuffer.cpp \
+-	codeflinger/tinyutils/VectorImpl.cpp \
+ 	fixed.cpp.arm \
+ 	picker.cpp.arm \
+ 	pixelflinger.cpp.arm \
+@@ -59,6 +57,8 @@ LOCAL_SHARED_LIBRARIES := libcutils liblog
+ LOCAL_MODULE:= libpixelflinger
+ LOCAL_SRC_FILES := $(PIXELFLINGER_SRC_FILES)
+ LOCAL_CFLAGS := $(PIXELFLINGER_CFLAGS)
++LOCAL_C_INCLUDES += external/safe-iop/include
++LOCAL_SHARED_LIBRARIES := libcutils liblog libutils
+ 
+ ifneq ($(BUILD_TINY_ANDROID),true)
+ # Really this should go away entirely or at least not depend on
+diff --git a/libpixelflinger/codeflinger/ARMAssembler.h b/libpixelflinger/codeflinger/ARMAssembler.h
+index c03dd9a..e0c7646 100644
+--- a/libpixelflinger/codeflinger/ARMAssembler.h
++++ b/libpixelflinger/codeflinger/ARMAssembler.h
+@@ -21,9 +21,9 @@
+ #include <stdint.h>
+ #include <sys/types.h>
+ 
+-#include "tinyutils/Vector.h"
+-#include "tinyutils/KeyedVector.h"
+ #include "tinyutils/smartpointer.h"
++#include "utils/Vector.h"
++#include "utils/KeyedVector.h"
+ 
+ #include "ARMAssemblerInterface.h"
+ #include "CodeCache.h"
+diff --git a/libpixelflinger/codeflinger/CodeCache.h b/libpixelflinger/codeflinger/CodeCache.h
+index fa67dd0..0fb6fd5 100644
+--- a/libpixelflinger/codeflinger/CodeCache.h
++++ b/libpixelflinger/codeflinger/CodeCache.h
+@@ -23,7 +23,7 @@
+ #include <pthread.h>
+ #include <sys/types.h>
+ 
+-#include "tinyutils/KeyedVector.h"
++#include "utils/KeyedVector.h"
+ #include "tinyutils/smartpointer.h"
+ 
+ namespace android {
+diff --git a/libpixelflinger/codeflinger/MIPSAssembler.h b/libpixelflinger/codeflinger/MIPSAssembler.h
+index 430ab06..8fea8cb 100644
+--- a/libpixelflinger/codeflinger/MIPSAssembler.h
++++ b/libpixelflinger/codeflinger/MIPSAssembler.h
+@@ -21,9 +21,9 @@
+ #include <stdint.h>
+ #include <sys/types.h>
+ 
+-#include "tinyutils/KeyedVector.h"
+-#include "tinyutils/Vector.h"
+ #include "tinyutils/smartpointer.h"
++#include "utils/KeyedVector.h"
++#include "utils/Vector.h"
+ 
+ #include "ARMAssemblerInterface.h"
+ #include "CodeCache.h"
+diff --git a/libpixelflinger/codeflinger/tinyutils/Errors.h b/libpixelflinger/codeflinger/tinyutils/Errors.h
+deleted file mode 100644
+index 47ae9d7..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/Errors.h
++++ /dev/null
+@@ -1,48 +0,0 @@
+-/*
+- * Copyright 2007 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#ifndef ANDROID_PIXELFLINGER_ERRORS_H
+-#define ANDROID_PIXELFLINGER_ERRORS_H
+-
+-#include <sys/types.h>
+-#include <errno.h>
+-
+-namespace android {
+-namespace tinyutils {
+-
+-// use this type to return error codes
+-typedef int32_t     status_t;
+-
+-/*
+- * Error codes. 
+- * All error codes are negative values.
+- */
+-
+-enum {
+-    NO_ERROR          = 0,    // No errors.
+-    NO_MEMORY           = -ENOMEM,
+-    BAD_VALUE           = -EINVAL,
+-    BAD_INDEX           = -EOVERFLOW,
+-    NAME_NOT_FOUND      = -ENOENT,
+-};
+-
+-
+-} // namespace tinyutils
+-} // namespace android
+-    
+-// ---------------------------------------------------------------------------
+-    
+-#endif // ANDROID_PIXELFLINGER_ERRORS_H
+diff --git a/libpixelflinger/codeflinger/tinyutils/KeyedVector.h b/libpixelflinger/codeflinger/tinyutils/KeyedVector.h
+deleted file mode 100644
+index 9d8668b..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/KeyedVector.h
++++ /dev/null
+@@ -1,203 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#ifndef ANDROID_PIXELFLINGER_KEYED_VECTOR_H
+-#define ANDROID_PIXELFLINGER_KEYED_VECTOR_H
+-
+-#include <assert.h>
+-#include <stdint.h>
+-#include <sys/types.h>
+-
+-#include "Errors.h"
+-#include "SortedVector.h"
+-#include "TypeHelpers.h"
+-
+-// ---------------------------------------------------------------------------
+-
+-namespace android {
+-namespace tinyutils {
+-
+-template <typename KEY, typename VALUE>
+-class KeyedVector
+-{
+-public:
+-    typedef KEY    key_type;
+-    typedef VALUE  value_type;
+-
+-    inline                  KeyedVector();
+-
+-    /*
+-     * empty the vector
+-     */
+-
+-    inline  void            clear()                     { mVector.clear(); }
+-
+-    /*! 
+-     * vector stats
+-     */
+-
+-    //! returns number of items in the vector
+-    inline  size_t          size() const                { return mVector.size(); }
+-    //! returns wether or not the vector is empty
+-    inline  bool            isEmpty() const             { return mVector.isEmpty(); }
+-    //! returns how many items can be stored without reallocating the backing store
+-    inline  size_t          capacity() const            { return mVector.capacity(); }
+-    //! setst the capacity. capacity can never be reduced less than size()
+-    inline ssize_t          setCapacity(size_t size)    { return mVector.setCapacity(size); }
+-    
+-    /*! 
+-     * accessors
+-     */
+-            const VALUE&    valueFor(const KEY& key) const;
+-            const VALUE&    valueAt(size_t index) const;
+-            const KEY&      keyAt(size_t index) const;
+-            ssize_t         indexOfKey(const KEY& key) const;
+-
+-    /*!
+-     * modifing the array
+-     */
+-
+-            VALUE&          editValueFor(const KEY& key);
+-            VALUE&          editValueAt(size_t index);
+-
+-            /*! 
+-             * add/insert/replace items
+-             */
+-             
+-            ssize_t         add(const KEY& key, const VALUE& item);
+-            ssize_t         replaceValueFor(const KEY& key, const VALUE& item);
+-            ssize_t         replaceValueAt(size_t index, const VALUE& item);
+-
+-    /*!
+-     * remove items
+-     */
+-
+-            ssize_t         removeItem(const KEY& key);
+-            ssize_t         removeItemsAt(size_t index, size_t count = 1);
+-            
+-private:
+-            SortedVector< key_value_pair_t<KEY, VALUE> >    mVector;
+-};
+-
+-// ---------------------------------------------------------------------------
+-
+-/**
+- * Variation of KeyedVector that holds a default value to return when
+- * valueFor() is called with a key that doesn't exist.
+- */
+-template <typename KEY, typename VALUE>
+-class DefaultKeyedVector : public KeyedVector<KEY, VALUE>
+-{
+-public:
+-    inline                  DefaultKeyedVector(const VALUE& defValue = VALUE());
+-            const VALUE&    valueFor(const KEY& key) const;
+-
+-private:
+-            VALUE                                           mDefault;
+-};
+-
+-// ---------------------------------------------------------------------------
+-
+-template<typename KEY, typename VALUE> inline
+-KeyedVector<KEY,VALUE>::KeyedVector()
+-{
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-ssize_t KeyedVector<KEY,VALUE>::indexOfKey(const KEY& key) const {
+-    return mVector.indexOf( key_value_pair_t<KEY,VALUE>(key) );
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-const VALUE& KeyedVector<KEY,VALUE>::valueFor(const KEY& key) const {
+-    ssize_t i = indexOfKey(key);
+-    assert(i>=0);
+-    return mVector.itemAt(i).value;
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-const VALUE& KeyedVector<KEY,VALUE>::valueAt(size_t index) const {
+-    return mVector.itemAt(index).value;
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-const KEY& KeyedVector<KEY,VALUE>::keyAt(size_t index) const {
+-    return mVector.itemAt(index).key;
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-VALUE& KeyedVector<KEY,VALUE>::editValueFor(const KEY& key) {
+-    ssize_t i = indexOfKey(key);
+-    assert(i>=0);
+-    return mVector.editItemAt(i).value;
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-VALUE& KeyedVector<KEY,VALUE>::editValueAt(size_t index) {
+-    return mVector.editItemAt(index).value;
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-ssize_t KeyedVector<KEY,VALUE>::add(const KEY& key, const VALUE& value) {
+-    return mVector.add( key_value_pair_t<KEY,VALUE>(key, value) );
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-ssize_t KeyedVector<KEY,VALUE>::replaceValueFor(const KEY& key, const VALUE& value) {
+-    key_value_pair_t<KEY,VALUE> pair(key, value);
+-    mVector.remove(pair);
+-    return mVector.add(pair);
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-ssize_t KeyedVector<KEY,VALUE>::replaceValueAt(size_t index, const VALUE& item) {
+-    if (index<size()) {
+-        mVector.editValueAt(index).value = item;
+-        return index;
+-    }
+-    return BAD_INDEX;
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-ssize_t KeyedVector<KEY,VALUE>::removeItem(const KEY& key) {
+-    return mVector.remove(key_value_pair_t<KEY,VALUE>(key));
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-ssize_t KeyedVector<KEY, VALUE>::removeItemsAt(size_t index, size_t count) {
+-    return mVector.removeItemsAt(index, count);
+-}
+-
+-// ---------------------------------------------------------------------------
+-
+-template<typename KEY, typename VALUE> inline
+-DefaultKeyedVector<KEY,VALUE>::DefaultKeyedVector(const VALUE& defValue)
+-    : mDefault(defValue)
+-{
+-}
+-
+-template<typename KEY, typename VALUE> inline
+-const VALUE& DefaultKeyedVector<KEY,VALUE>::valueFor(const KEY& key) const {
+-    ssize_t i = indexOfKey(key);
+-    return i >= 0 ? KeyedVector<KEY,VALUE>::valueAt(i) : mDefault;
+-}
+-
+-} // namespace tinyutils
+-} // namespace android
+-
+-// ---------------------------------------------------------------------------
+-
+-#endif // ANDROID_PIXELFLINGER_KEYED_VECTOR_H
+diff --git a/libpixelflinger/codeflinger/tinyutils/SharedBuffer.cpp b/libpixelflinger/codeflinger/tinyutils/SharedBuffer.cpp
+deleted file mode 100644
+index ef453fa..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/SharedBuffer.cpp
++++ /dev/null
+@@ -1,115 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#include <stdlib.h>
+-#include <string.h>
+-
+-#include <cutils/atomic.h>
+-
+-#include "SharedBuffer.h"
+-
+-// ---------------------------------------------------------------------------
+-
+-namespace android {
+-namespace tinyutils {
+-
+-SharedBuffer* SharedBuffer::alloc(size_t size)
+-{
+-    SharedBuffer* sb = static_cast<SharedBuffer *>(malloc(sizeof(SharedBuffer) + size));
+-    if (sb) {
+-        sb->mRefs = 1;
+-        sb->mSize = size;
+-    }
+-    return sb;
+-}
+-
+-
+-ssize_t SharedBuffer::dealloc(const SharedBuffer* released)
+-{
+-    if (released->mRefs != 0) return -1; // XXX: invalid operation
+-    free(const_cast<SharedBuffer*>(released));
+-    return 0;
+-}
+-
+-SharedBuffer* SharedBuffer::edit() const
+-{
+-    if (onlyOwner()) {
+-        return const_cast<SharedBuffer*>(this);
+-    }
+-    SharedBuffer* sb = alloc(mSize);
+-    if (sb) {
+-        memcpy(sb->data(), data(), size());
+-        release();
+-    }
+-    return sb;    
+-}
+-
+-SharedBuffer* SharedBuffer::editResize(size_t newSize) const
+-{
+-    if (onlyOwner()) {
+-        SharedBuffer* buf = const_cast<SharedBuffer*>(this);
+-        if (buf->mSize == newSize) return buf;
+-        buf = (SharedBuffer*)realloc(buf, sizeof(SharedBuffer) + newSize);
+-        if (buf != NULL) {
+-            buf->mSize = newSize;
+-            return buf;
+-        }
+-    }
+-    SharedBuffer* sb = alloc(newSize);
+-    if (sb) {
+-        const size_t mySize = mSize;
+-        memcpy(sb->data(), data(), newSize < mySize ? newSize : mySize);
+-        release();
+-    }
+-    return sb;    
+-}
+-
+-SharedBuffer* SharedBuffer::attemptEdit() const
+-{
+-    if (onlyOwner()) {
+-        return const_cast<SharedBuffer*>(this);
+-    }
+-    return 0;
+-}
+-
+-SharedBuffer* SharedBuffer::reset(size_t new_size) const
+-{
+-    // cheap-o-reset.
+-    SharedBuffer* sb = alloc(new_size);
+-    if (sb) {
+-        release();
+-    }
+-    return sb;
+-}
+-
+-void SharedBuffer::acquire() const {
+-    android_atomic_inc(&mRefs);
+-}
+-
+-int32_t SharedBuffer::release(uint32_t flags) const
+-{
+-    int32_t prev = 1;
+-    if (onlyOwner() || ((prev = android_atomic_dec(&mRefs)) == 1)) {
+-        mRefs = 0;
+-        if ((flags & eKeepStorage) == 0) {
+-            free(const_cast<SharedBuffer*>(this));
+-        }
+-    }
+-    return prev;
+-}
+-
+-} // namespace tinyutils
+-} // namespace android
+diff --git a/libpixelflinger/codeflinger/tinyutils/SharedBuffer.h b/libpixelflinger/codeflinger/tinyutils/SharedBuffer.h
+deleted file mode 100644
+index d69b417..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/SharedBuffer.h
++++ /dev/null
+@@ -1,148 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#ifndef ANDROID_PIXELFLINGER_SHARED_BUFFER_H
+-#define ANDROID_PIXELFLINGER_SHARED_BUFFER_H
+-
+-#include <stdint.h>
+-#include <sys/types.h>
+-
+-// ---------------------------------------------------------------------------
+-
+-namespace android {
+-namespace tinyutils {
+-
+-class SharedBuffer
+-{
+-public:
+-
+-    /* flags to use with release() */
+-    enum {
+-        eKeepStorage = 0x00000001
+-    };
+-
+-    /*! allocate a buffer of size 'size' and acquire() it.
+-     *  call release() to free it.
+-     */
+-    static          SharedBuffer*           alloc(size_t size);
+-    
+-    /*! free the memory associated with the SharedBuffer.
+-     * Fails if there are any users associated with this SharedBuffer.
+-     * In other words, the buffer must have been release by all its
+-     * users.
+-     */
+-    static          ssize_t                 dealloc(const SharedBuffer* released);
+-    
+-    //! get the SharedBuffer from the data pointer
+-    static  inline  const SharedBuffer*     sharedBuffer(const void* data);
+-
+-    //! access the data for read
+-    inline          const void*             data() const;
+-    
+-    //! access the data for read/write
+-    inline          void*                   data();
+-
+-    //! get size of the buffer
+-    inline          size_t                  size() const;
+- 
+-    //! get back a SharedBuffer object from its data
+-    static  inline  SharedBuffer*           bufferFromData(void* data);
+-    
+-    //! get back a SharedBuffer object from its data
+-    static  inline  const SharedBuffer*     bufferFromData(const void* data);
+-
+-    //! get the size of a SharedBuffer object from its data
+-    static  inline  size_t                  sizeFromData(const void* data);
+-    
+-    //! edit the buffer (get a writtable, or non-const, version of it)
+-                    SharedBuffer*           edit() const;
+-
+-    //! edit the buffer, resizing if needed
+-                    SharedBuffer*           editResize(size_t size) const;
+-
+-    //! like edit() but fails if a copy is required
+-                    SharedBuffer*           attemptEdit() const;
+-    
+-    //! resize and edit the buffer, loose it's content.
+-                    SharedBuffer*           reset(size_t size) const;
+-
+-    //! acquire/release a reference on this buffer
+-                    void                    acquire() const;
+-                    
+-    /*! release a reference on this buffer, with the option of not
+-     * freeing the memory associated with it if it was the last reference
+-     * returns the previous reference count
+-     */     
+-                    int32_t                 release(uint32_t flags = 0) const;
+-    
+-    //! returns wether or not we're the only owner
+-    inline          bool                    onlyOwner() const;
+-    
+-
+-private:
+-        inline SharedBuffer() { }
+-        inline ~SharedBuffer() { }
+-        inline SharedBuffer(const SharedBuffer&);
+- 
+-        // 16 bytes. must be sized to preserve correct alingment.
+-        mutable int32_t        mRefs;
+-                size_t         mSize;
+-                uint32_t       mReserved[2];
+-};
+-
+-// ---------------------------------------------------------------------------
+-
+-const SharedBuffer* SharedBuffer::sharedBuffer(const void* data) {
+-    return data ? reinterpret_cast<const SharedBuffer *>(data)-1 : 0;
+-}
+-
+-const void* SharedBuffer::data() const {
+-    return this + 1;
+-}
+-
+-void* SharedBuffer::data() {
+-    return this + 1;
+-}
+-
+-size_t SharedBuffer::size() const {
+-    return mSize;
+-}
+-
+-SharedBuffer* SharedBuffer::bufferFromData(void* data)
+-{
+-    return ((SharedBuffer*)data)-1;
+-}
+-    
+-const SharedBuffer* SharedBuffer::bufferFromData(const void* data)
+-{
+-    return ((const SharedBuffer*)data)-1;
+-}
+-
+-size_t SharedBuffer::sizeFromData(const void* data)
+-{
+-    return (((const SharedBuffer*)data)-1)->mSize;
+-}
+-
+-bool SharedBuffer::onlyOwner() const {
+-    return (mRefs == 1);
+-}
+-
+-} // namespace tinyutils
+-} // namespace android
+-
+-// ---------------------------------------------------------------------------
+-
+-#endif // ANDROID_PIXELFLINGER_SHARED_BUFFER_H
+diff --git a/libpixelflinger/codeflinger/tinyutils/SortedVector.h b/libpixelflinger/codeflinger/tinyutils/SortedVector.h
+deleted file mode 100644
+index a2b7005..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/SortedVector.h
++++ /dev/null
+@@ -1,284 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#ifndef ANDROID_PIXELFLINGER_SORTED_VECTOR_H
+-#define ANDROID_PIXELFLINGER_SORTED_VECTOR_H
+-
+-#include <assert.h>
+-#include <stdint.h>
+-#include <sys/types.h>
+-
+-#include "Vector.h"
+-#include "VectorImpl.h"
+-#include "TypeHelpers.h"
+-
+-// ---------------------------------------------------------------------------
+-
+-namespace android {
+-namespace tinyutils {
+-
+-template <class TYPE>
+-class SortedVector : private SortedVectorImpl
+-{
+-public:
+-            typedef TYPE    value_type;
+-    
+-    /*! 
+-     * Constructors and destructors
+-     */
+-    
+-                            SortedVector();
+-                            SortedVector(const SortedVector<TYPE>& rhs);
+-    virtual                 ~SortedVector();
+-
+-    /*! copy operator */
+-    const SortedVector<TYPE>&   operator = (const SortedVector<TYPE>& rhs) const;    
+-    SortedVector<TYPE>&         operator = (const SortedVector<TYPE>& rhs);    
+-
+-    /*
+-     * empty the vector
+-     */
+-
+-    inline  void            clear()             { VectorImpl::clear(); }
+-
+-    /*! 
+-     * vector stats
+-     */
+-
+-    //! returns number of items in the vector
+-    inline  size_t          size() const                { return VectorImpl::size(); }
+-    //! returns wether or not the vector is empty
+-    inline  bool            isEmpty() const             { return VectorImpl::isEmpty(); }
+-    //! returns how many items can be stored without reallocating the backing store
+-    inline  size_t          capacity() const            { return VectorImpl::capacity(); }
+-    //! setst the capacity. capacity can never be reduced less than size()
+-    inline  ssize_t         setCapacity(size_t size)    { return VectorImpl::setCapacity(size); }
+-
+-    /*! 
+-     * C-style array access
+-     */
+-     
+-    //! read-only C-style access 
+-    inline  const TYPE*     array() const;
+-
+-    //! read-write C-style access. BE VERY CAREFUL when modifying the array
+-    //! you ust keep it sorted! You usually don't use this function.
+-            TYPE*           editArray();
+-
+-            //! finds the index of an item
+-            ssize_t         indexOf(const TYPE& item) const;
+-            
+-            //! finds where this item should be inserted
+-            size_t          orderOf(const TYPE& item) const;
+-            
+-    
+-    /*! 
+-     * accessors
+-     */
+-
+-    //! read-only access to an item at a given index
+-    inline  const TYPE&     operator [] (size_t index) const;
+-    //! alternate name for operator []
+-    inline  const TYPE&     itemAt(size_t index) const;
+-    //! stack-usage of the vector. returns the top of the stack (last element)
+-            const TYPE&     top() const;
+-    //! same as operator [], but allows to access the vector backward (from the end) with a negative index
+-            const TYPE&     mirrorItemAt(ssize_t index) const;
+-
+-    /*!
+-     * modifing the array
+-     */
+-
+-            //! add an item in the right place (and replace the one that is there)
+-            ssize_t         add(const TYPE& item);
+-            
+-            //! editItemAt() MUST NOT change the order of this item
+-            TYPE&           editItemAt(size_t index) {
+-                return *( static_cast<TYPE *>(VectorImpl::editItemLocation(index)) );
+-            }
+-
+-            //! merges a vector into this one
+-            ssize_t         merge(const Vector<TYPE>& vector);
+-            ssize_t         merge(const SortedVector<TYPE>& vector);
+-            
+-            //! removes an item
+-            ssize_t         remove(const TYPE&);
+-
+-    //! remove several items
+-    inline  ssize_t         removeItemsAt(size_t index, size_t count = 1);
+-    //! remove one item
+-    inline  ssize_t         removeAt(size_t index)  { return removeItemsAt(index); }
+-            
+-protected:
+-    virtual void    do_construct(void* storage, size_t num) const;
+-    virtual void    do_destroy(void* storage, size_t num) const;
+-    virtual void    do_copy(void* dest, const void* from, size_t num) const;
+-    virtual void    do_splat(void* dest, const void* item, size_t num) const;
+-    virtual void    do_move_forward(void* dest, const void* from, size_t num) const;
+-    virtual void    do_move_backward(void* dest, const void* from, size_t num) const;
+-    virtual int     do_compare(const void* lhs, const void* rhs) const;
+-};
+-
+-
+-// ---------------------------------------------------------------------------
+-// No user serviceable parts from here...
+-// ---------------------------------------------------------------------------
+-
+-template<class TYPE> inline
+-SortedVector<TYPE>::SortedVector()
+-    : SortedVectorImpl(sizeof(TYPE),
+-                ((traits<TYPE>::has_trivial_ctor   ? HAS_TRIVIAL_CTOR   : 0)
+-                |(traits<TYPE>::has_trivial_dtor   ? HAS_TRIVIAL_DTOR   : 0)
+-                |(traits<TYPE>::has_trivial_copy   ? HAS_TRIVIAL_COPY   : 0)
+-                |(traits<TYPE>::has_trivial_assign ? HAS_TRIVIAL_ASSIGN : 0))
+-                )
+-{
+-}
+-
+-template<class TYPE> inline
+-SortedVector<TYPE>::SortedVector(const SortedVector<TYPE>& rhs)
+-    : SortedVectorImpl(rhs) {
+-}
+-
+-template<class TYPE> inline
+-SortedVector<TYPE>::~SortedVector() {
+-    finish_vector();
+-}
+-
+-template<class TYPE> inline
+-SortedVector<TYPE>& SortedVector<TYPE>::operator = (const SortedVector<TYPE>& rhs) {
+-    SortedVectorImpl::operator = (rhs);
+-    return *this; 
+-}
+-
+-template<class TYPE> inline
+-const SortedVector<TYPE>& SortedVector<TYPE>::operator = (const SortedVector<TYPE>& rhs) const {
+-    SortedVectorImpl::operator = (rhs);
+-    return *this; 
+-}
+-
+-template<class TYPE> inline
+-const TYPE* SortedVector<TYPE>::array() const {
+-    return static_cast<const TYPE *>(arrayImpl());
+-}
+-
+-template<class TYPE> inline
+-TYPE* SortedVector<TYPE>::editArray() {
+-    return static_cast<TYPE *>(editArrayImpl());
+-}
+-
+-
+-template<class TYPE> inline
+-const TYPE& SortedVector<TYPE>::operator[](size_t index) const {
+-    assert( index<size() );
+-    return *(array() + index);
+-}
+-
+-template<class TYPE> inline
+-const TYPE& SortedVector<TYPE>::itemAt(size_t index) const {
+-    return operator[](index);
+-}
+-
+-template<class TYPE> inline
+-const TYPE& SortedVector<TYPE>::mirrorItemAt(ssize_t index) const {
+-    assert( (index>0 ? index : -index)<size() );
+-    return *(array() + ((index<0) ? (size()-index) : index));
+-}
+-
+-template<class TYPE> inline
+-const TYPE& SortedVector<TYPE>::top() const {
+-    return *(array() + size() - 1);
+-}
+-
+-template<class TYPE> inline
+-ssize_t SortedVector<TYPE>::add(const TYPE& item) {
+-    return SortedVectorImpl::add(&item);
+-}
+-
+-template<class TYPE> inline
+-ssize_t SortedVector<TYPE>::indexOf(const TYPE& item) const {
+-    return SortedVectorImpl::indexOf(&item);
+-}
+-
+-template<class TYPE> inline
+-size_t SortedVector<TYPE>::orderOf(const TYPE& item) const {
+-    return SortedVectorImpl::orderOf(&item);
+-}
+-
+-template<class TYPE> inline
+-ssize_t SortedVector<TYPE>::merge(const Vector<TYPE>& vector) {
+-    return SortedVectorImpl::merge(reinterpret_cast<const VectorImpl&>(vector));
+-}
+-
+-template<class TYPE> inline
+-ssize_t SortedVector<TYPE>::merge(const SortedVector<TYPE>& vector) {
+-    return SortedVectorImpl::merge(reinterpret_cast<const SortedVectorImpl&>(vector));
+-}
+-
+-template<class TYPE> inline
+-ssize_t SortedVector<TYPE>::remove(const TYPE& item) {
+-    return SortedVectorImpl::remove(&item);
+-}
+-
+-template<class TYPE> inline
+-ssize_t SortedVector<TYPE>::removeItemsAt(size_t index, size_t count) {
+-    return VectorImpl::removeItemsAt(index, count);
+-}
+-
+-// ---------------------------------------------------------------------------
+-
+-template<class TYPE>
+-void SortedVector<TYPE>::do_construct(void* storage, size_t num) const {
+-    construct_type( reinterpret_cast<TYPE*>(storage), num );
+-}
+-
+-template<class TYPE>
+-void SortedVector<TYPE>::do_destroy(void* storage, size_t num) const {
+-    destroy_type( reinterpret_cast<TYPE*>(storage), num );
+-}
+-
+-template<class TYPE>
+-void SortedVector<TYPE>::do_copy(void* dest, const void* from, size_t num) const {
+-    copy_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
+-}
+-
+-template<class TYPE>
+-void SortedVector<TYPE>::do_splat(void* dest, const void* item, size_t num) const {
+-    splat_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(item), num );
+-}
+-
+-template<class TYPE>
+-void SortedVector<TYPE>::do_move_forward(void* dest, const void* from, size_t num) const {
+-    move_forward_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
+-}
+-
+-template<class TYPE>
+-void SortedVector<TYPE>::do_move_backward(void* dest, const void* from, size_t num) const {
+-    move_backward_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
+-}
+-
+-template<class TYPE>
+-int SortedVector<TYPE>::do_compare(const void* lhs, const void* rhs) const {
+-    return compare_type( *reinterpret_cast<const TYPE*>(lhs), *reinterpret_cast<const TYPE*>(rhs) );
+-}
+-
+-} // namespace tinyutils
+-} // namespace android
+-
+-
+-// ---------------------------------------------------------------------------
+-
+-#endif // ANDROID_PIXELFLINGER_SORTED_VECTOR_H
+diff --git a/libpixelflinger/codeflinger/tinyutils/TypeHelpers.h b/libpixelflinger/codeflinger/tinyutils/TypeHelpers.h
+deleted file mode 100644
+index 7abff07..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/TypeHelpers.h
++++ /dev/null
+@@ -1,256 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#ifndef ANDROID_PIXELFLINGER_TYPE_HELPERS_H
+-#define ANDROID_PIXELFLINGER_TYPE_HELPERS_H
+-
+-#include <new>
+-#include <stdint.h>
+-#include <string.h>
+-#include <sys/types.h>
+-
+-// ---------------------------------------------------------------------------
+-
+-namespace android {
+-namespace tinyutils {
+-
+-/*
+- * Types traits
+- */
+-    
+-template <typename T> struct trait_trivial_ctor  { enum { value = false }; };
+-template <typename T> struct trait_trivial_dtor  { enum { value = false }; };
+-template <typename T> struct trait_trivial_copy  { enum { value = false }; };
+-template <typename T> struct trait_trivial_assign{ enum { value = false }; };
+-
+-template <typename T> struct trait_pointer     { enum { value = false }; };    
+-template <typename T> struct trait_pointer<T*> { enum { value = true }; };
+-
+-#define ANDROID_BASIC_TYPES_TRAITS( T )                                       \
+-    template<> struct trait_trivial_ctor< T >  { enum { value = true }; };    \
+-    template<> struct trait_trivial_dtor< T >  { enum { value = true }; };    \
+-    template<> struct trait_trivial_copy< T >  { enum { value = true }; };    \
+-    template<> struct trait_trivial_assign< T >{ enum { value = true }; }; 
+-
+-#define ANDROID_TYPE_TRAITS( T, ctor, dtor, copy, assign )                    \
+-    template<> struct trait_trivial_ctor< T >  { enum { value = ctor }; };    \
+-    template<> struct trait_trivial_dtor< T >  { enum { value = dtor }; };    \
+-    template<> struct trait_trivial_copy< T >  { enum { value = copy }; };    \
+-    template<> struct trait_trivial_assign< T >{ enum { value = assign }; }; 
+-
+-template <typename TYPE>
+-struct traits {
+-    enum {
+-        is_pointer          = trait_pointer<TYPE>::value,
+-        has_trivial_ctor    = is_pointer || trait_trivial_ctor<TYPE>::value,
+-        has_trivial_dtor    = is_pointer || trait_trivial_dtor<TYPE>::value,
+-        has_trivial_copy    = is_pointer || trait_trivial_copy<TYPE>::value,
+-        has_trivial_assign  = is_pointer || trait_trivial_assign<TYPE>::value   
+-    };
+-};
+-
+-template <typename T, typename U>
+-struct aggregate_traits {
+-    enum {
+-        is_pointer          = false,
+-        has_trivial_ctor    = traits<T>::has_trivial_ctor && traits<U>::has_trivial_ctor,
+-        has_trivial_dtor    = traits<T>::has_trivial_dtor && traits<U>::has_trivial_dtor,
+-        has_trivial_copy    = traits<T>::has_trivial_copy && traits<U>::has_trivial_copy,
+-        has_trivial_assign  = traits<T>::has_trivial_assign && traits<U>::has_trivial_assign
+-    };
+-};
+-
+-// ---------------------------------------------------------------------------
+-
+-/*
+- * basic types traits
+- */
+- 
+-ANDROID_BASIC_TYPES_TRAITS( void );
+-ANDROID_BASIC_TYPES_TRAITS( bool );
+-ANDROID_BASIC_TYPES_TRAITS( char );
+-ANDROID_BASIC_TYPES_TRAITS( unsigned char );
+-ANDROID_BASIC_TYPES_TRAITS( short );
+-ANDROID_BASIC_TYPES_TRAITS( unsigned short );
+-ANDROID_BASIC_TYPES_TRAITS( int );
+-ANDROID_BASIC_TYPES_TRAITS( unsigned int );
+-ANDROID_BASIC_TYPES_TRAITS( long );
+-ANDROID_BASIC_TYPES_TRAITS( unsigned long );
+-ANDROID_BASIC_TYPES_TRAITS( long long );
+-ANDROID_BASIC_TYPES_TRAITS( unsigned long long );
+-ANDROID_BASIC_TYPES_TRAITS( float );
+-ANDROID_BASIC_TYPES_TRAITS( double );
+-
+-// ---------------------------------------------------------------------------
+-
+-    
+-/*
+- * compare and order types
+- */
+-
+-template<typename TYPE> inline
+-int strictly_order_type(const TYPE& lhs, const TYPE& rhs) {
+-    return (lhs < rhs) ? 1 : 0;
+-}
+-
+-template<typename TYPE> inline
+-int compare_type(const TYPE& lhs, const TYPE& rhs) {
+-    return strictly_order_type(rhs, lhs) - strictly_order_type(lhs, rhs);
+-}
+-
+-/*
+- * create, destroy, copy and assign types...
+- */
+- 
+-template<typename TYPE> inline
+-void construct_type(TYPE* p, size_t n) {
+-    if (!traits<TYPE>::has_trivial_ctor) {
+-        while (n--) {
+-            new(p++) TYPE;
+-        }
+-    }
+-}
+-
+-template<typename TYPE> inline
+-void destroy_type(TYPE* p, size_t n) {
+-    if (!traits<TYPE>::has_trivial_dtor) {
+-        while (n--) {
+-            p->~TYPE();
+-            p++;
+-        }
+-    }
+-}
+-
+-template<typename TYPE> inline
+-void copy_type(TYPE* d, const TYPE* s, size_t n) {
+-    if (!traits<TYPE>::has_trivial_copy) {
+-        while (n--) {
+-            new(d) TYPE(*s);
+-            d++, s++;
+-        }
+-    } else {
+-        memcpy(d,s,n*sizeof(TYPE));
+-    }
+-}
+-
+-template<typename TYPE> inline
+-void assign_type(TYPE* d, const TYPE* s, size_t n) {
+-    if (!traits<TYPE>::has_trivial_assign) {
+-        while (n--) {
+-            *d++ = *s++;
+-        }
+-    } else {
+-        memcpy(d,s,n*sizeof(TYPE));
+-    }
+-}
+-
+-template<typename TYPE> inline
+-void splat_type(TYPE* where, const TYPE* what, size_t n) {
+-    if (!traits<TYPE>::has_trivial_copy) {
+-        while (n--) {
+-            new(where) TYPE(*what);
+-            where++;
+-        }
+-    } else {
+-         while (n--) {
+-             *where++ = *what;
+-        }
+-    }
+-}
+-
+-template<typename TYPE> inline
+-void move_forward_type(TYPE* d, const TYPE* s, size_t n = 1) {
+-    if (!traits<TYPE>::has_trivial_copy || !traits<TYPE>::has_trivial_dtor) {
+-        d += n;
+-        s += n;
+-        while (n--) {
+-            --d, --s;
+-            if (!traits<TYPE>::has_trivial_copy) {
+-                new(d) TYPE(*s);
+-            } else {
+-                *d = *s;
+-            }
+-            if (!traits<TYPE>::has_trivial_dtor) {
+-                s->~TYPE();
+-            }
+-        }
+-    } else {
+-        memmove(d,s,n*sizeof(TYPE));
+-    }
+-}
+-
+-template<typename TYPE> inline
+-void move_backward_type(TYPE* d, const TYPE* s, size_t n = 1) {
+-    if (!traits<TYPE>::has_trivial_copy || !traits<TYPE>::has_trivial_dtor) {
+-        while (n--) {
+-            if (!traits<TYPE>::has_trivial_copy) {
+-                new(d) TYPE(*s);
+-            } else {
+-                *d = *s;
+-            }
+-            if (!traits<TYPE>::has_trivial_dtor) {
+-                s->~TYPE();
+-            }
+-            d++, s++;
+-        }
+-    } else {
+-        memmove(d,s,n*sizeof(TYPE));
+-    }
+-}
+-// ---------------------------------------------------------------------------
+-
+-/*
+- * a key/value pair
+- */
+-
+-template <typename KEY, typename VALUE>
+-struct key_value_pair_t {
+-    KEY     key;
+-    VALUE   value;
+-    key_value_pair_t() { }
+-    key_value_pair_t(const key_value_pair_t& o) : key(o.key), value(o.value) { }
+-    key_value_pair_t(const KEY& k, const VALUE& v) : key(k), value(v)  { }
+-    key_value_pair_t(const KEY& k) : key(k) { }
+-    inline bool operator < (const key_value_pair_t& o) const {
+-        return strictly_order_type(key, o.key);
+-    }
+-};
+-
+-template<>
+-template <typename K, typename V>
+-struct trait_trivial_ctor< key_value_pair_t<K, V> >
+-{ enum { value = aggregate_traits<K,V>::has_trivial_ctor }; };
+-template<> 
+-template <typename K, typename V>
+-struct trait_trivial_dtor< key_value_pair_t<K, V> >
+-{ enum { value = aggregate_traits<K,V>::has_trivial_dtor }; };
+-template<> 
+-template <typename K, typename V>
+-struct trait_trivial_copy< key_value_pair_t<K, V> >
+-{ enum { value = aggregate_traits<K,V>::has_trivial_copy }; };
+-template<> 
+-template <typename K, typename V>
+-struct trait_trivial_assign< key_value_pair_t<K, V> >
+-{ enum { value = aggregate_traits<K,V>::has_trivial_assign};};
+-
+-// ---------------------------------------------------------------------------
+-
+-} // namespace tinyutils
+-} // namespace android
+-
+-// ---------------------------------------------------------------------------
+-
+-#endif // ANDROID_PIXELFLINGER_TYPE_HELPERS_H
+diff --git a/libpixelflinger/codeflinger/tinyutils/Vector.h b/libpixelflinger/codeflinger/tinyutils/Vector.h
+deleted file mode 100644
+index c07a17a..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/Vector.h
++++ /dev/null
+@@ -1,353 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#ifndef ANDROID_PIXELFLINGER_VECTOR_H
+-#define ANDROID_PIXELFLINGER_VECTOR_H
+-
+-#include <new>
+-#include <stdint.h>
+-#include <sys/types.h>
+-
+-#include <cutils/log.h>
+-
+-#include "Errors.h"
+-#include "VectorImpl.h"
+-#include "TypeHelpers.h"
+-
+-// ---------------------------------------------------------------------------
+-
+-namespace android {
+-namespace tinyutils {
+-
+-/*!
+- * The main templated vector class ensuring type safety
+- * while making use of VectorImpl.
+- * This is the class users want to use.
+- */
+-
+-template <class TYPE>
+-class Vector : private VectorImpl
+-{
+-public:
+-            typedef TYPE    value_type;
+-    
+-    /*! 
+-     * Constructors and destructors
+-     */
+-    
+-                            Vector();
+-                            Vector(const Vector<TYPE>& rhs);
+-    virtual                 ~Vector();
+-
+-    /*! copy operator */
+-            const Vector<TYPE>&     operator = (const Vector<TYPE>& rhs) const;
+-            Vector<TYPE>&           operator = (const Vector<TYPE>& rhs);    
+-
+-    /*
+-     * empty the vector
+-     */
+-
+-    inline  void            clear()             { VectorImpl::clear(); }
+-
+-    /*! 
+-     * vector stats
+-     */
+-
+-    //! returns number of items in the vector
+-    inline  size_t          size() const                { return VectorImpl::size(); }
+-    //! returns wether or not the vector is empty
+-    inline  bool            isEmpty() const             { return VectorImpl::isEmpty(); }
+-    //! returns how many items can be stored without reallocating the backing store
+-    inline  size_t          capacity() const            { return VectorImpl::capacity(); }
+-    //! setst the capacity. capacity can never be reduced less than size()
+-    inline  ssize_t         setCapacity(size_t size)    { return VectorImpl::setCapacity(size); }
+-
+-    /*! 
+-     * C-style array access
+-     */
+-     
+-    //! read-only C-style access 
+-    inline  const TYPE*     array() const;
+-    //! read-write C-style access
+-            TYPE*           editArray();
+-    
+-    /*! 
+-     * accessors
+-     */
+-
+-    //! read-only access to an item at a given index
+-    inline  const TYPE&     operator [] (size_t index) const;
+-    //! alternate name for operator []
+-    inline  const TYPE&     itemAt(size_t index) const;
+-    //! stack-usage of the vector. returns the top of the stack (last element)
+-            const TYPE&     top() const;
+-    //! same as operator [], but allows to access the vector backward (from the end) with a negative index
+-            const TYPE&     mirrorItemAt(ssize_t index) const;
+-
+-    /*!
+-     * modifing the array
+-     */
+-
+-    //! copy-on write support, grants write access to an item
+-            TYPE&           editItemAt(size_t index);
+-    //! grants right acces to the top of the stack (last element)
+-            TYPE&           editTop();
+-
+-            /*! 
+-             * append/insert another vector
+-             */
+-            
+-    //! insert another vector at a given index
+-            ssize_t         insertVectorAt(const Vector<TYPE>& vector, size_t index);
+-
+-    //! append another vector at the end of this one
+-            ssize_t         appendVector(const Vector<TYPE>& vector);
+-
+-
+-            /*! 
+-             * add/insert/replace items
+-             */
+-             
+-    //! insert one or several items initialized with their default constructor
+-    inline  ssize_t         insertAt(size_t index, size_t numItems = 1);
+-    //! insert on onr several items initialized from a prototype item
+-            ssize_t         insertAt(const TYPE& prototype_item, size_t index, size_t numItems = 1);
+-    //! pop the top of the stack (removes the last element). No-op if the stack's empty
+-    inline  void            pop();
+-    //! pushes an item initialized with its default constructor
+-    inline  void            push();
+-    //! pushes an item on the top of the stack
+-            void            push(const TYPE& item);
+-    //! same as push() but returns the index the item was added at (or an error)
+-    inline  ssize_t         add();
+-    //! same as push() but returns the index the item was added at (or an error)
+-            ssize_t         add(const TYPE& item);            
+-    //! replace an item with a new one initialized with its default constructor
+-    inline  ssize_t         replaceAt(size_t index);
+-    //! replace an item with a new one
+-            ssize_t         replaceAt(const TYPE& item, size_t index);
+-
+-    /*!
+-     * remove items
+-     */
+-
+-    //! remove several items
+-    inline  ssize_t         removeItemsAt(size_t index, size_t count = 1);
+-    //! remove one item
+-    inline  ssize_t         removeAt(size_t index)  { return removeItemsAt(index); }
+-
+-    /*!
+-     * sort (stable) the array
+-     */
+-     
+-     typedef int (*compar_t)(const TYPE* lhs, const TYPE* rhs);
+-     typedef int (*compar_r_t)(const TYPE* lhs, const TYPE* rhs, void* state);
+-     
+-     inline status_t        sort(compar_t cmp);
+-     inline status_t        sort(compar_r_t cmp, void* state);
+-
+-protected:
+-    virtual void    do_construct(void* storage, size_t num) const;
+-    virtual void    do_destroy(void* storage, size_t num) const;
+-    virtual void    do_copy(void* dest, const void* from, size_t num) const;
+-    virtual void    do_splat(void* dest, const void* item, size_t num) const;
+-    virtual void    do_move_forward(void* dest, const void* from, size_t num) const;
+-    virtual void    do_move_backward(void* dest, const void* from, size_t num) const;
+-};
+-
+-
+-// ---------------------------------------------------------------------------
+-// No user serviceable parts from here...
+-// ---------------------------------------------------------------------------
+-
+-template<class TYPE> inline
+-Vector<TYPE>::Vector()
+-    : VectorImpl(sizeof(TYPE),
+-                ((traits<TYPE>::has_trivial_ctor   ? HAS_TRIVIAL_CTOR   : 0)
+-                |(traits<TYPE>::has_trivial_dtor   ? HAS_TRIVIAL_DTOR   : 0)
+-                |(traits<TYPE>::has_trivial_copy   ? HAS_TRIVIAL_COPY   : 0)
+-                |(traits<TYPE>::has_trivial_assign ? HAS_TRIVIAL_ASSIGN : 0))
+-                )
+-{
+-}
+-
+-template<class TYPE> inline
+-Vector<TYPE>::Vector(const Vector<TYPE>& rhs)
+-    : VectorImpl(rhs) {
+-}
+-
+-template<class TYPE> inline
+-Vector<TYPE>::~Vector() {
+-    finish_vector();
+-}
+-
+-template<class TYPE> inline
+-Vector<TYPE>& Vector<TYPE>::operator = (const Vector<TYPE>& rhs) {
+-    VectorImpl::operator = (rhs);
+-    return *this; 
+-}
+-
+-template<class TYPE> inline
+-const Vector<TYPE>& Vector<TYPE>::operator = (const Vector<TYPE>& rhs) const {
+-    VectorImpl::operator = (rhs);
+-    return *this; 
+-}
+-
+-template<class TYPE> inline
+-const TYPE* Vector<TYPE>::array() const {
+-    return static_cast<const TYPE *>(arrayImpl());
+-}
+-
+-template<class TYPE> inline
+-TYPE* Vector<TYPE>::editArray() {
+-    return static_cast<TYPE *>(editArrayImpl());
+-}
+-
+-
+-template<class TYPE> inline
+-const TYPE& Vector<TYPE>::operator[](size_t index) const {
+-    LOG_FATAL_IF( index>=size(),
+-                  "itemAt: index %d is past size %d", (int)index, (int)size() );
+-    return *(array() + index);
+-}
+-
+-template<class TYPE> inline
+-const TYPE& Vector<TYPE>::itemAt(size_t index) const {
+-    return operator[](index);
+-}
+-
+-template<class TYPE> inline
+-const TYPE& Vector<TYPE>::mirrorItemAt(ssize_t index) const {
+-    LOG_FATAL_IF( (index>0 ? index : -index)>=size(),
+-                  "mirrorItemAt: index %d is past size %d",
+-                  (int)index, (int)size() );
+-    return *(array() + ((index<0) ? (size()-index) : index));
+-}
+-
+-template<class TYPE> inline
+-const TYPE& Vector<TYPE>::top() const {
+-    return *(array() + size() - 1);
+-}
+-
+-template<class TYPE> inline
+-TYPE& Vector<TYPE>::editItemAt(size_t index) {
+-    return *( static_cast<TYPE *>(editItemLocation(index)) );
+-}
+-
+-template<class TYPE> inline
+-TYPE& Vector<TYPE>::editTop() {
+-    return *( static_cast<TYPE *>(editItemLocation(size()-1)) );
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::insertVectorAt(const Vector<TYPE>& vector, size_t index) {
+-    return VectorImpl::insertVectorAt(reinterpret_cast<const VectorImpl&>(vector), index);
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::appendVector(const Vector<TYPE>& vector) {
+-    return VectorImpl::appendVector(reinterpret_cast<const VectorImpl&>(vector));
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::insertAt(const TYPE& item, size_t index, size_t numItems) {
+-    return VectorImpl::insertAt(&item, index, numItems);
+-}
+-
+-template<class TYPE> inline
+-void Vector<TYPE>::push(const TYPE& item) {
+-    return VectorImpl::push(&item);
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::add(const TYPE& item) {
+-    return VectorImpl::add(&item);
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::replaceAt(const TYPE& item, size_t index) {
+-    return VectorImpl::replaceAt(&item, index);
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::insertAt(size_t index, size_t numItems) {
+-    return VectorImpl::insertAt(index, numItems);
+-}
+-
+-template<class TYPE> inline
+-void Vector<TYPE>::pop() {
+-    VectorImpl::pop();
+-}
+-
+-template<class TYPE> inline
+-void Vector<TYPE>::push() {
+-    VectorImpl::push();
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::add() {
+-    return VectorImpl::add();
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::replaceAt(size_t index) {
+-    return VectorImpl::replaceAt(index);
+-}
+-
+-template<class TYPE> inline
+-ssize_t Vector<TYPE>::removeItemsAt(size_t index, size_t count) {
+-    return VectorImpl::removeItemsAt(index, count);
+-}
+-
+-// ---------------------------------------------------------------------------
+-
+-template<class TYPE>
+-void Vector<TYPE>::do_construct(void* storage, size_t num) const {
+-    construct_type( reinterpret_cast<TYPE*>(storage), num );
+-}
+-
+-template<class TYPE>
+-void Vector<TYPE>::do_destroy(void* storage, size_t num) const {
+-    destroy_type( reinterpret_cast<TYPE*>(storage), num );
+-}
+-
+-template<class TYPE>
+-void Vector<TYPE>::do_copy(void* dest, const void* from, size_t num) const {
+-    copy_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
+-}
+-
+-template<class TYPE>
+-void Vector<TYPE>::do_splat(void* dest, const void* item, size_t num) const {
+-    splat_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(item), num );
+-}
+-
+-template<class TYPE>
+-void Vector<TYPE>::do_move_forward(void* dest, const void* from, size_t num) const {
+-    move_forward_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
+-}
+-
+-template<class TYPE>
+-void Vector<TYPE>::do_move_backward(void* dest, const void* from, size_t num) const {
+-    move_backward_type( reinterpret_cast<TYPE*>(dest), reinterpret_cast<const TYPE*>(from), num );
+-}
+-
+-} // namespace tinyutils
+-} // namespace android
+-
+-
+-// ---------------------------------------------------------------------------
+-
+-#endif // ANDROID_PIXELFLINGER_VECTOR_H
+diff --git a/libpixelflinger/codeflinger/tinyutils/VectorImpl.cpp b/libpixelflinger/codeflinger/tinyutils/VectorImpl.cpp
+deleted file mode 100644
+index 689129a..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/VectorImpl.cpp
++++ /dev/null
+@@ -1,555 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#define LOG_TAG "Vector"
+-
+-#include <string.h>
+-#include <stdlib.h>
+-#include <stdio.h>
+-#include <errno.h>
+-
+-#include <cutils/log.h>
+-
+-#include "Errors.h"
+-#include "SharedBuffer.h"
+-#include "VectorImpl.h"
+-
+-/*****************************************************************************/
+-
+-
+-namespace android {
+-namespace tinyutils {
+-
+-// ----------------------------------------------------------------------------
+-
+-const size_t kMinVectorCapacity = 4;
+-
+-static inline size_t max(size_t a, size_t b) {
+-    return a>b ? a : b;
+-}
+-
+-// ----------------------------------------------------------------------------
+-
+-VectorImpl::VectorImpl(size_t itemSize, uint32_t flags)
+-    : mStorage(0), mCount(0), mFlags(flags), mItemSize(itemSize)
+-{
+-}
+-
+-VectorImpl::VectorImpl(const VectorImpl& rhs)
+-    :   mStorage(rhs.mStorage), mCount(rhs.mCount),
+-        mFlags(rhs.mFlags), mItemSize(rhs.mItemSize)
+-{
+-    if (mStorage) {
+-        SharedBuffer::sharedBuffer(mStorage)->acquire();
+-    }
+-}
+-
+-VectorImpl::~VectorImpl()
+-{
+-    ALOG_ASSERT(!mCount,
+-        "[%p] "
+-        "subclasses of VectorImpl must call finish_vector()"
+-        " in their destructor. Leaking %d bytes.",
+-        this, (int)(mCount*mItemSize));
+-    // We can't call _do_destroy() here because the vtable is already gone. 
+-}
+-
+-VectorImpl& VectorImpl::operator = (const VectorImpl& rhs)
+-{
+-    ALOG_ASSERT(mItemSize == rhs.mItemSize,
+-        "Vector<> have different types (this=%p, rhs=%p)", this, &rhs);
+-    if (this != &rhs) {
+-        release_storage();
+-        if (rhs.mCount) {
+-            mStorage = rhs.mStorage;
+-            mCount = rhs.mCount;
+-            SharedBuffer::sharedBuffer(mStorage)->acquire();
+-        } else {
+-            mStorage = 0;
+-            mCount = 0;
+-        }
+-    }
+-    return *this;
+-}
+-
+-void* VectorImpl::editArrayImpl()
+-{
+-    if (mStorage) {
+-        SharedBuffer* sb = SharedBuffer::sharedBuffer(mStorage)->attemptEdit();
+-        if (sb == 0) {
+-            sb = SharedBuffer::alloc(capacity() * mItemSize);
+-            if (sb) {
+-                _do_copy(sb->data(), mStorage, mCount);
+-                release_storage();
+-                mStorage = sb->data();
+-            }
+-        }
+-    }
+-    return mStorage;
+-}
+-
+-size_t VectorImpl::capacity() const
+-{
+-    if (mStorage) {
+-        return SharedBuffer::sharedBuffer(mStorage)->size() / mItemSize;
+-    }
+-    return 0;
+-}
+-
+-ssize_t VectorImpl::insertVectorAt(const VectorImpl& vector, size_t index)
+-{
+-    if (index > size())
+-        return BAD_INDEX;
+-    void* where = _grow(index, vector.size());
+-    if (where) {
+-        _do_copy(where, vector.arrayImpl(), vector.size());
+-    }
+-    return where ? index : (ssize_t)NO_MEMORY;
+-}
+-
+-ssize_t VectorImpl::appendVector(const VectorImpl& vector)
+-{
+-    return insertVectorAt(vector, size());
+-}
+-
+-ssize_t VectorImpl::insertAt(size_t index, size_t numItems)
+-{
+-    return insertAt(0, index, numItems);
+-}
+-
+-ssize_t VectorImpl::insertAt(const void* item, size_t index, size_t numItems)
+-{
+-    if (index > size())
+-        return BAD_INDEX;
+-    void* where = _grow(index, numItems);
+-    if (where) {
+-        if (item) {
+-            _do_splat(where, item, numItems);
+-        } else {
+-            _do_construct(where, numItems);
+-        }
+-    }
+-    return where ? index : (ssize_t)NO_MEMORY;
+-}
+-
+-void VectorImpl::pop()
+-{
+-    if (size())
+-        removeItemsAt(size()-1, 1);
+-}
+-
+-void VectorImpl::push()
+-{
+-    push(0);
+-}
+-
+-void VectorImpl::push(const void* item)
+-{
+-    insertAt(item, size());
+-}
+-
+-ssize_t VectorImpl::add()
+-{
+-    return add(0);
+-}
+-
+-ssize_t VectorImpl::add(const void* item)
+-{
+-    return insertAt(item, size());
+-}
+-
+-ssize_t VectorImpl::replaceAt(size_t index)
+-{
+-    return replaceAt(0, index);
+-}
+-
+-ssize_t VectorImpl::replaceAt(const void* prototype, size_t index)
+-{
+-    ALOG_ASSERT(index<size(),
+-        "[%p] replace: index=%d, size=%d", this, (int)index, (int)size());
+-
+-    void* item = editItemLocation(index);
+-    if (item == 0)
+-        return NO_MEMORY;
+-    _do_destroy(item, 1);
+-    if (prototype == 0) {
+-        _do_construct(item, 1);
+-    } else {
+-        _do_copy(item, prototype, 1);
+-    }
+-    return ssize_t(index);
+-}
+-
+-ssize_t VectorImpl::removeItemsAt(size_t index, size_t count)
+-{
+-    ALOG_ASSERT((index+count)<=size(),
+-        "[%p] remove: index=%d, count=%d, size=%d",
+-               this, (int)index, (int)count, (int)size());
+-
+-    if ((index+count) > size())
+-        return BAD_VALUE;
+-   _shrink(index, count);
+-   return index;
+-}
+-
+-void VectorImpl::finish_vector()
+-{
+-    release_storage();
+-    mStorage = 0;
+-    mCount = 0;
+-}
+-
+-void VectorImpl::clear()
+-{
+-    _shrink(0, mCount);
+-}
+-
+-void* VectorImpl::editItemLocation(size_t index)
+-{
+-    ALOG_ASSERT(index<capacity(),
+-        "[%p] itemLocation: index=%d, capacity=%d, count=%d",
+-        this, (int)index, (int)capacity(), (int)mCount);
+-            
+-    void* buffer = editArrayImpl();
+-    if (buffer)
+-        return reinterpret_cast<char*>(buffer) + index*mItemSize;
+-    return 0;
+-}
+-
+-const void* VectorImpl::itemLocation(size_t index) const
+-{
+-    ALOG_ASSERT(index<capacity(),
+-        "[%p] editItemLocation: index=%d, capacity=%d, count=%d",
+-        this, (int)index, (int)capacity(), (int)mCount);
+-
+-    const  void* buffer = arrayImpl();
+-    if (buffer)
+-        return reinterpret_cast<const char*>(buffer) + index*mItemSize;
+-    return 0;
+-}
+-
+-ssize_t VectorImpl::setCapacity(size_t new_capacity)
+-{
+-    size_t current_capacity = capacity();
+-    ssize_t amount = new_capacity - size();
+-    if (amount <= 0) {
+-        // we can't reduce the capacity
+-        return current_capacity;
+-    } 
+-    SharedBuffer* sb = SharedBuffer::alloc(new_capacity * mItemSize);
+-    if (sb) {
+-        void* array = sb->data();
+-        _do_copy(array, mStorage, size());
+-        release_storage();
+-        mStorage = const_cast<void*>(array);
+-    } else {
+-        return NO_MEMORY;
+-    }
+-    return new_capacity;
+-}
+-
+-void VectorImpl::release_storage()
+-{
+-    if (mStorage) {
+-        const SharedBuffer* sb = SharedBuffer::sharedBuffer(mStorage);
+-        if (sb->release(SharedBuffer::eKeepStorage) == 1) {
+-            _do_destroy(mStorage, mCount);
+-            SharedBuffer::dealloc(sb);
+-        } 
+-    }
+-}
+-
+-void* VectorImpl::_grow(size_t where, size_t amount)
+-{
+-//    ALOGV("_grow(this=%p, where=%d, amount=%d) count=%d, capacity=%d",
+-//        this, (int)where, (int)amount, (int)mCount, (int)capacity());
+-
+-    if (where > mCount)
+-        where = mCount;
+-      
+-    const size_t new_size = mCount + amount;
+-    if (capacity() < new_size) {
+-        const size_t new_capacity = max(kMinVectorCapacity, ((new_size*3)+1)/2);
+-//        ALOGV("grow vector %p, new_capacity=%d", this, (int)new_capacity);
+-        if ((mStorage) &&
+-            (mCount==where) &&
+-            (mFlags & HAS_TRIVIAL_COPY) &&
+-            (mFlags & HAS_TRIVIAL_DTOR))
+-        {
+-            const SharedBuffer* cur_sb = SharedBuffer::sharedBuffer(mStorage);
+-            SharedBuffer* sb = cur_sb->editResize(new_capacity * mItemSize);
+-            mStorage = sb->data();
+-        } else {
+-            SharedBuffer* sb = SharedBuffer::alloc(new_capacity * mItemSize);
+-            if (sb) {
+-                void* array = sb->data();
+-                if (where>0) {
+-                    _do_copy(array, mStorage, where);
+-                }
+-                if (mCount>where) {
+-                    const void* from = reinterpret_cast<const uint8_t *>(mStorage) + where*mItemSize;
+-                    void* dest = reinterpret_cast<uint8_t *>(array) + (where+amount)*mItemSize;
+-                    _do_copy(dest, from, mCount-where);
+-                }
+-                release_storage();
+-                mStorage = const_cast<void*>(array);
+-            }
+-        }
+-    } else {
+-        ssize_t s = mCount-where;
+-        if (s>0) {
+-            void* array = editArrayImpl();    
+-            void* to = reinterpret_cast<uint8_t *>(array) + (where+amount)*mItemSize;
+-            const void* from = reinterpret_cast<const uint8_t *>(array) + where*mItemSize;
+-            _do_move_forward(to, from, s);
+-        }
+-    }
+-    mCount += amount;
+-    void* free_space = const_cast<void*>(itemLocation(where));
+-    return free_space;
+-}
+-
+-void VectorImpl::_shrink(size_t where, size_t amount)
+-{
+-    if (!mStorage)
+-        return;
+-
+-//    ALOGV("_shrink(this=%p, where=%d, amount=%d) count=%d, capacity=%d",
+-//        this, (int)where, (int)amount, (int)mCount, (int)capacity());
+-
+-    if (where >= mCount)
+-        where = mCount - amount;
+-
+-    const size_t new_size = mCount - amount;
+-    if (new_size*3 < capacity()) {
+-        const size_t new_capacity = max(kMinVectorCapacity, new_size*2);
+-//        ALOGV("shrink vector %p, new_capacity=%d", this, (int)new_capacity);
+-        if ((where == mCount-amount) &&
+-            (mFlags & HAS_TRIVIAL_COPY) &&
+-            (mFlags & HAS_TRIVIAL_DTOR))
+-        {
+-            const SharedBuffer* cur_sb = SharedBuffer::sharedBuffer(mStorage);
+-            SharedBuffer* sb = cur_sb->editResize(new_capacity * mItemSize);
+-            mStorage = sb->data();
+-        } else {
+-            SharedBuffer* sb = SharedBuffer::alloc(new_capacity * mItemSize);
+-            if (sb) {
+-                void* array = sb->data();
+-                if (where>0) {
+-                    _do_copy(array, mStorage, where);
+-                }
+-                if (mCount > where+amount) {
+-                    const void* from = reinterpret_cast<const uint8_t *>(mStorage) + (where+amount)*mItemSize;
+-                    void* dest = reinterpret_cast<uint8_t *>(array) + where*mItemSize;
+-                    _do_copy(dest, from, mCount-(where+amount));
+-                }
+-                release_storage();
+-                mStorage = const_cast<void*>(array);
+-            }
+-        }
+-    } else {
+-        void* array = editArrayImpl();    
+-        void* to = reinterpret_cast<uint8_t *>(array) + where*mItemSize;
+-        _do_destroy(to, amount);
+-        ssize_t s = mCount-(where+amount);
+-        if (s>0) {
+-            const void* from = reinterpret_cast<uint8_t *>(array) + (where+amount)*mItemSize;
+-            _do_move_backward(to, from, s);
+-        }
+-    }
+-
+-    // adjust the number of items...
+-    mCount -= amount;
+-}
+-
+-size_t VectorImpl::itemSize() const {
+-    return mItemSize;
+-}
+-
+-void VectorImpl::_do_construct(void* storage, size_t num) const
+-{
+-    if (!(mFlags & HAS_TRIVIAL_CTOR)) {
+-        do_construct(storage, num);
+-    }
+-}
+-
+-void VectorImpl::_do_destroy(void* storage, size_t num) const
+-{
+-    if (!(mFlags & HAS_TRIVIAL_DTOR)) {
+-        do_destroy(storage, num);
+-    }
+-}
+-
+-void VectorImpl::_do_copy(void* dest, const void* from, size_t num) const
+-{
+-    if (!(mFlags & HAS_TRIVIAL_COPY)) {
+-        do_copy(dest, from, num);
+-    } else {
+-        memcpy(dest, from, num*itemSize());
+-    }
+-}
+-
+-void VectorImpl::_do_splat(void* dest, const void* item, size_t num) const {
+-    do_splat(dest, item, num);
+-}
+-
+-void VectorImpl::_do_move_forward(void* dest, const void* from, size_t num) const {
+-    do_move_forward(dest, from, num);
+-}
+-
+-void VectorImpl::_do_move_backward(void* dest, const void* from, size_t num) const {
+-    do_move_backward(dest, from, num);
+-}
+-
+-void VectorImpl::reservedVectorImpl1() { }
+-void VectorImpl::reservedVectorImpl2() { }
+-void VectorImpl::reservedVectorImpl3() { }
+-void VectorImpl::reservedVectorImpl4() { }
+-void VectorImpl::reservedVectorImpl5() { }
+-void VectorImpl::reservedVectorImpl6() { }
+-void VectorImpl::reservedVectorImpl7() { }
+-void VectorImpl::reservedVectorImpl8() { }
+-
+-/*****************************************************************************/
+-
+-SortedVectorImpl::SortedVectorImpl(size_t itemSize, uint32_t flags)
+-    : VectorImpl(itemSize, flags)
+-{
+-}
+-
+-SortedVectorImpl::SortedVectorImpl(const VectorImpl& rhs)
+-: VectorImpl(rhs)
+-{
+-}
+-
+-SortedVectorImpl::~SortedVectorImpl()
+-{
+-}
+-
+-SortedVectorImpl& SortedVectorImpl::operator = (const SortedVectorImpl& rhs)
+-{
+-    return static_cast<SortedVectorImpl&>( VectorImpl::operator = (static_cast<const VectorImpl&>(rhs)) );
+-}
+-
+-ssize_t SortedVectorImpl::indexOf(const void* item) const
+-{
+-    return _indexOrderOf(item);
+-}
+-
+-size_t SortedVectorImpl::orderOf(const void* item) const
+-{
+-    size_t o;
+-    _indexOrderOf(item, &o);
+-    return o;
+-}
+-
+-ssize_t SortedVectorImpl::_indexOrderOf(const void* item, size_t* order) const
+-{
+-    // binary search
+-    ssize_t err = NAME_NOT_FOUND;
+-    ssize_t l = 0;
+-    ssize_t h = size()-1;
+-    ssize_t mid;
+-    const void* a = arrayImpl();
+-    const size_t s = itemSize();
+-    while (l <= h) {
+-        mid = l + (h - l)/2;
+-        const void* const curr = reinterpret_cast<const char *>(a) + (mid*s);
+-        const int c = do_compare(curr, item);
+-        if (c == 0) {
+-            err = l = mid;
+-            break;
+-        } else if (c < 0) {
+-            l = mid + 1;
+-        } else {
+-            h = mid - 1;
+-        }
+-    }
+-    if (order) *order = l;
+-    return err;
+-}
+-
+-ssize_t SortedVectorImpl::add(const void* item)
+-{
+-    size_t order;
+-    ssize_t index = _indexOrderOf(item, &order);
+-    if (index < 0) {
+-        index = VectorImpl::insertAt(item, order, 1);
+-    } else {
+-        index = VectorImpl::replaceAt(item, index);
+-    }
+-    return index;
+-}
+-
+-ssize_t SortedVectorImpl::merge(const VectorImpl& vector)
+-{
+-    // naive merge...
+-    if (!vector.isEmpty()) {
+-        const void* buffer = vector.arrayImpl();
+-        const size_t is = itemSize();
+-        size_t s = vector.size();
+-        for (size_t i=0 ; i<s ; i++) {
+-            ssize_t err = add( reinterpret_cast<const char*>(buffer) + i*is );
+-            if (err<0) {
+-                return err;
+-            }
+-        }
+-    }
+-    return NO_ERROR;
+-}
+-
+-ssize_t SortedVectorImpl::merge(const SortedVectorImpl& vector)
+-{
+-    // we've merging a sorted vector... nice!
+-    ssize_t err = NO_ERROR;
+-    if (!vector.isEmpty()) {
+-        // first take care of the case where the vectors are sorted together
+-        if (do_compare(vector.itemLocation(vector.size()-1), arrayImpl()) <= 0) {
+-            err = VectorImpl::insertVectorAt(static_cast<const VectorImpl&>(vector), 0);
+-        } else if (do_compare(vector.arrayImpl(), itemLocation(size()-1)) >= 0) {
+-            err = VectorImpl::appendVector(static_cast<const VectorImpl&>(vector));
+-        } else {
+-            // this could be made a little better
+-            err = merge(static_cast<const VectorImpl&>(vector));
+-        }
+-    }
+-    return err;
+-}
+-
+-ssize_t SortedVectorImpl::remove(const void* item)
+-{
+-    ssize_t i = indexOf(item);
+-    if (i>=0) {
+-        VectorImpl::removeItemsAt(i, 1);
+-    }
+-    return i;
+-}
+-
+-void SortedVectorImpl::reservedSortedVectorImpl1() { };
+-void SortedVectorImpl::reservedSortedVectorImpl2() { };
+-void SortedVectorImpl::reservedSortedVectorImpl3() { };
+-void SortedVectorImpl::reservedSortedVectorImpl4() { };
+-void SortedVectorImpl::reservedSortedVectorImpl5() { };
+-void SortedVectorImpl::reservedSortedVectorImpl6() { };
+-void SortedVectorImpl::reservedSortedVectorImpl7() { };
+-void SortedVectorImpl::reservedSortedVectorImpl8() { };
+-
+-
+-/*****************************************************************************/
+-
+-} // namespace tinyutils
+-} // namespace android
+-
+diff --git a/libpixelflinger/codeflinger/tinyutils/VectorImpl.h b/libpixelflinger/codeflinger/tinyutils/VectorImpl.h
+deleted file mode 100644
+index 56089b3..0000000
+--- a/libpixelflinger/codeflinger/tinyutils/VectorImpl.h
++++ /dev/null
+@@ -1,195 +0,0 @@
+-/*
+- * Copyright 2005 The Android Open Source Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-#ifndef ANDROID_PIXELFLINGER_VECTOR_IMPL_H
+-#define ANDROID_PIXELFLINGER_VECTOR_IMPL_H
+-
+-#include <assert.h>
+-#include <stdint.h>
+-#include <sys/types.h>
+-
+-// ---------------------------------------------------------------------------
+-// No user serviceable parts in here...
+-// ---------------------------------------------------------------------------
+-
+-namespace android {
+-namespace tinyutils {
+-
+-/*!
+- * Implementation of the guts of the vector<> class
+- * this ensures backward binary compatibility and
+- * reduces code size.
+- * For performance reasons, we expose mStorage and mCount
+- * so these fields are set in stone.
+- *
+- */
+-
+-class VectorImpl
+-{
+-public:
+-    enum { // flags passed to the ctor
+-        HAS_TRIVIAL_CTOR    = 0x00000001,
+-        HAS_TRIVIAL_DTOR    = 0x00000002,
+-        HAS_TRIVIAL_COPY    = 0x00000004,
+-        HAS_TRIVIAL_ASSIGN  = 0x00000008
+-    };
+-
+-                            VectorImpl(size_t itemSize, uint32_t flags);
+-                            VectorImpl(const VectorImpl& rhs);
+-    virtual                 ~VectorImpl();
+-
+-    /*! must be called from subclasses destructor */
+-            void            finish_vector();
+-
+-            VectorImpl&     operator = (const VectorImpl& rhs);    
+-            
+-    /*! C-style array access */
+-    inline  const void*     arrayImpl() const       { return mStorage; }
+-            void*           editArrayImpl();
+-            
+-    /*! vector stats */
+-    inline  size_t          size() const        { return mCount; }
+-    inline  bool            isEmpty() const     { return mCount == 0; }
+-            size_t          capacity() const;
+-            ssize_t         setCapacity(size_t size);
+-
+-            /*! append/insert another vector */
+-            ssize_t         insertVectorAt(const VectorImpl& vector, size_t index);
+-            ssize_t         appendVector(const VectorImpl& vector);
+-            
+-            /*! add/insert/replace items */
+-            ssize_t         insertAt(size_t where, size_t numItems = 1);
+-            ssize_t         insertAt(const void* item, size_t where, size_t numItems = 1);
+-            void            pop();
+-            void            push();
+-            void            push(const void* item);
+-            ssize_t         add();
+-            ssize_t         add(const void* item);
+-            ssize_t         replaceAt(size_t index);
+-            ssize_t         replaceAt(const void* item, size_t index);
+-
+-            /*! remove items */
+-            ssize_t         removeItemsAt(size_t index, size_t count = 1);
+-            void            clear();
+-
+-            const void*     itemLocation(size_t index) const;
+-            void*           editItemLocation(size_t index);
+-
+-protected:
+-            size_t          itemSize() const;
+-            void            release_storage();
+-
+-    virtual void            do_construct(void* storage, size_t num) const = 0;
+-    virtual void            do_destroy(void* storage, size_t num) const = 0;
+-    virtual void            do_copy(void* dest, const void* from, size_t num) const = 0;
+-    virtual void            do_splat(void* dest, const void* item, size_t num) const = 0;
+-    virtual void            do_move_forward(void* dest, const void* from, size_t num) const = 0;
+-    virtual void            do_move_backward(void* dest, const void* from, size_t num) const = 0;
+-
+-    // take care of FBC...
+-    virtual void            reservedVectorImpl1();
+-    virtual void            reservedVectorImpl2();
+-    virtual void            reservedVectorImpl3();
+-    virtual void            reservedVectorImpl4();
+-    virtual void            reservedVectorImpl5();
+-    virtual void            reservedVectorImpl6();
+-    virtual void            reservedVectorImpl7();
+-    virtual void            reservedVectorImpl8();
+-    
+-private:
+-        void* _grow(size_t where, size_t amount);
+-        void  _shrink(size_t where, size_t amount);
+-
+-        inline void _do_construct(void* storage, size_t num) const;
+-        inline void _do_destroy(void* storage, size_t num) const;
+-        inline void _do_copy(void* dest, const void* from, size_t num) const;
+-        inline void _do_splat(void* dest, const void* item, size_t num) const;
+-        inline void _do_move_forward(void* dest, const void* from, size_t num) const;
+-        inline void _do_move_backward(void* dest, const void* from, size_t num) const;
+-
+-            // These 2 fields are exposed in the inlines below,
+-            // so they're set in stone.
+-            void *      mStorage;   // base address of the vector
+-            size_t      mCount;     // number of items
+-
+-    const   uint32_t    mFlags;
+-    const   size_t      mItemSize;
+-};
+-
+-
+-
+-class SortedVectorImpl : public VectorImpl
+-{
+-public:
+-                            SortedVectorImpl(size_t itemSize, uint32_t flags);
+-                            SortedVectorImpl(const VectorImpl& rhs);
+-    virtual                 ~SortedVectorImpl();
+-    
+-    SortedVectorImpl&     operator = (const SortedVectorImpl& rhs);    
+-
+-    //! finds the index of an item
+-            ssize_t         indexOf(const void* item) const;
+-
+-    //! finds where this item should be inserted
+-            size_t          orderOf(const void* item) const;
+-
+-    //! add an item in the right place (or replaces it if there is one)
+-            ssize_t         add(const void* item);
+-
+-    //! merges a vector into this one
+-            ssize_t         merge(const VectorImpl& vector);
+-            ssize_t         merge(const SortedVectorImpl& vector);
+-             
+-    //! removes an item
+-            ssize_t         remove(const void* item);
+-        
+-protected:
+-    virtual int             do_compare(const void* lhs, const void* rhs) const = 0;
+-
+-    // take care of FBC...
+-    virtual void            reservedSortedVectorImpl1();
+-    virtual void            reservedSortedVectorImpl2();
+-    virtual void            reservedSortedVectorImpl3();
+-    virtual void            reservedSortedVectorImpl4();
+-    virtual void            reservedSortedVectorImpl5();
+-    virtual void            reservedSortedVectorImpl6();
+-    virtual void            reservedSortedVectorImpl7();
+-    virtual void            reservedSortedVectorImpl8();
+-
+-private:
+-            ssize_t         _indexOrderOf(const void* item, size_t* order = 0) const;
+-
+-            // these are made private, because they can't be used on a SortedVector
+-            // (they don't have an implementation either)
+-            ssize_t         add();
+-            void            pop();
+-            void            push();
+-            void            push(const void* item);
+-            ssize_t         insertVectorAt(const VectorImpl& vector, size_t index);
+-            ssize_t         appendVector(const VectorImpl& vector);
+-            ssize_t         insertAt(size_t where, size_t numItems = 1);
+-            ssize_t         insertAt(const void* item, size_t where, size_t numItems = 1);
+-            ssize_t         replaceAt(size_t index);
+-            ssize_t         replaceAt(const void* item, size_t index);
+-};
+-
+-} // namespace tinyutils
+-} // namespace android
+-
+-
+-// ---------------------------------------------------------------------------
+-
+-#endif // ANDROID_PIXELFLINGER_VECTOR_IMPL_H
+diff --git a/libutils/Android.mk b/libutils/Android.mk
+index 039ac1b..3024d2f 100644
+--- a/libutils/Android.mk
++++ b/libutils/Android.mk
+@@ -70,6 +70,7 @@ LOCAL_MODULE:= libutils
+ LOCAL_STATIC_LIBRARIES := liblog
+ LOCAL_CFLAGS += $(host_commonCflags)
+ LOCAL_LDLIBS += $(host_commonLdlibs)
++LOCAL_C_INCLUDES += external/safe-iop/include
+ include $(BUILD_HOST_STATIC_LIBRARY)
+ 
+ 
+@@ -84,6 +85,7 @@ LOCAL_MODULE:= lib64utils
+ LOCAL_STATIC_LIBRARIES := liblog
+ LOCAL_CFLAGS += $(host_commonCflags) -m64
+ LOCAL_LDLIBS += $(host_commonLdlibs)
++LOCAL_C_INCLUDES += external/safe-iop/include
+ include $(BUILD_HOST_STATIC_LIBRARY)
+ 
+ 
+@@ -121,6 +123,7 @@ LOCAL_SHARED_LIBRARIES := \
+         libdl
+ 
+ LOCAL_MODULE:= libutils
++LOCAL_C_INCLUDES += external/safe-iop/include
+ include $(BUILD_STATIC_LIBRARY)
+ 
+ # For the device, shared
+@@ -133,6 +136,7 @@ LOCAL_SHARED_LIBRARIES := \
+         libcutils \
+         libdl \
+         libcorkscrew
++LOCAL_C_INCLUDES += external/safe-iop/include
+ 
+ include $(BUILD_SHARED_LIBRARY)
+ 
+diff --git a/libutils/VectorImpl.cpp b/libutils/VectorImpl.cpp
+index 5a79647..3bcf54b 100644
+--- a/libutils/VectorImpl.cpp
++++ b/libutils/VectorImpl.cpp
+@@ -21,6 +21,7 @@
+ #include <stdio.h>
+ 
+ #include <cutils/log.h>
++#include <safe_iop.h>
+ 
+ #include <utils/Errors.h>
+ #include <utils/SharedBuffer.h>
+@@ -85,14 +86,19 @@ VectorImpl& VectorImpl::operator = (const VectorImpl& rhs)
+ void* VectorImpl::editArrayImpl()
+ {
+     if (mStorage) {
+-        SharedBuffer* sb = SharedBuffer::bufferFromData(mStorage)->attemptEdit();
+-        if (sb == 0) {
+-            sb = SharedBuffer::alloc(capacity() * mItemSize);
+-            if (sb) {
+-                _do_copy(sb->data(), mStorage, mCount);
+-                release_storage();
+-                mStorage = sb->data();
+-            }
++        const SharedBuffer* sb = SharedBuffer::bufferFromData(mStorage);
++        SharedBuffer* editable = sb->attemptEdit();
++        if (editable == 0) {
++            // If we're here, we're not the only owner of the buffer.
++            // We must make a copy of it.
++            editable = SharedBuffer::alloc(sb->size());
++            // Fail instead of returning a pointer to storage that's not
++            // editable. Otherwise we'd be editing the contents of a buffer
++            // for which we're not the only owner, which is undefined behaviour.
++            LOG_ALWAYS_FATAL_IF(editable == NULL);
++            _do_copy(editable->data(), mStorage, mCount);
++            release_storage();
++            mStorage = editable->data();
+         }
+     }
+     return mStorage;
+@@ -325,13 +331,15 @@ const void* VectorImpl::itemLocation(size_t index) const
+ 
+ ssize_t VectorImpl::setCapacity(size_t new_capacity)
+ {
+-    size_t current_capacity = capacity();
+-    ssize_t amount = new_capacity - size();
+-    if (amount <= 0) {
+-        // we can't reduce the capacity
+-        return current_capacity;
+-    } 
+-    SharedBuffer* sb = SharedBuffer::alloc(new_capacity * mItemSize);
++    // The capacity must always be greater than or equal to the size
++    // of this vector.
++    if (new_capacity <= size()) {
++        return capacity();
++    }
++
++    size_t new_allocation_size = 0;
++    LOG_ALWAYS_FATAL_IF(!safe_mul(&new_allocation_size, new_capacity, mItemSize));
++    SharedBuffer* sb = SharedBuffer::alloc(new_allocation_size);
+     if (sb) {
+         void* array = sb->data();
+         _do_copy(array, mStorage, size());
+@@ -373,9 +381,28 @@ void* VectorImpl::_grow(size_t where, size_t amount)
+             "[%p] _grow: where=%d, amount=%d, count=%d",
+             this, (int)where, (int)amount, (int)mCount); // caller already checked
+ 
+-    const size_t new_size = mCount + amount;
++    size_t new_size;
++    LOG_ALWAYS_FATAL_IF(!safe_add(&new_size, mCount, amount), "new_size overflow");
++
+     if (capacity() < new_size) {
+-        const size_t new_capacity = max(kMinVectorCapacity, ((new_size*3)+1)/2);
++        // NOTE: This implementation used to resize vectors as per ((3*x + 1) / 2)
++        // (sigh..). Also note, the " + 1" was necessary to handle the special case
++        // where x == 1, where the resized_capacity will be equal to the old
++        // capacity without the +1. The old calculation wouldn't work properly
++        // if x was zero.
++        //
++        // This approximates the old calculation, using (x + (x/2) + 1) instead.
++        size_t new_capacity = 0;
++        LOG_ALWAYS_FATAL_IF(!safe_add(&new_capacity, new_size, (new_size / 2)),
++                            "new_capacity overflow");
++        LOG_ALWAYS_FATAL_IF(!safe_add(&new_capacity, new_capacity, static_cast<size_t>(1u)),
++                            "new_capacity overflow");
++        new_capacity = max(kMinVectorCapacity, new_capacity);
++
++        size_t new_alloc_size = 0;
++        LOG_ALWAYS_FATAL_IF(!safe_mul(&new_alloc_size, new_capacity, mItemSize),
++                            "new_alloc_size overflow");
++
+ //        ALOGV("grow vector %p, new_capacity=%d", this, (int)new_capacity);
+         if ((mStorage) &&
+             (mCount==where) &&
+@@ -383,10 +410,10 @@ void* VectorImpl::_grow(size_t where, size_t amount)
+             (mFlags & HAS_TRIVIAL_DTOR))
+         {
+             const SharedBuffer* cur_sb = SharedBuffer::bufferFromData(mStorage);
+-            SharedBuffer* sb = cur_sb->editResize(new_capacity * mItemSize);
++            SharedBuffer* sb = cur_sb->editResize(new_alloc_size);
+             mStorage = sb->data();
+         } else {
+-            SharedBuffer* sb = SharedBuffer::alloc(new_capacity * mItemSize);
++            SharedBuffer* sb = SharedBuffer::alloc(new_alloc_size);
+             if (sb) {
+                 void* array = sb->data();
+                 if (where != 0) {
+@@ -426,10 +453,19 @@ void VectorImpl::_shrink(size_t where, size_t amount)
+             "[%p] _shrink: where=%d, amount=%d, count=%d",
+             this, (int)where, (int)amount, (int)mCount); // caller already checked
+ 
+-    const size_t new_size = mCount - amount;
+-    if (new_size*3 < capacity()) {
+-        const size_t new_capacity = max(kMinVectorCapacity, new_size*2);
+-//        ALOGV("shrink vector %p, new_capacity=%d", this, (int)new_capacity);
++    size_t new_size;
++    LOG_ALWAYS_FATAL_IF(!safe_sub(&new_size, mCount, amount));
++
++    if (new_size < (capacity() / 2)) {
++        // NOTE: (new_size * 2) is safe because capacity didn't overflow and
++        // new_size < (capacity / 2)).
++        const size_t new_capacity = max(kMinVectorCapacity, new_size * 2);
++
++        // NOTE: (new_capacity * mItemSize), (where * mItemSize) and
++        // ((where + amount) * mItemSize) beyond this point are safe because
++        // we are always reducing the capacity of the underlying SharedBuffer.
++        // In other words, (old_capacity * mItemSize) did not overflow, and
++        // where < (where + amount) < new_capacity < old_capacity.
+         if ((where == new_size) &&
+             (mFlags & HAS_TRIVIAL_COPY) &&
+             (mFlags & HAS_TRIVIAL_DTOR))
+diff --git a/libutils/tests/Android.mk b/libutils/tests/Android.mk
+index caedaff..d6e40e0 100644
+--- a/libutils/tests/Android.mk
++++ b/libutils/tests/Android.mk
+@@ -32,3 +32,11 @@ $(foreach file,$(test_src_files), \
+     $(eval LOCAL_MODULE := $(notdir $(file:%.cpp=%))) \
+     $(eval include $(BUILD_NATIVE_TEST)) \
+ )
++
++include $(CLEAR_VARS)
++
++LOCAL_MODULE := libutils_tests_host
++LOCAL_SRC_FILES := Vector_test.cpp
++LOCAL_STATIC_LIBRARIES := libutils liblog
++
++include $(BUILD_HOST_NATIVE_TEST)
+diff --git a/libutils/tests/Vector_test.cpp b/libutils/tests/Vector_test.cpp
+index d29c054..09914bd 100644
+--- a/libutils/tests/Vector_test.cpp
++++ b/libutils/tests/Vector_test.cpp
+@@ -71,5 +71,80 @@ TEST_F(VectorTest, CopyOnWrite_CopyAndAddElements) {
+     EXPECT_EQ(other[3], 5);
+ }
+ 
++// TODO: gtest isn't capable of parsing Abort messages formatted by
++// Android (fails differently on host and target), so we always need to
++// use an empty error message for death tests.
++TEST_F(VectorTest, SetCapacity_Overflow) {
++  Vector<int> vector;
++  EXPECT_DEATH(vector.setCapacity(SIZE_MAX / sizeof(int) + 1), "");
++}
++
++TEST_F(VectorTest, SetCapacity_ShrinkBelowSize) {
++  Vector<int> vector;
++  vector.add(1);
++  vector.add(2);
++  vector.add(3);
++  vector.add(4);
++
++  vector.setCapacity(8);
++  ASSERT_EQ(8, vector.capacity());
++  vector.setCapacity(2);
++  ASSERT_EQ(8, vector.capacity());
++}
++
++// NOTE: All of the tests below are useless because of the "TODO" above.
++// We have no way of knowing *why* the process crashed. Given that we're
++// inserting a NULL array, we'll fail with a SIGSEGV eventually. We need
++// the ability to make assertions on the abort message to make sure we're
++// failing for the right reasons.
++TEST_F(VectorTest, _grow_OverflowSize) {
++  Vector<int> vector;
++  vector.add(1);
++
++  // Checks that the size calculation (not the capacity calculation) doesn't
++  // overflow : the size here will be (1 + SIZE_MAX).
++  //
++  // EXPECT_DEATH(vector.insertArrayAt(NULL, 0, SIZE_MAX), "new_size_overflow");
++  EXPECT_DEATH(vector.insertArrayAt(NULL, 0, SIZE_MAX), "");
++}
++
++TEST_F(VectorTest, _grow_OverflowCapacityDoubling) {
++  Vector<int> vector;
++
++  // This should fail because the calculated capacity will overflow even though
++  // the size of the vector doesn't.
++  //
++  // EXPECT_DEATH(vector.insertArrayAt(NULL, 0, (SIZE_MAX - 1)), "new_capacity_overflow");
++  EXPECT_DEATH(vector.insertArrayAt(NULL, 0, (SIZE_MAX - 1)), "");
++}
++
++TEST_F(VectorTest, _grow_OverflowBufferAlloc) {
++  Vector<int> vector;
++  // This should fail because the capacity * sizeof(int) overflows, even
++  // though the capacity itself doesn't.
++  //
++  // EXPECT_DEATH(vector.insertArrayAt(NULL, 0, (SIZE_MAX / 2)), "new_alloc_size overflow");
++  EXPECT_DEATH(vector.insertArrayAt(NULL, 0, (SIZE_MAX / 2)), "");
++}
++
++TEST_F(VectorTest, editArray_Shared) {
++  Vector<int> vector1;
++  vector1.add(1);
++  vector1.add(2);
++  vector1.add(3);
++  vector1.add(4);
++
++  Vector<int> vector2 = vector1;
++  ASSERT_EQ(vector1.array(), vector2.array());
++  // We must make a copy here, since we're not the exclusive owners
++  // of this array.
++  ASSERT_NE(vector1.editArray(), vector2.editArray());
++
++  // Vector doesn't implement operator ==.
++  ASSERT_EQ(vector1.size(), vector2.size());
++  for (size_t i = 0; i < vector1.size(); ++i) {
++    EXPECT_EQ(vector1[i], vector2[i]);
++  }
++}
+ 
+ } // namespace android
+-- 
+2.7.4
+

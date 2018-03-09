@@ -1,0 +1,35 @@
+From 229be7d0753166d2f312e551e9c33372d0cf9661 Mon Sep 17 00:00:00 2001
+From: Michael Lentine <mlentine@google.com>
+Date: Wed, 18 Feb 2015 10:14:18 -0800
+Subject: [PATCH 03/18] Update maxNumber to be smaller.
+
+There shouldn't be more than 4096 fds (probably signficantly smaller) and
+there shouldn't be more than 4096 ints.
+
+Bug: 18076253
+
+Change-Id: I3a3e50ee3078a4710e9737114e65afc923ed0573
+---
+ libs/ui/GraphicBuffer.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/libs/ui/GraphicBuffer.cpp b/libs/ui/GraphicBuffer.cpp
+index 03b4109..100b3c2 100644
+--- a/libs/ui/GraphicBuffer.cpp
++++ b/libs/ui/GraphicBuffer.cpp
+@@ -251,7 +251,11 @@ status_t GraphicBuffer::unflatten(
+     const size_t numFds  = buf[6];
+     const size_t numInts = buf[7];
+ 
+-    const size_t maxNumber = UINT_MAX / sizeof(int);
++    // Limit the maxNumber to be relatively small. The number of fds or ints
++    // should not come close to this number, and the number itself was simply
++    // chosen to be high enough to not cause issues and low enough to prevent
++    // overflow problems.
++    const size_t maxNumber = 4096;
+     if (numFds >= maxNumber || numInts >= (maxNumber - 8)) {
+         width = height = stride = format = usage = 0;
+         handle = NULL;
+-- 
+2.7.4
+

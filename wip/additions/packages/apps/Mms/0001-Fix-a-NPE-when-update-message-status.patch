@@ -1,0 +1,29 @@
+From ea70340adb7d0b029d68637688c595c50e8ed5c1 Mon Sep 17 00:00:00 2001
+From: seven <lingtongshen@gmail.com>
+Date: Wed, 5 Aug 2015 07:17:11 +0000
+Subject: [PATCH] Fix a NPE when update message status
+
+a NPE excetion could result in DoS attack(CVE-2015-3839)
+Signed-off-by: seven_shen <lingtongshen@gmail.com>
+
+Change-Id: I04bddb50f23c6cb5253143f32f52fd1d30dd9655
+---
+ src/com/android/mms/transaction/MessageStatusService.java | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/com/android/mms/transaction/MessageStatusService.java b/src/com/android/mms/transaction/MessageStatusService.java
+index 19dd8c3..1991d48 100644
+--- a/src/com/android/mms/transaction/MessageStatusService.java
++++ b/src/com/android/mms/transaction/MessageStatusService.java
+@@ -97,6 +97,8 @@ public class MessageStatusService extends IntentService {
+             } else {
+                 error("Can't find message for status update: " + messageUri);
+             }
++        } catch(NullPointerException e){
++            return null;
+         } finally {
+             cursor.close();
+         }
+-- 
+2.7.4
+

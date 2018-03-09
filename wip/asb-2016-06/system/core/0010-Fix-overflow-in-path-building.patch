@@ -1,0 +1,32 @@
+From 35ae4ed0cda8d6a3cad2f549c7efc4b956df60d0 Mon Sep 17 00:00:00 2001
+From: Daniel Rosenberg <drosen@google.com>
+Date: Tue, 12 Apr 2016 16:30:28 -0700
+Subject: [PATCH 10/20] Fix overflow in path building
+
+An incorrect size was causing an unsigned value
+to wrap, causing it to write past the end of
+the buffer.
+
+Bug: 28085658
+Change-Id: Ie9625c729cca024d514ba2880ff97209d435a165
+(cherry picked from commit 6ea6c04ca695e0f0b6bcf3ea4529b9fd74fee8e4)
+---
+ sdcard/sdcard.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sdcard/sdcard.c b/sdcard/sdcard.c
+index 05fbfba..62d8f10 100644
+--- a/sdcard/sdcard.c
++++ b/sdcard/sdcard.c
+@@ -325,7 +325,7 @@ static ssize_t get_node_path_locked(struct node* node, char* buf, size_t bufsize
+ 
+     ssize_t pathlen = 0;
+     if (node->parent && node->graft_path == NULL) {
+-        pathlen = get_node_path_locked(node->parent, buf, bufsize - namelen - 2);
++        pathlen = get_node_path_locked(node->parent, buf, bufsize - namelen - 1);
+         if (pathlen < 0) {
+             return -1;
+         }
+-- 
+2.7.4
+

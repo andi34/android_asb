@@ -1,0 +1,58 @@
+From 072f129751dbe918aca31552097bf8956db46758 Mon Sep 17 00:00:00 2001
+From: Christopher Tate <ctate@google.com>
+Date: Fri, 5 Feb 2016 19:02:56 -0800
+Subject: [PATCH 10/18] Sanity check IMemory access versus underlying mmap
+
+Bug 26877992
+
+Change-Id: Ibbf4b1061e4675e4e96bc944a865b53eaf6984fe
+(cherry picked from commit 94b0d4e3ab023cfa03a7a4e85f3e09d3743da715)
+---
+ libs/binder/IMemory.cpp | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/libs/binder/IMemory.cpp b/libs/binder/IMemory.cpp
+index 07cb41a..99df06d 100644
+--- a/libs/binder/IMemory.cpp
++++ b/libs/binder/IMemory.cpp
+@@ -26,6 +26,7 @@
+ #include <sys/mman.h>
+ 
+ #include <binder/IMemory.h>
++#include <cutils/log.h>
+ #include <utils/KeyedVector.h>
+ #include <utils/threads.h>
+ #include <utils/Atomic.h>
+@@ -187,15 +188,26 @@ sp<IMemoryHeap> BpMemory::getMemory(ssize_t* offset, size_t* size) const
+             if (heap != 0) {
+                 mHeap = interface_cast<IMemoryHeap>(heap);
+                 if (mHeap != 0) {
+-                    mOffset = o;
+-                    mSize = s;
++                    size_t heapSize = mHeap->getSize();
++                    if (s <= heapSize
++                            && o >= 0
++                            && (static_cast<size_t>(o) <= heapSize - s)) {
++                        mOffset = o;
++                        mSize = s;
++                    } else {
++                        // Hm.
++                        android_errorWriteWithInfoLog(0x534e4554,
++                            "26877992", -1, NULL, 0);
++                        mOffset = 0;
++                        mSize = 0;
++                    }
+                 }
+             }
+         }
+     }
+     if (offset) *offset = mOffset;
+     if (size) *size = mSize;
+-    return mHeap;
++    return (mSize > 0) ? mHeap : 0;
+ }
+ 
+ // ---------------------------------------------------------------------------
+-- 
+2.7.4
+

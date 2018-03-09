@@ -1,0 +1,27 @@
+From 371f0436566aaf9636d197ee4b772acbcdabf1cd Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Mon, 11 Jan 2016 15:02:12 -0800
+Subject: [PATCH 08/18] IGraphicBufferProducer: fix QUEUE_BUFFER info leak
+
+Bug: 26338109
+Change-Id: I8a979469bfe1e317ebdefa43685e19f9302baea8
+(cherry picked from commit d06421fd37fbb7fd07002e6738fac3a223cb1a62)
+---
+ libs/gui/IGraphicBufferProducer.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/libs/gui/IGraphicBufferProducer.cpp b/libs/gui/IGraphicBufferProducer.cpp
+index b73e69e..e713c04 100644
+--- a/libs/gui/IGraphicBufferProducer.cpp
++++ b/libs/gui/IGraphicBufferProducer.cpp
+@@ -219,6 +219,7 @@ status_t BnGraphicBufferProducer::onTransact(
+             QueueBufferOutput* const output =
+                     reinterpret_cast<QueueBufferOutput *>(
+                             reply->writeInplace(sizeof(QueueBufferOutput)));
++            memset(output, 0, sizeof(QueueBufferOutput));
+             status_t result = queueBuffer(buf, input, output);
+             reply->writeInt32(result);
+             return NO_ERROR;
+-- 
+2.7.4
+

@@ -1,0 +1,238 @@
+From ac35a9708183687309fb506ceccec4eefe61debc Mon Sep 17 00:00:00 2001
+From: Jack He <siyuanh@google.com>
+Date: Mon, 13 Mar 2017 10:37:06 -0700
+Subject: [PATCH 6/6] OPP: Restrict file based URI access to external storage
+
+* Allow only external storage paths in file based URI in
+  BluetoothOppSendFileInfo when the file send request comes from an
+  external source
+* Fix a potential NPE when using Uri.getPath()
+
+Bug: 35310991
+Test: Make, test various cases of Bluetooth file share
+Change-Id: Id5519588266f22674b6d01ec6ebe34fe38cbccce
+(cherry picked from commit 3edd7f0a8aadf2f44bc62ea5b567c74d39a534c8)
+(cherry picked from commit 3ce229fa602f739d1e98e2a85a3bd955c3a308f6)
+---
+ .../opp/BluetoothOppHandoverReceiver.java          |  4 +--
+ .../opp/BluetoothOppLauncherActivity.java          |  9 +++--
+ .../android/bluetooth/opp/BluetoothOppManager.java | 10 +++---
+ .../bluetooth/opp/BluetoothOppSendFileInfo.java    | 15 +++++++--
+ .../opp/BluetoothOppTransferActivity.java          |  2 +-
+ .../android/bluetooth/opp/BluetoothOppUtility.java | 38 ++++++++++++++++++++++
+ 6 files changed, 66 insertions(+), 12 deletions(-)
+
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppHandoverReceiver.java b/src/com/android/bluetooth/opp/BluetoothOppHandoverReceiver.java
+index c2cd172..5b3777b 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppHandoverReceiver.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppHandoverReceiver.java
+@@ -50,7 +50,7 @@ public class BluetoothOppHandoverReceiver extends BroadcastReceiver {
+                     // Save type/stream, will be used when adding transfer
+                     // session to DB.
+                     BluetoothOppManager.getInstance(context).saveSendingFileInfo(type,
+-                            stream.toString(), true);
++                            stream.toString(), true, false);
+                 } else {
+                     if (D) Log.d(TAG, "No mimeType or stream attached to handover request");
+                 }
+@@ -60,7 +60,7 @@ public class BluetoothOppHandoverReceiver extends BroadcastReceiver {
+                 uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+                 if (mimeType != null && uris != null) {
+                     BluetoothOppManager.getInstance(context).saveSendingFileInfo(mimeType,
+-                            uris, true);
++                            uris, true /* isHandover */, true /* fromExternal */);
+                 } else {
+                     if (D) Log.d(TAG, "No mimeType or stream attached to handover request");
+                     return;
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppLauncherActivity.java b/src/com/android/bluetooth/opp/BluetoothOppLauncherActivity.java
+index e63d67c..1905850 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppLauncherActivity.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppLauncherActivity.java
+@@ -103,7 +103,8 @@ public class BluetoothOppLauncherActivity extends Activity {
+                     Thread t = new Thread(new Runnable() {
+                         public void run() {
+                             BluetoothOppManager.getInstance(BluetoothOppLauncherActivity.this)
+-                                .saveSendingFileInfo(type,stream.toString(), false);
++                                .saveSendingFileInfo(type,stream.toString(),
++                                    false /* isHandover */, true /* fromExternal */);
+                             //Done getting file info..Launch device picker and finish this activity
+                             launchDevicePicker();
+                             finish();
+@@ -119,7 +120,8 @@ public class BluetoothOppLauncherActivity extends Activity {
+                         Thread t = new Thread(new Runnable() {
+                             public void run() {
+                                 BluetoothOppManager.getInstance(BluetoothOppLauncherActivity.this)
+-                                    .saveSendingFileInfo(type,fileUri.toString(), false);
++                                    .saveSendingFileInfo(type,fileUri.toString(),
++                                        false /* isHandover */, false /* fromExternal */);
+                                 //Done getting file info..Launch device picker
+                                 //and finish this activity
+                                 launchDevicePicker();
+@@ -147,7 +149,8 @@ public class BluetoothOppLauncherActivity extends Activity {
+                     Thread t = new Thread(new Runnable() {
+                         public void run() {
+                             BluetoothOppManager.getInstance(BluetoothOppLauncherActivity.this)
+-                                .saveSendingFileInfo(mimeType,uris, false);
++                                .saveSendingFileInfo(mimeType,uris,
++                                    false /* isHandover */, true /* fromExternal */);
+                             //Done getting file info..Launch device picker
+                             //and finish this activity
+                             launchDevicePicker();
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppManager.java b/src/com/android/bluetooth/opp/BluetoothOppManager.java
+index c70428d..26e95c9 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppManager.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppManager.java
+@@ -247,14 +247,15 @@ public class BluetoothOppManager {
+         if (V) Log.v(TAG, "Application data stored to SharedPreference! ");
+     }
+ 
+-    public void saveSendingFileInfo(String mimeType, String uriString, boolean isHandover) {
++    public void saveSendingFileInfo(String mimeType, String uriString, boolean isHandover,
++            boolean fromExternal) {
+         synchronized (BluetoothOppManager.this) {
+             mMultipleFlag = false;
+             mMimeTypeOfSendingFile = mimeType;
+             mIsHandoverInitiated = isHandover;
+             Uri uri = Uri.parse(uriString);
+             BluetoothOppSendFileInfo sendFileInfo =
+-                BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType);
++                BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType, fromExternal);
+             uri = BluetoothOppUtility.generateUri(uri, sendFileInfo);
+             BluetoothOppUtility.putSendFileInfo(uri, sendFileInfo);
+             mUriOfSendingFile = uri.toString();
+@@ -262,7 +263,8 @@ public class BluetoothOppManager {
+         }
+     }
+ 
+-    public void saveSendingFileInfo(String mimeType, ArrayList<Uri> uris, boolean isHandover) {
++    public void saveSendingFileInfo(String mimeType, ArrayList<Uri> uris, boolean isHandover,
++            boolean fromExternal) {
+         synchronized (BluetoothOppManager.this) {
+             mMultipleFlag = true;
+             mMimeTypeOfSendingFiles = mimeType;
+@@ -270,7 +272,7 @@ public class BluetoothOppManager {
+             mIsHandoverInitiated = isHandover;
+             for (Uri uri : uris) {
+                 BluetoothOppSendFileInfo sendFileInfo =
+-                    BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType);
++                    BluetoothOppSendFileInfo.generateFileInfo(mContext, uri, mimeType, fromExternal);
+                 uri = BluetoothOppUtility.generateUri(uri, sendFileInfo);
+                 mUrisOfSendingFiles.add(uri);
+                 BluetoothOppUtility.putSendFileInfo(uri, sendFileInfo);
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppSendFileInfo.java b/src/com/android/bluetooth/opp/BluetoothOppSendFileInfo.java
+index c269ad7..6686859 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppSendFileInfo.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppSendFileInfo.java
+@@ -39,6 +39,7 @@ import android.database.Cursor;
+ import android.database.sqlite.SQLiteException;
+ import android.net.Uri;
+ import android.provider.OpenableColumns;
++import android.util.EventLog;
+ import android.util.Log;
+ 
+ import java.io.File;
+@@ -97,8 +98,8 @@ public class BluetoothOppSendFileInfo {
+         mStatus = status;
+     }
+ 
+-    public static BluetoothOppSendFileInfo generateFileInfo(Context context, Uri uri,
+-            String type) {
++    public static BluetoothOppSendFileInfo generateFileInfo(
++            Context context, Uri uri, String type, boolean fromExternal) {
+         ContentResolver contentResolver = context.getContentResolver();
+         String scheme = uri.getScheme();
+         String fileName = null;
+@@ -134,6 +135,16 @@ public class BluetoothOppSendFileInfo {
+                 fileName = uri.getLastPathSegment();
+             }
+         } else if ("file".equals(scheme)) {
++            if (uri.getPath() == null) {
++                Log.e(TAG, "Invalid URI path: " + uri);
++                return SEND_FILE_INFO_ERROR;
++            }
++            if (fromExternal && !BluetoothOppUtility.isInExternalStorageDir(uri)) {
++                EventLog.writeEvent(0x534e4554, "35310991", -1, uri.getPath());
++                Log.e(TAG,
++                        "File based URI not in Environment.getExternalStorageDirectory() is not allowed.");
++                return SEND_FILE_INFO_ERROR;
++            }
+             fileName = uri.getLastPathSegment();
+             contentType = type;
+             File f = new File(uri.getPath());
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java b/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java
+index c394634..5c8ec02 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppTransferActivity.java
+@@ -373,7 +373,7 @@ public class BluetoothOppTransferActivity extends AlertActivity implements
+                     // retry the failed transfer
+                     Uri uri = BluetoothOppUtility.originalUri(Uri.parse(mTransInfo.mFileUri));
+                     BluetoothOppSendFileInfo sendFileInfo =
+-                        BluetoothOppSendFileInfo.generateFileInfo(this, uri, mTransInfo.mFileType);
++                        BluetoothOppSendFileInfo.generateFileInfo(this, uri, mTransInfo.mFileType, false);
+                     uri = BluetoothOppUtility.generateUri(uri, sendFileInfo);
+                     BluetoothOppUtility.putSendFileInfo(uri, sendFileInfo);
+                     mTransInfo.mFileUri = uri.toString();
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppUtility.java b/src/com/android/bluetooth/opp/BluetoothOppUtility.java
+index 1a42133..67c42bd 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppUtility.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppUtility.java
+@@ -39,6 +39,7 @@ import com.google.android.collect.Lists;
+ import android.bluetooth.BluetoothAdapter;
+ import android.bluetooth.BluetoothDevice;
+ import android.net.Uri;
++import android.content.ContentResolver;
+ import android.content.ContentValues;
+ import android.content.Context;
+ import android.content.ActivityNotFoundException;
+@@ -46,6 +47,7 @@ import android.content.Intent;
+ import android.content.pm.PackageManager;
+ import android.content.pm.ResolveInfo;
+ import android.database.Cursor;
++import android.os.Environment;
+ import android.util.Log;
+ 
+ import java.io.File;
+@@ -349,4 +351,40 @@ public class BluetoothOppUtility {
+             }
+         }
+     }
++
++    /**
++     * Checks if the URI is in Environment.getExternalStorageDirectory() as it
++     * is the only directory that is possibly readable by both the sender and
++     * the Bluetooth process.
++     */
++    static boolean isInExternalStorageDir(Uri uri) {
++        if (!ContentResolver.SCHEME_FILE.equals(uri.getScheme())) {
++            Log.e(TAG, "Not a file URI: " + uri);
++            return false;
++        }
++        final File file = new File(uri.getCanonicalUri().getPath());
++        return isSameOrSubDirectory(Environment.getExternalStorageDirectory(), file);
++    }
++
++    /**
++     * Checks, whether the child directory is the same as, or a sub-directory of the base
++     * directory. Neither base nor child should be null.
++     */
++    static boolean isSameOrSubDirectory(File base, File child) {
++        try {
++            base = base.getCanonicalFile();
++            child = child.getCanonicalFile();
++            File parentFile = child;
++            while (parentFile != null) {
++                if (base.equals(parentFile)) {
++                    return true;
++                }
++                parentFile = parentFile.getParentFile();
++            }
++            return false;
++        } catch (IOException ex) {
++            Log.e(TAG, "Error while accessing file", ex);
++            return false;
++        }
++    }
+ }
+-- 
+2.7.4
+

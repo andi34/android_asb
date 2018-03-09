@@ -1,0 +1,33 @@
+From 987cd73dadb60699c7925dc7c2ae05b736a27755 Mon Sep 17 00:00:00 2001
+From: Ajay Panicker <apanicke@google.com>
+Date: Thu, 8 Sep 2016 11:01:29 -0700
+Subject: [PATCH 29/46] Fix setPairingConfirmation permissions issue (2/2)
+
+setPairingConfirmation was set to only require BLUETOOTH_ADMIN
+permission which shouldn't be able to set the confirmation itself.
+
+This is restricted to BLUETOOTH_PRIVILEGED permission.
+
+Bug: 29043989
+Change-Id: Iddc935f0b02f5ff56e930914b4b664377e786184
+(cherry picked from commit edae39d59aa2155c2d79cca991e163e2284cc355)
+---
+ core/java/android/bluetooth/BluetoothDevice.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/java/android/bluetooth/BluetoothDevice.java b/core/java/android/bluetooth/BluetoothDevice.java
+index d789a94..cd74faa 100644
+--- a/core/java/android/bluetooth/BluetoothDevice.java
++++ b/core/java/android/bluetooth/BluetoothDevice.java
+@@ -993,7 +993,7 @@ public final class BluetoothDevice implements Parcelable {
+ 
+     /**
+      * Confirm passkey for {@link #PAIRING_VARIANT_PASSKEY_CONFIRMATION} pairing.
+-     * <p>Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN}.
++     * <p>Requires {@link android.Manifest.permission#BLUETOOTH_PRIVILEGED}.
+      *
+      * @return true confirmation has been sent out
+      *         false for error
+-- 
+2.7.4
+

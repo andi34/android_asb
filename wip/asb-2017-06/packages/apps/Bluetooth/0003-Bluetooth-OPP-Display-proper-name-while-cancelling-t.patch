@@ -1,0 +1,47 @@
+From 1ae385d2d13c4fb428079b9eb5c3ca3beb5f8c9f Mon Sep 17 00:00:00 2001
+From: Pradeep Panigrahi <pradeepp@codeaurora.org>
+Date: Thu, 29 Aug 2013 11:34:03 +0530
+Subject: [PATCH 3/6] Bluetooth: OPP: Display proper name while cancelling
+ transfer
+
+Saves names of all the selected files to be transferred even
+before starting of client thread so that names remain intact
+in the outbound information even when the batch is cancelled
+from initiator.
+
+Change-Id: I1763e6fee04dc8bbac943ec1db4d739d46f40939
+(cherry picked from commit 6bb19d0c0829fc58a369fa7c509e46492ea497c9)
+(cherry picked from commit 4ff3f8e74af2570ad560ca8e311e704bb2580a28)
+(cherry picked from commit f11f07a1f02f8a9ce726721951a64133e3ec68a7)
+---
+ src/com/android/bluetooth/opp/BluetoothOppManager.java | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/com/android/bluetooth/opp/BluetoothOppManager.java b/src/com/android/bluetooth/opp/BluetoothOppManager.java
+index dd8efe0..5a8589b 100644
+--- a/src/com/android/bluetooth/opp/BluetoothOppManager.java
++++ b/src/com/android/bluetooth/opp/BluetoothOppManager.java
+@@ -1,4 +1,5 @@
+ /*
++ * Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+  * Copyright (c) 2008-2009, Motorola, Inc.
+  *
+  * All rights reserved.
+@@ -433,11 +434,14 @@ public class BluetoothOppManager {
+                     contentType = mTypeOfMultipleFiles;
+                 }
+ 
++                BluetoothOppSendFileInfo fileInfo = BluetoothOppSendFileInfo.generateFileInfo(
++                mContext, fileUri, contentType);
+                 ContentValues values = new ContentValues();
+                 values.put(BluetoothShare.URI, fileUri.toString());
+                 values.put(BluetoothShare.MIMETYPE, contentType);
+                 values.put(BluetoothShare.DESTINATION, mRemoteDevice.getAddress());
+                 values.put(BluetoothShare.TIMESTAMP, ts);
++                values.put(BluetoothShare.FILENAME_HINT, fileInfo.mFileName);
+                 if (mIsHandoverInitiated) {
+                     values.put(BluetoothShare.USER_CONFIRMATION,
+                             BluetoothShare.USER_CONFIRMATION_HANDOVER_CONFIRMED);
+-- 
+2.7.4
+

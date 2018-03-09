@@ -1,0 +1,39 @@
+From 41f642a27fa5aa94a7d533b64f64a5c1cf422a43 Mon Sep 17 00:00:00 2001
+From: Shreyas Basarge <snb@google.com>
+Date: Thu, 12 Nov 2015 15:32:44 +0000
+Subject: [PATCH 06/46] Sync extras bundle comparison can throw NPE
+
+Bug: 23591205
+Change-Id: I960dfcc1584c0a17685790d5d722eaf11b930e25
+(cherry picked from commit 2f137b7705875ee026319abb8e512d918c118222)
+---
+ core/java/android/content/PeriodicSync.java | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/android/content/PeriodicSync.java b/core/java/android/content/PeriodicSync.java
+index b586eec..e27870f 100644
+--- a/core/java/android/content/PeriodicSync.java
++++ b/core/java/android/content/PeriodicSync.java
+@@ -21,6 +21,8 @@ import android.os.Bundle;
+ import android.os.Parcel;
+ import android.accounts.Account;
+ 
++import java.util.Objects;
++
+ /**
+  * Value type that contains information about a periodic sync.
+  */
+@@ -147,7 +149,9 @@ public class PeriodicSync implements Parcelable {
+             if (!b2.containsKey(key)) {
+                 return false;
+             }
+-            if (!b1.get(key).equals(b2.get(key))) {
++            // Null check. According to ContentResolver#validateSyncExtrasBundle null-valued keys
++            // are allowed in the bundle.
++            if (!Objects.equals(b1.get(key), b2.get(key))) {
+                 return false;
+             }
+         }
+-- 
+2.7.4
+

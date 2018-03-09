@@ -1,0 +1,36 @@
+From 1c7667c0e95c5d8ae8acfd6ca5a8c33b3c72f58a Mon Sep 17 00:00:00 2001
+From: Josh Gao <jmgao@google.com>
+Date: Tue, 16 Feb 2016 14:26:11 -0800
+Subject: [PATCH 08/20] Don't create tombstone directory. DO NOT MERGE
+
+Partial backport of cf79748.
+
+Bug: http://b/26403620
+Change-Id: I412889bfa331c96ad8e2ce6e0d66b54fb230e8c0
+(cherry picked from commit 557749e55bb3c22b83dd0d8da0adc696ba06ea74)
+---
+ debuggerd/tombstone.c | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/debuggerd/tombstone.c b/debuggerd/tombstone.c
+index 29cd76c..442e163 100644
+--- a/debuggerd/tombstone.c
++++ b/debuggerd/tombstone.c
+@@ -810,14 +810,6 @@ static int activity_manager_connect() {
+ char* engrave_tombstone(pid_t pid, pid_t tid, int signal, uintptr_t abort_msg_address,
+         bool dump_sibling_threads, bool quiet, bool* detach_failed,
+         int* total_sleep_time_usec) {
+-    mkdir(TOMBSTONE_DIR, 0755);
+-    chown(TOMBSTONE_DIR, AID_SYSTEM, AID_SYSTEM);
+-
+-    if (selinux_android_restorecon(TOMBSTONE_DIR) == -1) {
+-        *detach_failed = false;
+-        return NULL;
+-    }
+-
+     int fd;
+     char* path = find_and_open_tombstone(&fd);
+     if (!path) {
+-- 
+2.7.4
+

@@ -1,0 +1,50 @@
+From 37eaff6c2234634403fe799ba8175c7bd2673064 Mon Sep 17 00:00:00 2001
+From: Santos Cordon <santoscordon@google.com>
+Date: Mon, 22 Feb 2016 16:34:45 -0800
+Subject: [PATCH 1/4] DO NOT MERGE - Prevent "add-call" UI during setup wizard.
+
+Bug: 26303187
+Change-Id: I03b479752f08109d2815b6e4cc7638c4bec7675c
+(cherry picked from commit 3217d389dce293a6705c1c54d8d37d3746cd6a3e)
+---
+ src/com/android/phone/CallModeler.java | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/phone/CallModeler.java b/src/com/android/phone/CallModeler.java
+index e4ed147..5228789 100644
+--- a/src/com/android/phone/CallModeler.java
++++ b/src/com/android/phone/CallModeler.java
+@@ -20,6 +20,7 @@ import android.os.AsyncResult;
+ import android.os.Handler;
+ import android.os.Message;
+ import android.os.SystemProperties;
++import android.provider.Settings;
+ import android.telephony.PhoneNumberUtils;
+ import android.text.TextUtils;
+ import android.util.Log;
+@@ -658,7 +659,7 @@ public class CallModeler extends Handler {
+             canSwapCall = PhoneUtils.okToSwapCalls(mCallManager);
+         }
+ 
+-        canAddCall = PhoneUtils.okToAddCall(mCallManager);
++        canAddCall = PhoneUtils.okToAddCall(mCallManager) && passedSetupWizard();
+ 
+         // "Mute": only enabled when the foreground call is ACTIVE.
+         // (It's meaningless while on hold, or while DIALING/ALERTING.)
+@@ -898,6 +899,13 @@ public class CallModeler extends Handler {
+         return new Call(callId);
+     }
+ 
++    private boolean passedSetupWizard() {
++        // Incoming calls are totally ignored if the device isn't provisioned yet.
++        return Settings.Global.getInt(
++                PhoneGlobals.getInstance().getContentResolver(),
++                Settings.Global.DEVICE_PROVISIONED, 0) != 0;
++    }
++
+     /**
+      * Listener interface for changes to Calls.
+      */
+-- 
+2.7.4
+

@@ -1,0 +1,119 @@
+From 53e2cd52851d5ab6e041b6583b509f559630dff1 Mon Sep 17 00:00:00 2001
+From: Michael Bestas <mikeioannina@gmail.com>
+Date: Wed, 15 Jan 2014 06:21:09 +0200
+Subject: [PATCH 40/46] Keyguard: Fix PIN layout on sw320dp-mdpi devices
+
+Fix a long standing lockscreen layout problem that was introduced in 4.2
+
+Before: http://i.imgur.com/9sVKHRR.png
+After: http://i.imgur.com/DLY4DRu.png
+
+Change-Id: Ia3cdc0d10217a0a2504a7287f480d9f036e66eee
+---
+ packages/Keyguard/res/values-sw320dp-hdpi/dimens.xml | 6 ++++++
+ packages/Keyguard/res/values-sw320dp/dimens.xml      | 8 ++++++--
+ packages/Keyguard/res/values-sw360dp/dimens.xml      | 9 +++++++--
+ packages/Keyguard/res/values/dimens.xml              | 6 ++++++
+ packages/Keyguard/res/values/styles.xml              | 4 ++--
+ 5 files changed, 27 insertions(+), 6 deletions(-)
+
+diff --git a/packages/Keyguard/res/values-sw320dp-hdpi/dimens.xml b/packages/Keyguard/res/values-sw320dp-hdpi/dimens.xml
+index e61542c..9fcb000 100644
+--- a/packages/Keyguard/res/values-sw320dp-hdpi/dimens.xml
++++ b/packages/Keyguard/res/values-sw320dp-hdpi/dimens.xml
+@@ -23,4 +23,10 @@
+ 
+     <!-- Height of the sliding KeyguardSecurityContainer with hidden widget (includes 2x keyguard_security_view_margin) -->
+     <dimen name="keyguard_security_no_widget_height">450dp</dimen>
++
++    <!-- Top padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_top">6dp</dimen>
++
++    <!-- Bottom padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_bottom">8dp</dimen>
+ </resources>
+diff --git a/packages/Keyguard/res/values-sw320dp/dimens.xml b/packages/Keyguard/res/values-sw320dp/dimens.xml
+index 62839a0..b293468 100644
+--- a/packages/Keyguard/res/values-sw320dp/dimens.xml
++++ b/packages/Keyguard/res/values-sw320dp/dimens.xml
+@@ -18,14 +18,18 @@
+ */
+ -->
+ <resources>
+-
+     <!-- Height of the sliding KeyguardSecurityContainer (includes 2x keyguard_security_view_margin) -->
+     <dimen name="keyguard_security_height">300dp</dimen>
+ 
+     <!-- Height of the sliding KeyguardSecurityContainer with hidden widget (includes 2x keyguard_security_view_margin) -->
+     <dimen name="keyguard_security_no_widget_height">400dp</dimen>
+ 
++    <!-- Top padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_top">2dp</dimen>
++
++    <!-- Bottom padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_bottom">2dp</dimen>
++
+     <!-- Left padding of num pad key on keyguard -->
+     <dimen name="kg_num_pad_key_padding_left">10dp</dimen>
+-
+ </resources>
+diff --git a/packages/Keyguard/res/values-sw360dp/dimens.xml b/packages/Keyguard/res/values-sw360dp/dimens.xml
+index b2eacc1..b8c6265 100644
+--- a/packages/Keyguard/res/values-sw360dp/dimens.xml
++++ b/packages/Keyguard/res/values-sw360dp/dimens.xml
+@@ -19,13 +19,18 @@
+ -->
+ <resources>
+ 
+-    <!-- Height of the sliding KeyguardSecurityContainer (includes 2x
+-         keyguard_security_view_margin) -->
++    <!-- Height of the sliding KeyguardSecurityContainer (includes 2x keyguard_security_view_margin) -->
+     <dimen name="keyguard_security_height">400dp</dimen>
+ 
+     <!-- Height of the sliding KeyguardSecurityContainer with hidden widget (includes 2x keyguard_security_view_margin) -->
+     <dimen name="keyguard_security_no_widget_height">400dp</dimen>
+ 
++    <!-- Top padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_top">6dp</dimen>
++
++    <!-- Bottom padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_bottom">8dp</dimen>
++
+     <!-- Left padding of num pad key on keyguard -->
+     <dimen name="kg_num_pad_key_padding_left">20dp</dimen>
+ 
+diff --git a/packages/Keyguard/res/values/dimens.xml b/packages/Keyguard/res/values/dimens.xml
+index b816c8f..cb9e830 100644
+--- a/packages/Keyguard/res/values/dimens.xml
++++ b/packages/Keyguard/res/values/dimens.xml
+@@ -153,6 +153,12 @@
+     security mode. -->
+     <dimen name="kg_small_widget_height">160dp</dimen>
+ 
++    <!-- Top padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_top">6dp</dimen>
++
++    <!-- Bottom padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_bottom">8dp</dimen>
++
+     <!-- Left padding of num pad key on keyguard -->
+     <dimen name="kg_num_pad_key_padding_left">20dp</dimen>
+ 
+diff --git a/packages/Keyguard/res/values/styles.xml b/packages/Keyguard/res/values/styles.xml
+index 2e6b520..8607fe1 100644
+--- a/packages/Keyguard/res/values/styles.xml
++++ b/packages/Keyguard/res/values/styles.xml
+@@ -28,8 +28,8 @@
+         <item name="android:fontFamily">sans-serif</item>
+         <item name="android:textStyle">normal</item>
+         <item name="android:textColor">#ffffff</item>
+-        <item name="android:paddingTop">6dp</item>
+-        <item name="android:paddingBottom">8dp</item>
++        <item name="android:paddingTop">@dimen/kg_num_pad_key_padding_top</item>
++        <item name="android:paddingBottom">@dimen/kg_num_pad_key_padding_bottom</item>
+         <item name="android:paddingLeft">@dimen/kg_num_pad_key_padding_left</item>
+         <item name="android:paddingRight">6dp</item>
+     </style>
+-- 
+2.7.4
+

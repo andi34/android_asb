@@ -1,0 +1,37 @@
+From 3668fe449939972f43be1ca311579b6689e6fe7a Mon Sep 17 00:00:00 2001
+From: Jack Yu <jackyu@google.com>
+Date: Mon, 16 Jan 2017 10:15:34 -0800
+Subject: [PATCH 4/4] Added permission check for setCellInfoListRate
+
+Now the caller needs to have MODIFY_PHONE_STATE to call
+this API.
+
+Test: Manual
+bug: 33815946
+Merged-In: Ia2cf0de383572033c70b94ae71080ef35c3f443c
+AOSP-Change-Id: Ia2cf0de383572033c70b94ae71080ef35c3f443c
+
+CVE-2017-0554
+
+Change-Id: I9c48ae03ffd2bf54634f5f9a537df496de40119e
+(cherry picked from commit aeb795ef2290af1a0e4b14909363bc574e6b3ee7)
+(cherry picked from commit b3d279492e4e6d76022a5f9ac3e836bec91e5ea8)
+---
+ src/com/android/phone/PhoneInterfaceManager.java | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
+index cf86e7a..31efd0f 100644
+--- a/src/com/android/phone/PhoneInterfaceManager.java
++++ b/src/com/android/phone/PhoneInterfaceManager.java
+@@ -752,6 +752,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub implements CallModele
+     }
+ 
+     public void setCellInfoListRate(int rateInMillis) {
++        enforceModifyPermission();
+         mPhone.setCellInfoListRate(rateInMillis);
+     }
+ 
+-- 
+2.7.4
+

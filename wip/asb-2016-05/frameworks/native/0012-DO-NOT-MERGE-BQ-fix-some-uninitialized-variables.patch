@@ -1,0 +1,43 @@
+From 1ad57574071cb2bd1ea8412db609abe2f233b545 Mon Sep 17 00:00:00 2001
+From: Pablo Ceballos <pceballos@google.com>
+Date: Tue, 15 Mar 2016 18:10:49 -0700
+Subject: [PATCH 12/18] DO NOT MERGE BQ: fix some uninitialized variables
+
+Bug 27555981
+Bug 27556038
+
+Change-Id: I436b6fec589677d7e36c0e980f6e59808415dc0e
+(cherry picked from commit 030172e49c866943203e4906b26e1a132ff94ff4)
+---
+ libs/gui/IGraphicBufferConsumer.cpp | 2 +-
+ libs/gui/IGraphicBufferProducer.cpp | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/libs/gui/IGraphicBufferConsumer.cpp b/libs/gui/IGraphicBufferConsumer.cpp
+index 9574b61..ea98296 100644
+--- a/libs/gui/IGraphicBufferConsumer.cpp
++++ b/libs/gui/IGraphicBufferConsumer.cpp
+@@ -410,7 +410,7 @@ status_t BnGraphicBufferConsumer::onTransact(
+         } break;
+         case GET_RELEASED_BUFFERS: {
+             CHECK_INTERFACE(IGraphicBufferConsumer, data, reply);
+-            uint32_t slotMask;
++            uint32_t slotMask = 0;
+             status_t result = getReleasedBuffers(&slotMask);
+             reply->writeInt32(slotMask);
+             reply->writeInt32(result);
+diff --git a/libs/gui/IGraphicBufferProducer.cpp b/libs/gui/IGraphicBufferProducer.cpp
+index e713c04..6549a0c 100644
+--- a/libs/gui/IGraphicBufferProducer.cpp
++++ b/libs/gui/IGraphicBufferProducer.cpp
+@@ -249,6 +249,7 @@ status_t BnGraphicBufferProducer::onTransact(
+             QueueBufferOutput* const output =
+                     reinterpret_cast<QueueBufferOutput *>(
+                             reply->writeInplace(sizeof(QueueBufferOutput)));
++            memset(output, 0, sizeof(QueueBufferOutput));
+             status_t res = connect(token, api, producerControlledByApp, output);
+             reply->writeInt32(res);
+             return NO_ERROR;
+-- 
+2.7.4
+

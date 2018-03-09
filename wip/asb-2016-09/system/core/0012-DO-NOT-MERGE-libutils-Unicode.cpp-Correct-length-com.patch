@@ -1,0 +1,214 @@
+From 8394eb1ad1b05c7e64d7605fa13ef3b59118e77c Mon Sep 17 00:00:00 2001
+From: Sergio Giro <sgiro@google.com>
+Date: Tue, 28 Jun 2016 18:02:29 +0100
+Subject: [PATCH 12/20] DO NOT MERGE libutils/Unicode.cpp: Correct length
+ computation and add checks for utf16->utf8
+
+Inconsistent behaviour between utf16_to_utf8 and utf16_to_utf8_length
+is causing a heap overflow.
+
+Correcting the length computation and adding bound checks to the
+conversion functions.
+
+(cherry picked from commit c4966a363e46d2e1074d1a365e232af0dcedd6a1)
+
+Bug: 29250543
+Change-Id: Ia2d6a550f5594280505fb0835c752e53898700ed
+(cherry picked from commit 5fce0542b6b822b6a79fc4cb0e12db1eb7d41f6c)
+---
+ include/utils/Unicode.h         |  4 ++--
+ libutils/String8.cpp            | 25 +++++++++++++------------
+ libutils/Unicode.cpp            | 15 +++++++++++----
+ libutils/tests/String8_test.cpp | 20 ++++++++++++++++++++
+ 4 files changed, 46 insertions(+), 18 deletions(-)
+
+diff --git a/include/utils/Unicode.h b/include/utils/Unicode.h
+index c8c87c3..f96c99e 100644
+--- a/include/utils/Unicode.h
++++ b/include/utils/Unicode.h
+@@ -90,7 +90,7 @@ ssize_t utf32_to_utf8_length(const char32_t *src, size_t src_len);
+  * "dst" becomes \xE3\x81\x82\xE3\x81\x84
+  * (note that "dst" is NOT null-terminated, like strncpy)
+  */
+-void utf32_to_utf8(const char32_t* src, size_t src_len, char* dst);
++void utf32_to_utf8(const char32_t* src, size_t src_len, char* dst, size_t dst_len);
+ 
+ /**
+  * Returns the unicode value at "index".
+@@ -112,7 +112,7 @@ ssize_t utf16_to_utf8_length(const char16_t *src, size_t src_len);
+  * enough to fit the UTF-16 as measured by utf16_to_utf8_length with an added
+  * NULL terminator.
+  */
+-void utf16_to_utf8(const char16_t* src, size_t src_len, char* dst);
++void utf16_to_utf8(const char16_t* src, size_t src_len, char* dst, size_t dst_len);
+ 
+ /**
+  * Returns the length of "src" when "src" is valid UTF-8 string.
+diff --git a/libutils/String8.cpp b/libutils/String8.cpp
+index bb06825..cad401f 100644
+--- a/libutils/String8.cpp
++++ b/libutils/String8.cpp
+@@ -102,20 +102,21 @@ static char* allocFromUTF16(const char16_t* in, size_t len)
+ {
+     if (len == 0) return getEmptyString();
+ 
+-    const ssize_t bytes = utf16_to_utf8_length(in, len);
+-    if (bytes < 0) {
++     // Allow for closing '\0'
++    const ssize_t resultStrLen = utf16_to_utf8_length(in, len) + 1;
++    if (resultStrLen < 1) {
+         return getEmptyString();
+     }
+ 
+-    SharedBuffer* buf = SharedBuffer::alloc(bytes+1);
++    SharedBuffer* buf = SharedBuffer::alloc(resultStrLen);
+     ALOG_ASSERT(buf, "Unable to allocate shared buffer");
+     if (!buf) {
+         return getEmptyString();
+     }
+ 
+-    char* str = (char*)buf->data();
+-    utf16_to_utf8(in, len, str);
+-    return str;
++    char* resultStr = (char*)buf->data();
++    utf16_to_utf8(in, len, resultStr, resultStrLen);
++    return resultStr;
+ }
+ 
+ static char* allocFromUTF32(const char32_t* in, size_t len)
+@@ -124,21 +125,21 @@ static char* allocFromUTF32(const char32_t* in, size_t len)
+         return getEmptyString();
+     }
+ 
+-    const ssize_t bytes = utf32_to_utf8_length(in, len);
+-    if (bytes < 0) {
++    const ssize_t resultStrLen = utf32_to_utf8_length(in, len) + 1;
++    if (resultStrLen < 1) {
+         return getEmptyString();
+     }
+ 
+-    SharedBuffer* buf = SharedBuffer::alloc(bytes+1);
++    SharedBuffer* buf = SharedBuffer::alloc(resultStrLen);
+     ALOG_ASSERT(buf, "Unable to allocate shared buffer");
+     if (!buf) {
+         return getEmptyString();
+     }
+ 
+-    char* str = (char*) buf->data();
+-    utf32_to_utf8(in, len, str);
++    char* resultStr = (char*) buf->data();
++    utf32_to_utf8(in, len, resultStr, resultStrLen);
+ 
+-    return str;
++    return resultStr;
+ }
+ 
+ // ---------------------------------------------------------------------------
+diff --git a/libutils/Unicode.cpp b/libutils/Unicode.cpp
+index a66e3bb..ef1057f 100644
+--- a/libutils/Unicode.cpp
++++ b/libutils/Unicode.cpp
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ 
++#include <log/log.h>
+ #include <utils/Unicode.h>
+ 
+ #include <stddef.h>
+@@ -188,7 +189,7 @@ ssize_t utf32_to_utf8_length(const char32_t *src, size_t src_len)
+     return ret;
+ }
+ 
+-void utf32_to_utf8(const char32_t* src, size_t src_len, char* dst)
++void utf32_to_utf8(const char32_t* src, size_t src_len, char* dst, size_t dst_len)
+ {
+     if (src == NULL || src_len == 0 || dst == NULL) {
+         return;
+@@ -199,9 +200,12 @@ void utf32_to_utf8(const char32_t* src, size_t src_len, char* dst)
+     char *cur = dst;
+     while (cur_utf32 < end_utf32) {
+         size_t len = utf32_codepoint_utf8_length(*cur_utf32);
++        LOG_ALWAYS_FATAL_IF(dst_len < len, "%zu < %zu", dst_len, len);
+         utf32_codepoint_to_utf8((uint8_t *)cur, *cur_utf32++, len);
+         cur += len;
++        dst_len -= len;
+     }
++    LOG_ALWAYS_FATAL_IF(dst_len < 1, "dst_len < 1: %zu < 1", dst_len);
+     *cur = '\0';
+ }
+ 
+@@ -330,7 +334,7 @@ int strzcmp16_h_n(const char16_t *s1H, size_t n1, const char16_t *s2N, size_t n2
+            : 0);
+ }
+ 
+-void utf16_to_utf8(const char16_t* src, size_t src_len, char* dst)
++void utf16_to_utf8(const char16_t* src, size_t src_len, char* dst, size_t dst_len)
+ {
+     if (src == NULL || src_len == 0 || dst == NULL) {
+         return;
+@@ -350,9 +354,12 @@ void utf16_to_utf8(const char16_t* src, size_t src_len, char* dst)
+             utf32 = (char32_t) *cur_utf16++;
+         }
+         const size_t len = utf32_codepoint_utf8_length(utf32);
++        LOG_ALWAYS_FATAL_IF(dst_len < len, "%zu < %zu", dst_len, len);
+         utf32_codepoint_to_utf8((uint8_t*)cur, utf32, len);
+         cur += len;
++        dst_len -= len;
+     }
++    LOG_ALWAYS_FATAL_IF(dst_len < 1, "%zu < 1", dst_len);
+     *cur = '\0';
+ }
+ 
+@@ -413,10 +420,10 @@ ssize_t utf16_to_utf8_length(const char16_t *src, size_t src_len)
+     const char16_t* const end = src + src_len;
+     while (src < end) {
+         if ((*src & 0xFC00) == 0xD800 && (src + 1) < end
+-                && (*++src & 0xFC00) == 0xDC00) {
++                && (*(src + 1) & 0xFC00) == 0xDC00) {
+             // surrogate pairs are always 4 bytes.
+             ret += 4;
+-            src++;
++            src += 2;
+         } else {
+             ret += utf32_codepoint_utf8_length((char32_t) *src++);
+         }
+diff --git a/libutils/tests/String8_test.cpp b/libutils/tests/String8_test.cpp
+index c42c68d..7394163 100644
+--- a/libutils/tests/String8_test.cpp
++++ b/libutils/tests/String8_test.cpp
+@@ -17,6 +17,7 @@
+ #define LOG_TAG "String8_test"
+ #include <utils/Log.h>
+ #include <utils/String8.h>
++#include <utils/String16.h>
+ 
+ #include <gtest/gtest.h>
+ 
+@@ -72,4 +73,23 @@ TEST_F(String8Test, OperatorPlusEquals) {
+     EXPECT_STREQ(src3, " Verify me.");
+ }
+ 
++// http://b/29250543
++TEST_F(String8Test, CorrectInvalidSurrogate) {
++    // d841d8 is an invalid start for a surrogate pair. Make sure this is handled by ignoring the
++    // first character in the pair and handling the rest correctly.
++    char16_t char16_arr[] = { 0xd841, 0xd841, 0xdc41, 0x0000 };
++    String16 string16(char16_arr);
++    String8 string8(string16);
++
++    EXPECT_EQ(4U, string8.length());
++}
++
++TEST_F(String8Test, CheckUtf32Conversion) {
++    // Since bound checks were added, check the conversion can be done without fatal errors.
++    // The utf8 lengths of these are chars are 1 + 2 + 3 + 4 = 10.
++    const char32_t string32[] = { 0x0000007f, 0x000007ff, 0x0000911, 0x0010fffe, 0 };
++    String8 string8(string32);
++    EXPECT_EQ(10U, string8.length());
++}
++
+ }
+-- 
+2.7.4
+

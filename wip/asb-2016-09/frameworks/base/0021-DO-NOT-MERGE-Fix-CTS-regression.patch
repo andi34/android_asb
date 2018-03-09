@@ -1,0 +1,35 @@
+From 3f4deb3ec55ba6eb181b4596dc4dfc49d760bc53 Mon Sep 17 00:00:00 2001
+From: Sungsoo Lim <sungsoo@google.com>
+Date: Mon, 25 Jul 2016 11:53:13 +0900
+Subject: [PATCH 21/46] DO NOT MERGE: Fix CTS regression
+
+Bug: 30297223, Bug: 30437363
+Change-Id: I7b18af40e4eac2713577204428fbfb96cc346582
+---
+ media/java/android/media/ExifInterface.java | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/media/java/android/media/ExifInterface.java b/media/java/android/media/ExifInterface.java
+index 68fcbf5..654a08a 100644
+--- a/media/java/android/media/ExifInterface.java
++++ b/media/java/android/media/ExifInterface.java
+@@ -1325,12 +1325,12 @@ public class ExifInterface {
+      * determine whether the image data format is JPEG or not.
+      */
+     private void loadAttributes() throws IOException {
++        // Initialize mAttributes.
++        for (int i = 0; i < EXIF_TAGS.length; ++i) {
++            mAttributes[i] = new HashMap();
++        }
+         try {
+             InputStream in = new FileInputStream(mFilename);
+-            // Initialize mAttributes.
+-            for (int i = 0; i < EXIF_TAGS.length; ++i) {
+-                mAttributes[i] = new HashMap();
+-            }
+             getJpegAttributes(in);
+         } catch (IOException e) {
+             // Ignore exceptions in order to keep the compatibility with the old versions of
+-- 
+2.7.4
+

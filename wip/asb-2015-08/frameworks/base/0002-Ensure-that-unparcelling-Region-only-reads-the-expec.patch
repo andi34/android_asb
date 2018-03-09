@@ -1,0 +1,35 @@
+From 04463e60ceb542082b339060ee1206247dd63082 Mon Sep 17 00:00:00 2001
+From: Leon Scroggins III <scroggo@google.com>
+Date: Sat, 12 Sep 2015 15:27:17 +0200
+Subject: [PATCH 02/46] Ensure that unparcelling Region only reads the expected
+ number of bytes
+
+CVE-2015-3849: Elevation of Privilege Vulnerability in Region
+
+Bug: 20883006
+Change-Id: I4f109667fb210a80fbddddf5f1bfb7ef3a02b6ce
+---
+ core/jni/android/graphics/Region.cpp | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/core/jni/android/graphics/Region.cpp b/core/jni/android/graphics/Region.cpp
+index 1e0cf96..d901e9c 100644
+--- a/core/jni/android/graphics/Region.cpp
++++ b/core/jni/android/graphics/Region.cpp
+@@ -181,7 +181,12 @@ static SkRegion* Region_createFromParcel(JNIEnv* env, jobject clazz, jobject par
+         return NULL;
+     }
+     SkRegion* region = new SkRegion;
+-    region->readFromMemory(regionData, size);
++    size_t actualSize = region->readFromMemory(regionData, size);
++
++    if (size != actualSize) {
++        delete region;
++        return NULL;
++    }
+ 
+     return region;
+ }
+-- 
+2.7.4
+

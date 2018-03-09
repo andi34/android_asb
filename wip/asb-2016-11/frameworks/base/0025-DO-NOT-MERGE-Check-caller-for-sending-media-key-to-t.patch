@@ -1,0 +1,73 @@
+From 7c3f66297b6142cd1e31c0721e71e56017d4e8fe Mon Sep 17 00:00:00 2001
+From: Jaewan Kim <jaewan@google.com>
+Date: Wed, 21 Sep 2016 11:20:54 +0900
+Subject: [PATCH 25/46] DO NOT MERGE Check caller for sending media key to
+ telephony service
+
+Prevent sending media key events from the non-system app to the
+telephony service through the AudioManager.dispatchMediaKeyEvent()
+or sending media key broadcast directly.
+
+Bug: 29833954
+Tested: Installed malicious apps and confirmed that they don't work.
+Tested: Run CtsTelecomTestCases and CtsMediaTestCases
+Change-Id: I2a9e78196ba7455324e485f098f095d03b47ee15
+(cherry picked from commit d1641e8c2719dd5e83f841dfddf7a6efff86e4d9)
+---
+ media/java/android/media/MediaFocusControl.java              |  9 ++++++++-
+ .../com/android/internal/policy/impl/PhoneWindowManager.java | 12 ++++++++++++
+ 2 files changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/media/java/android/media/MediaFocusControl.java b/media/java/android/media/MediaFocusControl.java
+index 5614eac..2cf62a2 100644
+--- a/media/java/android/media/MediaFocusControl.java
++++ b/media/java/android/media/MediaFocusControl.java
+@@ -40,6 +40,7 @@ import android.os.IBinder;
+ import android.os.Looper;
+ import android.os.Message;
+ import android.os.PowerManager;
++import android.os.Process;
+ import android.os.RemoteException;
+ import android.os.UserHandle;
+ import android.os.IBinder.DeathRecipient;
+@@ -750,7 +751,13 @@ public class MediaFocusControl implements OnFinished {
+             synchronized(mRCStack) {
+                 if ((mMediaReceiverForCalls != null) &&
+                         (mIsRinging || (mAudioService.getMode() == AudioSystem.MODE_IN_CALL))) {
+-                    dispatchMediaKeyEventForCalls(keyEvent, needWakeLock);
++                    if (Binder.getCallingUid() != Process.SYSTEM_UID) {
++                        // Prevent dispatching key event to the global priority session.
++                        Slog.i(TAG, "Only the system can dispatch media key event "
++                                + "to the global priority session.");
++                    } else {
++                        dispatchMediaKeyEventForCalls(keyEvent, needWakeLock);
++                    }
+                     return;
+                 }
+             }
+diff --git a/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java b/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java
+index fff0a17..4ea3ff0 100644
+--- a/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java
++++ b/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java
+@@ -4044,6 +4044,18 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+             case KeyEvent.KEYCODE_MEDIA_RECORD:
+             case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD:
+             case KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK: {
++                ITelephony telephonyService = getTelephonyService();
++                if (telephonyService != null) {
++                    try {
++                        if (!telephonyService.isIdle()) {
++                            // When phone is ringing or in-call, pass all media keys to it.
++                            result &= ~ACTION_PASS_TO_USER;
++                        }
++                    } catch (RemoteException ex) {
++                        Log.w(TAG, "ITelephony threw RemoteException", ex);
++                    }
++                }
++
+                 if ((result & ACTION_PASS_TO_USER) == 0) {
+                     // Only do this if we would otherwise not pass it to the user. In that
+                     // case, the PhoneWindow class will do the same thing, except it will
+-- 
+2.7.4
+

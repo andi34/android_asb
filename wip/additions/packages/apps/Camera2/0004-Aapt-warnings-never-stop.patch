@@ -1,0 +1,36 @@
+From 8f3568da92dd5272493c3d89122856ebeca6b679 Mon Sep 17 00:00:00 2001
+From: Andreas Blaesius <skate4life@gmx.de>
+Date: Sun, 15 Oct 2017 16:32:59 +0200
+Subject: [PATCH 4/5] Aapt warnings never stop...
+
+Change-Id: Ib5afe9dbcdc03cfadb9f43a99e151e6cfee5d333
+---
+ res/values-et/strings.xml | 2 --
+ res/values-ms/strings.xml | 2 --
+ 2 files changed, 4 deletions(-)
+
+diff --git a/res/values-et/strings.xml b/res/values-et/strings.xml
+index fd3109c..adb9343 100644
+--- a/res/values-et/strings.xml
++++ b/res/values-et/strings.xml
+@@ -249,6 +249,4 @@
+     <string name="remember_location_prompt" msgid="724592331305808098">"Märkige oma fotodele ja videotele jäädvustamise asukoht."\n\n"Muud rakendused pääsevad lisaks salvestatud piltidele juurde ka sellele teabele."</string>
+     <string name="remember_location_no" msgid="7541394381714894896">"Ei, tänan"</string>
+     <string name="remember_location_yes" msgid="862884269285964180">"Jah"</string>
+-    <string name="menu_camera" msgid="3476709832879398998">"Kaamera"</string>
+-    <string name="menu_search" msgid="7580008232297437190">"Otsing"</string>
+ </resources>
+diff --git a/res/values-ms/strings.xml b/res/values-ms/strings.xml
+index be9f6d4..35232fb 100644
+--- a/res/values-ms/strings.xml
++++ b/res/values-ms/strings.xml
+@@ -249,6 +249,4 @@
+     <string name="remember_location_prompt" msgid="724592331305808098">"Teg foto dan video anda dengan lokasi tempat diambil."\n\n"Apl lain boleh mengakses maklumat ini bersama dengan imej disimpan anda."</string>
+     <string name="remember_location_no" msgid="7541394381714894896">"Tidak, terima kasih"</string>
+     <string name="remember_location_yes" msgid="862884269285964180">"Ya"</string>
+-    <string name="menu_camera" msgid="3476709832879398998">"Kamera"</string>
+-    <string name="menu_search" msgid="7580008232297437190">"Cari"</string>
+ </resources>
+-- 
+2.7.4
+

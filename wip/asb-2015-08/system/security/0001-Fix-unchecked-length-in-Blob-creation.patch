@@ -1,0 +1,39 @@
+From 72eade557081c8bfa4656e01cb7c1b2d73cfb8b9 Mon Sep 17 00:00:00 2001
+From: Chad Brubaker <cbrubaker@google.com>
+Date: Wed, 29 Jul 2015 13:53:36 -0700
+Subject: [PATCH 1/2] Fix unchecked length in Blob creation
+
+Applications can specify arbitrary blobs using insert(), check their
+length to prevent overflow issues.
+
+Bug:22802399
+Change-Id: I4097bd891c733914df70da5e2c58783081d913bf
+---
+ keystore/keystore.cpp | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/keystore/keystore.cpp b/keystore/keystore.cpp
+index 7366c34..031f4c8 100644
+--- a/keystore/keystore.cpp
++++ b/keystore/keystore.cpp
+@@ -410,8 +410,16 @@ static const uint8_t CURRENT_BLOB_VERSION = 2;
+ 
+ class Blob {
+ public:
+-    Blob(const uint8_t* value, int32_t valueLength, const uint8_t* info, uint8_t infoLength,
++    Blob(const uint8_t* value, size_t valueLength, const uint8_t* info, uint8_t infoLength,
+             BlobType type) {
++        if (valueLength > sizeof(mBlob.value)) {
++            valueLength = sizeof(mBlob.value);
++            ALOGW("Provided blob length too large");
++        }
++        if (infoLength + valueLength > sizeof(mBlob.value)) {
++            infoLength = sizeof(mBlob.value) - valueLength;
++            ALOGW("Provided info length too large");
++        }
+         mBlob.length = valueLength;
+         memcpy(mBlob.value, value, valueLength);
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,271 @@
+From c71a5df0f4ca18bd3184f07062c7cbf2a74f0d4d Mon Sep 17 00:00:00 2001
+From: Martijn Coenen <maco@google.com>
+Date: Mon, 23 May 2016 12:30:43 +0200
+Subject: [PATCH] Verify setForegroundDispatch caller is in foreground. (DO NOT
+ MERGE)
+
+Bug: 28300969
+Change-Id: Ibcc2fc384a91a452d378c9ff9632ec110bd4e063
+(cherry picked from commit c48b7447d282bf9b00575915b59af08dca4d9ba7)
+---
+ AndroidManifest.xml                      |   1 +
+ src/com/android/nfc/ForegroundUtils.java | 191 +++++++++++++++++++++++++++++++
+ src/com/android/nfc/NfcService.java      |  11 ++
+ 3 files changed, 203 insertions(+)
+ create mode 100644 src/com/android/nfc/ForegroundUtils.java
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 95fedff..6aa1250 100755
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -40,6 +40,7 @@
+     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
+     <uses-permission android:name="android.permission.MANAGE_USERS" />
+     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW" />
++    <uses-permission android:name="android.permission.SET_ACTIVITY_WATCHER" />
+     <uses-permission android:name="com.android.permission.WHITELIST_BLUETOOTH_DEVICE" />
+     <uses-permission android:name="com.android.permission.HANDOVER_STATUS" />
+     <application android:name=".NfcApplication"
+diff --git a/src/com/android/nfc/ForegroundUtils.java b/src/com/android/nfc/ForegroundUtils.java
+new file mode 100644
+index 0000000..ea46376
+--- /dev/null
++++ b/src/com/android/nfc/ForegroundUtils.java
+@@ -0,0 +1,191 @@
++/*
++ * Copyright (C) 2014 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package com.android.nfc;
++
++import java.util.ArrayList;
++import java.util.List;
++
++import android.app.ActivityManagerNative;
++import android.app.IActivityManager;
++import android.app.IProcessObserver;
++import android.os.RemoteException;
++import android.util.Log;
++import android.util.SparseArray;
++import android.util.SparseBooleanArray;
++
++public class ForegroundUtils extends IProcessObserver.Stub {
++    static final boolean DBG = false;
++    private final String TAG = "ForegroundUtils";
++    private final IActivityManager mIActivityManager;
++
++    private final Object mLock = new Object();
++    // We need to keep track of the individual PIDs per UID,
++    // since a single UID may have multiple processes running
++    // that transition into foreground/background state.
++    private final SparseArray<SparseBooleanArray> mForegroundUidPids =
++            new SparseArray<SparseBooleanArray>();
++    private final SparseArray<List<Callback>> mBackgroundCallbacks =
++            new SparseArray<List<Callback>>();
++
++    private static class Singleton {
++        private static final ForegroundUtils INSTANCE = new ForegroundUtils();
++    }
++
++    private ForegroundUtils() {
++        mIActivityManager = ActivityManagerNative.getDefault();
++        try {
++            mIActivityManager.registerProcessObserver(this);
++        } catch (RemoteException e) {
++            // Should not happen!
++            Log.e(TAG, "ForegroundUtils: could not get IActivityManager");
++        }
++    }
++
++    public interface Callback {
++        void onUidToBackground(int uid);
++    }
++
++    public static ForegroundUtils getInstance() {
++        return Singleton.INSTANCE;
++    }
++
++    /**
++     * Checks whether the specified UID has any activities running in the foreground,
++     * and if it does, registers a callback for when that UID no longer has any foreground
++     * activities. This is done atomically, so callers can be ensured that they will
++     * get a callback if this method returns true.
++     *
++     * @param callback Callback to be called
++     * @param uid The UID to be checked
++     * @return true when the UID has an Activity in the foreground and the callback
++     * , false otherwise
++     */
++    public boolean registerUidToBackgroundCallback(Callback callback, int uid) {
++        synchronized (mLock) {
++            if (!isInForegroundLocked(uid)) {
++                return false;
++            }
++            // This uid is in the foreground; register callback for when it moves
++            // into the background.
++            List<Callback> callbacks = mBackgroundCallbacks.get(uid, new ArrayList<Callback>());
++            callbacks.add(callback);
++            mBackgroundCallbacks.put(uid, callbacks);
++            return true;
++        }
++    }
++
++    /**
++     * @param uid The UID to be checked
++     * @return whether the UID has any activities running in the foreground
++     */
++    public boolean isInForeground(int uid) {
++        synchronized (mLock) {
++            return isInForegroundLocked(uid);
++        }
++    }
++
++    /**
++     * @return a list of UIDs currently in the foreground, or an empty list
++     *         if none are found.
++     */
++    public List<Integer> getForegroundUids() {
++        ArrayList<Integer> uids = new ArrayList<Integer>(mForegroundUidPids.size());
++        synchronized (mLock) {
++            for (int i = 0; i < mForegroundUidPids.size(); i++) {
++                uids.add(mForegroundUidPids.keyAt(i));
++            }
++        }
++        return uids;
++    }
++
++    private boolean isInForegroundLocked(int uid) {
++        return mForegroundUidPids.get(uid) != null;
++    }
++
++    private void handleUidToBackground(int uid) {
++        ArrayList<Callback> pendingCallbacks = null;
++        synchronized (mLock) {
++            List<Callback> callbacks = mBackgroundCallbacks.get(uid);
++            if (callbacks != null) {
++                pendingCallbacks = new ArrayList<Callback>(callbacks);
++                // Only call them once
++                mBackgroundCallbacks.remove(uid);
++            }
++        }
++        // Release lock for callbacks
++        if (pendingCallbacks != null) {
++            for (Callback callback : pendingCallbacks) {
++                callback.onUidToBackground(uid);
++            }
++        }
++    }
++
++    @Override
++    public void onForegroundActivitiesChanged(int pid, int uid,
++            boolean hasForegroundActivities) throws RemoteException {
++        boolean uidToBackground = false;
++        synchronized (mLock) {
++            SparseBooleanArray foregroundPids = mForegroundUidPids.get(uid,
++                    new SparseBooleanArray());
++            if (hasForegroundActivities) {
++               foregroundPids.put(pid, true);
++            } else {
++               foregroundPids.delete(pid);
++            }
++            if (foregroundPids.size() == 0) {
++                mForegroundUidPids.remove(uid);
++                uidToBackground = true;
++            } else {
++                mForegroundUidPids.put(uid, foregroundPids);
++            }
++        }
++        if (uidToBackground) {
++            handleUidToBackground(uid);
++        }
++        if (DBG) {
++            if (DBG) Log.d(TAG, "Foreground changed, PID: " + Integer.toString(pid) + " UID: " +
++                                    Integer.toString(uid) + " foreground: " +
++                                    hasForegroundActivities);
++            synchronized (mLock) {
++                Log.d(TAG, "Foreground UID/PID combinations:");
++                for (int i = 0; i < mForegroundUidPids.size(); i++) {
++                    int foregroundUid = mForegroundUidPids.keyAt(i);
++                    SparseBooleanArray foregroundPids = mForegroundUidPids.get(foregroundUid);
++                    if (foregroundPids.size() == 0) {
++                        Log.e(TAG, "No PIDS associated with foreground UID!");
++                    }
++                    for (int j = 0; j < foregroundPids.size(); j++)
++                        Log.d(TAG, "UID: " + Integer.toString(foregroundUid) + " PID: " +
++                                Integer.toString(foregroundPids.keyAt(j)));
++                }
++            }
++        }
++    }
++
++
++    @Override
++    public void onProcessDied(int pid, int uid) throws RemoteException {
++        if (DBG) Log.d(TAG, "Process died; UID " + Integer.toString(uid) + " PID " +
++                Integer.toString(pid));
++        onForegroundActivitiesChanged(pid, uid, false);
++    }
++
++    @Override
++    public void onImportanceChanged(int pid, int uid, int importance)
++            throws RemoteException {
++        // Don't care
++    }
++}
+diff --git a/src/com/android/nfc/NfcService.java b/src/com/android/nfc/NfcService.java
+index 4d81ae7..36f8ff5 100755
+--- a/src/com/android/nfc/NfcService.java
++++ b/src/com/android/nfc/NfcService.java
+@@ -278,6 +278,7 @@ public class NfcService implements DeviceHostListener {
+     private HostEmulationManager mHostEmulationManager;
+     private AidRoutingManager mAidRoutingManager;
+ 
++    private ForegroundUtils mForegroundUtils;
+     private static NfcService sService;
+ 
+     public static void enforceAdminPerm(Context context) {
+@@ -530,6 +531,8 @@ public class NfcService implements DeviceHostListener {
+             updatePackageCache();
+         }
+ 
++        mForegroundUtils = ForegroundUtils.getInstance();
++
+         new EnableDisableTask().execute(TASK_BOOT);  // do blocking boot tasks
+     }
+ 
+@@ -1011,6 +1014,10 @@ public class NfcService implements DeviceHostListener {
+                 IntentFilter[] filters, TechListParcel techListsParcel) {
+             mContext.enforceCallingOrSelfPermission(NFC_PERM, NFC_PERM_ERROR);
+ 
++            if (!mForegroundUtils.isInForeground(Binder.getCallingUid())) {
++                Log.e(TAG, "setForegroundDispatch: Caller not in foreground.");
++                return;
++            }
+             // Short-cut the disable path
+             if (intent == null && filters == null && techListsParcel == null) {
+                 mNfcDispatcher.setForegroundDispatch(null, null, null);
+@@ -1092,6 +1099,10 @@ public class NfcService implements DeviceHostListener {
+         @Override
+         public void setReaderMode(IBinder binder, IAppCallback callback, int flags, Bundle extras)
+                 throws RemoteException {
++            if (!mForegroundUtils.isInForeground(Binder.getCallingUid())) {
++                Log.e(TAG, "setReaderMode: Caller not in foreground.");
++                return;
++            }
+             synchronized (NfcService.this) {
+                 if (flags != 0) {
+                     try {
+-- 
+2.7.4
+

@@ -1,0 +1,46 @@
+From 4aa2856a0788327faf3b4428ba9f6efa93878d3f Mon Sep 17 00:00:00 2001
+From: Andreas Blaesius <skate4life@gmx.de>
+Date: Sat, 13 Jan 2018 20:26:07 +0100
+Subject: [PATCH 41/46] Keyguard: fix Sim-Pin layout on tablets
+
+---
+ packages/Keyguard/res/values-sw600dp-land/dimens.xml | 7 +++++++
+ packages/Keyguard/res/values-sw600dp/dimens.xml      | 7 +++++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/packages/Keyguard/res/values-sw600dp-land/dimens.xml b/packages/Keyguard/res/values-sw600dp-land/dimens.xml
+index 5507e5f..8cf404d 100644
+--- a/packages/Keyguard/res/values-sw600dp-land/dimens.xml
++++ b/packages/Keyguard/res/values-sw600dp-land/dimens.xml
+@@ -23,4 +23,11 @@
+ 
+     <!-- Size of margin on the right of keyguard's status view -->
+     <dimen name="kg_status_line_font_right_margin">16dp</dimen>
++
++    <!-- Top padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_top">2dp</dimen>
++
++    <!-- Bottom padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_bottom">2dp</dimen>
++
+ </resources>
+\ No newline at end of file
+diff --git a/packages/Keyguard/res/values-sw600dp/dimens.xml b/packages/Keyguard/res/values-sw600dp/dimens.xml
+index ea5ef27..51b9192 100644
+--- a/packages/Keyguard/res/values-sw600dp/dimens.xml
++++ b/packages/Keyguard/res/values-sw600dp/dimens.xml
+@@ -69,4 +69,11 @@
+     <!-- EmergencyCarrierArea overlap - amount to overlap the emergency button and carrier text.
+          Should be 0 on devices with plenty of room (e.g. tablets) -->
+     <dimen name="eca_overlap">0dip</dimen>
++
++    <!-- Top padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_top">2dp</dimen>
++
++    <!-- Bottom padding of num pad key on keyguard -->
++    <dimen name="kg_num_pad_key_padding_bottom">2dp</dimen>
++
+ </resources>
+-- 
+2.7.4
+

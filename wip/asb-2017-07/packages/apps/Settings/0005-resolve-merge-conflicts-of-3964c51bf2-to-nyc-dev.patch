@@ -1,0 +1,59 @@
+From 639f2031dc32d922b4a29bb9f55cf20fe404a20c Mon Sep 17 00:00:00 2001
+From: Dmitry Dementyev <dementyev@google.com>
+Date: Wed, 8 Mar 2017 16:32:00 -0800
+Subject: [PATCH 5/8] resolve merge conflicts of 3964c51bf2 to nyc-dev
+
+Bug: 33123882
+Test: manual tests
+Merged-In: If68343d155364654fa7db55ace3fb3c4db508c7e
+Change-Id: I17ceca883819a161c4eab2a414abf0b64c320378
+(cherry picked from commit 0f04a5a93f846d6f2d528ab6ae0c9e37d701e438)
+---
+ src/com/android/settings/accounts/ManageAccountsSettings.java | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/src/com/android/settings/accounts/ManageAccountsSettings.java b/src/com/android/settings/accounts/ManageAccountsSettings.java
+index 184f680..576b805 100644
+--- a/src/com/android/settings/accounts/ManageAccountsSettings.java
++++ b/src/com/android/settings/accounts/ManageAccountsSettings.java
+@@ -32,6 +32,7 @@ import android.graphics.drawable.Drawable;
+ import android.os.Bundle;
+ import android.preference.Preference;
+ import android.preference.PreferenceActivity;
++import android.preference.PreferenceGroup;
+ import android.preference.PreferenceScreen;
+ import android.util.Log;
+ import android.view.LayoutInflater;
+@@ -74,7 +75,7 @@ public class ManageAccountsSettings extends AccountPreferenceBase
+ 
+     // If an account type is set, then show only accounts of that type
+     private String mAccountType;
+-    // Temporary hack, to deal with backward compatibility 
++    // Temporary hack, to deal with backward compatibility
+     private Account mFirstAccount;
+ 
+     @Override
+@@ -382,15 +383,18 @@ public class ManageAccountsSettings extends AccountPreferenceBase
+     }
+ 
+     /**
+-     * Filters through the preference list provided by GoogleLoginService.
++     * Recursively filters through the preference list provided by GoogleLoginService.
+      *
+      * This method removes all the invalid intent from the list, adds account name as extra into the
+      * intent, and hack the location settings to start it as a fragment.
+      */
+-    private void updatePreferenceIntents(PreferenceScreen prefs) {
++    private void updatePreferenceIntents(PreferenceGroup prefs) {
+         PackageManager pm = getActivity().getPackageManager();
+         for (int i = 0; i < prefs.getPreferenceCount();) {
+             Preference pref = prefs.getPreference(i);
++            if (pref instanceof PreferenceGroup) {
++                updatePreferenceIntents((PreferenceGroup) pref);
++            }
+             Intent intent = pref.getIntent();
+             if (intent != null) {
+                 // Hack. Launch "Location" as fragment instead of as activity.
+-- 
+2.7.4
+

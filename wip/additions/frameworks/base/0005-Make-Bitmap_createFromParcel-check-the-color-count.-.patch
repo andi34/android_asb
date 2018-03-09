@@ -1,0 +1,89 @@
+From 7c16306bee9f648b2a98052aab89a0979b151148 Mon Sep 17 00:00:00 2001
+From: Leon Scroggins III <scroggo@google.com>
+Date: Wed, 11 Mar 2015 13:12:06 -0400
+Subject: [PATCH 05/46] Make Bitmap_createFromParcel check the color count. DO
+ NOT MERGE
+
+When reading from the parcel, if the number of colors is invalid, early
+exit.
+
+Add two more checks: setInfo must return true, and Parcel::readInplace
+must return non-NULL. The former ensures that the previously read values
+(width, height, etc) were valid, and the latter checks that the Parcel
+had enough data even if the number of colors was reasonable.
+
+Also use an auto-deleter to handle deletion of the SkBitmap.
+
+Cherry pick from change-Id: Icbd562d6d1f131a723724883fd31822d337cf5a6
+
+BUG=19666945
+
+Change-Id: Iab0d218c41ae0c39606e333e44cda078eef32291
+---
+ core/jni/android/graphics/Bitmap.cpp | 22 +++++++++++++++-------
+ 1 file changed, 15 insertions(+), 7 deletions(-)
+
+diff --git a/core/jni/android/graphics/Bitmap.cpp b/core/jni/android/graphics/Bitmap.cpp
+index 2125763..9992308 100644
+--- a/core/jni/android/graphics/Bitmap.cpp
++++ b/core/jni/android/graphics/Bitmap.cpp
+@@ -488,24 +488,33 @@ static jobject Bitmap_createFromParcel(JNIEnv* env, jobject, jobject parcel) {
+         return NULL;
+     }
+ 
+-    SkBitmap* bitmap = new SkBitmap;
++    SkAutoTDelete<SkBitmap> bitmap(new SkBitmap);
+ 
+-    bitmap->setConfig(config, width, height, rowBytes);
++    if (!bitmap->setConfig(config, width, height, rowBytes)) {
++        return NULL;
++    }
+ 
+     SkColorTable* ctable = NULL;
+     if (config == SkBitmap::kIndex8_Config) {
+         int count = p->readInt32();
++        if (count < 0 || count > 256) {
++            // The data is corrupt, since SkColorTable enforces a value between 0 and 256,
++            // inclusive.
++            return NULL;
++        }
+         if (count > 0) {
+             size_t size = count * sizeof(SkPMColor);
+             const SkPMColor* src = (const SkPMColor*)p->readInplace(size);
++            if (src == NULL) {
++                return NULL;
++            }
+             ctable = new SkColorTable(src, count);
+         }
+     }
+ 
+-    jbyteArray buffer = GraphicsJNI::allocateJavaPixelRef(env, bitmap, ctable);
++    jbyteArray buffer = GraphicsJNI::allocateJavaPixelRef(env, bitmap.get(), ctable);
+     if (NULL == buffer) {
+         SkSafeUnref(ctable);
+-        delete bitmap;
+         return NULL;
+     }
+ 
+@@ -517,7 +526,6 @@ static jobject Bitmap_createFromParcel(JNIEnv* env, jobject, jobject parcel) {
+     android::status_t status = p->readBlob(size, &blob);
+     if (status) {
+         doThrowRE(env, "Could not read bitmap from parcel blob.");
+-        delete bitmap;
+         return NULL;
+     }
+ 
+@@ -527,8 +535,8 @@ static jobject Bitmap_createFromParcel(JNIEnv* env, jobject, jobject parcel) {
+ 
+     blob.release();
+ 
+-    return GraphicsJNI::createBitmap(env, bitmap, buffer, getPremulBitmapCreateFlags(isMutable),
+-            NULL, NULL, density);
++    return GraphicsJNI::createBitmap(env, bitmap.detach(), buffer,
++            getPremulBitmapCreateFlags(isMutable), NULL, NULL, density);
+ }
+ 
+ static jboolean Bitmap_writeToParcel(JNIEnv* env, jobject,
+-- 
+2.7.4
+

@@ -1,0 +1,122 @@
+From b974bb92d6c637e0f8d9e63c3674028141462296 Mon Sep 17 00:00:00 2001
+From: Ziyan <jaraidaniel@gmail.com>
+Date: Fri, 3 Feb 2017 20:39:49 +0100
+Subject: [PATCH 42/46] Add support for rotation lock input events
+
+Change-Id: Ifabdd562b5c0b52aaa3f8269cf3c930036639011
+---
+ core/java/android/view/WindowManagerPolicy.java           |  9 ++++++++-
+ .../android/internal/policy/impl/PhoneWindowManager.java  | 15 +++++++++++++++
+ .../com/android/server/input/InputManagerService.java     | 11 +++++++++++
+ services/java/com/android/server/wm/InputMonitor.java     |  6 ++++++
+ 4 files changed, 40 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/android/view/WindowManagerPolicy.java b/core/java/android/view/WindowManagerPolicy.java
+index c5a1b86..580cec4 100644
+--- a/core/java/android/view/WindowManagerPolicy.java
++++ b/core/java/android/view/WindowManagerPolicy.java
+@@ -950,7 +950,14 @@ public interface WindowManagerPolicy {
+      * @param lidOpen True if the lid is now open.
+      */
+     public void notifyLidSwitchChanged(long whenNanos, boolean lidOpen);
+-    
++
++    /**
++     * Tell the policy that the rotation lock switch has changed state.
++     * @param whenNanos The time when the change occurred in uptime nanoseconds.
++     * @param isLocked True if the rotation is now locked.
++     */
++    public void notifyRotateLockSwitchChanged(long whenNanos, boolean isLocked);
++
+     /**
+      * Tell the policy if anyone is requesting that keyguard not come on.
+      *
+diff --git a/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java b/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java
+index 4ea3ff0..64e3546 100644
+--- a/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java
++++ b/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java
+@@ -3634,6 +3634,21 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+         }
+     }
+ 
++    /** {@inheritDoc} */
++    public void notifyRotateLockSwitchChanged(long whenNanos, boolean isLocked) {
++        // do nothing if headless
++        if (mHeadless) return;
++
++        try {
++            if (isLocked)
++                mWindowManager.freezeRotation(-1);
++            else
++                mWindowManager.thawRotation();
++        } catch (RemoteException e) {
++            // Ignore
++        }
++    }
++
+     void setHdmiPlugged(boolean plugged) {
+         if (mHdmiPlugged != plugged) {
+             mHdmiPlugged = plugged;
+diff --git a/services/java/com/android/server/input/InputManagerService.java b/services/java/com/android/server/input/InputManagerService.java
+index 3145805..3c46eaa 100644
+--- a/services/java/com/android/server/input/InputManagerService.java
++++ b/services/java/com/android/server/input/InputManagerService.java
+@@ -230,6 +230,9 @@ public class InputManagerService extends IInputManager.Stub
+     /** Switch code: Headphone/Microphone Jack.  When set, something is inserted. */
+     public static final int SW_JACK_PHYSICAL_INSERT = 0x07;
+ 
++    /** Switch code: Rotation Lock.  When set, rotation is locked. */
++    public static final int SW_ROTATE_LOCK = 0x0c;
++
+     public static final int SW_LID_BIT = 1 << SW_LID;
+     public static final int SW_KEYPAD_SLIDE_BIT = 1 << SW_KEYPAD_SLIDE;
+     public static final int SW_HEADPHONE_INSERT_BIT = 1 << SW_HEADPHONE_INSERT;
+@@ -237,6 +240,7 @@ public class InputManagerService extends IInputManager.Stub
+     public static final int SW_JACK_PHYSICAL_INSERT_BIT = 1 << SW_JACK_PHYSICAL_INSERT;
+     public static final int SW_JACK_BITS =
+             SW_HEADPHONE_INSERT_BIT | SW_MICROPHONE_INSERT_BIT | SW_JACK_PHYSICAL_INSERT_BIT;
++    public static final int SW_ROTATE_LOCK_BIT = 1 << SW_ROTATE_LOCK;
+ 
+     /** Whether to use the dev/input/event or uevent subsystem for the audio jack. */
+     final boolean mUseDevInputEventForAudioJack;
+@@ -1284,6 +1288,11 @@ public class InputManagerService extends IInputManager.Stub
+             mWiredAccessoryCallbacks.notifyWiredAccessoryChanged(whenNanos, switchValues,
+                     switchMask);
+         }
++
++        if ((switchMask & SW_ROTATE_LOCK_BIT) != 0) {
++            final boolean isLocked = ((switchValues & SW_ROTATE_LOCK_BIT) != 0);
++            mWindowManagerCallbacks.notifyRotateLockSwitchChanged(whenNanos, isLocked);
++        }
+     }
+ 
+     // Native callback.
+@@ -1476,6 +1485,8 @@ public class InputManagerService extends IInputManager.Stub
+ 
+         public void notifyLidSwitchChanged(long whenNanos, boolean lidOpen);
+ 
++        public void notifyRotateLockSwitchChanged(long whenNanos, boolean isLocked);
++
+         public void notifyInputChannelBroken(InputWindowHandle inputWindowHandle);
+ 
+         public long notifyANR(InputApplicationHandle inputApplicationHandle,
+diff --git a/services/java/com/android/server/wm/InputMonitor.java b/services/java/com/android/server/wm/InputMonitor.java
+index 3d2ec45..eeda9dc 100644
+--- a/services/java/com/android/server/wm/InputMonitor.java
++++ b/services/java/com/android/server/wm/InputMonitor.java
+@@ -349,6 +349,12 @@ final class InputMonitor implements InputManagerService.WindowManagerCallbacks {
+         mService.mPolicy.notifyLidSwitchChanged(whenNanos, lidOpen);
+     }
+ 
++    /* Notifies that the rotation lock switch changed state. */
++    @Override
++    public void notifyRotateLockSwitchChanged(long whenNanos, boolean isLocked) {
++        mService.mPolicy.notifyRotateLockSwitchChanged(whenNanos, isLocked);
++    }
++
+     /* Provides an opportunity for the window manager policy to intercept early key
+      * processing as soon as the key has been read from the device. */
+     @Override
+-- 
+2.7.4
+

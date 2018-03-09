@@ -1,0 +1,33 @@
+From 57de8c54b573fc28de53f4a07c48dc378a29cd46 Mon Sep 17 00:00:00 2001
+From: Christopher Tate <ctate@google.com>
+Date: Wed, 27 May 2015 17:53:02 -0700
+Subject: [PATCH 04/18] Disregard alleged binder entities beyond parcel bounds
+
+When appending one parcel's contents to another, ignore binder
+objects within the source Parcel that appear to lie beyond the
+formal bounds of that Parcel's data buffer.
+
+Bug 17312693
+
+Change-Id: If592a260f3fcd9a56fc160e7feb2c8b44c73f514
+(cherry picked from commit 27182be9f20f4f5b48316666429f09b9ecc1f22e)
+---
+ libs/binder/Parcel.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index db9e0a1..10c946a 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -384,7 +384,7 @@ status_t Parcel::appendFrom(const Parcel *parcel, size_t offset, size_t len)
+     // Count objects in range
+     for (int i = 0; i < (int) size; i++) {
+         size_t off = objects[i];
+-        if ((off >= offset) && (off < offset + len)) {
++        if ((off >= offset) && (off + sizeof(flat_binder_object) <= offset + len)) {
+             if (firstIndex == -1) {
+                 firstIndex = i;
+             }
+-- 
+2.7.4
+

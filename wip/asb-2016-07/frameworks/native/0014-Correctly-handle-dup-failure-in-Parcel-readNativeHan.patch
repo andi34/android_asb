@@ -1,0 +1,38 @@
+From 813530421a2cbb3babc5a3125f46a33cc558e308 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 26 Apr 2016 08:44:09 -0700
+Subject: [PATCH 14/18] Correctly handle dup() failure in
+ Parcel::readNativeHandle
+
+bail out if dup() fails, instead of creating an invalid native_handle_t
+
+Bug: 28395952
+
+Change-Id: Ia1a6198c0f45165b9c6a55a803e5f64d8afa0572
+(cherry picked from commit 1de7966c72981aebc3c7f9978ab129678ac89258)
+---
+ libs/binder/Parcel.cpp | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index 10c946a..4f754f9 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -1146,7 +1146,13 @@ native_handle* Parcel::readNativeHandle() const
+     native_handle* h = native_handle_create(numFds, numInts);
+     for (int i=0 ; err==NO_ERROR && i<numFds ; i++) {
+         h->data[i] = dup(readFileDescriptor());
+-        if (h->data[i] < 0) err = BAD_VALUE;
++        if (h->data[i] < 0) {
++            for (int j = 0; j < i; j++) {
++                close(h->data[j]);
++            }
++            native_handle_delete(h);
++            return 0;
++        }
+     }
+     err = read(h->data + numFds, sizeof(int)*numInts);
+     if (err != NO_ERROR) {
+-- 
+2.7.4
+
