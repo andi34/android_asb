@@ -1,0 +1,40 @@
+From f131552932a727bb64d2c859bfc7abe8524d801b Mon Sep 17 00:00:00 2001
+From: Pawin Vongmasa <pawin@google.com>
+Date: Fri, 19 Aug 2016 01:45:39 -0700
+Subject: [PATCH 123/182] DO NOT MERGE - Fix build breakage caused by commit
+ 940829f69b52d6038db66a9c727534636ecc456d.
+
+Change-Id: Ic55a9ab25ddb57f270c21d78ffcb556f3e11dd5d
+---
+ media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp b/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
+index 469e516..d50a219 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
+@@ -27,6 +27,10 @@
+ 
+ #include "mp4dec_api.h"
+ 
++#ifndef UINT32_MAX
++#define UINT32_MAX (4294967295U)
++#endif
++
+ namespace android {
+ 
+ static const CodecProfileLevel kM4VProfileLevels[] = {
+@@ -193,8 +197,8 @@ void SoftMPEG4::onQueueFilled(OMX_U32 portIndex) {
+             OMX_U32 yFrameSize = sizeof(uint8) * mHandle->size;
+             if ((outHeader->nAllocLen < yFrameSize) ||
+                     (outHeader->nAllocLen - yFrameSize < yFrameSize / 2)) {
+-                ALOGE("Too small output buffer for reference frame: %zu bytes",
+-                        outHeader->nAllocLen);
++                ALOGE("Too small output buffer for reference frame: %lu bytes",
++                        (unsigned long)outHeader->nAllocLen);
+                 android_errorWriteLog(0x534e4554, "30033990");
+                 notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+                 mSignalledError = true;
+-- 
+2.7.4
+

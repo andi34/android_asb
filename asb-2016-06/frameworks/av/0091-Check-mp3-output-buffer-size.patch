@@ -1,0 +1,34 @@
+From 32cf7c2c20659fdad85e00b755fabb5801267099 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Wed, 23 Mar 2016 15:36:36 -0700
+Subject: [PATCH 091/182] Check mp3 output buffer size
+
+Bug: 27793371
+Change-Id: I0fe40a4cfd0a5b488f93d3f3ba6f9495235926ac
+(cherry picked from commit 30940b31b21f47eaa15786764e013d0a283d7d49)
+---
+ media/libstagefright/codecs/mp3dec/SoftMP3.cpp | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+index 7c382fb..06f455e 100644
+--- a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
++++ b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+@@ -240,6 +240,14 @@ void SoftMP3::onQueueFilled(OMX_U32 portIndex) {
+         mConfig->inputBufferUsedLength = 0;
+ 
+         mConfig->outputFrameSize = kOutputBufferSize / sizeof(int16_t);
++        if ((int32)outHeader->nAllocLen < mConfig->outputFrameSize) {
++            ALOGE("input buffer too small: got %lu, expected %u",
++                outHeader->nAllocLen, mConfig->outputFrameSize);
++            android_errorWriteLog(0x534e4554, "27793371");
++            notify(OMX_EventError, OMX_ErrorUndefined, OUTPUT_BUFFER_TOO_SMALL, NULL);
++            mSignalledError = true;
++            return;
++        }
+ 
+         mConfig->pOutputBuffer =
+             reinterpret_cast<int16_t *>(outHeader->pBuffer);
+-- 
+2.7.4
+

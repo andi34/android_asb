@@ -1,0 +1,62 @@
+From ebf71f08d9edbd2b0608629045b5b3bdc7d2986c Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 18 Aug 2015 11:17:24 -0700
+Subject: [PATCH 016/182] libstagefright: fix handling of mSampleTimeEntries
+ and mNumSampleSizes in SampleTable.
+
+Bug: 23247055
+Change-Id: I29ef59c7ff09248063714e5013f7c33f66c5eebd
+(cherry picked from commit 3564c4562f46bede6ef1ea716c4fd4f77e470ae8)
+---
+ media/libstagefright/SampleTable.cpp | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/SampleTable.cpp b/media/libstagefright/SampleTable.cpp
+index a7ceecb..a414d2b 100644
+--- a/media/libstagefright/SampleTable.cpp
++++ b/media/libstagefright/SampleTable.cpp
+@@ -27,6 +27,11 @@
+ #include <media/stagefright/DataSource.h>
+ #include <media/stagefright/Utils.h>
+ 
++/* TODO: remove after being merged into other branches */
++#ifndef UINT32_MAX
++#define UINT32_MAX       (4294967295U)
++#endif
++
+ namespace android {
+ 
+ // static
+@@ -282,6 +287,9 @@ status_t SampleTable::setSampleSizeParams(
+ 
+     mDefaultSampleSize = U32_AT(&header[4]);
+     mNumSampleSizes = U32_AT(&header[8]);
++    if (mNumSampleSizes > (UINT32_MAX - 12) / 16) {
++        return ERROR_MALFORMED;
++    }
+ 
+     if (type == kSampleSizeType32) {
+         mSampleSizeFieldSize = 32;
+@@ -498,7 +506,7 @@ int SampleTable::CompareIncreasingTime(const void *_a, const void *_b) {
+ void SampleTable::buildSampleEntriesTable() {
+     Mutex::Autolock autoLock(mLock);
+ 
+-    if (mSampleTimeEntries != NULL) {
++    if (mSampleTimeEntries != NULL || mNumSampleSizes == 0) {
+         return;
+     }
+ 
+@@ -540,6 +548,10 @@ status_t SampleTable::findSampleAtTime(
+         uint32_t req_time, uint32_t *sample_index, uint32_t flags) {
+     buildSampleEntriesTable();
+ 
++    if (mSampleTimeEntries == NULL) {
++        return ERROR_OUT_OF_RANGE;
++    }
++
+     uint32_t left = 0;
+     uint32_t right = mNumSampleSizes;
+     while (left < right) {
+-- 
+2.7.4
+

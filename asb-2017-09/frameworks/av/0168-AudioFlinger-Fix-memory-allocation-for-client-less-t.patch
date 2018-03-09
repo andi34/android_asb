@@ -1,0 +1,52 @@
+From 329f45cdf99d8b1a2469d8aab7a4855fea9405a9 Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Mon, 13 Feb 2017 18:50:48 -0800
+Subject: [PATCH 168/182] AudioFlinger: Fix memory allocation for client-less
+ tracks
+
+Test: Ringtone with BT
+Bug: 35350587
+Bug: 38340117
+Change-Id: If247d319d58f8f4d18b49f58ec950491871ebb2d
+(cherry picked from commit afb31487f3156a7284d2f0d06646c7bc00d99537)
+(cherry picked from commit 1159ffd5e3f832206982d45a7b030b943cc4775e)
+CVE-2017-0779
+---
+ services/audioflinger/Tracks.cpp | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/services/audioflinger/Tracks.cpp b/services/audioflinger/Tracks.cpp
+index d6b9908..f41aa60 100644
+--- a/services/audioflinger/Tracks.cpp
++++ b/services/audioflinger/Tracks.cpp
+@@ -125,9 +125,11 @@ AudioFlinger::ThreadBase::TrackBase::TrackBase(
+             return;
+         }
+     } else {
+-        // this syntax avoids calling the audio_track_cblk_t constructor twice
+-        mCblk = (audio_track_cblk_t *) new uint8_t[size];
+-        // assume mCblk != NULL
++        mCblk = (audio_track_cblk_t *) malloc(size);
++        if (mCblk == NULL) {
++            ALOGE("not enough memory for AudioTrack size=%zu", size);
++            return;
++        }
+     }
+ 
+     // construct the shared structure in-place.
+@@ -175,10 +177,9 @@ AudioFlinger::ThreadBase::TrackBase::~TrackBase()
+     // delete the proxy before deleting the shared memory it refers to, to avoid dangling reference
+     delete mServerProxy;
+     if (mCblk != NULL) {
++        mCblk->~audio_track_cblk_t();   // destroy our shared-structure.
+         if (mClient == 0) {
+-            delete mCblk;
+-        } else {
+-            mCblk->~audio_track_cblk_t();   // destroy our shared-structure.
++            free(mCblk);
+         }
+     }
+     mCblkMemory.clear();    // free the shared memory before releasing the heap it belongs to
+-- 
+2.7.4
+

@@ -1,0 +1,30 @@
+From 6b72ea93c13ed68c8c0f7836190890a8edc783ae Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Wed, 19 Aug 2015 15:36:12 -0700
+Subject: [PATCH 025/182] Check RTSP payload length
+
+Bug: 23346388
+Change-Id: Ifd918cefc90527c2f52177c3ce0da7a13259ad08
+---
+ media/libstagefright/rtsp/AMPEG4AudioAssembler.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/rtsp/AMPEG4AudioAssembler.cpp b/media/libstagefright/rtsp/AMPEG4AudioAssembler.cpp
+index aa8ffc6..851805f 100644
+--- a/media/libstagefright/rtsp/AMPEG4AudioAssembler.cpp
++++ b/media/libstagefright/rtsp/AMPEG4AudioAssembler.cpp
+@@ -404,8 +404,9 @@ sp<ABuffer> AMPEG4AudioAssembler::removeLATMFraming(const sp<ABuffer> &buffer) {
+                 break;
+             }
+         }
+-
+-        CHECK_LE(offset + payloadLength, buffer->size());
++        
++        CHECK_LT(offset, buffer->size());
++        CHECK_LE(payloadLength, buffer->size() - offset);
+ 
+         memcpy(out->data() + out->size(), &ptr[offset], payloadLength);
+         out->setRange(0, out->size() + payloadLength);
+-- 
+2.7.4
+

@@ -1,0 +1,54 @@
+From 14b0c4c91c25354f1b9fa99d14fa341a7a409f87 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Fri, 19 May 2017 14:34:10 -0700
+Subject: [PATCH 155/182] m4v_h263: check header first before decoding a frame.
+
+Test: fix the file in the bug
+Bug: 37660827
+Change-Id: I9d6919f96c0c9f29221be1e8e852ecb21062bad9
+(cherry picked from commit db545366c2e893dbbe1a42d858c52067101beda6)
+(cherry picked from commit 38142b60f5144f92d99463fa1d65c543382d1264)
+---
+ .../codecs/m4v_h263/dec/SoftMPEG4.cpp              | 23 ++++++++++++++++++----
+ 1 file changed, 19 insertions(+), 4 deletions(-)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp b/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
+index d50a219..87389cc 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/SoftMPEG4.cpp
+@@ -239,13 +239,28 @@ void SoftMPEG4::onQueueFilled(OMX_U32 portIndex) {
+             mSignalledError = true;
+             return;
+         }
++
++        // Need to check if header contains new info, e.g., width/height, etc.
++        VopHeaderInfo header_info;
++        uint8_t *bitstreamTmp = bitstream;
++        if (PVDecodeVopHeader(
++                    mHandle, &bitstreamTmp, &timestamp, &tmp,
++                    &header_info, &useExtTimestamp,
++                    outHeader->pBuffer) != PV_TRUE) {
++            ALOGE("failed to decode vop header.");
++
++            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
++            mSignalledError = true;
++            return;
++        }
++        if (portSettingsChanged()) {
++            return;
++        }
++
+         // The PV decoder is lying to us, sometimes it'll claim to only have
+         // consumed a subset of the buffer when it clearly consumed all of it.
+         // ignore whatever it says...
+-        if (PVDecodeVideoFrame(
+-                    mHandle, &bitstream, &timestamp, &tmp,
+-                    &useExtTimestamp,
+-                    outHeader->pBuffer) != PV_TRUE) {
++        if (PVDecodeVopBody(mHandle, &tmp) != PV_TRUE) {
+             ALOGE("failed to decode video frame.");
+ 
+             notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+-- 
+2.7.4
+

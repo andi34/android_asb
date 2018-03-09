@@ -1,0 +1,64 @@
+From b4257849a3aff44eaa695f4ee13a8ff33761ddff Mon Sep 17 00:00:00 2001
+From: Chong Zhang <chz@google.com>
+Date: Fri, 14 Aug 2015 13:50:02 -0700
+Subject: [PATCH 017/182] do not dequeue from native window after we hit fatal
+ error -- DO NOT MERGE
+
+bug: 22845824
+Change-Id: I8c375790c697e02b6ab3ea54b84d3f70d5e78141
+(cherry picked from commit 346de3c26a8fbd0fa0c8102f4a21ea4dcee4432a)
+---
+ include/media/stagefright/ACodec.h |  1 +
+ media/libstagefright/ACodec.cpp    | 10 ++++++++++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/include/media/stagefright/ACodec.h b/include/media/stagefright/ACodec.h
+index bf3a998..0783e2b 100644
+--- a/include/media/stagefright/ACodec.h
++++ b/include/media/stagefright/ACodec.h
+@@ -188,6 +188,7 @@ private:
+     bool mSentFormat;
+     bool mIsEncoder;
+     bool mUseMetadataOnEncoderOutput;
++    bool mFatalError;
+     bool mShutdownInProgress;
+     bool mIsConfiguredForAdaptivePlayback;
+ 
+diff --git a/media/libstagefright/ACodec.cpp b/media/libstagefright/ACodec.cpp
+index 9276818..9fda07f 100644
+--- a/media/libstagefright/ACodec.cpp
++++ b/media/libstagefright/ACodec.cpp
+@@ -362,6 +362,7 @@ ACodec::ACodec()
+       mSentFormat(false),
+       mIsEncoder(false),
+       mUseMetadataOnEncoderOutput(false),
++      mFatalError(false),
+       mShutdownInProgress(false),
+       mIsConfiguredForAdaptivePlayback(false),
+       mEncoderDelay(0),
+@@ -812,6 +813,12 @@ ACodec::BufferInfo *ACodec::dequeueBufferFromNativeWindow() {
+     ANativeWindowBuffer *buf;
+     int fenceFd = -1;
+     CHECK(mNativeWindow.get() != NULL);
++
++    if (mFatalError) {
++        ALOGW("not dequeuing from native window due to fatal error");
++        return NULL;
++    }
++
+     if (native_window_dequeue_buffer_and_wait(mNativeWindow.get(), &buf) != 0) {
+         ALOGE("dequeueBuffer failed.");
+         return NULL;
+@@ -2692,6 +2699,9 @@ void ACodec::signalError(OMX_ERRORTYPE error, status_t internalError) {
+     sp<AMessage> notify = mNotify->dup();
+     notify->setInt32("what", ACodec::kWhatError);
+     notify->setInt32("omx-error", error);
++
++    mFatalError = true;
++
+     notify->setInt32("err", internalError);
+     notify->post();
+ }
+-- 
+2.7.4
+

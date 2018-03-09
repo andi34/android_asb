@@ -1,0 +1,36 @@
+From 3701ee413c5ca0de838fd74cbfb3fb0f847665ac Mon Sep 17 00:00:00 2001
+From: "Joshua J. Drake" <android-open-source@qoop.org>
+Date: Wed, 8 Apr 2015 23:44:57 -0500
+Subject: [PATCH 002/182] Fix integer overflow during MP4 atom processing
+
+A few sample table related FourCC values are handled by the
+setSampleToChunkParams function. An integer overflow exists within this
+function. Validate that mNumSampleToChunkOffets will not cause an integer
+overflow.
+
+Bug: 20139950
+
+(cherry picked from commit c24607c29c96f939aed9e33bfa702b1dd79da4b7)
+
+Change-Id: I49086952451b09a234d8b82669251ab9f1ef58d9
+---
+ media/libstagefright/SampleTable.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/media/libstagefright/SampleTable.cpp b/media/libstagefright/SampleTable.cpp
+index d9858d7..0872c1c 100644
+--- a/media/libstagefright/SampleTable.cpp
++++ b/media/libstagefright/SampleTable.cpp
+@@ -230,6 +230,9 @@ status_t SampleTable::setSampleToChunkParams(
+         return ERROR_MALFORMED;
+     }
+ 
++    if (SIZE_MAX / sizeof(SampleToChunkEntry) <= mNumSampleToChunkOffsets)
++        return ERROR_OUT_OF_RANGE;
++
+     mSampleToChunkEntries =
+         new SampleToChunkEntry[mNumSampleToChunkOffsets];
+ 
+-- 
+2.7.4
+

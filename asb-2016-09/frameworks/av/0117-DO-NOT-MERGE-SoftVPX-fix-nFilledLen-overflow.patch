@@ -1,0 +1,74 @@
+From 0d7bf4c339257d8f7c775e7c79d9750a11706f5a Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Fri, 24 Jun 2016 12:37:45 -0700
+Subject: [PATCH 117/182] DO NOT MERGE - SoftVPX: fix nFilledLen overflow
+
+Bug: 29421675
+Change-Id: I25d4cf54a5df22c2130c37e95c7c7f75063111f3
+---
+ media/libstagefright/codecs/on2/dec/SoftVPX.cpp | 22 +++++++++++++++++++---
+ media/libstagefright/codecs/on2/dec/SoftVPX.h   |  1 +
+ 2 files changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+index 3934edc..5d039ef 100644
+--- a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
++++ b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+@@ -155,7 +155,7 @@ void SoftVPX::onQueueFilled(OMX_U32 portIndex) {
+             outHeader->nFlags = EOSseen ? OMX_BUFFERFLAG_EOS : 0;
+             outHeader->nTimeStamp = inHeader->nTimeStamp;
+ 
+-            if (outHeader->nAllocLen >= outHeader->nFilledLen) {
++            if (outputBufferSafe(outHeader)) {
+                 const uint8_t *srcLine = (const uint8_t *)img->planes[VPX_PLANE_Y];
+                 uint8_t *dst = outHeader->pBuffer;
+                 for (size_t i = 0; i < img->d_h; ++i) {
+@@ -181,8 +181,6 @@ void SoftVPX::onQueueFilled(OMX_U32 portIndex) {
+                     dst += img->d_w / 2;
+                 }
+             } else {
+-                ALOGE("b/27597103, buffer too small");
+-                android_errorWriteLog(0x534e4554, "27597103");
+                 outHeader->nFilledLen = 0;
+             }
+             outInfo->mOwnedByUs = false;
+@@ -200,6 +198,24 @@ void SoftVPX::onQueueFilled(OMX_U32 portIndex) {
+     }
+ }
+ 
++bool SoftVPX::outputBufferSafe(OMX_BUFFERHEADERTYPE *outHeader) {
++    uint32_t width = mWidth;
++    uint32_t height = mHeight;
++    uint64_t nFilledLen = width;
++    nFilledLen *= height;
++    if (nFilledLen > UINT32_MAX / 3) {
++        ALOGE("b/29421675, nFilledLen overflow %llu w %u h %u", nFilledLen, width, height);
++        android_errorWriteLog(0x534e4554, "29421675");
++        return false;
++    } else if (outHeader->nAllocLen < outHeader->nFilledLen) {
++        ALOGE("b/27597103, buffer too small");
++        android_errorWriteLog(0x534e4554, "27597103");
++        return false;
++    }
++
++    return true;
++}
++
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/on2/dec/SoftVPX.h b/media/libstagefright/codecs/on2/dec/SoftVPX.h
+index cd5eb28..5801b4a 100644
+--- a/media/libstagefright/codecs/on2/dec/SoftVPX.h
++++ b/media/libstagefright/codecs/on2/dec/SoftVPX.h
+@@ -48,6 +48,7 @@ private:
+     void *mCtx;
+ 
+     status_t initDecoder();
++    bool outputBufferSafe(OMX_BUFFERHEADERTYPE *outHeader);
+ 
+     DISALLOW_EVIL_CONSTRUCTORS(SoftVPX);
+ };
+-- 
+2.7.4
+

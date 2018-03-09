@@ -1,0 +1,119 @@
+From 1792dcc4f5df40dc2fdddc79851795d9c4e331b7 Mon Sep 17 00:00:00 2001
+From: Eric Laurent <elaurent@google.com>
+Date: Fri, 8 May 2015 10:50:03 -0700
+Subject: [PATCH 039/182] DO NOT MERGE - audio flinger: fix fuzz test crash
+
+Clear output stream pointer in duplicating thread
+when the main output to which it is attached is closed.
+
+Also do not forward master mute and volume commands to
+duplicating threads as this is not applicable.
+
+Also fix logic in AudioFlinger::primaryPlaybackThread_l()
+that could accidentally return a duplicating thread.
+This never happens because the primary thread is always
+first in the list.
+
+Bug: 20731946.
+Change-Id: Ic8869699836920351b23d09544c50a258d3fb585
+---
+ services/audioflinger/AudioFlinger.cpp | 19 +++++++++++++++----
+ services/audioflinger/Threads.cpp      |  5 ++++-
+ services/audioflinger/Threads.h        |  2 ++
+ 3 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/services/audioflinger/AudioFlinger.cpp b/services/audioflinger/AudioFlinger.cpp
+index acbd19a..afbcb2a 100644
+--- a/services/audioflinger/AudioFlinger.cpp
++++ b/services/audioflinger/AudioFlinger.cpp
+@@ -646,8 +646,12 @@ status_t AudioFlinger::setMasterVolume(float value)
+     // assigned to HALs which do not have master volume support will apply
+     // master volume during the mix operation.  Threads with HALs which do
+     // support master volume will simply ignore the setting.
+-    for (size_t i = 0; i < mPlaybackThreads.size(); i++)
++    for (size_t i = 0; i < mPlaybackThreads.size(); i++) {
++        if (mPlaybackThreads.valueAt(i)->isDuplicating()) {
++            continue;
++        }
+         mPlaybackThreads.valueAt(i)->setMasterVolume(value);
++    }
+ 
+     return NO_ERROR;
+ }
+@@ -753,8 +757,12 @@ status_t AudioFlinger::setMasterMute(bool muted)
+     // assigned to HALs which do not have master mute support will apply master
+     // mute during the mix operation.  Threads with HALs which do support master
+     // mute will simply ignore the setting.
+-    for (size_t i = 0; i < mPlaybackThreads.size(); i++)
++    for (size_t i = 0; i < mPlaybackThreads.size(); i++) {
++        if (mPlaybackThreads.valueAt(i)->isDuplicating()) {
++            continue;
++        }
+         mPlaybackThreads.valueAt(i)->setMasterMute(muted);
++    }
+ 
+     return NO_ERROR;
+ }
+@@ -1596,7 +1604,7 @@ status_t AudioFlinger::closeOutput_nonvirtual(audio_io_handle_t output)
+ 
+         if (thread->type() == ThreadBase::MIXER) {
+             for (size_t i = 0; i < mPlaybackThreads.size(); i++) {
+-                if (mPlaybackThreads.valueAt(i)->type() == ThreadBase::DUPLICATING) {
++                if (mPlaybackThreads.valueAt(i)->isDuplicating()) {
+                     DuplicatingThread *dupThread =
+                             (DuplicatingThread *)mPlaybackThreads.valueAt(i).get();
+                     dupThread->removeOutputTrack((MixerThread *)thread.get());
+@@ -1627,7 +1635,7 @@ status_t AudioFlinger::closeOutput_nonvirtual(audio_io_handle_t output)
+     // The thread entity (active unit of execution) is no longer running here,
+     // but the ThreadBase container still exists.
+ 
+-    if (thread->type() != ThreadBase::DUPLICATING) {
++    if (!thread->isDuplicating()) {
+         AudioStreamOut *out = thread->clearOutput();
+         ALOG_ASSERT(out != NULL, "out shouldn't be NULL");
+         // from now on thread->mOutput is NULL
+@@ -2000,6 +2008,9 @@ AudioFlinger::PlaybackThread *AudioFlinger::primaryPlaybackThread_l() const
+ {
+     for (size_t i = 0; i < mPlaybackThreads.size(); i++) {
+         PlaybackThread *thread = mPlaybackThreads.valueAt(i).get();
++        if(thread->isDuplicating()) {
++            continue;
++        }
+         AudioStreamOut *output = thread->getOutput();
+         if (output != NULL && output->audioHwDev == mPrimaryHardwareDev) {
+             return thread;
+diff --git a/services/audioflinger/Threads.cpp b/services/audioflinger/Threads.cpp
+index 3d657b3..a9eaa8a 100644
+--- a/services/audioflinger/Threads.cpp
++++ b/services/audioflinger/Threads.cpp
+@@ -4306,10 +4306,13 @@ void AudioFlinger::DuplicatingThread::removeOutputTrack(MixerThread *thread)
+             mOutputTracks[i]->destroy();
+             mOutputTracks.removeAt(i);
+             updateWaitTime_l();
++            if (thread->getOutput() == mOutput) {
++                mOutput = NULL;
++            }
+             return;
+         }
+     }
+-    ALOGV("removeOutputTrack(): unkonwn thread: %p", thread);
++    ALOGV("removeOutputTrack(): unknown thread: %p", thread);
+ }
+ 
+ // caller must hold mLock
+diff --git a/services/audioflinger/Threads.h b/services/audioflinger/Threads.h
+index 207f1eb..bb92df1 100644
+--- a/services/audioflinger/Threads.h
++++ b/services/audioflinger/Threads.h
+@@ -118,6 +118,8 @@ public:
+ 
+                 // static externally-visible
+                 type_t      type() const { return mType; }
++                bool isDuplicating() const { return (mType == DUPLICATING); }
++
+                 audio_io_handle_t id() const { return mId;}
+ 
+                 // dynamic externally-visible
+-- 
+2.7.4
+

@@ -1,0 +1,31 @@
+From 433e2535b12b11703bd83a064f3373abac0748d0 Mon Sep 17 00:00:00 2001
+From: Lajos Molnar <lajos@google.com>
+Date: Wed, 6 Sep 2017 19:41:19 -0700
+Subject: [PATCH] OMXNodeInstance: use a lock around OMX::freeNode
+
+This is to avoid a concurrent use after free if other OMX commands
+are being executed before the node is marked as deleted.
+
+Bug: 63666573
+Change-Id: I7720dd900bfa252f8675e0c56191adbf52aa957e
+CVE-2017-13154
+---
+ media/libstagefright/omx/OMXNodeInstance.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index 1221e7e..2afbeb7 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -250,6 +250,8 @@ status_t OMXNodeInstance::freeNode(OMXMaster *master) {
+             break;
+     }
+ 
++    Mutex::Autolock _l(mLock);
++
+     ALOGV("calling destroyComponentInstance");
+     OMX_ERRORTYPE err = master->destroyComponentInstance(
+             static_cast<OMX_COMPONENTTYPE *>(mHandle));
+-- 
+2.7.4
+

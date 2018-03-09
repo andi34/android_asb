@@ -1,0 +1,31 @@
+From 366f16bb05359209b23ec4ae0635ec51d8900a64 Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Tue, 12 Jul 2016 18:00:53 -0700
+Subject: [PATCH 114/182] OMXCodec: check IMemory::pointer() before using
+ allocation
+
+Bug: 29421811
+Change-Id: I0a73ba12bae4122f1d89fc92e5ea4f6a96cd1ed1
+(cherry picked from commit 2a14baea6e9bb51de8cb7e130510312be17f8469)
+---
+ media/libstagefright/OMXCodec.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/OMXCodec.cpp b/media/libstagefright/OMXCodec.cpp
+index 4b3ad68..5089d30 100644
+--- a/media/libstagefright/OMXCodec.cpp
++++ b/media/libstagefright/OMXCodec.cpp
+@@ -1550,7 +1550,9 @@ status_t OMXCodec::allocateBuffersOnPort(OMX_U32 portIndex) {
+ 
+     for (OMX_U32 i = 0; i < def.nBufferCountActual; ++i) {
+         sp<IMemory> mem = mDealer[portIndex]->allocate(def.nBufferSize);
+-        CHECK(mem.get() != NULL);
++        if (mem == NULL || mem->pointer() == NULL) {
++            return NO_MEMORY;
++        }
+ 
+         BufferInfo info;
+         info.mData = NULL;
+-- 
+2.7.4
+

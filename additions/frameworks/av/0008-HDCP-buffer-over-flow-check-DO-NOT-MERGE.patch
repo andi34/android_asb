@@ -1,0 +1,61 @@
+From 67c8578224cf0f2eca1388576c9c828a935ed77a Mon Sep 17 00:00:00 2001
+From: Chong Zhang <chz@google.com>
+Date: Mon, 27 Apr 2015 18:38:17 -0700
+Subject: [PATCH 008/182] HDCP: buffer over flow check -- DO NOT MERGE
+
+bug: 20222489
+Change-Id: I3a64a5999d68ea243d187f12ec7717b7f26d93a3
+(cherry picked from commit 532cd7b86a5fdc7b9a30a45d8ae2d16ef7660a72)
+---
+ media/libmedia/IHDCP.cpp | 26 ++++++++++++++++++++++++--
+ 1 file changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/media/libmedia/IHDCP.cpp b/media/libmedia/IHDCP.cpp
+index 1cf987a..9d93320 100644
+--- a/media/libmedia/IHDCP.cpp
++++ b/media/libmedia/IHDCP.cpp
+@@ -241,8 +241,19 @@ status_t BnHDCP::onTransact(
+         case HDCP_ENCRYPT:
+         {
+             size_t size = data.readInt32();
++            size_t bufSize = 2 * size;
++
++            // watch out for overflow
++            void *inData = NULL;
++            if (bufSize > size) {
++                inData = malloc(bufSize);
++            }
++
++            if (inData == NULL) {
++                reply->writeInt32(ERROR_OUT_OF_RANGE);
++                return OK;
++            }
+ 
+-            void *inData = malloc(2 * size);
+             void *outData = (uint8_t *)inData + size;
+ 
+             data.read(inData, size);
+@@ -295,8 +306,19 @@ status_t BnHDCP::onTransact(
+         case HDCP_DECRYPT:
+         {
+             size_t size = data.readInt32();
++            size_t bufSize = 2 * size;
++
++            // watch out for overflow
++            void *inData = NULL;
++            if (bufSize > size) {
++                inData = malloc(bufSize);
++            }
++
++            if (inData == NULL) {
++                reply->writeInt32(ERROR_OUT_OF_RANGE);
++                return OK;
++            }
+ 
+-            void *inData = malloc(2 * size);
+             void *outData = (uint8_t *)inData + size;
+ 
+             data.read(inData, size);
+-- 
+2.7.4
+

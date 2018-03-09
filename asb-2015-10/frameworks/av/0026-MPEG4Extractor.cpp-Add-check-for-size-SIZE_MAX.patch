@@ -1,0 +1,39 @@
+From 53081ca8dc49abd1f690b0651fb54994ea8c3d1a Mon Sep 17 00:00:00 2001
+From: Nick Kralevich <nnk@google.com>
+Date: Fri, 7 Aug 2015 10:02:37 -0700
+Subject: [PATCH 026/182] MPEG4Extractor.cpp: Add check for size == SIZE_MAX
+
+If size == SIZE_MAX, the line:
+
+  uint8_t *buffer = new (std::nothrow) uint8_t[size + 1];
+
+ends up allocating zero bytes, which is obviously incorrect.
+
+This is conceptually a cherrypick of commit
+b2d33aee5122c91a59c2a676c0b89ad340232450 , but specifically for
+Android 4.1 through Android 4.4. In Android 5.0, new code
+was introduced which caused the function parseMetaData()
+to be renamed.
+
+Bug: 23031033
+Change-Id: Ib34e740f3292a484f8a24e513c1cce58f2f33ecb
+---
+ media/libstagefright/MPEG4Extractor.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index d1d26c1..fce810c 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -2017,7 +2017,7 @@ status_t MPEG4Extractor::parseTrackHeader(
+ }
+ 
+ status_t MPEG4Extractor::parseMetaData(off64_t offset, size_t size) {
+-    if (size < 4) {
++    if (size < 4 || size == SIZE_MAX) {
+         return ERROR_MALFORMED;
+     }
+ 
+-- 
+2.7.4
+

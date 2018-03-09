@@ -1,0 +1,117 @@
+From deb39a9c0a468adf4a2fb5f26ba9784eba80dc71 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 4 Aug 2015 16:49:28 -0700
+Subject: [PATCH 041/182] Fix crash on malformed id3
+
+Bug: 22954006
+Change-Id: I488cb1e2c69fc7043b6040481b30fa866000515d
+---
+ include/media/stagefright/MetaData.h |  2 +-
+ media/libstagefright/MetaData.cpp    | 32 ++++++++++++++++++++------------
+ media/libstagefright/id3/ID3.cpp     |  6 ++++++
+ 3 files changed, 27 insertions(+), 13 deletions(-)
+
+diff --git a/include/media/stagefright/MetaData.h b/include/media/stagefright/MetaData.h
+index 3a87474..78e6403 100644
+--- a/include/media/stagefright/MetaData.h
++++ b/include/media/stagefright/MetaData.h
+@@ -246,7 +246,7 @@ private:
+             return mSize <= sizeof(u.reservoir);
+         }
+ 
+-        void allocateStorage(size_t size);
++        void *allocateStorage(size_t size);
+         void freeStorage();
+ 
+         void *storage() {
+diff --git a/media/libstagefright/MetaData.cpp b/media/libstagefright/MetaData.cpp
+index f870b98..2264a23 100644
+--- a/media/libstagefright/MetaData.cpp
++++ b/media/libstagefright/MetaData.cpp
+@@ -233,8 +233,11 @@ MetaData::typed_data::~typed_data() {
+ MetaData::typed_data::typed_data(const typed_data &from)
+     : mType(from.mType),
+       mSize(0) {
+-    allocateStorage(from.mSize);
+-    memcpy(storage(), from.storage(), mSize);
++
++    void *dst = allocateStorage(from.mSize);
++    if (dst) {
++        memcpy(dst, from.storage(), mSize);
++    }
+ }
+ 
+ MetaData::typed_data &MetaData::typed_data::operator=(
+@@ -242,8 +245,10 @@ MetaData::typed_data &MetaData::typed_data::operator=(
+     if (this != &from) {
+         clear();
+         mType = from.mType;
+-        allocateStorage(from.mSize);
+-        memcpy(storage(), from.storage(), mSize);
++        void *dst = allocateStorage(from.mSize);
++        if (dst) {
++            memcpy(dst, from.storage(), mSize);
++        }
+     }
+ 
+     return *this;
+@@ -260,13 +265,11 @@ void MetaData::typed_data::setData(
+     clear();
+ 
+     mType = type;
+-    allocateStorage(size);
+-    void *dst = storage();
+-    if (!dst) {
+-        ALOGE("Couldn't allocate %zu bytes for item", size);
+-        return;
++
++    void *dst = allocateStorage(size);
++    if (dst) {
++        memcpy(dst, data, size);
+     }
+-    memcpy(dst, data, size);
+ }
+ 
+ void MetaData::typed_data::getData(
+@@ -276,14 +279,19 @@ void MetaData::typed_data::getData(
+     *data = storage();
+ }
+ 
+-void MetaData::typed_data::allocateStorage(size_t size) {
++void *MetaData::typed_data::allocateStorage(size_t size) {
+     mSize = size;
+ 
+     if (usesReservoir()) {
+-        return;
++        return &u.reservoir;
+     }
+ 
+     u.ext_data = malloc(mSize);
++    if (u.ext_data == NULL) {
++        ALOGE("Couldn't allocate %zu bytes for item", size);
++        mSize = 0;
++    }
++    return u.ext_data;
+ }
+ 
+ void MetaData::typed_data::freeStorage() {
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index cb09b82..fee3d16 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -850,6 +850,12 @@ ID3::getAlbumArt(size_t *length, String8 *mime) const {
+ 
+             size_t descLen = StringSize(&data[2 + mimeLen], encoding);
+ 
++            if (size < 2 ||
++                    size - 2 < mimeLen ||
++                    size - 2 - mimeLen < descLen) {
++                ALOGW("bogus album art sizes");
++                return NULL;
++            }
+             *length = size - 2 - mimeLen - descLen;
+ 
+             return &data[2 + mimeLen + descLen];
+-- 
+2.7.4
+

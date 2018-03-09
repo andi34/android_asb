@@ -1,0 +1,57 @@
+From b6237f700fd0a036d9cd50f2a8672d3d5ed5b594 Mon Sep 17 00:00:00 2001
+From: Wonsik Kim <wonsik@google.com>
+Date: Thu, 7 Apr 2016 17:45:02 +0900
+Subject: [PATCH 090/182] DO NOT MERGE codecs: check OMX buffer size before use
+ in (gsm|g711)dec
+
+Bug: 27793163
+Bug: 27793367
+Change-Id: Iec3de8a237ee2379d87a8371c13e543878c6652c
+(cherry picked from commit 0490fe25b580546f54d4d5bdb184fa8df091dfc5)
+---
+ media/libstagefright/codecs/g711/dec/SoftG711.cpp | 9 +++++++++
+ media/libstagefright/codecs/gsm/dec/SoftGSM.cpp   | 8 ++++++++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/media/libstagefright/codecs/g711/dec/SoftG711.cpp b/media/libstagefright/codecs/g711/dec/SoftG711.cpp
+index bcdd3c7..7318a3f 100644
+--- a/media/libstagefright/codecs/g711/dec/SoftG711.cpp
++++ b/media/libstagefright/codecs/g711/dec/SoftG711.cpp
+@@ -218,6 +218,15 @@ void SoftG711::onQueueFilled(OMX_U32 portIndex) {
+             mSignalledError = true;
+         }
+ 
++        if (inHeader->nFilledLen * sizeof(int16_t) > outHeader->nAllocLen) {
++            ALOGE("output buffer too small (%d).", outHeader->nAllocLen);
++            android_errorWriteLog(0x534e4554, "27793163");
++
++            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
++            mSignalledError = true;
++            return;
++        }
++
+         const uint8_t *inputptr = inHeader->pBuffer + inHeader->nOffset;
+ 
+         if (mIsMLaw) {
+diff --git a/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp b/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp
+index 00e0c85..bec7cd2 100644
+--- a/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp
++++ b/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp
+@@ -213,6 +213,14 @@ void SoftGSM::onQueueFilled(OMX_U32 portIndex) {
+             mSignalledError = true;
+         }
+ 
++        if (outHeader->nAllocLen < (inHeader->nFilledLen / 65) * 320) {
++            ALOGE("output buffer is not large enough (%d).", outHeader->nAllocLen);
++            android_errorWriteLog(0x534e4554, "27793367");
++            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
++            mSignalledError = true;
++            return;
++        }
++
+         uint8_t *inputptr = inHeader->pBuffer + inHeader->nOffset;
+ 
+         int n = mSignalledError ? 0 : DecodeGSM(mGsm,
+-- 
+2.7.4
+

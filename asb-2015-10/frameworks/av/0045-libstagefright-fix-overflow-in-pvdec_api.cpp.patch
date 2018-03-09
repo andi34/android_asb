@@ -1,0 +1,37 @@
+From 23763463efa052e345fa464e40bee9abde0cbf19 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Wed, 19 Aug 2015 17:31:51 -0700
+Subject: [PATCH 045/182] libstagefright: fix overflow in pvdec_api.cpp.
+
+Bug: 20674086
+Change-Id: Ie2c711865c3b92f3fa2f3c7a436fa0e3687eb8b3
+(cherry picked from commit d7bb1cd786e5ea4ac61119cc1a08082474f7787b)
+---
+ media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
+index 78f2556..18c0cd6 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
+@@ -330,7 +330,7 @@ Bool PVAllocVideoData(VideoDecControls *decCtrl, int width, int height, int nLay
+     video->prevVop->uChan = video->prevVop->yChan + size;
+     video->prevVop->vChan = video->prevVop->uChan + (size >> 2);
+ #else
+-    if (size > INT32_MAX / 3 * 2) {
++    if (size > INT32_MAX / 3) {
+         return PV_FALSE;
+     }
+     video->currVop->yChan = (PIXEL *) oscl_malloc(size * 3 / 2); /* Allocate memory for all VOP OKA 3/2/1*/
+@@ -360,7 +360,7 @@ Bool PVAllocVideoData(VideoDecControls *decCtrl, int width, int height, int nLay
+         {
+             oscl_memset(video->prevEnhcVop, 0, sizeof(Vop));
+ #ifndef PV_MEMORY_POOL
+-            if (size > INT32_MAX / 3 * 2) {
++            if (size > INT32_MAX / 3) {
+                 return PV_FALSE;
+             }
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,1381 @@
+From 352b76d4f28ac15e4e95264f971e209672d56766 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 29 Feb 2016 12:47:20 -0800
+Subject: [PATCH 093/182] DO NOT MERGE Verify OMX buffer sizes prior to access
+
+Bug: 27207275
+Change-Id: I4412825d1ee233d993af0a67708bea54304ff62d
+---
+ media/libmedia/IOMX.cpp                            |  96 +++++++++-----
+ media/libstagefright/codecs/aacdec/SoftAAC2.cpp    |  20 +++
+ .../codecs/aacenc/SoftAACEncoder.cpp               |  28 ++++
+ .../codecs/aacenc/SoftAACEncoder2.cpp              |  28 ++++
+ media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp  |  20 +++
+ .../codecs/amrnb/enc/SoftAMRNBEncoder.cpp          |  28 ++++
+ .../codecs/amrwbenc/SoftAMRWBEncoder.cpp           |  28 ++++
+ .../codecs/avc/enc/SoftAVCEncoder.cpp              |  16 +++
+ .../codecs/flac/enc/SoftFlacEncoder.cpp            |  26 ++++
+ media/libstagefright/codecs/g711/dec/SoftG711.cpp  |  12 ++
+ media/libstagefright/codecs/gsm/dec/SoftGSM.cpp    |  12 ++
+ .../codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp       |  24 ++++
+ media/libstagefright/codecs/mp3dec/SoftMP3.cpp     |  33 +++++
+ .../codecs/on2/enc/SoftVPXEncoder.cpp              | 141 +++++++++++++++------
+ media/libstagefright/codecs/raw/SoftRaw.cpp        |  12 ++
+ .../codecs/vorbis/dec/SoftVorbis.cpp               |  16 +++
+ media/libstagefright/include/SoftOMXComponent.h    |  50 ++++++++
+ .../libstagefright/omx/SimpleSoftOMXComponent.cpp  |   8 ++
+ .../omx/SoftVideoDecoderOMXComponent.cpp           |  20 +++
+ 19 files changed, 551 insertions(+), 67 deletions(-)
+
+diff --git a/media/libmedia/IOMX.cpp b/media/libmedia/IOMX.cpp
+index 787c828..1bc3c49 100644
+--- a/media/libmedia/IOMX.cpp
++++ b/media/libmedia/IOMX.cpp
+@@ -18,6 +18,8 @@
+ #define LOG_TAG "IOMX"
+ #include <utils/Log.h>
+ 
++#include <sys/mman.h>
++
+ #include <binder/IMemory.h>
+ #include <binder/Parcel.h>
+ #include <media/IOMX.h>
+@@ -598,38 +600,70 @@ status_t BnOMX::onTransact(
+ 
+             size_t size = data.readInt32();
+ 
+-            status_t err = NO_MEMORY;
+-            void *params = calloc(size, 1);
+-            if (params) {
+-                err = data.read(params, size);
+-                if (err != OK) {
+-                    android_errorWriteLog(0x534e4554, "26914474");
++            status_t err = NOT_ENOUGH_DATA;
++            void *params = NULL;
++            size_t pageSize = 0;
++            size_t allocSize = 0;
++            if (code != SET_INTERNAL_OPTION && size < 8) {
++                // we expect the structure to contain at least the size and
++                // version, 8 bytes total
++                ALOGE("b/27207275 (%zu)", size);
++                android_errorWriteLog(0x534e4554, "27207275");
++            } else {
++                err = NO_MEMORY;
++                pageSize = (size_t) sysconf(_SC_PAGE_SIZE);
++                if (size > SIZE_MAX - (pageSize * 2)) {
++                    ALOGE("requested param size too big");
+                 } else {
+-                    switch (code) {
+-                        case GET_PARAMETER:
+-                            err = getParameter(node, index, params, size);
+-                            break;
+-                        case SET_PARAMETER:
+-                            err = setParameter(node, index, params, size);
+-                            break;
+-                        case GET_CONFIG:
+-                            err = getConfig(node, index, params, size);
+-                            break;
+-                        case SET_CONFIG:
+-                            err = setConfig(node, index, params, size);
+-                            break;
+-                        case SET_INTERNAL_OPTION:
+-                        {
+-                            InternalOptionType type =
+-                                (InternalOptionType)data.readInt32();
+-
+-                            err = setInternalOption(node, index, type, params, size);
+-                            break;
++                    allocSize = (size + pageSize * 2) & ~(pageSize - 1);
++                    params = mmap(NULL, allocSize, PROT_READ | PROT_WRITE,
++                            MAP_PRIVATE | MAP_ANONYMOUS, -1 /* fd */, 0 /* offset */);
++                }
++                if (params != MAP_FAILED) {
++                    err = data.read(params, size);
++                    if (err != OK) {
++                        android_errorWriteLog(0x534e4554, "26914474");
++                    } else {
++                        err = NOT_ENOUGH_DATA;
++                        OMX_U32 declaredSize = *(OMX_U32*)params;
++                        if (code != SET_INTERNAL_OPTION && declaredSize > size) {
++                            // the buffer says it's bigger than it actually is
++                            ALOGE("b/27207275 (%u/%zu)", declaredSize, size);
++                            android_errorWriteLog(0x534e4554, "27207275");
++                        } else {
++                            // mark the last page as inaccessible, to avoid exploitation
++                            // of codecs that access past the end of the allocation because
++                            // they didn't check the size
++                            mprotect((char*)params + allocSize - pageSize, pageSize, PROT_NONE);
++                            switch (code) {
++                                case GET_PARAMETER:
++                                    err = getParameter(node, index, params, size);
++                                    break;
++                                case SET_PARAMETER:
++                                    err = setParameter(node, index, params, size);
++                                    break;
++                                case GET_CONFIG:
++                                    err = getConfig(node, index, params, size);
++                                    break;
++                                case SET_CONFIG:
++                                    err = setConfig(node, index, params, size);
++                                    break;
++                                case SET_INTERNAL_OPTION:
++                                {
++                                    InternalOptionType type =
++                                        (InternalOptionType)data.readInt32();
++
++                                    err = setInternalOption(node, index, type, params, size);
++                                    break;
++                                }
++
++                                default:
++                                    TRESPASS();
++                            }
+                         }
+-
+-                        default:
+-                            TRESPASS();
+                     }
++                } else {
++                    ALOGE("couldn't map: %s", strerror(errno));
+                 }
+             }
+ 
+@@ -639,7 +673,9 @@ status_t BnOMX::onTransact(
+                 reply->write(params, size);
+             }
+ 
+-            free(params);
++            if (params) {
++                munmap(params, allocSize);
++            }
+             params = NULL;
+ 
+             return NO_ERROR;
+diff --git a/media/libstagefright/codecs/aacdec/SoftAAC2.cpp b/media/libstagefright/codecs/aacdec/SoftAAC2.cpp
+index 1b20cbb..7acedbc 100644
+--- a/media/libstagefright/codecs/aacdec/SoftAAC2.cpp
++++ b/media/libstagefright/codecs/aacdec/SoftAAC2.cpp
+@@ -162,6 +162,10 @@ OMX_ERRORTYPE SoftAAC2::internalGetParameter(
+             OMX_AUDIO_PARAM_AACPROFILETYPE *aacParams =
+                 (OMX_AUDIO_PARAM_AACPROFILETYPE *)params;
+ 
++            if (!isValidOMXParam(aacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (aacParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -197,6 +201,10 @@ OMX_ERRORTYPE SoftAAC2::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -237,6 +245,10 @@ OMX_ERRORTYPE SoftAAC2::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_decoder.aac",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -251,6 +263,10 @@ OMX_ERRORTYPE SoftAAC2::internalSetParameter(
+             const OMX_AUDIO_PARAM_AACPROFILETYPE *aacParams =
+                 (const OMX_AUDIO_PARAM_AACPROFILETYPE *)params;
+ 
++            if (!isValidOMXParam(aacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (aacParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -272,6 +288,10 @@ OMX_ERRORTYPE SoftAAC2::internalSetParameter(
+             const OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp b/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
+index c6724c2..ab0a228 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
+@@ -154,6 +154,10 @@ OMX_ERRORTYPE SoftAACEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -174,6 +178,10 @@ OMX_ERRORTYPE SoftAACEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_AACPROFILETYPE *aacParams =
+                 (OMX_AUDIO_PARAM_AACPROFILETYPE *)params;
+ 
++            if (!isValidOMXParam(aacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (aacParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -198,6 +206,10 @@ OMX_ERRORTYPE SoftAACEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -229,6 +241,10 @@ OMX_ERRORTYPE SoftAACEncoder::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_encoder.aac",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -243,6 +259,10 @@ OMX_ERRORTYPE SoftAACEncoder::internalSetParameter(
+             const OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (const OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -266,6 +286,10 @@ OMX_ERRORTYPE SoftAACEncoder::internalSetParameter(
+             OMX_AUDIO_PARAM_AACPROFILETYPE *aacParams =
+                 (OMX_AUDIO_PARAM_AACPROFILETYPE *)params;
+ 
++            if (!isValidOMXParam(aacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (aacParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -286,6 +310,10 @@ OMX_ERRORTYPE SoftAACEncoder::internalSetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
+index ff2b503..f5c858a 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
+@@ -120,6 +120,10 @@ OMX_ERRORTYPE SoftAACEncoder2::internalGetParameter(
+             OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -140,6 +144,10 @@ OMX_ERRORTYPE SoftAACEncoder2::internalGetParameter(
+             OMX_AUDIO_PARAM_AACPROFILETYPE *aacParams =
+                 (OMX_AUDIO_PARAM_AACPROFILETYPE *)params;
+ 
++            if (!isValidOMXParam(aacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (aacParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -164,6 +172,10 @@ OMX_ERRORTYPE SoftAACEncoder2::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -195,6 +207,10 @@ OMX_ERRORTYPE SoftAACEncoder2::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_encoder.aac",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -209,6 +225,10 @@ OMX_ERRORTYPE SoftAACEncoder2::internalSetParameter(
+             const OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (const OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -232,6 +252,10 @@ OMX_ERRORTYPE SoftAACEncoder2::internalSetParameter(
+             OMX_AUDIO_PARAM_AACPROFILETYPE *aacParams =
+                 (OMX_AUDIO_PARAM_AACPROFILETYPE *)params;
+ 
++            if (!isValidOMXParam(aacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (aacParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -255,6 +279,10 @@ OMX_ERRORTYPE SoftAACEncoder2::internalSetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp b/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp
+index 25ee4cc..6fb59dd 100644
+--- a/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp
++++ b/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp
+@@ -148,6 +148,10 @@ OMX_ERRORTYPE SoftAMR::internalGetParameter(
+             OMX_AUDIO_PARAM_AMRTYPE *amrParams =
+                 (OMX_AUDIO_PARAM_AMRTYPE *)params;
+ 
++            if (!isValidOMXParam(amrParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (amrParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -174,6 +178,10 @@ OMX_ERRORTYPE SoftAMR::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -207,6 +215,10 @@ OMX_ERRORTYPE SoftAMR::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (mMode == MODE_NARROW) {
+                 if (strncmp((const char *)roleParams->cRole,
+                             "audio_decoder.amrnb",
+@@ -229,6 +241,10 @@ OMX_ERRORTYPE SoftAMR::internalSetParameter(
+             const OMX_AUDIO_PARAM_AMRTYPE *aacParams =
+                 (const OMX_AUDIO_PARAM_AMRTYPE *)params;
+ 
++            if (!isValidOMXParam(aacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (aacParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -241,6 +257,10 @@ OMX_ERRORTYPE SoftAMR::internalSetParameter(
+             const OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/amrnb/enc/SoftAMRNBEncoder.cpp b/media/libstagefright/codecs/amrnb/enc/SoftAMRNBEncoder.cpp
+index 50b739c..544958a 100644
+--- a/media/libstagefright/codecs/amrnb/enc/SoftAMRNBEncoder.cpp
++++ b/media/libstagefright/codecs/amrnb/enc/SoftAMRNBEncoder.cpp
+@@ -120,6 +120,10 @@ OMX_ERRORTYPE SoftAMRNBEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -140,6 +144,10 @@ OMX_ERRORTYPE SoftAMRNBEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_AMRTYPE *amrParams =
+                 (OMX_AUDIO_PARAM_AMRTYPE *)params;
+ 
++            if (!isValidOMXParam(amrParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (amrParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -158,6 +166,10 @@ OMX_ERRORTYPE SoftAMRNBEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -188,6 +200,10 @@ OMX_ERRORTYPE SoftAMRNBEncoder::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_encoder.amrnb",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -202,6 +218,10 @@ OMX_ERRORTYPE SoftAMRNBEncoder::internalSetParameter(
+             const OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (const OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -225,6 +245,10 @@ OMX_ERRORTYPE SoftAMRNBEncoder::internalSetParameter(
+             OMX_AUDIO_PARAM_AMRTYPE *amrParams =
+                 (OMX_AUDIO_PARAM_AMRTYPE *)params;
+ 
++            if (!isValidOMXParam(amrParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (amrParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -252,6 +276,10 @@ OMX_ERRORTYPE SoftAMRNBEncoder::internalSetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/amrwbenc/SoftAMRWBEncoder.cpp b/media/libstagefright/codecs/amrwbenc/SoftAMRWBEncoder.cpp
+index 9ccb49c..74652f0 100644
+--- a/media/libstagefright/codecs/amrwbenc/SoftAMRWBEncoder.cpp
++++ b/media/libstagefright/codecs/amrwbenc/SoftAMRWBEncoder.cpp
+@@ -155,6 +155,10 @@ OMX_ERRORTYPE SoftAMRWBEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -175,6 +179,10 @@ OMX_ERRORTYPE SoftAMRWBEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_AMRTYPE *amrParams =
+                 (OMX_AUDIO_PARAM_AMRTYPE *)params;
+ 
++            if (!isValidOMXParam(amrParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (amrParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -196,6 +204,10 @@ OMX_ERRORTYPE SoftAMRWBEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -226,6 +238,10 @@ OMX_ERRORTYPE SoftAMRWBEncoder::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_encoder.amrwb",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -240,6 +256,10 @@ OMX_ERRORTYPE SoftAMRWBEncoder::internalSetParameter(
+             const OMX_AUDIO_PARAM_PORTFORMATTYPE *formatParams =
+                 (const OMX_AUDIO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -263,6 +283,10 @@ OMX_ERRORTYPE SoftAMRWBEncoder::internalSetParameter(
+             OMX_AUDIO_PARAM_AMRTYPE *amrParams =
+                 (OMX_AUDIO_PARAM_AMRTYPE *)params;
+ 
++            if (!isValidOMXParam(amrParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (amrParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -299,6 +323,10 @@ OMX_ERRORTYPE SoftAMRWBEncoder::internalSetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp b/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp
+index 4e11628..9423481 100644
+--- a/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp
++++ b/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp
+@@ -450,6 +450,10 @@ OMX_ERRORTYPE SoftAVCEncoder::internalGetParameter(
+             OMX_VIDEO_PARAM_BITRATETYPE *bitRate =
+                 (OMX_VIDEO_PARAM_BITRATETYPE *) params;
+ 
++            if (!isValidOMXParam(bitRate)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (bitRate->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -494,6 +498,10 @@ OMX_ERRORTYPE SoftAVCEncoder::internalGetParameter(
+             OMX_VIDEO_PARAM_AVCTYPE *avcParams =
+                 (OMX_VIDEO_PARAM_AVCTYPE *)params;
+ 
++            if (!isValidOMXParam(avcParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (avcParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -564,6 +572,10 @@ OMX_ERRORTYPE SoftAVCEncoder::internalSetParameter(
+             OMX_VIDEO_PARAM_BITRATETYPE *bitRate =
+                 (OMX_VIDEO_PARAM_BITRATETYPE *) params;
+ 
++            if (!isValidOMXParam(bitRate)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (bitRate->nPortIndex != 1 ||
+                 bitRate->eControlRate != OMX_Video_ControlRateVariable) {
+                 return OMX_ErrorUndefined;
+@@ -665,6 +677,10 @@ OMX_ERRORTYPE SoftAVCEncoder::internalSetParameter(
+             OMX_VIDEO_PARAM_AVCTYPE *avcType =
+                 (OMX_VIDEO_PARAM_AVCTYPE *)params;
+ 
++            if (!isValidOMXParam(avcType)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (avcType->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/flac/enc/SoftFlacEncoder.cpp b/media/libstagefright/codecs/flac/enc/SoftFlacEncoder.cpp
+index e64fe72..fcc199e 100644
+--- a/media/libstagefright/codecs/flac/enc/SoftFlacEncoder.cpp
++++ b/media/libstagefright/codecs/flac/enc/SoftFlacEncoder.cpp
+@@ -153,6 +153,10 @@ OMX_ERRORTYPE SoftFlacEncoder::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -174,6 +178,11 @@ OMX_ERRORTYPE SoftFlacEncoder::internalGetParameter(
+         case OMX_IndexParamAudioFlac:
+         {
+             OMX_AUDIO_PARAM_FLACTYPE *flacParams = (OMX_AUDIO_PARAM_FLACTYPE *)params;
++
++            if (!isValidOMXParam(flacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             flacParams->nCompressionLevel = mCompressionLevel;
+             flacParams->nChannels = mNumChannels;
+             flacParams->nSampleRate = mSampleRate;
+@@ -193,6 +202,10 @@ OMX_ERRORTYPE SoftFlacEncoder::internalSetParameter(
+             ALOGV("SoftFlacEncoder::internalSetParameter(OMX_IndexParamAudioPcm)");
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams = (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0 && pcmParams->nPortIndex != 1) {
+                 ALOGE("SoftFlacEncoder::internalSetParameter() Error #1");
+                 return OMX_ErrorUndefined;
+@@ -215,6 +228,10 @@ OMX_ERRORTYPE SoftFlacEncoder::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                     "audio_encoder.flac",
+                     OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -230,6 +247,11 @@ OMX_ERRORTYPE SoftFlacEncoder::internalSetParameter(
+         {
+             // used only for setting the compression level
+             OMX_AUDIO_PARAM_FLACTYPE *flacParams = (OMX_AUDIO_PARAM_FLACTYPE *)params;
++
++            if (!isValidOMXParam(flacParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             mCompressionLevel = flacParams->nCompressionLevel; // range clamping done inside encoder
+             return OMX_ErrorNone;
+         }
+@@ -239,6 +261,10 @@ OMX_ERRORTYPE SoftFlacEncoder::internalSetParameter(
+             OMX_PARAM_PORTDEFINITIONTYPE *defParams =
+                 (OMX_PARAM_PORTDEFINITIONTYPE *)params;
+ 
++            if (!isValidOMXParam(defParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (defParams->nPortIndex == 0) {
+                 if (defParams->nBufferSize > kMaxInputBufferSize) {
+                     ALOGE("Input buffer size must be at most %zu bytes",
+diff --git a/media/libstagefright/codecs/g711/dec/SoftG711.cpp b/media/libstagefright/codecs/g711/dec/SoftG711.cpp
+index 7318a3f..ea7dacf 100644
+--- a/media/libstagefright/codecs/g711/dec/SoftG711.cpp
++++ b/media/libstagefright/codecs/g711/dec/SoftG711.cpp
+@@ -109,6 +109,10 @@ OMX_ERRORTYPE SoftG711::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -140,6 +144,10 @@ OMX_ERRORTYPE SoftG711::internalSetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0 && pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -160,6 +168,10 @@ OMX_ERRORTYPE SoftG711::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (mIsMLaw) {
+                 if (strncmp((const char *)roleParams->cRole,
+                             "audio_decoder.g711mlaw",
+diff --git a/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp b/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp
+index bec7cd2..5132b63 100644
+--- a/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp
++++ b/media/libstagefright/codecs/gsm/dec/SoftGSM.cpp
+@@ -107,6 +107,10 @@ OMX_ERRORTYPE SoftGSM::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -138,6 +142,10 @@ OMX_ERRORTYPE SoftGSM::internalSetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0 && pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -158,6 +166,10 @@ OMX_ERRORTYPE SoftGSM::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_decoder.gsm",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+index 9f03502..199ff02 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+@@ -317,6 +317,10 @@ OMX_ERRORTYPE SoftMPEG4Encoder::internalGetParameter(
+             OMX_VIDEO_PARAM_BITRATETYPE *bitRate =
+                 (OMX_VIDEO_PARAM_BITRATETYPE *) params;
+ 
++            if (!isValidOMXParam(bitRate)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (bitRate->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -365,6 +369,10 @@ OMX_ERRORTYPE SoftMPEG4Encoder::internalGetParameter(
+             OMX_VIDEO_PARAM_H263TYPE *h263type =
+                 (OMX_VIDEO_PARAM_H263TYPE *)params;
+ 
++            if (!isValidOMXParam(h263type)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (h263type->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -386,6 +394,10 @@ OMX_ERRORTYPE SoftMPEG4Encoder::internalGetParameter(
+             OMX_VIDEO_PARAM_MPEG4TYPE *mpeg4type =
+                 (OMX_VIDEO_PARAM_MPEG4TYPE *)params;
+ 
++            if (!isValidOMXParam(mpeg4type)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (mpeg4type->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -449,6 +461,10 @@ OMX_ERRORTYPE SoftMPEG4Encoder::internalSetParameter(
+             OMX_VIDEO_PARAM_BITRATETYPE *bitRate =
+                 (OMX_VIDEO_PARAM_BITRATETYPE *) params;
+ 
++            if (!isValidOMXParam(bitRate)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (bitRate->nPortIndex != 1 ||
+                 bitRate->eControlRate != OMX_Video_ControlRateVariable) {
+                 return OMX_ErrorUndefined;
+@@ -557,6 +573,10 @@ OMX_ERRORTYPE SoftMPEG4Encoder::internalSetParameter(
+             OMX_VIDEO_PARAM_H263TYPE *h263type =
+                 (OMX_VIDEO_PARAM_H263TYPE *)params;
+ 
++            if (!isValidOMXParam(h263type)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (h263type->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -579,6 +599,10 @@ OMX_ERRORTYPE SoftMPEG4Encoder::internalSetParameter(
+             OMX_VIDEO_PARAM_MPEG4TYPE *mpeg4type =
+                 (OMX_VIDEO_PARAM_MPEG4TYPE *)params;
+ 
++            if (!isValidOMXParam(mpeg4type)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (mpeg4type->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+index 06f455e..139af11 100644
+--- a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
++++ b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+@@ -126,6 +126,10 @@ OMX_ERRORTYPE SoftMP3::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex > 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -144,6 +148,27 @@ OMX_ERRORTYPE SoftMP3::internalGetParameter(
+             return OMX_ErrorNone;
+         }
+ 
++        case OMX_IndexParamAudioMp3:
++        {
++            OMX_AUDIO_PARAM_MP3TYPE *mp3Params =
++                (OMX_AUDIO_PARAM_MP3TYPE *)params;
++
++            if (!isValidOMXParam(mp3Params)) {
++                return OMX_ErrorBadParameter;
++            }
++
++            if (mp3Params->nPortIndex > 1) {
++                return OMX_ErrorUndefined;
++            }
++
++            mp3Params->nChannels = mNumChannels;
++            mp3Params->nBitRate = 0 /* unknown */;
++            mp3Params->nSampleRate = mSamplingRate;
++            // other fields are encoder-only
++
++            return OMX_ErrorNone;
++        }
++
+         default:
+             return SimpleSoftOMXComponent::internalGetParameter(index, params);
+     }
+@@ -157,6 +182,10 @@ OMX_ERRORTYPE SoftMP3::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_decoder.mp3",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -171,6 +200,10 @@ OMX_ERRORTYPE SoftMP3::internalSetParameter(
+             const OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (const OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+index 0eb7440..de993c5 100644
+--- a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
++++ b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+@@ -387,20 +387,24 @@ OMX_ERRORTYPE SoftVPXEncoder::internalGetParameter(OMX_INDEXTYPE index,
+             OMX_VIDEO_PARAM_BITRATETYPE *bitrate =
+                 (OMX_VIDEO_PARAM_BITRATETYPE *)param;
+ 
+-                if (bitrate->nPortIndex != kOutputPortIndex) {
+-                    return OMX_ErrorUnsupportedIndex;
+-                }
++            if (!isValidOMXParam(bitrate)) {
++                return OMX_ErrorBadParameter;
++            }
+ 
+-                bitrate->nTargetBitrate = mBitrate;
++            if (bitrate->nPortIndex != kOutputPortIndex) {
++                return OMX_ErrorUnsupportedIndex;
++            }
+ 
+-                if (mBitrateControlMode == VPX_VBR) {
+-                    bitrate->eControlRate = OMX_Video_ControlRateVariable;
+-                } else if (mBitrateControlMode == VPX_CBR) {
+-                    bitrate->eControlRate = OMX_Video_ControlRateConstant;
+-                } else {
+-                    return OMX_ErrorUnsupportedSetting;
+-                }
+-                return OMX_ErrorNone;
++            bitrate->nTargetBitrate = mBitrate;
++
++            if (mBitrateControlMode == VPX_VBR) {
++                bitrate->eControlRate = OMX_Video_ControlRateVariable;
++            } else if (mBitrateControlMode == VPX_CBR) {
++                bitrate->eControlRate = OMX_Video_ControlRateConstant;
++            } else {
++                return OMX_ErrorUnsupportedSetting;
++            }
++            return OMX_ErrorNone;
+         }
+ 
+         // VP8 specific parameters that use extension headers
+@@ -408,21 +412,29 @@ OMX_ERRORTYPE SoftVPXEncoder::internalGetParameter(OMX_INDEXTYPE index,
+             OMX_VIDEO_PARAM_VP8TYPE *vp8Params =
+                 (OMX_VIDEO_PARAM_VP8TYPE *)param;
+ 
+-                if (vp8Params->nPortIndex != kOutputPortIndex) {
+-                    return OMX_ErrorUnsupportedIndex;
+-                }
++            if (!isValidOMXParam(vp8Params)) {
++                return OMX_ErrorBadParameter;
++            }
+ 
+-                vp8Params->eProfile = OMX_VIDEO_VP8ProfileMain;
+-                vp8Params->eLevel = mLevel;
+-                vp8Params->nDCTPartitions = mDCTPartitions;
+-                vp8Params->bErrorResilientMode = mErrorResilience;
+-                return OMX_ErrorNone;
++            if (vp8Params->nPortIndex != kOutputPortIndex) {
++                return OMX_ErrorUnsupportedIndex;
++            }
++
++            vp8Params->eProfile = OMX_VIDEO_VP8ProfileMain;
++            vp8Params->eLevel = mLevel;
++            vp8Params->nDCTPartitions = mDCTPartitions;
++            vp8Params->bErrorResilientMode = mErrorResilience;
++            return OMX_ErrorNone;
+         }
+ 
+         case OMX_IndexParamVideoProfileLevelQuerySupported: {
+             OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileAndLevel =
+                 (OMX_VIDEO_PARAM_PROFILELEVELTYPE *)param;
+ 
++            if (!isValidOMXParam(profileAndLevel)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (profileAndLevel->nPortIndex != kOutputPortIndex) {
+                 return OMX_ErrorUnsupportedIndex;
+             }
+@@ -456,6 +468,10 @@ OMX_ERRORTYPE SoftVPXEncoder::internalGetParameter(OMX_INDEXTYPE index,
+             OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileAndLevel =
+                 (OMX_VIDEO_PARAM_PROFILELEVELTYPE *)param;
+ 
++            if (!isValidOMXParam(profileAndLevel)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (profileAndLevel->nPortIndex != kOutputPortIndex) {
+                 return OMX_ErrorUnsupportedIndex;
+             }
+@@ -477,18 +493,37 @@ OMX_ERRORTYPE SoftVPXEncoder::internalSetParameter(OMX_INDEXTYPE index,
+     const int32_t indexFull = index;
+ 
+     switch (indexFull) {
+-        case OMX_IndexParamStandardComponentRole:
+-            return internalSetRoleParams(
+-                (const OMX_PARAM_COMPONENTROLETYPE *)param);
++        case OMX_IndexParamStandardComponentRole: {
++            const OMX_PARAM_COMPONENTROLETYPE *role =
++                (const OMX_PARAM_COMPONENTROLETYPE*) param;
++
++            if (!isValidOMXParam(role)) {
++                return OMX_ErrorBadParameter;
++            }
++            return internalSetRoleParams(role);
++        }
+ 
+-        case OMX_IndexParamVideoBitrate:
+-            return internalSetBitrateParams(
+-                (const OMX_VIDEO_PARAM_BITRATETYPE *)param);
++        case OMX_IndexParamVideoBitrate: {
++            const OMX_VIDEO_PARAM_BITRATETYPE *bitRate =
++                (const OMX_VIDEO_PARAM_BITRATETYPE*) param;
++
++            if (!isValidOMXParam(bitRate)) {
++                return OMX_ErrorBadParameter;
++            }
++
++            return internalSetBitrateParams(bitRate);
++        }
+ 
+         case OMX_IndexParamPortDefinition:
+         {
+-            OMX_ERRORTYPE err = internalSetPortParams(
+-                (const OMX_PARAM_PORTDEFINITIONTYPE *)param);
++            const OMX_PARAM_PORTDEFINITIONTYPE *portDefinition =
++                (const OMX_PARAM_PORTDEFINITIONTYPE*) param;
++
++            if (!isValidOMXParam(portDefinition)) {
++                return OMX_ErrorBadParameter;
++            }
++
++            OMX_ERRORTYPE err = internalSetPortParams(portDefinition);
+ 
+             if (err != OMX_ErrorNone) {
+                 return err;
+@@ -497,17 +532,37 @@ OMX_ERRORTYPE SoftVPXEncoder::internalSetParameter(OMX_INDEXTYPE index,
+             return SimpleSoftOMXComponent::internalSetParameter(index, param);
+         }
+ 
+-        case OMX_IndexParamVideoPortFormat:
+-            return internalSetFormatParams(
+-                (const OMX_VIDEO_PARAM_PORTFORMATTYPE *)param);
++        case OMX_IndexParamVideoPortFormat: {
++            const OMX_VIDEO_PARAM_PORTFORMATTYPE *portFormatType =
++                (const OMX_VIDEO_PARAM_PORTFORMATTYPE*) param;
++
++            if (!isValidOMXParam(portFormatType)) {
++                return OMX_ErrorBadParameter;
++            }
++            return internalSetFormatParams(portFormatType);
++        }
++
++        case OMX_IndexParamVideoVp8: {
++            const OMX_VIDEO_PARAM_VP8TYPE *vp8Params =
++                (const OMX_VIDEO_PARAM_VP8TYPE*) param;
++
++            if (!isValidOMXParam(vp8Params)) {
++                return OMX_ErrorBadParameter;
++            }
++
++            return internalSetVp8Params(vp8Params);
++        }
++
++        case OMX_IndexParamVideoProfileLevelCurrent: {
++            const OMX_VIDEO_PARAM_PROFILELEVELTYPE *vp8Params =
++                (const OMX_VIDEO_PARAM_PROFILELEVELTYPE*) param;
+ 
+-        case OMX_IndexParamVideoVp8:
+-            return internalSetVp8Params(
+-                (const OMX_VIDEO_PARAM_VP8TYPE *)param);
++            if (!isValidOMXParam(vp8Params)) {
++                return OMX_ErrorBadParameter;
++            }
+ 
+-        case OMX_IndexParamVideoProfileLevelCurrent:
+-            return internalSetProfileLevel(
+-                (const OMX_VIDEO_PARAM_PROFILELEVELTYPE *)param);
++            return internalSetProfileLevel(vp8Params);
++        }
+ 
+         case OMX_IndexVendorStartUnused:
+         {
+@@ -515,6 +570,10 @@ OMX_ERRORTYPE SoftVPXEncoder::internalSetParameter(OMX_INDEXTYPE index,
+             const StoreMetaDataInBuffersParams *storeParam =
+                 (const StoreMetaDataInBuffersParams *)param;
+ 
++            if (!isValidOMXParam(storeParam)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (storeParam->nPortIndex != kInputPortIndex) {
+                 return OMX_ErrorBadPortIndex;
+             }
+@@ -537,6 +596,10 @@ OMX_ERRORTYPE SoftVPXEncoder::setConfig(
+             OMX_CONFIG_INTRAREFRESHVOPTYPE *params =
+                 (OMX_CONFIG_INTRAREFRESHVOPTYPE *)_params;
+ 
++            if (!isValidOMXParam(params)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (params->nPortIndex != kOutputPortIndex) {
+                 return OMX_ErrorBadPortIndex;
+             }
+@@ -550,6 +613,10 @@ OMX_ERRORTYPE SoftVPXEncoder::setConfig(
+             OMX_VIDEO_CONFIG_BITRATETYPE *params =
+                 (OMX_VIDEO_CONFIG_BITRATETYPE *)_params;
+ 
++            if (!isValidOMXParam(params)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (params->nPortIndex != kOutputPortIndex) {
+                 return OMX_ErrorBadPortIndex;
+             }
+diff --git a/media/libstagefright/codecs/raw/SoftRaw.cpp b/media/libstagefright/codecs/raw/SoftRaw.cpp
+index 19d6f13..5c1fadb 100644
+--- a/media/libstagefright/codecs/raw/SoftRaw.cpp
++++ b/media/libstagefright/codecs/raw/SoftRaw.cpp
+@@ -103,6 +103,10 @@ OMX_ERRORTYPE SoftRaw::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0 && pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -134,6 +138,10 @@ OMX_ERRORTYPE SoftRaw::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_decoder.raw",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -148,6 +156,10 @@ OMX_ERRORTYPE SoftRaw::internalSetParameter(
+             const OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp b/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp
+index 51bb958..a6256c1 100644
+--- a/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp
++++ b/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp
+@@ -128,6 +128,10 @@ OMX_ERRORTYPE SoftVorbis::internalGetParameter(
+             OMX_AUDIO_PARAM_VORBISTYPE *vorbisParams =
+                 (OMX_AUDIO_PARAM_VORBISTYPE *)params;
+ 
++            if (!isValidOMXParam(vorbisParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (vorbisParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -159,6 +163,10 @@ OMX_ERRORTYPE SoftVorbis::internalGetParameter(
+             OMX_AUDIO_PARAM_PCMMODETYPE *pcmParams =
+                 (OMX_AUDIO_PARAM_PCMMODETYPE *)params;
+ 
++            if (!isValidOMXParam(pcmParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (pcmParams->nPortIndex != 1) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -195,6 +203,10 @@ OMX_ERRORTYPE SoftVorbis::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         "audio_decoder.vorbis",
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -209,6 +221,10 @@ OMX_ERRORTYPE SoftVorbis::internalSetParameter(
+             const OMX_AUDIO_PARAM_VORBISTYPE *vorbisParams =
+                 (const OMX_AUDIO_PARAM_VORBISTYPE *)params;
+ 
++            if (!isValidOMXParam(vorbisParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (vorbisParams->nPortIndex != 0) {
+                 return OMX_ErrorUndefined;
+             }
+diff --git a/media/libstagefright/include/SoftOMXComponent.h b/media/libstagefright/include/SoftOMXComponent.h
+index a808611..20fe773 100644
+--- a/media/libstagefright/include/SoftOMXComponent.h
++++ b/media/libstagefright/include/SoftOMXComponent.h
+@@ -18,6 +18,8 @@
+ 
+ #define SOFT_OMX_COMPONENT_H_
+ 
++#include <log/log.h>
++
+ #include <media/stagefright/foundation/ABase.h>
+ #include <media/stagefright/foundation/AString.h>
+ #include <utils/RefBase.h>
+@@ -168,6 +170,54 @@ private:
+     DISALLOW_EVIL_CONSTRUCTORS(SoftOMXComponent);
+ };
+ 
++// minimal implementations of is_same and static_assert that work on K,
++// though error messages are minimal
++
++// a type that has a member constant of a specified type and value
++template<typename T, T somevalue>
++struct compat_integral_constant
++{
++    static const T value = somevalue;
++};
++
++// types to hold true and false
++typedef compat_integral_constant<bool, true> compat_true_type;
++typedef compat_integral_constant<bool, false> compat_false_type;
++
++// a type that indicates two other types are different
++template<typename, typename> struct compat_is_same : public compat_false_type { };
++
++// a type that indicates two other types are the same
++template<typename sametype> struct compat_is_same<sametype, sametype> : public compat_true_type { };
++// for the specific use below, we want to consider "const type" and "type" to be the same
++template<typename sametype> struct compat_is_same<const sametype, sametype> : public compat_true_type { };
++
++
++// Compile time assert. Note that the message is ignored. Instead, the
++// compiler will report a division by zero and/or a non-constant expression
++// when the assertion triggers.
++#define STATIC_ASSERT(e, m) \
++    do { \
++        enum { STATIC_ASSERT__ = 1/(e) }; \
++    } while (0)
++
++template<typename T>
++bool isValidOMXParam(T *a) {
++  STATIC_ASSERT(offsetof(typeof(*a), nSize) == 0, "nSize not at offset 0");
++  const bool isSame1 = compat_is_same<typeof(a->nSize), OMX_U32>::value;
++  STATIC_ASSERT(isSame1, "nSize has wrong type");
++  STATIC_ASSERT(offsetof(typeof(*a), nVersion) == 4, "nVersion not at offset 4");
++  const bool isSame2 = compat_is_same<typeof(a->nVersion), OMX_VERSIONTYPE>::value;
++  STATIC_ASSERT(isSame2, "nVersion has wrong type");
++
++  if (a->nSize < sizeof(*a)) {
++      ALOGE("b/27207275: need %zu, got %lu", sizeof(*a), a->nSize);
++      android_errorWriteLog(0x534e4554, "27207275");
++      return false;
++  }
++  return true;
++}
++
+ }  // namespace android
+ 
+ #endif  // SOFT_OMX_COMPONENT_H_
+diff --git a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+index 4999663..d36c1d5 100644
+--- a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
++++ b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+@@ -125,6 +125,10 @@ OMX_ERRORTYPE SimpleSoftOMXComponent::internalGetParameter(
+             OMX_PARAM_PORTDEFINITIONTYPE *defParams =
+                 (OMX_PARAM_PORTDEFINITIONTYPE *)params;
+ 
++            if (!isValidOMXParam(defParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (defParams->nPortIndex >= mPorts.size()
+                     || defParams->nSize
+                             != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
+@@ -152,6 +156,10 @@ OMX_ERRORTYPE SimpleSoftOMXComponent::internalSetParameter(
+             OMX_PARAM_PORTDEFINITIONTYPE *defParams =
+                 (OMX_PARAM_PORTDEFINITIONTYPE *)params;
+ 
++            if (!isValidOMXParam(defParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (defParams->nPortIndex >= mPorts.size()
+                     || defParams->nSize
+                             != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
+diff --git a/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp b/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp
+index 08a3d42..820712c 100644
+--- a/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp
++++ b/media/libstagefright/omx/SoftVideoDecoderOMXComponent.cpp
+@@ -148,6 +148,10 @@ OMX_ERRORTYPE SoftVideoDecoderOMXComponent::internalGetParameter(
+             OMX_VIDEO_PARAM_PORTFORMATTYPE *formatParams =
+                 (OMX_VIDEO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > kMaxPortIndex) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -176,6 +180,10 @@ OMX_ERRORTYPE SoftVideoDecoderOMXComponent::internalGetParameter(
+             OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevel =
+                   (OMX_VIDEO_PARAM_PROFILELEVELTYPE *) params;
+ 
++            if (!isValidOMXParam(profileLevel)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (profileLevel->nPortIndex != kInputPortIndex) {
+                 ALOGE("Invalid port index: %ld", profileLevel->nPortIndex);
+                 return OMX_ErrorUnsupportedIndex;
+@@ -203,6 +211,10 @@ OMX_ERRORTYPE SoftVideoDecoderOMXComponent::internalSetParameter(
+             const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+                 (const OMX_PARAM_COMPONENTROLETYPE *)params;
+ 
++            if (!isValidOMXParam(roleParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (strncmp((const char *)roleParams->cRole,
+                         mComponentRole,
+                         OMX_MAX_STRINGNAME_SIZE - 1)) {
+@@ -217,6 +229,10 @@ OMX_ERRORTYPE SoftVideoDecoderOMXComponent::internalSetParameter(
+             OMX_VIDEO_PARAM_PORTFORMATTYPE *formatParams =
+                 (OMX_VIDEO_PARAM_PORTFORMATTYPE *)params;
+ 
++            if (!isValidOMXParam(formatParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (formatParams->nPortIndex > kMaxPortIndex) {
+                 return OMX_ErrorUndefined;
+             }
+@@ -240,6 +256,10 @@ OMX_ERRORTYPE SoftVideoDecoderOMXComponent::getConfig(
+         {
+             OMX_CONFIG_RECTTYPE *rectParams = (OMX_CONFIG_RECTTYPE *)params;
+ 
++            if (!isValidOMXParam(rectParams)) {
++                return OMX_ErrorBadParameter;
++            }
++
+             if (rectParams->nPortIndex != kOutputPortIndex) {
+                 return OMX_ErrorUndefined;
+             }
+-- 
+2.7.4
+

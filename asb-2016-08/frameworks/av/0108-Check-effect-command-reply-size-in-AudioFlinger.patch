@@ -1,0 +1,32 @@
+From 65a5abb07e1385e90cca81ae989bf351708d0468 Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Mon, 20 Jun 2016 15:22:52 -0700
+Subject: [PATCH 108/182] Check effect command reply size in AudioFlinger
+
+Bug: 29251553
+Change-Id: I1bcc1281f1f0542bb645f6358ce31631f2a8ffbf
+(cherry picked from commit 110bc9547a0c851ff1f20f5d7579b34f942947b8)
+---
+ services/audioflinger/Effects.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/services/audioflinger/Effects.cpp b/services/audioflinger/Effects.cpp
+index a8a5169..e751465 100644
+--- a/services/audioflinger/Effects.cpp
++++ b/services/audioflinger/Effects.cpp
+@@ -526,6 +526,12 @@ status_t AudioFlinger::EffectModule::command(uint32_t cmdCode,
+     if (mStatus != NO_ERROR) {
+         return mStatus;
+     }
++    if (cmdCode == EFFECT_CMD_GET_PARAM &&
++            (*replySize < sizeof(effect_param_t) ||
++                    ((effect_param_t *)pCmdData)->psize > *replySize - sizeof(effect_param_t))) {
++        android_errorWriteLog(0x534e4554, "29251553");
++        return -EINVAL;
++    }
+     status_t status = (*mEffectInterface)->command(mEffectInterface,
+                                                    cmdCode,
+                                                    cmdSize,
+-- 
+2.7.4
+

@@ -1,0 +1,92 @@
+From 0269d9c5d29efec99e4a844b5eefbde95dd8c632 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Fri, 13 Jun 2014 14:13:44 -0700
+Subject: [PATCH 047/182] Fail more gracefully on allocation failure
+
+Check allocations when the size is read from a file and might therefore
+be invalid.
+
+b/14388161
+
+Change-Id: Ia08cc0a6107f275a70e793ef3b50c0ce16ceeee0
+(cherry picked from commit 3878b990f7d53eae7c2cf9246b6ef2db5a049872)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 27 ++++++++++++++++++++-------
+ 1 file changed, 20 insertions(+), 7 deletions(-)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index be48afe..84149fa 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -366,7 +366,7 @@ MPEG4Extractor::~MPEG4Extractor() {
+     SINF *sinf = mFirstSINF;
+     while (sinf) {
+         SINF *next = sinf->next;
+-        delete sinf->IPMPData;
++        delete[] sinf->IPMPData;
+         delete sinf;
+         sinf = next;
+     }
+@@ -683,7 +683,11 @@ status_t MPEG4Extractor::parseDrmSINF(off64_t *offset, off64_t data_offset) {
+                 return ERROR_MALFORMED;
+             }
+             sinf->len = dataLen - 3;
+-            sinf->IPMPData = new char[sinf->len];
++            sinf->IPMPData = new (std::nothrow) char[sinf->len];
++            if (sinf->IPMPData == NULL) {
++                return ERROR_MALFORMED;
++            }
++            data_offset += 2;
+ 
+             if (mDataSource->readAt(data_offset + 2, sinf->IPMPData, sinf->len) < sinf->len) {
+                 return ERROR_IO;
+@@ -1077,7 +1081,10 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+                 return ERROR_MALFORMED;
+             }
+ 
+-            pssh.data = new uint8_t[pssh.datalen];
++            pssh.data = new (std::nothrow) uint8_t[pssh.datalen];
++            if (pssh.data == NULL) {
++                return ERROR_MALFORMED;
++            }
+             ALOGV("allocated pssh @ %p", pssh.data);
+             ssize_t requested = (ssize_t) pssh.datalen;
+             if (mDataSource->readAt(data_offset + 24, pssh.data, requested) < requested) {
+@@ -1743,8 +1750,7 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+             if ((chunk_size > SIZE_MAX) || (SIZE_MAX - chunk_size <= size)) {
+                 return ERROR_MALFORMED;
+             }
+-
+-            uint8_t *buffer = new uint8_t[size + chunk_size];
++            uint8_t *buffer = new (std::nothrow) uint8_t[size + chunk_size];
+             if (buffer == NULL) {
+                 return ERROR_MALFORMED;
+             }
+@@ -2037,7 +2043,10 @@ status_t MPEG4Extractor::parseMetaData(off64_t offset, size_t size) {
+         return ERROR_MALFORMED;
+     }
+ 
+-    uint8_t *buffer = new uint8_t[size + 1];
++    uint8_t *buffer = new (std::nothrow) uint8_t[size + 1];
++    if (buffer == NULL) {
++        return ERROR_MALFORMED;
++    }
+     if (mDataSource->readAt(
+                 offset, buffer, size) != (ssize_t)size) {
+         delete[] buffer;
+@@ -2502,7 +2511,11 @@ status_t MPEG4Source::start(MetaData *params) {
+ 
+     mGroup->add_buffer(new MediaBuffer(max_size));
+ 
+-    mSrcBuffer = new uint8_t[max_size];
++    mSrcBuffer = new (std::nothrow) uint8_t[max_size];
++    if (mSrcBuffer == NULL) {
++        // file probably specified a bad max size
++        return ERROR_MALFORMED;
++    }
+ 
+     mStarted = true;
+ 
+-- 
+2.7.4
+

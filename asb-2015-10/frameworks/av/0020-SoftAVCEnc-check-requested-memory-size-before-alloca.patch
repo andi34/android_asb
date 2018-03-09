@@ -1,0 +1,65 @@
+From 1616cf05b1c19c348da1b739797adc81b867ebca Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Sun, 16 Aug 2015 17:46:34 -0700
+Subject: [PATCH 020/182] SoftAVCEnc: check requested memory size before
+ allocation.
+
+Bug: 20674674
+
+Change-Id: If80186a7b9078e575d389220f3bebe9f7630a956
+(cherry picked from commit f6fe4340219a8e674f3250fe32d4697ec8184b24)
+---
+ media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp b/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp
+index 1d66120..4e11628 100644
+--- a/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp
++++ b/media/libstagefright/codecs/avc/enc/SoftAVCEncoder.cpp
+@@ -34,6 +34,10 @@
+ 
+ #include "SoftAVCEncoder.h"
+ 
++#ifndef INT32_MAX
++#define INT32_MAX   2147483647
++#endif
++
+ namespace android {
+ 
+ template<class T>
+@@ -257,6 +261,10 @@ OMX_ERRORTYPE SoftAVCEncoder::initEncParams() {
+     if (mVideoColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+         // Color conversion is needed.
+         CHECK(mInputFrameData == NULL);
++        if (((uint64_t)mVideoWidth * mVideoHeight) > ((uint64_t)INT32_MAX / 3)) {
++            ALOGE("Buffer size is too big.");
++            return OMX_ErrorUndefined;
++        }
+         mInputFrameData =
+             (uint8_t *) malloc((mVideoWidth * mVideoHeight * 3 ) >> 1);
+         CHECK(mInputFrameData != NULL);
+@@ -278,6 +286,10 @@ OMX_ERRORTYPE SoftAVCEncoder::initEncParams() {
+     int32_t nMacroBlocks = ((((mVideoWidth + 15) >> 4) << 4) *
+             (((mVideoHeight + 15) >> 4) << 4)) >> 8;
+     CHECK(mSliceGroup == NULL);
++    if ((size_t)nMacroBlocks > SIZE_MAX / sizeof(uint32_t)) {
++        ALOGE("requested memory size is too big.");
++        return OMX_ErrorUndefined;
++    }
+     mSliceGroup = (uint32_t *) malloc(sizeof(uint32_t) * nMacroBlocks);
+     CHECK(mSliceGroup != NULL);
+     for (int ii = 0, idx = 0; ii < nMacroBlocks; ++ii) {
+@@ -698,6 +710,10 @@ OMX_ERRORTYPE SoftAVCEncoder::internalSetParameter(
+             if (mStoreMetaDataInBuffers) {
+                 mVideoColorFormat == OMX_COLOR_FormatYUV420SemiPlanar;
+                 if (mInputFrameData == NULL) {
++                    if (((uint64_t)mVideoWidth * mVideoHeight) > ((uint64_t)INT32_MAX / 3)) {
++                        ALOGE("Buffer size is too big.");
++                        return OMX_ErrorUndefined;
++                    }
+                     mInputFrameData =
+                             (uint8_t *) malloc((mVideoWidth * mVideoHeight * 3 ) >> 1);
+                 }
+-- 
+2.7.4
+

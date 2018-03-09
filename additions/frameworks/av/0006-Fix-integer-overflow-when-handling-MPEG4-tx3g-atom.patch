@@ -1,0 +1,39 @@
+From 32b89dd4cab150e2ebbfa9ad8d14e75e37c71df7 Mon Sep 17 00:00:00 2001
+From: "Joshua J. Drake" <android-open-source@qoop.org>
+Date: Mon, 4 May 2015 18:29:08 -0500
+Subject: [PATCH 006/182] Fix integer overflow when handling MPEG4 tx3g atom
+
+When the sum of the 'size' and 'chunk_size' variables is larger than 2^32,
+an integer overflow occurs. Using the result value to allocate memory
+leads to an undersized buffer allocation and later a potentially
+exploitable heap corruption condition. Ensure that integer overflow does
+not occur.
+
+Bug: 20923261
+Change-Id: Id050a36b33196864bdd98b5ea24241f95a0b5d1f
+---
+ media/libstagefright/MPEG4Extractor.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index b29a160..1102865 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -1724,7 +1724,14 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+                 size = 0;
+             }
+ 
++            if (SIZE_MAX - chunk_size <= size) {
++                return ERROR_MALFORMED;
++            }
++
+             uint8_t *buffer = new uint8_t[size + chunk_size];
++            if (buffer == NULL) {
++                return ERROR_MALFORMED;
++            }
+ 
+             if (size > 0) {
+                 memcpy(buffer, data, size);
+-- 
+2.7.4
+

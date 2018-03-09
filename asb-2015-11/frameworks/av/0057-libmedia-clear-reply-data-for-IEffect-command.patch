@@ -1,0 +1,36 @@
+From a164f443317206f381696e048bf9a4d33de5f50c Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Wed, 26 Aug 2015 16:34:33 -0700
+Subject: [PATCH 057/182] libmedia: clear reply data for IEffect command
+
+Bug: 23540907
+Change-Id: Ib89afc6b273b0eb310bbc5a1bd92b1e3d407c249
+(cherry picked from commit 57bed83a539535bb64a33722fb67231119cb0618)
+---
+ media/libmedia/IEffect.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/media/libmedia/IEffect.cpp b/media/libmedia/IEffect.cpp
+index a303a8f..86c706a 100644
+--- a/media/libmedia/IEffect.cpp
++++ b/media/libmedia/IEffect.cpp
+@@ -151,14 +151,14 @@ status_t BnEffect::onTransact(
+             uint32_t cmdSize = data.readInt32();
+             char *cmd = NULL;
+             if (cmdSize) {
+-                cmd = (char *)malloc(cmdSize);
++                cmd = (char *)calloc(cmdSize, 1);
+                 data.read(cmd, cmdSize);
+             }
+             uint32_t replySize = data.readInt32();
+             uint32_t replySz = replySize;
+             char *resp = NULL;
+             if (replySize) {
+-                resp = (char *)malloc(replySize);
++                resp = (char *)calloc(replySize, 1);
+             }
+             status_t status = command(cmdCode, cmdSize, cmd, &replySz, resp);
+             reply->writeInt32(status);
+-- 
+2.7.4
+

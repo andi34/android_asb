@@ -1,0 +1,53 @@
+From 1ab00ce28d8854d87d208fd116ff003cbfec51fa Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Thu, 18 Feb 2016 08:25:47 -0800
+Subject: [PATCH 079/182] Get service by value instead of reference
+
+to prevent a cleared service binder from being used.
+
+Bug: 26040840
+Change-Id: Ifb5483c55b172d3553deb80dbe27f2204b86ecdb
+(cherry picked from commit 61a6d26aab95870279b274e565c1495748befde0)
+---
+ include/media/mediametadataretriever.h    | 2 +-
+ media/libmedia/mediametadataretriever.cpp | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/include/media/mediametadataretriever.h b/include/media/mediametadataretriever.h
+index 0df77c1..1acfac3 100644
+--- a/include/media/mediametadataretriever.h
++++ b/include/media/mediametadataretriever.h
+@@ -77,7 +77,7 @@ public:
+     const char* extractMetadata(int keyCode);
+ 
+ private:
+-    static const sp<IMediaPlayerService>& getService();
++    static const sp<IMediaPlayerService> getService();
+ 
+     class DeathNotifier: public IBinder::DeathRecipient
+     {
+diff --git a/media/libmedia/mediametadataretriever.cpp b/media/libmedia/mediametadataretriever.cpp
+index 110b94c..0857461 100644
+--- a/media/libmedia/mediametadataretriever.cpp
++++ b/media/libmedia/mediametadataretriever.cpp
+@@ -32,7 +32,7 @@ Mutex MediaMetadataRetriever::sServiceLock;
+ sp<IMediaPlayerService> MediaMetadataRetriever::sService;
+ sp<MediaMetadataRetriever::DeathNotifier> MediaMetadataRetriever::sDeathNotifier;
+ 
+-const sp<IMediaPlayerService>& MediaMetadataRetriever::getService()
++const sp<IMediaPlayerService> MediaMetadataRetriever::getService()
+ {
+     Mutex::Autolock lock(sServiceLock);
+     if (sService == 0) {
+@@ -59,7 +59,7 @@ const sp<IMediaPlayerService>& MediaMetadataRetriever::getService()
+ MediaMetadataRetriever::MediaMetadataRetriever()
+ {
+     ALOGV("constructor");
+-    const sp<IMediaPlayerService>& service(getService());
++    const sp<IMediaPlayerService> service(getService());
+     if (service == 0) {
+         ALOGE("failed to obtain MediaMetadataRetrieverService");
+         return;
+-- 
+2.7.4
+

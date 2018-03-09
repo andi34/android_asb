@@ -1,0 +1,42 @@
+From acb73db809c4f83c265878d9cdeaec85844f0248 Mon Sep 17 00:00:00 2001
+From: Chong Zhang <chz@google.com>
+Date: Fri, 15 May 2015 13:40:15 -0700
+Subject: [PATCH 048/182] stagefright: check IMemory::pointer() before using
+ the allocation
+
+bug: 19779574
+Change-Id: I4ffe8c3fadc07da211f421e75ee83010b01d9cbb
+(cherry picked from commit 8ec845c8fe0f03bc57c901bc484541bdd6a7cf80)
+---
+ media/libstagefright/ACodec.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/ACodec.cpp b/media/libstagefright/ACodec.cpp
+index 9fda07f..718e6c7 100644
+--- a/media/libstagefright/ACodec.cpp
++++ b/media/libstagefright/ACodec.cpp
+@@ -499,7 +499,9 @@ status_t ACodec::allocateBuffersOnPort(OMX_U32 portIndex) {
+ 
+             for (OMX_U32 i = 0; i < def.nBufferCountActual; ++i) {
+                 sp<IMemory> mem = mDealer[portIndex]->allocate(def.nBufferSize);
+-                CHECK(mem.get() != NULL);
++                if (mem == NULL || mem->pointer() == NULL) {
++                    return NO_MEMORY;
++                }
+ 
+                 BufferInfo info;
+                 info.mStatus = BufferInfo::OWNED_BY_US;
+@@ -756,7 +758,9 @@ status_t ACodec::allocateOutputMetaDataBuffers() {
+ 
+         sp<IMemory> mem = mDealer[kPortIndexOutput]->allocate(
+                 sizeof(struct VideoDecoderOutputMetaData));
+-        CHECK(mem.get() != NULL);
++        if (mem == NULL || mem->pointer() == NULL) {
++            return NO_MEMORY;
++        }
+         info.mData = new ABuffer(mem->pointer(), mem->size());
+ 
+         // we use useBuffer for metadata regardless of quirks
+-- 
+2.7.4
+

@@ -1,0 +1,33 @@
+From cfe53b32dc37e6b3f1363f1d121fb42cbbd9fee6 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Fri, 24 Mar 2017 14:04:05 -0700
+Subject: [PATCH 166/182] MPEG4Source: fix fragmented read.
+
+Test: passed CTS test DecoderTest#testDecodeFragmented
+Bug: 64314728
+Bug: 36571704
+Change-Id: I71ad6aaae473b03483f8405899d3178148597bba
+(cherry picked from commit ba9af7792dfed6e9b1b216aab91a97e713eec891)
+(cherry picked from commit 6b401a337674f2f22b7589534700a33187899869)
+CVE-2017-0774
+---
+ media/libstagefright/MPEG4Extractor.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 503f071..861bfae 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -2726,7 +2726,8 @@ status_t MPEG4Source::parseChunk(off64_t *offset) {
+ 
+                  while (true) {
+                      if (mDataSource->readAt(*offset, hdr, 8) < 8) {
+-                         return ERROR_END_OF_STREAM;
++                         // no more box to the end of file.
++                         break;
+                      }
+                      chunk_size = ntohl(hdr[0]);
+                      chunk_type = ntohl(hdr[1]);
+-- 
+2.7.4
+

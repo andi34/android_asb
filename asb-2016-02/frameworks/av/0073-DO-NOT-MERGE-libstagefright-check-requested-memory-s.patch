@@ -1,0 +1,73 @@
+From c70b5d04030872806ffee4ee2d34db745fb4a5bc Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Fri, 20 Nov 2015 10:34:35 -0800
+Subject: [PATCH 073/182] DO NOT MERGE - libstagefright: check requested memory
+ size before allocation for SoftMPEG4Encoder and SoftVPXEncoder.
+
+Bug: 25812794
+Change-Id: I96dc74734380d462583f6efa33d09946f9532809
+(cherry picked from commit 87f8cbb223ee516803dbb99699320c2484cbf3ba)
+(cherry picked from commit 6afc659b00c3f4a83b9f5f3c744b7119b33340b4)
+---
+ media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp | 11 ++++++++++-
+ media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp        |  8 ++++++++
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+index e02af90..9f03502 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+@@ -33,6 +33,10 @@
+ 
+ #include "SoftMPEG4Encoder.h"
+ 
++#ifndef INT32_MAX
++#define INT32_MAX   2147483647
++#endif
++
+ namespace android {
+ 
+ template<class T>
+@@ -149,7 +153,12 @@ OMX_ERRORTYPE SoftMPEG4Encoder::initEncParams() {
+ 
+     if (mVideoColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+         // Color conversion is needed.
+-        CHECK(mInputFrameData == NULL);
++        free(mInputFrameData);
++        mInputFrameData = NULL;
++        if (((uint64_t)mVideoWidth * mVideoHeight) > ((uint64_t)INT32_MAX / 3)) {
++            ALOGE("b/25812794, Buffer size is too big.");
++            return OMX_ErrorBadParameter;
++        }
+         mInputFrameData =
+             (uint8_t *) malloc((mVideoWidth * mVideoHeight * 3 ) >> 1);
+         CHECK(mInputFrameData != NULL);
+diff --git a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+index 8375cac..50eb6bf 100644
+--- a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
++++ b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+@@ -25,6 +25,10 @@
+ #include <media/stagefright/foundation/ADebug.h>
+ #include <media/stagefright/MediaDefs.h>
+ 
++#ifndef INT32_MAX
++#define INT32_MAX   2147483647
++#endif
++
+ namespace android {
+ 
+ 
+@@ -300,6 +304,10 @@ status_t SoftVPXEncoder::initEncoder() {
+ 
+     if (mColorFormat == OMX_COLOR_FormatYUV420SemiPlanar || mInputDataIsMeta) {
+         if (mConversionBuffer == NULL) {
++            if (((uint64_t)mWidth * mHeight) > ((uint64_t)INT32_MAX / 3)) {
++                ALOGE("b/25812794, Buffer size is too big.");
++                return UNKNOWN_ERROR;
++            }
+             mConversionBuffer = (uint8_t *)malloc(mWidth * mHeight * 3 / 2);
+             if (mConversionBuffer == NULL) {
+                 ALOGE("Allocating conversion buffer failed.");
+-- 
+2.7.4
+

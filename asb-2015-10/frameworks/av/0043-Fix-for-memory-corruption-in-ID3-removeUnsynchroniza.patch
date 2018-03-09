@@ -1,0 +1,28 @@
+From e8b6868958305f2e27ac353a6954a142c301175d Mon Sep 17 00:00:00 2001
+From: Neel Mehta <nmehta@google.com>
+Date: Fri, 14 Aug 2015 17:38:48 -0700
+Subject: [PATCH 043/182] Fix for memory corruption in
+ ID3::removeUnsynchronizationV2_4(). Bug: 23227354
+
+Change-Id: Iaa36cfda4fd84ca7e039f56086fd61b4118020db
+(cherry picked from commit 77e23413a539df16503e356bd4df4a952f3abc47)
+---
+ media/libstagefright/id3/ID3.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index fee3d16..5a490e9 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -349,7 +349,7 @@ bool ID3::removeUnsynchronizationV2_4(bool iTunesHack) {
+         if (flags & 1) {
+             // Strip data length indicator
+ 
+-            if (mSize < 14 || mSize - 14 < offset) {
++            if (mSize < 14 || mSize - 14 < offset || dataSize < 4) {
+                 return false;
+             }
+             memmove(&mData[offset + 10], &mData[offset + 14], mSize - offset - 14);
+-- 
+2.7.4
+

@@ -1,0 +1,74 @@
+From 25e8887ee610c8869ac54b2dfb105474849e562c Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Mon, 27 Jun 2016 13:55:14 -0700
+Subject: [PATCH 115/182] DO NOT MERGE - SoftMP3: memset safely
+
+Bug: 29422022
+Change-Id: I70c9e33269d16bf8c163815706ac24e18e34fe97
+(cherry picked from commit bce5cc9f9d071e1bd5c6c9194a3c8ee289d2d9a1)
+---
+ media/libstagefright/codecs/mp3dec/SoftMP3.cpp | 21 +++++++++++++++++----
+ media/libstagefright/codecs/mp3dec/SoftMP3.h   |  1 +
+ 2 files changed, 18 insertions(+), 4 deletions(-)
+
+diff --git a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+index 139af11..1221181 100644
+--- a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
++++ b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+@@ -118,6 +118,17 @@ void SoftMP3::initDecoder() {
+     mIsFirst = true;
+ }
+ 
++void *SoftMP3::memsetSafe(OMX_BUFFERHEADERTYPE *outHeader, int c, size_t len) {
++    if (len > outHeader->nAllocLen) {
++        ALOGE("memset buffer too small: got %lu, expected %zu", outHeader->nAllocLen, len);
++        android_errorWriteLog(0x534e4554, "29422022");
++        notify(OMX_EventError, OMX_ErrorUndefined, OUTPUT_BUFFER_TOO_SMALL, NULL);
++        mSignalledError = true;
++        return NULL;
++    }
++    return memset(outHeader->pBuffer, c, len);
++}
++
+ OMX_ERRORTYPE SoftMP3::internalGetParameter(
+         OMX_INDEXTYPE index, OMX_PTR params) {
+     switch (index) {
+@@ -245,7 +256,9 @@ void SoftMP3::onQueueFilled(OMX_U32 portIndex) {
+                 outHeader->nFilledLen =
+                     kPVMP3DecoderDelay * mNumChannels * sizeof(int16_t);
+ 
+-                memset(outHeader->pBuffer, 0, outHeader->nFilledLen);
++                if (!memsetSafe(outHeader, 0, outHeader->nFilledLen)) {
++                    return;
++                }
+             } else {
+                 // Since we never discarded frames from the start, we won't have
+                 // to add any padding at the end either.
+@@ -305,9 +318,9 @@ void SoftMP3::onQueueFilled(OMX_U32 portIndex) {
+ 
+             // This is recoverable, just ignore the current frame and
+             // play silence instead.
+-            memset(outHeader->pBuffer,
+-                   0,
+-                   mConfig->outputFrameSize * sizeof(int16_t));
++            if (!memsetSafe(outHeader, 0, mConfig->outputFrameSize * sizeof(int16_t))) {
++                return;
++            }
+ 
+             mConfig->inputBufferUsedLength = inHeader->nFilledLen;
+         } else if (mConfig->samplingRate != mSamplingRate
+diff --git a/media/libstagefright/codecs/mp3dec/SoftMP3.h b/media/libstagefright/codecs/mp3dec/SoftMP3.h
+index 4af91ea..3e30498 100644
+--- a/media/libstagefright/codecs/mp3dec/SoftMP3.h
++++ b/media/libstagefright/codecs/mp3dec/SoftMP3.h
+@@ -70,6 +70,7 @@ private:
+ 
+     void initPorts();
+     void initDecoder();
++    void *memsetSafe(OMX_BUFFERHEADERTYPE *outHeader, int c, size_t len);
+ 
+     DISALLOW_EVIL_CONSTRUCTORS(SoftMP3);
+ };
+-- 
+2.7.4
+

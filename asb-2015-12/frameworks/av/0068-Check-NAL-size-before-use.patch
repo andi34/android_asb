@@ -1,0 +1,45 @@
+From c714ba46d962408baf11394735d4dbf6f57db570 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Fri, 2 Oct 2015 15:12:00 -0700
+Subject: [PATCH 068/182] Check NAL size before use
+
+Bug: 24441553
+Bug: 24445122
+Change-Id: Ib7f025769adbafd5a2cb64fae5562a0a565945c2
+(cherry picked from commit 5d101298d8b0a78a1dc5bd26dbdada411f4ecd4d)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 13f487f..34d33f6 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -3307,7 +3307,10 @@ status_t MPEG4Source::read(
+             (const uint8_t *)mBuffer->data() + mBuffer->range_offset();
+ 
+         size_t nal_size = parseNALSize(src);
+-        if (mBuffer->range_length() < mNALLengthSize + nal_size) {
++        if (mNALLengthSize > SIZE_MAX - nal_size) {
++            ALOGE("b/24441553, b/24445122");
++        }
++        if (mBuffer->range_length() - mNALLengthSize < nal_size) {
+             ALOGE("incomplete NAL unit.");
+ 
+             mBuffer->release();
+@@ -3572,7 +3575,11 @@ status_t MPEG4Source::fragmentedRead(
+             (const uint8_t *)mBuffer->data() + mBuffer->range_offset();
+ 
+         size_t nal_size = parseNALSize(src);
+-        if (mBuffer->range_length() < mNALLengthSize + nal_size) {
++        if (mNALLengthSize > SIZE_MAX - nal_size) {
++            ALOGE("b/24441553, b/24445122");
++        }
++
++        if (mBuffer->range_length() - mNALLengthSize < nal_size) {
+             ALOGE("incomplete NAL unit.");
+ 
+             mBuffer->release();
+-- 
+2.7.4
+

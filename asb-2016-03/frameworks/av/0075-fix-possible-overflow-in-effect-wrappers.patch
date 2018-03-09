@@ -1,0 +1,53 @@
+From adef7a97b87ab8506dce66e293127db483cbe933 Mon Sep 17 00:00:00 2001
+From: Eric Laurent <elaurent@google.com>
+Date: Fri, 8 Jan 2016 10:52:38 -0800
+Subject: [PATCH 075/182] fix possible overflow in effect wrappers.
+
+Add checks on parameter size field in effect command handlers
+to avoid overflow leading to invalid comparison with min allowed
+size for command and reply buffers.
+
+Bug: 26347509.
+Change-Id: I20e6a9b6de8e5172b957caa1ac9410b9752efa4d
+(cherry picked from commit ad1bd92a49d78df6bc6e75bee68c517c1326f3cf)
+(cherry picked from commit 9e29523b9537983b4c4b205ff868d0b3bca0383b)
+---
+ media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp | 5 ++++-
+ media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp | 5 ++++-
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+index 9fcfba3..5befff8 100644
+--- a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
++++ b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+@@ -2809,7 +2809,10 @@ int Effect_command(effect_handle_t  self,
+             //ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_GET_PARAM start");
+ 
+             effect_param_t *p = (effect_param_t *)pCmdData;
+-
++            if (SIZE_MAX - sizeof(effect_param_t) < (size_t)p->psize) {
++                android_errorWriteLog(0x534e4554, "26347509");
++                return -EINVAL;
++            }
+             if (pCmdData == NULL || cmdSize < sizeof(effect_param_t) ||
+                     cmdSize < (sizeof(effect_param_t) + p->psize) ||
+                     pReplyData == NULL || replySize == NULL ||
+diff --git a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+index 2e22532..7ab16a1 100644
+--- a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
++++ b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+@@ -1953,7 +1953,10 @@ int Reverb_command(effect_handle_t  self,
+             //ALOGV("\tReverb_command cmdCode Case: "
+             //        "EFFECT_CMD_GET_PARAM start");
+             effect_param_t *p = (effect_param_t *)pCmdData;
+-
++            if (SIZE_MAX - sizeof(effect_param_t) < (size_t)p->psize) {
++                android_errorWriteLog(0x534e4554, "26347509");
++                return -EINVAL;
++            }
+             if (pCmdData == NULL || cmdSize < sizeof(effect_param_t) ||
+                     cmdSize < (sizeof(effect_param_t) + p->psize) ||
+                     pReplyData == NULL || replySize == NULL ||
+-- 
+2.7.4
+

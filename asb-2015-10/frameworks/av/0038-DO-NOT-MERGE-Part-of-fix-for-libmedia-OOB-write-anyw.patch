@@ -1,0 +1,45 @@
+From c0bccf3615722dc1c6ed2899b175828baf650219 Mon Sep 17 00:00:00 2001
+From: Jeff Tinker <jtinker@google.com>
+Date: Mon, 17 Aug 2015 17:57:47 -0700
+Subject: [PATCH 038/182] DO NOT MERGE Part of fix for libmedia OOB write
+ anywhere
+
+Clarify that decrypt destination is not a pointer for
+secure case.
+
+b/23223325
+
+Change-Id: I642dcf790a9eb9e32175f3e0d8f040c82228e3ac
+(cherry picked from commit ed555d70d80964f40563d89a4e6d6a80f83f4b89)
+---
+ media/libmedia/ICrypto.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/media/libmedia/ICrypto.cpp b/media/libmedia/ICrypto.cpp
+index 98b183a..55e9695 100644
+--- a/media/libmedia/ICrypto.cpp
++++ b/media/libmedia/ICrypto.cpp
+@@ -247,9 +247,9 @@ status_t BnCrypto::onTransact(
+                     subSamples,
+                     sizeof(CryptoPlugin::SubSample) * numSubSamples);
+ 
+-            void *dstPtr;
++            void *secureBufferId, dstPtr;
+             if (secure) {
+-                dstPtr = (void *)data.readIntPtr();
++                secureBufferId = (void *)data.readIntPtr();
+             } else {
+                 dstPtr = malloc(totalSize);
+             }
+@@ -262,7 +262,7 @@ status_t BnCrypto::onTransact(
+                     mode,
+                     srcData,
+                     subSamples, numSubSamples,
+-                    dstPtr,
++                    secure ? secureBufferId : dstPtr,
+                     &errorDetailMsg);
+ 
+             reply->writeInt32(result);
+-- 
+2.7.4
+

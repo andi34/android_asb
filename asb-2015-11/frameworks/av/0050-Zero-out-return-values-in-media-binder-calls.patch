@@ -1,0 +1,57 @@
+From 86ba4beaa5356aa4fece0dfda2d613fde5ce46de Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Wed, 2 Sep 2015 16:46:59 -0700
+Subject: [PATCH 050/182] Zero out return values in media binder calls
+
+More specifically when handling:
+* GET_STREAM_VOLUME in IAudioPolicyService, and
+* GET_CURRENT_POSITION and GET_DURATION in IMediaPlayer
+
+This prevents leaking uninitialized values across binder in error cases.
+
+Bug: 23756261
+Change-Id: I0ffd900ab12b685b0611259ade4a3efb1ec5defe
+(cherry picked from commit 892354335d49f0b9fcd10e20e0c13e3cd0f1f1cb)
+---
+ media/libmedia/IAudioPolicyService.cpp | 2 +-
+ media/libmedia/IMediaPlayer.cpp        | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/media/libmedia/IAudioPolicyService.cpp b/media/libmedia/IAudioPolicyService.cpp
+index 4be3c09..f4e65c5 100644
+--- a/media/libmedia/IAudioPolicyService.cpp
++++ b/media/libmedia/IAudioPolicyService.cpp
+@@ -566,7 +566,7 @@ status_t BnAudioPolicyService::onTransact(
+             audio_stream_type_t stream =
+                     static_cast <audio_stream_type_t>(data.readInt32());
+             audio_devices_t device = static_cast <audio_devices_t>(data.readInt32());
+-            int index;
++            int index = 0;
+             status_t status = getStreamVolumeIndex(stream, &index, device);
+             reply->writeInt32(index);
+             reply->writeInt32(static_cast <uint32_t>(status));
+diff --git a/media/libmedia/IMediaPlayer.cpp b/media/libmedia/IMediaPlayer.cpp
+index 9b57902..2a5c7a7 100644
+--- a/media/libmedia/IMediaPlayer.cpp
++++ b/media/libmedia/IMediaPlayer.cpp
+@@ -423,7 +423,7 @@ status_t BnMediaPlayer::onTransact(
+         } break;
+         case GET_CURRENT_POSITION: {
+             CHECK_INTERFACE(IMediaPlayer, data, reply);
+-            int msec;
++            int msec = 0;
+             status_t ret = getCurrentPosition(&msec);
+             reply->writeInt32(msec);
+             reply->writeInt32(ret);
+@@ -431,7 +431,7 @@ status_t BnMediaPlayer::onTransact(
+         } break;
+         case GET_DURATION: {
+             CHECK_INTERFACE(IMediaPlayer, data, reply);
+-            int msec;
++            int msec = 0;
+             status_t ret = getDuration(&msec);
+             reply->writeInt32(msec);
+             reply->writeInt32(ret);
+-- 
+2.7.4
+

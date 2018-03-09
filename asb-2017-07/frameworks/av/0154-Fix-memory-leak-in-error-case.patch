@@ -1,0 +1,29 @@
+From 4ad5b9142c291f07103b423582787fd919861334 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Fri, 12 May 2017 10:45:14 -0700
+Subject: [PATCH 154/182] Fix memory leak in error case
+
+Bug: 37239013
+AOSP-Change-Id: Ic33e0f7ed946d0729efa46f69aff1a5d35e81b1e
+(cherry picked from commit ab34612a31e82b713ca0ac043e14f68f3788fbda)
+
+Change-Id: I8292502e9668ccafb298e29a13f226b3f2785be6
+---
+ media/libstagefright/MPEG4Extractor.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 4a00f7a..abd2e13 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -1140,6 +1140,7 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+             ALOGV("allocated pssh @ %p", pssh.data);
+             ssize_t requested = (ssize_t) pssh.datalen;
+             if (mDataSource->readAt(data_offset + 24, pssh.data, requested) < requested) {
++                delete[] pssh.data;
+                 return ERROR_IO;
+             }
+             mPssh.push_back(pssh);
+-- 
+2.7.4
+

@@ -1,0 +1,39 @@
+From 5db1e75d1a29b49cdd283228725323ceefba4089 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Thu, 4 Jun 2015 10:40:23 -0700
+Subject: [PATCH 035/182] SampleTable: fix integer overflow checks.
+
+Bug: 20139950
+Bug: 22935234
+(cherry picked from commit a105482ae577852ffd08ce88ae5d1ba81db875ac)
+
+Change-Id: I408d261de1a6dd5c4343bcf3a7dfd8a259e0e2f3
+---
+ media/libstagefright/SampleTable.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/SampleTable.cpp b/media/libstagefright/SampleTable.cpp
+index a414d2b..116f358 100644
+--- a/media/libstagefright/SampleTable.cpp
++++ b/media/libstagefright/SampleTable.cpp
+@@ -341,7 +341,7 @@ status_t SampleTable::setTimeToSampleParams(
+     }
+ 
+     mTimeToSampleCount = U32_AT(&header[4]);
+-    uint64_t allocSize = mTimeToSampleCount * 2 * (uint64_t)sizeof(uint32_t);
++    uint64_t allocSize = (uint64_t)mTimeToSampleCount * 2 * sizeof(uint32_t);
+     if (allocSize > SIZE_MAX) {
+         return ERROR_OUT_OF_RANGE;
+     }
+@@ -387,7 +387,7 @@ status_t SampleTable::setCompositionTimeToSampleParams(
+     }
+ 
+     mNumCompositionTimeDeltaEntries = numEntries;
+-    uint64_t allocSize = numEntries * 2 * (uint64_t)sizeof(uint32_t);
++    uint64_t allocSize = (uint64_t)numEntries * 2 * sizeof(uint32_t);
+     if (allocSize > SIZE_MAX) {
+         return ERROR_OUT_OF_RANGE;
+     }
+-- 
+2.7.4
+

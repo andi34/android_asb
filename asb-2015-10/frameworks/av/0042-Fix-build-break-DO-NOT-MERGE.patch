@@ -1,0 +1,28 @@
+From 570756d8261badef49698b01cdc0d7fa780dd0b4 Mon Sep 17 00:00:00 2001
+From: Jeff Tinker <jtinker@google.com>
+Date: Fri, 21 Aug 2015 09:58:12 -0700
+Subject: [PATCH 042/182] Fix build break DO NOT MERGE
+
+related-to-bug: 23223325
+
+Change-Id: I7b09712b5f18912abddd50b75f6edaf860e894c1
+---
+ media/libmedia/ICrypto.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libmedia/ICrypto.cpp b/media/libmedia/ICrypto.cpp
+index 55e9695..bff4639 100644
+--- a/media/libmedia/ICrypto.cpp
++++ b/media/libmedia/ICrypto.cpp
+@@ -247,7 +247,7 @@ status_t BnCrypto::onTransact(
+                     subSamples,
+                     sizeof(CryptoPlugin::SubSample) * numSubSamples);
+ 
+-            void *secureBufferId, dstPtr;
++            void *secureBufferId, *dstPtr;
+             if (secure) {
+                 secureBufferId = (void *)data.readIntPtr();
+             } else {
+-- 
+2.7.4
+

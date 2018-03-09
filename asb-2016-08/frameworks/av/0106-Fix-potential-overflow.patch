@@ -1,0 +1,41 @@
+From 299015cfcb1f77d73d8a52679477aeeaed9cab1b Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 7 Jun 2016 15:48:07 -0700
+Subject: [PATCH 106/182] Fix potential overflow
+
+Bug: 28533562
+Change-Id: I798ab24caa4c81f3ba564cad7c9ee019284fb702
+(cherry picked from commit d0090759e79208d7203280166018bb7d5d4f9d02)
+---
+ media/libstagefright/codecs/on2/h264dec/source/h264bsd_dpb.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_dpb.c b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_dpb.c
+index 9517d0a..799bd16 100755
+--- a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_dpb.c
++++ b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_dpb.c
+@@ -60,6 +60,7 @@
+ #include "h264bsd_util.h"
+ #include "basetype.h"
+ 
++#include <log/log.h>
+ /*------------------------------------------------------------------------------
+     2. External compiler flags
+ --------------------------------------------------------------------------------
+@@ -998,6 +999,13 @@ u32 h264bsdInitDpb(
+     ASSERT(maxFrameNum);
+     ASSERT(dpbSize);
+ 
++    // see comment in loop below about size calculation
++    if (picSizeInMbs > (UINT32_MAX - 32 - 15) / 384) {
++        ALOGE("b/28533562");
++        android_errorWriteLog(0x534e4554, "28533562");
++        return(MEMORY_ALLOCATION_ERROR);
++    }
++
+     dpb->maxLongTermFrameIdx = NO_LONG_TERM_FRAME_INDICES;
+     dpb->maxRefFrames        = MAX(maxRefFrames, 1);
+     if (noReordering)
+-- 
+2.7.4
+

@@ -1,0 +1,79 @@
+From ff687ba081c4cc5d7627797c473939f20df54a41 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Sat, 12 Sep 2015 15:40:49 +0200
+Subject: [PATCH 001/182] Guard against codecinfo overflow
+
+CVE-2015-3861: Denial of Service Vulnerability in Mediaserver
+
+Bug: 21296336
+Change-Id: I78be5141b3108142f12d7cb94839fa50f776d84a
+---
+ media/libstagefright/MetaData.cpp                   |  7 ++++++-
+ media/libstagefright/matroska/MatroskaExtractor.cpp | 15 ++++++++++++++-
+ 2 files changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/MetaData.cpp b/media/libstagefright/MetaData.cpp
+index 7b60afc..f870b98 100644
+--- a/media/libstagefright/MetaData.cpp
++++ b/media/libstagefright/MetaData.cpp
+@@ -261,7 +261,12 @@ void MetaData::typed_data::setData(
+ 
+     mType = type;
+     allocateStorage(size);
+-    memcpy(storage(), data, size);
++    void *dst = storage();
++    if (!dst) {
++        ALOGE("Couldn't allocate %zu bytes for item", size);
++        return;
++    }
++    memcpy(dst, data, size);
+ }
+ 
+ void MetaData::typed_data::getData(
+diff --git a/media/libstagefright/matroska/MatroskaExtractor.cpp b/media/libstagefright/matroska/MatroskaExtractor.cpp
+index dcb1cda..cf20428 100644
+--- a/media/libstagefright/matroska/MatroskaExtractor.cpp
++++ b/media/libstagefright/matroska/MatroskaExtractor.cpp
+@@ -799,25 +799,38 @@ status_t addVorbisCodecInfo(
+     size_t offset = 1;
+     size_t len1 = 0;
+     while (offset < codecPrivateSize && codecPrivate[offset] == 0xff) {
++        if (len1 > (SIZE_MAX - 0xff)) {
++            return ERROR_MALFORMED; // would overflow
++        }
+         len1 += 0xff;
+         ++offset;
+     }
+     if (offset >= codecPrivateSize) {
+         return ERROR_MALFORMED;
+     }
++    if (len1 > (SIZE_MAX - codecPrivate[offset])) {
++        return ERROR_MALFORMED; // would overflow
++    }
+     len1 += codecPrivate[offset++];
+ 
+     size_t len2 = 0;
+     while (offset < codecPrivateSize && codecPrivate[offset] == 0xff) {
++        if (len2 > (SIZE_MAX - 0xff)) {
++            return ERROR_MALFORMED; // would overflow
++        }
+         len2 += 0xff;
+         ++offset;
+     }
+     if (offset >= codecPrivateSize) {
+         return ERROR_MALFORMED;
+     }
++    if (len2 > (SIZE_MAX - codecPrivate[offset])) {
++        return ERROR_MALFORMED; // would overflow
++    }
+     len2 += codecPrivate[offset++];
+ 
+-    if (codecPrivateSize < offset + len1 + len2) {
++    if (len1 > SIZE_MAX - len2 || offset > SIZE_MAX - (len1 + len2) ||
++            codecPrivateSize < offset + len1 + len2) {
+         return ERROR_MALFORMED;
+     }
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,115 @@
+From 0702359ad90a8193602519e9916aad04b1bcbe2a Mon Sep 17 00:00:00 2001
+From: Wonsik Kim <wonsik@google.com>
+Date: Tue, 8 Sep 2015 17:32:28 +0900
+Subject: [PATCH 063/182] DO NOT MERGE NuCachedSource2: fix possible erroneous
+ early free
+
+Because the constructor of NuCachedSource2 sent a message to
+AHandlerReflector object, AHandlerReflector::onMessageReceived could
+have executed just before the object gets wrapped in a strong
+pointer, resulting in erroneous early free. Fix the issue by using
+static Create function to ensure the message is sent after the
+object is wrapped in a sp.
+
+Bug: 23882800
+Change-Id: I38a9d7a3083f184b4c81d0b00ba1661721278855
+(cherry picked from commit c894f81bdf106f648561e569e0dc97fc6046115b)
+---
+ media/libstagefright/AwesomePlayer.cpp         |  4 ++--
+ media/libstagefright/DataSource.cpp            |  2 +-
+ media/libstagefright/NuCachedSource2.cpp       | 15 ++++++++++++---
+ media/libstagefright/include/NuCachedSource2.h |  7 ++++++-
+ 4 files changed, 21 insertions(+), 7 deletions(-)
+
+diff --git a/media/libstagefright/AwesomePlayer.cpp b/media/libstagefright/AwesomePlayer.cpp
+index 130207d..fe9f83f 100644
+--- a/media/libstagefright/AwesomePlayer.cpp
++++ b/media/libstagefright/AwesomePlayer.cpp
+@@ -2218,11 +2218,11 @@ status_t AwesomePlayer::finishSetDataSource_l() {
+             // The widevine extractor does its own caching.
+ 
+ #if 0
+-            mCachedSource = new NuCachedSource2(
++            mCachedSource = NuCachedSource2::Create(
+                     new ThrottledSource(
+                         mConnectingDataSource, 50 * 1024 /* bytes/sec */));
+ #else
+-            mCachedSource = new NuCachedSource2(
++            mCachedSource = NuCachedSource2::Create(
+                     mConnectingDataSource,
+                     cacheConfig.isEmpty() ? NULL : cacheConfig.string(),
+                     disconnectAtHighwatermark);
+diff --git a/media/libstagefright/DataSource.cpp b/media/libstagefright/DataSource.cpp
+index 97987e2..5531ea74 100644
+--- a/media/libstagefright/DataSource.cpp
++++ b/media/libstagefright/DataSource.cpp
+@@ -212,7 +212,7 @@ sp<DataSource> DataSource::CreateFromURI(
+                         &copy, &cacheConfig, &disconnectAtHighwatermark);
+             }
+ 
+-            source = new NuCachedSource2(
++            source = NuCachedSource2::Create(
+                     httpSource,
+                     cacheConfig.isEmpty() ? NULL : cacheConfig.string());
+         } else {
+diff --git a/media/libstagefright/NuCachedSource2.cpp b/media/libstagefright/NuCachedSource2.cpp
+index 05e599b..270d64a 100644
+--- a/media/libstagefright/NuCachedSource2.cpp
++++ b/media/libstagefright/NuCachedSource2.cpp
+@@ -214,9 +214,6 @@ NuCachedSource2::NuCachedSource2(
+     mLooper->setName("NuCachedSource2");
+     mLooper->registerHandler(mReflector);
+     mLooper->start();
+-
+-    Mutex::Autolock autoLock(mLock);
+-    (new AMessage(kWhatFetchMore, mReflector->id()))->post();
+ }
+ 
+ NuCachedSource2::~NuCachedSource2() {
+@@ -227,6 +224,18 @@ NuCachedSource2::~NuCachedSource2() {
+     mCache = NULL;
+ }
+ 
++// static
++sp<NuCachedSource2> NuCachedSource2::Create(
++        const sp<DataSource> &source,
++        const char *cacheConfig,
++        bool disconnectAtHighwatermark) {
++    sp<NuCachedSource2> instance = new NuCachedSource2(
++            source, cacheConfig, disconnectAtHighwatermark);
++    Mutex::Autolock autoLock(instance->mLock);
++    (new AMessage(kWhatFetchMore, instance->mReflector->id()))->post();
++    return instance;
++}
++
+ status_t NuCachedSource2::getEstimatedBandwidthKbps(int32_t *kbps) {
+     if (mSource->flags() & kIsHTTPBasedSource) {
+         HTTPBase* source = static_cast<HTTPBase *>(mSource.get());
+diff --git a/media/libstagefright/include/NuCachedSource2.h b/media/libstagefright/include/NuCachedSource2.h
+index 5db4b4b..949a49e 100644
+--- a/media/libstagefright/include/NuCachedSource2.h
++++ b/media/libstagefright/include/NuCachedSource2.h
+@@ -28,7 +28,7 @@ struct ALooper;
+ struct PageCache;
+ 
+ struct NuCachedSource2 : public DataSource {
+-    NuCachedSource2(
++    static sp<NuCachedSource2> Create(
+             const sp<DataSource> &source,
+             const char *cacheConfig = NULL,
+             bool disconnectAtHighwatermark = false);
+@@ -70,6 +70,11 @@ protected:
+ private:
+     friend struct AHandlerReflector<NuCachedSource2>;
+ 
++    NuCachedSource2(
++            const sp<DataSource> &source,
++            const char *cacheConfig,
++            bool disconnectAtHighwatermark);
++
+     enum {
+         kPageSize                       = 65536,
+         kDefaultHighWaterThreshold      = 20 * 1024 * 1024,
+-- 
+2.7.4
+

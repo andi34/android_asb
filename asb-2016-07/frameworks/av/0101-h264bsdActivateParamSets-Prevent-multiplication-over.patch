@@ -1,0 +1,61 @@
+From 2a0367a205ce206f3fbd122553b625a290b92f52 Mon Sep 17 00:00:00 2001
+From: Pawin Vongmasa <pawin@google.com>
+Date: Wed, 11 May 2016 16:08:21 -0700
+Subject: [PATCH 101/182] h264bsdActivateParamSets: Prevent multiplication
+ overflow.
+
+Report MEMORY_ALLOCATION_ERROR if pStorage->picSizeInMbs would
+exceed UINT32_MAX bytes.
+
+Bug: 28532266
+Change-Id: Ia6f11efb18818afcdb5fa2a38a14f2a2d8c8447a
+(cherry picked from commit 87277aac64a21461b657298dcdcb809737347980)
+---
+ .../codecs/on2/h264dec/source/h264bsd_storage.c    | 24 +++++++++++++++++++---
+ 1 file changed, 21 insertions(+), 3 deletions(-)
+
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_storage.c b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_storage.c
+index 3234754..ff7a42a 100755
+--- a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_storage.c
++++ b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_storage.c
+@@ -58,6 +58,10 @@
+     3. Module defines
+ ------------------------------------------------------------------------------*/
+ 
++#ifndef UINT32_MAX
++#define UINT32_MAX       (4294967295U)
++#endif
++
+ /*------------------------------------------------------------------------------
+     4. Local function prototypes
+ ------------------------------------------------------------------------------*/
+@@ -326,9 +330,23 @@ u32 h264bsdActivateParamSets(storage_t *pStorage, u32 ppsId, u32 isIdr)
+         pStorage->activePps = pStorage->pps[ppsId];
+         pStorage->activeSpsId = pStorage->activePps->seqParameterSetId;
+         pStorage->activeSps = pStorage->sps[pStorage->activeSpsId];
+-        pStorage->picSizeInMbs =
+-            pStorage->activeSps->picWidthInMbs *
+-            pStorage->activeSps->picHeightInMbs;
++
++        /* report error before multiplication to prevent integer overflow */
++        if (pStorage->activeSps->picWidthInMbs == 0)
++        {
++            pStorage->picSizeInMbs = 0;
++        }
++        else if (pStorage->activeSps->picHeightInMbs >
++                 UINT32_MAX / pStorage->activeSps->picWidthInMbs)
++        {
++            return(MEMORY_ALLOCATION_ERROR);
++        }
++        else
++        {
++            pStorage->picSizeInMbs =
++                pStorage->activeSps->picWidthInMbs *
++                pStorage->activeSps->picHeightInMbs;
++        }
+ 
+         pStorage->currImage->width = pStorage->activeSps->picWidthInMbs;
+         pStorage->currImage->height = pStorage->activeSps->picHeightInMbs;
+-- 
+2.7.4
+

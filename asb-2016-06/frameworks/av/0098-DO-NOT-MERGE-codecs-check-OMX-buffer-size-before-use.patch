@@ -1,0 +1,48 @@
+From 832d1c18cd8fa397d18938b1ad6aa20169023af0 Mon Sep 17 00:00:00 2001
+From: Wonsik Kim <wonsik@google.com>
+Date: Wed, 30 Mar 2016 17:13:00 +0900
+Subject: [PATCH 098/182] DO NOT MERGE codecs: check OMX buffer size before use
+ in vorbisdec
+
+Bug: 27833616
+Change-Id: I1ccdd16a00741da072527a6d13e87fd7c7fe8c54
+---
+ media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp b/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp
+index a6256c1..ec3d972 100644
+--- a/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp
++++ b/media/libstagefright/codecs/vorbis/dec/SoftVorbis.cpp
+@@ -271,6 +271,12 @@ void SoftVorbis::onQueueFilled(OMX_U32 portIndex) {
+ 
+         const uint8_t *data = header->pBuffer + header->nOffset;
+         size_t size = header->nFilledLen;
++        if (size < 7) {
++            ALOGE("Too small input buffer: %zu bytes", size);
++            android_errorWriteLog(0x534e4554, "27833616");
++            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
++            return;
++        }
+ 
+         ogg_buffer buf;
+         ogg_reference ref;
+@@ -371,9 +377,14 @@ void SoftVorbis::onQueueFilled(OMX_U32 portIndex) {
+         if (err != 0) {
+             ALOGW("vorbis_dsp_synthesis returned %d", err);
+         } else {
++            size_t numSamplesPerBuffer = kMaxNumSamplesPerBuffer;
++            if (numSamplesPerBuffer > outHeader->nAllocLen / sizeof(int16_t)) {
++                numSamplesPerBuffer = outHeader->nAllocLen / sizeof(int16_t);
++                android_errorWriteLog(0x534e4554, "27833616");
++            }
+             numFrames = vorbis_dsp_pcmout(
+                     mState, (int16_t *)outHeader->pBuffer,
+-                    kMaxNumSamplesPerBuffer);
++                    (numSamplesPerBuffer / mVi->channels));
+ 
+             if (numFrames < 0) {
+                 ALOGE("vorbis_dsp_pcmout returned %d", numFrames);
+-- 
+2.7.4
+

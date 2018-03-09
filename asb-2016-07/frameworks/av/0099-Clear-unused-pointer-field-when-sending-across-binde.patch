@@ -1,0 +1,27 @@
+From 3303db0768b19e918dd1f389a7905c6d28bd9180 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 2 May 2016 14:12:34 -0700
+Subject: [PATCH 099/182] Clear unused pointer field when sending across binder
+
+Bug: 28377502
+Change-Id: Iad5ebfb0a9ef89f09755bb332579dbd3534f9c98
+(cherry picked from commit e663be8d475ec6035a1a4257b208549b4375fa08)
+---
+ media/libmediaplayerservice/MetadataRetrieverClient.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/media/libmediaplayerservice/MetadataRetrieverClient.cpp b/media/libmediaplayerservice/MetadataRetrieverClient.cpp
+index 348957f..7e90924 100644
+--- a/media/libmediaplayerservice/MetadataRetrieverClient.cpp
++++ b/media/libmediaplayerservice/MetadataRetrieverClient.cpp
+@@ -212,6 +212,7 @@ sp<IMemory> MetadataRetrieverClient::getFrameAtTime(int64_t timeUs, int option)
+     ALOGV("rotation: %d", frameCopy->mRotationAngle);
+     frameCopy->mData = (uint8_t *)frameCopy + sizeof(VideoFrame);
+     memcpy(frameCopy->mData, frame->mData, frame->mSize);
++    frameCopy->mData = 0;
+     delete frame;  // Fix memory leakage
+     return mThumbnail;
+ }
+-- 
+2.7.4
+

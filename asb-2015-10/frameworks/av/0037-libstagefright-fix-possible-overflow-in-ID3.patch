@@ -1,0 +1,47 @@
+From 4302151d647a8d1a6526386802790506c20dce12 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Wed, 12 Aug 2015 10:41:00 -0700
+Subject: [PATCH 037/182] libstagefright: fix possible overflow in ID3.
+
+Bug: 23129786
+Change-Id: I2e6b7a6927aa4362ab49dd6824bbb1abf7b4e661
+(cherry picked from commit 09da86913ca97d7a818a8917b6601527e5e18a24)
+---
+ media/libstagefright/id3/ID3.cpp | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index 6681215..cb09b82 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -327,7 +327,7 @@ bool ID3::removeUnsynchronizationV2_4(bool iTunesHack) {
+     size_t oldSize = mSize;
+ 
+     size_t offset = 0;
+-    while (offset + 10 <= mSize) {
++    while (mSize >= 10 && offset <= mSize - 10) {
+         if (!memcmp(&mData[offset], "\0\0\0\0", 4)) {
+             break;
+         }
+@@ -339,7 +339,7 @@ bool ID3::removeUnsynchronizationV2_4(bool iTunesHack) {
+             return false;
+         }
+ 
+-        if (offset + dataSize + 10 > mSize) {
++        if (dataSize > mSize - 10 - offset) {
+             return false;
+         }
+ 
+@@ -349,6 +349,9 @@ bool ID3::removeUnsynchronizationV2_4(bool iTunesHack) {
+         if (flags & 1) {
+             // Strip data length indicator
+ 
++            if (mSize < 14 || mSize - 14 < offset) {
++                return false;
++            }
+             memmove(&mData[offset + 10], &mData[offset + 14], mSize - offset - 14);
+             mSize -= 4;
+             dataSize -= 4;
+-- 
+2.7.4
+

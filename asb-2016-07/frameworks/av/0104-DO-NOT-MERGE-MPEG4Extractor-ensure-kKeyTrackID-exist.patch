@@ -1,0 +1,57 @@
+From 2c87d9ba4f9902ee656710ccd2c6617c6ed7cb2a Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Fri, 28 Aug 2015 10:35:35 -0700
+Subject: [PATCH 104/182] DO NOT MERGE MPEG4Extractor: ensure kKeyTrackID
+ exists before creating an MPEG4Source as track.
+
+GenericSource: return error when no track exists.
+
+SampleIterator: make sure mSamplesPerChunk is not zero before using it as divisor.
+
+Bug: 21657957
+Bug: 23705695
+Bug: 22802344
+Bug: 28799341
+Change-Id: I7664992ade90b935d3f255dcd43ecc2898f30b04
+(cherry picked from commit 0386c91b8a910a134e5898ffa924c1b6c7560b13)
+(cherry picked from commit b016207fc2442420e8d3a8633575ffe4fc29fef3)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 5 +++++
+ media/libstagefright/SampleIterator.cpp | 5 +++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 5483abb..439c010 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -883,6 +883,11 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+             }
+ 
+             if (isTrack) {
++                int32_t trackId;
++                // There must be exact one track header per track.
++                if (!mLastTrack->meta->findInt32(kKeyTrackID, &trackId)) {
++                    mLastTrack->skipTrack = true;
++                }
+                 if (mLastTrack->skipTrack) {
+                     Track *cur = mFirstTrack;
+ 
+diff --git a/media/libstagefright/SampleIterator.cpp b/media/libstagefright/SampleIterator.cpp
+index eae721b..e85289e 100644
+--- a/media/libstagefright/SampleIterator.cpp
++++ b/media/libstagefright/SampleIterator.cpp
+@@ -84,6 +84,11 @@ status_t SampleIterator::seekTo(uint32_t sampleIndex) {
+ 
+     CHECK(sampleIndex < mStopChunkSampleIndex);
+ 
++    if (mSamplesPerChunk == 0) {
++        ALOGE("b/22802344");
++        return ERROR_MALFORMED;
++    }
++
+     uint32_t chunk =
+         (sampleIndex - mFirstChunkSampleIndex) / mSamplesPerChunk
+         + mFirstChunk;
+-- 
+2.7.4
+

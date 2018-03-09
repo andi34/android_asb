@@ -1,0 +1,145 @@
+From e174797104e6b456e3af32574f88724fae55d4a3 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Mon, 28 Sep 2015 11:32:23 -0700
+Subject: [PATCH 070/182] DO NOT MERGE - OMX: allow only secure codec to
+ remotely call allocateBuffer.
+
+Bug: 24310423
+Change-Id: Iebcfc58b447f925ec2134898060af2ef227266a3
+(cherry picked from commit 8dde7269a5356503d2b283234b6cb46d0c3f214e)
+(cherry picked from commit 4a03d784f7c0e3a9685d182eee92ba6580eaf5a1)
+---
+ include/media/IOMX.h                           | 6 ++++++
+ media/libmedia/IOMX.cpp                        | 6 ++++++
+ media/libstagefright/include/OMX.h             | 2 ++
+ media/libstagefright/include/OMXNodeInstance.h | 7 ++++++-
+ media/libstagefright/omx/OMX.cpp               | 7 ++++++-
+ media/libstagefright/omx/OMXNodeInstance.cpp   | 3 ++-
+ 6 files changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/include/media/IOMX.h b/include/media/IOMX.h
+index 6643736..d7be06f 100644
+--- a/include/media/IOMX.h
++++ b/include/media/IOMX.h
+@@ -203,6 +203,12 @@ public:
+     virtual status_t onTransact(
+             uint32_t code, const Parcel &data, Parcel *reply,
+             uint32_t flags = 0);
++
++protected:
++    // check if the codec is secure.
++    virtual bool isSecure(IOMX::node_id node) {
++        return false;
++    }
+ };
+ 
+ class BnOMXObserver : public BnInterface<IOMXObserver> {
+diff --git a/media/libmedia/IOMX.cpp b/media/libmedia/IOMX.cpp
+index 71ce320..10747f3 100644
+--- a/media/libmedia/IOMX.cpp
++++ b/media/libmedia/IOMX.cpp
+@@ -810,6 +810,12 @@ status_t BnOMX::onTransact(
+ 
+             node_id node = (void*)data.readIntPtr();
+             OMX_U32 port_index = data.readInt32();
++            if (!isSecure(node) || port_index != 0 /* kPortIndexInput */) {
++                ALOGE("b/24310423");
++                reply->writeInt32(INVALID_OPERATION);
++                return NO_ERROR;
++            }
++
+             size_t size = data.readInt32();
+ 
+             buffer_id buffer;
+diff --git a/media/libstagefright/include/OMX.h b/media/libstagefright/include/OMX.h
+index 31a5077..2bc3759 100644
+--- a/media/libstagefright/include/OMX.h
++++ b/media/libstagefright/include/OMX.h
+@@ -126,6 +126,8 @@ public:
+ 
+     virtual void binderDied(const wp<IBinder> &the_late_who);
+ 
++    virtual bool isSecure(IOMX::node_id node);
++
+     OMX_ERRORTYPE OnEvent(
+             node_id node,
+             OMX_IN OMX_EVENTTYPE eEvent,
+diff --git a/media/libstagefright/include/OMXNodeInstance.h b/media/libstagefright/include/OMXNodeInstance.h
+index 339179e..30d9584 100644
+--- a/media/libstagefright/include/OMXNodeInstance.h
++++ b/media/libstagefright/include/OMXNodeInstance.h
+@@ -31,7 +31,7 @@ struct GraphicBufferSource;
+ 
+ struct OMXNodeInstance {
+     OMXNodeInstance(
+-            OMX *owner, const sp<IOMXObserver> &observer);
++            OMX *owner, const sp<IOMXObserver> &observer, const char *name);
+ 
+     void setHandle(OMX::node_id node_id, OMX_HANDLETYPE handle);
+ 
+@@ -110,6 +110,10 @@ struct OMXNodeInstance {
+             const void *data,
+             size_t size);
+ 
++    bool isSecure() const {
++        return mIsSecure;
++    }
++
+     void onMessage(const omx_message &msg);
+     void onObserverDied(OMXMaster *master);
+     void onGetHandleFailed();
+@@ -125,6 +129,7 @@ private:
+     OMX_HANDLETYPE mHandle;
+     sp<IOMXObserver> mObserver;
+     bool mDying;
++    bool mIsSecure;
+ 
+     // Lock only covers mGraphicBufferSource.  We can't always use mLock
+     // because of rare instances where we'd end up locking it recursively.
+diff --git a/media/libstagefright/omx/OMX.cpp b/media/libstagefright/omx/OMX.cpp
+index 84a0e10..415910a 100644
+--- a/media/libstagefright/omx/OMX.cpp
++++ b/media/libstagefright/omx/OMX.cpp
+@@ -185,6 +185,11 @@ void OMX::binderDied(const wp<IBinder> &the_late_who) {
+     instance->onObserverDied(mMaster);
+ }
+ 
++bool OMX::isSecure(node_id node) {
++    OMXNodeInstance *instance = findInstance(node);
++    return (instance == NULL ? false : instance->isSecure());
++}
++
+ bool OMX::livesLocally(node_id node, pid_t pid) {
+     return pid == getpid();
+ }
+@@ -223,7 +228,7 @@ status_t OMX::allocateNode(
+ 
+     *node = 0;
+ 
+-    OMXNodeInstance *instance = new OMXNodeInstance(this, observer);
++    OMXNodeInstance *instance = new OMXNodeInstance(this, observer, name);
+ 
+     OMX_COMPONENTTYPE *handle;
+     OMX_ERRORTYPE err = mMaster->makeComponentInstance(
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index 4fe41c9..577e804 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -90,12 +90,13 @@ OMX_CALLBACKTYPE OMXNodeInstance::kCallbacks = {
+ };
+ 
+ OMXNodeInstance::OMXNodeInstance(
+-        OMX *owner, const sp<IOMXObserver> &observer)
++        OMX *owner, const sp<IOMXObserver> &observer, const char *name)
+     : mOwner(owner),
+       mNodeID(NULL),
+       mHandle(NULL),
+       mObserver(observer),
+       mDying(false) {
++    mIsSecure = AString(name).endsWith(".secure");
+ }
+ 
+ OMXNodeInstance::~OMXNodeInstance() {
+-- 
+2.7.4
+

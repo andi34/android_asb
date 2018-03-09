@@ -1,0 +1,29 @@
+From fa16aa6c3bf2423b5f4b07a731ef6bd5ffbf19c7 Mon Sep 17 00:00:00 2001
+From: Jeff Tinker <jtinker@google.com>
+Date: Tue, 11 Aug 2015 15:52:26 -0700
+Subject: [PATCH 014/182] Check integer overflow to prevent memory corruption
+
+bug: 23016072
+Change-Id: If3c9a835408773847c0024a812bd8b4915ebd680
+(cherry picked from commit fa8ebb45fd850f56ca1bf64fbed3ac11e10c7d3d)
+---
+ media/libstagefright/DRMExtractor.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/DRMExtractor.cpp b/media/libstagefright/DRMExtractor.cpp
+index 63cb430..9cb6e86 100644
+--- a/media/libstagefright/DRMExtractor.cpp
++++ b/media/libstagefright/DRMExtractor.cpp
+@@ -186,7 +186,8 @@ status_t DRMSource::read(MediaBuffer **buffer, const ReadOptions *options) {
+ 
+             srcOffset += mNALLengthSize;
+ 
+-            if (srcOffset + nalLength > len) {
++            size_t end = srcOffset + nalLength;
++            if (end > len || end < srcOffset) {
+                 if (decryptedDrmBuffer.data) {
+                     delete [] decryptedDrmBuffer.data;
+                     decryptedDrmBuffer.data = NULL;
+-- 
+2.7.4
+

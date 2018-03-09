@@ -1,0 +1,34 @@
+From 673fa584cca6bdb010a5de3ca588eabf990dba84 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Mon, 28 Sep 2015 14:50:47 -0700
+Subject: [PATCH 067/182] MPEG4Extractor: ensure buffer size is not less than 8
+ for LastCommentData.
+
+Bug: 24346430
+Change-Id: I897a724e968841d9160f819d06c0ce22f6d743c4
+(cherry picked from commit 5cae16bdce77b0a3ba590b55637f7d55a2f35402)
+(cherry picked from commit e6d904fe5f6e7c7fc1d5fca2798dd3512468b118)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 07ae4c0..13f487f 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -2153,6 +2153,12 @@ status_t MPEG4Extractor::parseMetaData(off64_t offset, size_t size) {
+                     mLastCommentName.setTo((const char *)buffer + 4);
+                     break;
+                 case FOURCC('d', 'a', 't', 'a'):
++                    if (size < 8) {
++                        delete[] buffer;
++                        buffer = NULL;
++                        ALOGE("b/24346430");
++                        return ERROR_MALFORMED;
++                    }
+                     mLastCommentData.setTo((const char *)buffer + 8);
+                     break;
+             }
+-- 
+2.7.4
+

@@ -1,0 +1,32 @@
+From fa46e357170346f0f8719ae0dcc76a9935b6cba0 Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Tue, 26 May 2015 11:14:36 -0700
+Subject: [PATCH 009/182] DO NOT MERGE - IOMX: Add buffer range check to
+ emptyBuffer
+
+Bug: 20634516
+Change-Id: If351dbd573bb4aeb6968bfa33f6d407225bc752c
+---
+ media/libstagefright/omx/OMXNodeInstance.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/media/libstagefright/omx/OMXNodeInstance.cpp b/media/libstagefright/omx/OMXNodeInstance.cpp
+index 6c5c857..4fe41c9 100644
+--- a/media/libstagefright/omx/OMXNodeInstance.cpp
++++ b/media/libstagefright/omx/OMXNodeInstance.cpp
+@@ -797,6 +797,12 @@ status_t OMXNodeInstance::emptyBuffer(
+     Mutex::Autolock autoLock(mLock);
+ 
+     OMX_BUFFERHEADERTYPE *header = (OMX_BUFFERHEADERTYPE *)buffer;
++    // rangeLength and rangeOffset must be a subset of the allocated data in the buffer.
++    // corner case: we permit rangeOffset == end-of-buffer with rangeLength == 0.
++    if (rangeOffset > header->nAllocLen
++            || rangeLength > header->nAllocLen - rangeOffset) {
++        return BAD_VALUE;
++    }
+     header->nFilledLen = rangeLength;
+     header->nOffset = rangeOffset;
+     header->nFlags = flags;
+-- 
+2.7.4
+

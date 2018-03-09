@@ -1,0 +1,30 @@
+From 8ab32451ab01e60bbc29061dc0a05705e38ec09e Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Sun, 16 Aug 2015 17:41:50 -0700
+Subject: [PATCH 015/182] libstagefright: check remaining data size before
+ parsing it.
+
+Bug: 23248776
+Change-Id: I45cf53e58e4375afcf260b122264c968ec0ff6c8
+(cherry picked from commit 3bf1e0fdf27e1188b8d3574ed073595b8eacb114)
+---
+ media/libstagefright/id3/ID3.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index 34d671a..8e2cbd1 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -547,6 +547,9 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
+         return;
+     }
+ 
++    if (mFrameSize < getHeaderLength() + 1) {
++        return;
++    }
+     size_t n = mFrameSize - getHeaderLength() - 1;
+     if (otherdata) {
+         // skip past the encoding, language, and the 0 separator
+-- 
+2.7.4
+

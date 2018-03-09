@@ -1,0 +1,33 @@
+From c8ccb6602bd30ee20d47949d2380ae1c1dbd3a8d Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 5 Apr 2016 14:20:11 -0700
+Subject: [PATCH 092/182] AudioSource: initialize variables
+
+to prevent info leak
+
+Bug: 27855172
+Change-Id: I3d33e0a9cc5cf8a758d7b0794590b09c43a24561
+(cherry picked from commit a2f5b80a54ac3cd0f7dcfbb4d87eaf2f5ab99557)
+---
+ media/libstagefright/AudioSource.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/media/libstagefright/AudioSource.cpp b/media/libstagefright/AudioSource.cpp
+index d7223d9..17293c8 100644
+--- a/media/libstagefright/AudioSource.cpp
++++ b/media/libstagefright/AudioSource.cpp
+@@ -51,7 +51,11 @@ AudioSource::AudioSource(
+         audio_source_t inputSource, uint32_t sampleRate, uint32_t channelCount)
+     : mStarted(false),
+       mSampleRate(sampleRate),
++      mTrackMaxAmplitude(false),
++      mStartTimeUs(0),
++      mMaxAmplitude(0),
+       mPrevSampleTimeUs(0),
++      mInitialReadTimeUs(0),
+       mNumFramesReceived(0),
+       mNumClientOwnedBuffers(0) {
+     ALOGV("sampleRate: %d, channelCount: %d", sampleRate, channelCount);
+-- 
+2.7.4
+

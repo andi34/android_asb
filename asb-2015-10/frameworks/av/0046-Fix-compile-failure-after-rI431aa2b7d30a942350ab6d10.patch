@@ -1,0 +1,53 @@
+From 2365806ffb6e8b23b29091a2dde9452d2d152105 Mon Sep 17 00:00:00 2001
+From: Abhishek Arya <aarya@google.com>
+Date: Mon, 17 Aug 2015 18:24:11 -0700
+Subject: [PATCH 046/182] Fix compile failure after
+ rI431aa2b7d30a942350ab6d105451c6b77e2f99d4
+
+Bug: 20674086
+Change-Id: I2ee6b7e0eabbf696c0986d08b2d759d48cb9eb7b
+---
+ media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp  | 8 ++++++++
+ media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp | 7 +++++++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
+index 18c0cd6..30d5cbd 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/pvdec_api.cpp
+@@ -19,6 +19,14 @@
+ #include "vlc_decode.h"
+ #include "bitstream.h"
+ 
++#ifndef INT32_MAX
++#define INT32_MAX 0x7fffffff
++#endif
++
++#ifndef SIZE_MAX
++#define SIZE_MAX ((size_t) -1)
++#endif
++
+ #define OSCL_DISABLE_WARNING_CONDITIONAL_IS_CONSTANT
+ 
+ #ifdef DEC_INTERNAL_MEMORY_OPT
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp b/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
+index da27377..c2b7c8d 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
+@@ -21,6 +21,13 @@
+ #include "rate_control.h"
+ #include "m4venc_oscl.h"
+ 
++#ifndef INT32_MAX
++#define INT32_MAX 0x7fffffff
++#endif
++
++#ifndef SIZE_MAX
++#define SIZE_MAX ((size_t) -1)
++#endif
+ 
+ /* Inverse normal zigzag */
+ const static Int zigzag_i[NCOEFF_BLOCK] =
+-- 
+2.7.4
+

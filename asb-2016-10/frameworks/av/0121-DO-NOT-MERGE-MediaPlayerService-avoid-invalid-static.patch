@@ -1,0 +1,57 @@
+From a47471bb41bd5bcabf7f85054e5abb40d97aab7d Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Tue, 16 Aug 2016 16:50:54 -0700
+Subject: [PATCH 121/182] DO NOT MERGE MediaPlayerService: avoid invalid static
+ cast
+
+Bug: 30204103
+Change-Id: Ie0dd3568a375f1e9fed8615ad3d85184bcc99028
+(cherry picked from commit c159a5ae12af671d0fe0c134a27e676ed86c9874)
+---
+ media/libmediaplayerservice/MediaPlayerService.cpp | 10 ++++++++++
+ media/libmediaplayerservice/MediaPlayerService.h   |  1 +
+ 2 files changed, 11 insertions(+)
+
+diff --git a/media/libmediaplayerservice/MediaPlayerService.cpp b/media/libmediaplayerservice/MediaPlayerService.cpp
+index 9ac9105..4866e19 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.cpp
++++ b/media/libmediaplayerservice/MediaPlayerService.cpp
+@@ -497,6 +497,12 @@ void MediaPlayerService::removeClient(wp<Client> client)
+     mClients.remove(client);
+ }
+ 
++bool MediaPlayerService::hasClient(wp<Client> client)
++{
++    Mutex::Autolock lock(mLock);
++    return mClients.indexOf(client) != NAME_NOT_FOUND;
++}
++
+ MediaPlayerService::Client::Client(
+         const sp<MediaPlayerService>& service, pid_t pid,
+         int32_t connId, const sp<IMediaPlayerClient>& client,
+@@ -926,6 +932,10 @@ status_t MediaPlayerService::Client::setNextPlayer(const sp<IMediaPlayer>& playe
+     ALOGV("setNextPlayer");
+     Mutex::Autolock l(mLock);
+     sp<Client> c = static_cast<Client*>(player.get());
++    if (!mService->hasClient(c)) {
++      return BAD_VALUE;
++    }
++
+     mNextClient = c;
+ 
+     if (c != NULL) {
+diff --git a/media/libmediaplayerservice/MediaPlayerService.h b/media/libmediaplayerservice/MediaPlayerService.h
+index 9c084e1..55bf3cd 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.h
++++ b/media/libmediaplayerservice/MediaPlayerService.h
+@@ -276,6 +276,7 @@ public:
+             const char *host, int32_t port, const char *exclusionList);
+ 
+             void                removeClient(wp<Client> client);
++            bool                hasClient(wp<Client> client);
+ 
+     // For battery usage tracking purpose
+     struct BatteryUsageInfo {
+-- 
+2.7.4
+

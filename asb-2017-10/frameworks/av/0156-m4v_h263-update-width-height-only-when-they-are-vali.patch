@@ -1,0 +1,65 @@
+From 19b3bb13a9a7decd41efb87b94a9bec6edcdf6b9 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Thu, 18 May 2017 12:43:12 -0700
+Subject: [PATCH 156/182] m4v_h263: update width/height only when they are
+ valid.
+
+Test: the file in the bug doesn't crash
+Bug: 37079296
+Change-Id: Ie092971dda568119ca38ec67d65ccfc00df93185
+(cherry picked from commit 0b5726782d5f9764325057870cef2750853f286a)
+---
+ media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp
+index b3c350f..56ade8f 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/vop.cpp
+@@ -15,6 +15,8 @@
+  * and limitations under the License.
+  * -------------------------------------------------------------------
+  */
++#include "log/log.h"
++
+ #include "mp4dec_lib.h"
+ #include "bitstream.h"
+ #include "vlc_decode.h"
+@@ -1332,8 +1334,7 @@ PV_STATUS DecodeShortHeader(VideoDecData *video, Vop *currVop)
+             }
+             tmpvar = BitstreamReadBits16(stream, 9);
+ 
+-            video->displayWidth = (tmpvar + 1) << 2;
+-            video->width = (video->displayWidth + 15) & -16;
++            int tmpDisplayWidth = (tmpvar + 1) << 2;
+             /* marker bit */
+             if (!BitstreamRead1Bits(stream))
+             {
+@@ -1346,14 +1347,21 @@ PV_STATUS DecodeShortHeader(VideoDecData *video, Vop *currVop)
+                 status = PV_FAIL;
+                 goto return_point;
+             }
+-            video->displayHeight = tmpvar << 2;
+-            video->height = (video->displayHeight + 15) & -16;
++            int tmpDisplayHeight = tmpvar << 2;
++            int tmpHeight = (tmpDisplayHeight + 15) & -16;
++            int tmpWidth = (tmpDisplayWidth + 15) & -16;
+ 
+-            if (video->height * video->width > video->size)
++            if (tmpHeight * tmpWidth > video->size)
+             {
++                // This is just possibly "b/37079296".
++                ALOGE("b/37079296");
+                 status = PV_FAIL;
+                 goto return_point;
+             }
++            video->displayWidth = tmpDisplayWidth;
++            video->width = tmpWidth;
++            video->displayHeight = tmpDisplayHeight;
++            video->height = tmpHeight;
+ 
+             video->nTotalMB = video->width / MB_SIZE * video->height / MB_SIZE;
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,55 @@
+From 6516053921f9c860539fdeac9838d1adbc0fabae Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 19 Sep 2016 16:22:56 -0700
+Subject: [PATCH 125/182] Limit mp4 atom size to something reasonable
+
+Bug: 28615448
+Change-Id: I5916f6839b4a9bbee4388a106e7373bcd4154f5a
+(cherry picked from commit 638c99bad693a8586a065d93b3d30017208e3067)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 439c010..76bc3b3 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -23,6 +23,8 @@
+ #include "include/ESDS.h"
+ 
+ #include <ctype.h>
++#define __STDC_FORMAT_MACROS 1
++#include <inttypes.h>
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -45,6 +47,12 @@
+ 
+ namespace android {
+ 
++enum {
++    // maximum size of an atom. Some atoms can be bigger according to the spec,
++    // but we only allow up to this size.
++    kMaxAtomSize = 64 * 1024 * 1024,
++};
++
+ class MPEG4Source : public MediaSource {
+ public:
+     // Caller retains ownership of both "dataSource" and "sampleTable".
+@@ -795,6 +803,13 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+     PathAdder autoAdder(&mPath, chunk_type);
+ 
+     off64_t chunk_data_size = *offset + chunk_size - data_offset;
++    if (chunk_type != FOURCC('m', 'd', 'a', 't') && chunk_data_size > kMaxAtomSize) {
++        char errMsg[100];
++        sprintf(errMsg, "%s atom has size %" PRId64, chunk, chunk_data_size);
++        ALOGE("%s (b/28615448)", errMsg);
++        android_errorWriteWithInfoLog(0x534e4554, "28615448", -1, errMsg, strlen(errMsg));
++        return ERROR_MALFORMED;
++    }
+ 
+     if (chunk_type != FOURCC('c', 'p', 'r', 't')
+             && chunk_type != FOURCC('c', 'o', 'v', 'r')
+-- 
+2.7.4
+

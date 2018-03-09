@@ -1,0 +1,53 @@
+From 411bf4c6ee9de41083dd16a0139751947fcc6e20 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Wed, 11 May 2016 11:11:20 -0700
+Subject: [PATCH 103/182] DO NOT MERGE Check malloc result to avoid NPD
+
+Bug: 28471206
+Change-Id: Id5d055d76893d6f53a2e524ff5f282d1ddca3345
+(cherry picked from commit ad92798cc37677ed14cacf1caf62196612a6b71e)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 72ccee9..5483abb 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -521,6 +521,10 @@ status_t MPEG4Extractor::readMetaData() {
+     }
+     if (psshsize) {
+         char *buf = (char*)malloc(psshsize);
++        if (!buf) {
++            ALOGE("b/28471206");
++            return NO_MEMORY;
++        }
+         char *ptr = buf;
+         for (size_t i = 0; i < mPssh.size(); i++) {
+             memcpy(ptr, mPssh[i].uuid, 20); // uuid + length
+@@ -1572,6 +1576,11 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+         {
+             sp<ABuffer> buffer = new ABuffer(chunk_data_size);
+ 
++            if (buffer->data() == NULL) {
++                ALOGE("b/28471206");
++                return NO_MEMORY;
++            }
++
+             if (mDataSource->readAt(
+                         data_offset, buffer->data(), chunk_data_size) < chunk_data_size) {
+                 return ERROR_IO;
+@@ -1786,6 +1795,10 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
+                     return ERROR_MALFORMED;
+                 }
+                 sp<ABuffer> buffer = new ABuffer(chunk_data_size + 1);
++                if (buffer->data() == NULL) {
++                    ALOGE("b/28471206");
++                    return NO_MEMORY;
++                }
+                 if (mDataSource->readAt(
+                     data_offset, buffer->data(), chunk_data_size) != (ssize_t)chunk_data_size) {
+                     return ERROR_IO;
+-- 
+2.7.4
+

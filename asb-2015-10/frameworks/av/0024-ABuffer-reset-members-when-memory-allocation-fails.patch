@@ -1,0 +1,41 @@
+From 11e66d18da6c751dbc9ee6da862d7daf6e51539c Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Mon, 20 Jul 2015 11:34:22 -0700
+Subject: [PATCH 024/182] ABuffer: reset members when memory allocation fails.
+
+Bug: 22077698
+Change-Id: I2beb724662d041ad2339d0f4c7f983e7ac5e5e6f
+(cherry picked from commit 94b0badc025b14141ff234e3e4e2745411742bac)
+---
+ media/libstagefright/foundation/ABuffer.cpp | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/media/libstagefright/foundation/ABuffer.cpp b/media/libstagefright/foundation/ABuffer.cpp
+index 6173db4..5f5c977 100644
+--- a/media/libstagefright/foundation/ABuffer.cpp
++++ b/media/libstagefright/foundation/ABuffer.cpp
+@@ -23,12 +23,17 @@
+ namespace android {
+ 
+ ABuffer::ABuffer(size_t capacity)
+-    : mData(malloc(capacity)),
+-      mCapacity(capacity),
+-      mRangeOffset(0),
+-      mRangeLength(capacity),
++    : mRangeOffset(0),
+       mInt32Data(0),
+       mOwnsData(true) {
++    mData = malloc(capacity);
++    if (mData == NULL) {
++        mCapacity = 0;
++        mRangeLength = 0;
++    } else {
++        mCapacity = capacity;
++        mRangeLength = capacity;
++    }
+ }
+ 
+ ABuffer::ABuffer(void *data, size_t capacity)
+-- 
+2.7.4
+

@@ -1,0 +1,69 @@
+From c4cbc851ab054417154520a7708626216482f74a Mon Sep 17 00:00:00 2001
+From: Vignesh Venkatasubramanian <vigneshv@google.com>
+Date: Wed, 13 Jan 2016 12:18:05 -0800
+Subject: [PATCH 077/182] DO NOT MERGE - Remove deprecated image defines
+
+libvpx has always supported the VPX_ prefixed versions of these defines.
+The unprefixed versions have been removed in the most recent release.
+
+https://chromium.googlesource.com/webm/libvpx/+/9cdaa3d72eade9ad162ef8f78a93bd8f85c6de10
+
+BUG=23452792
+
+Change-Id: Ib02073f42d545e6c08f9bd4a4fc868e3be886c1b
+(cherry picked from commit c73b811066319b2c7bbd1bc876a73f53a16f07e0)
+---
+ media/libstagefright/codecs/on2/dec/SoftVPX.cpp | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+index 2bae2ad..979a053 100644
+--- a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
++++ b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+@@ -134,7 +134,7 @@ void SoftVPX::onQueueFilled(OMX_U32 portIndex) {
+         vpx_image_t *img = vpx_codec_get_frame((vpx_codec_ctx_t *)mCtx, &iter);
+ 
+         if (img != NULL) {
+-            CHECK_EQ(img->fmt, IMG_FMT_I420);
++            CHECK_EQ(img->fmt, VPX_IMG_FMT_I420);
+ 
+             uint32_t width = img->d_w;
+             uint32_t height = img->d_h;
+@@ -155,28 +155,28 @@ void SoftVPX::onQueueFilled(OMX_U32 portIndex) {
+             outHeader->nFlags = EOSseen ? OMX_BUFFERFLAG_EOS : 0;
+             outHeader->nTimeStamp = inHeader->nTimeStamp;
+ 
+-            const uint8_t *srcLine = (const uint8_t *)img->planes[PLANE_Y];
++            const uint8_t *srcLine = (const uint8_t *)img->planes[VPX_PLANE_Y];
+             uint8_t *dst = outHeader->pBuffer;
+             for (size_t i = 0; i < img->d_h; ++i) {
+                 memcpy(dst, srcLine, img->d_w);
+ 
+-                srcLine += img->stride[PLANE_Y];
++                srcLine += img->stride[VPX_PLANE_Y];
+                 dst += img->d_w;
+             }
+ 
+-            srcLine = (const uint8_t *)img->planes[PLANE_U];
++            srcLine = (const uint8_t *)img->planes[VPX_PLANE_U];
+             for (size_t i = 0; i < img->d_h / 2; ++i) {
+                 memcpy(dst, srcLine, img->d_w / 2);
+ 
+-                srcLine += img->stride[PLANE_U];
++                srcLine += img->stride[VPX_PLANE_U];
+                 dst += img->d_w / 2;
+             }
+ 
+-            srcLine = (const uint8_t *)img->planes[PLANE_V];
++            srcLine = (const uint8_t *)img->planes[VPX_PLANE_V];
+             for (size_t i = 0; i < img->d_h / 2; ++i) {
+                 memcpy(dst, srcLine, img->d_w / 2);
+ 
+-                srcLine += img->stride[PLANE_V];
++                srcLine += img->stride[VPX_PLANE_V];
+                 dst += img->d_w / 2;
+             }
+ 
+-- 
+2.7.4
+

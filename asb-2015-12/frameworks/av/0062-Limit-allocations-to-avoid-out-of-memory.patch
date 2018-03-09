@@ -1,0 +1,51 @@
+From 63f26e401e54cfd09ad8d9481d8b6ce525cd0b39 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Thu, 4 Jun 2015 11:01:15 -0700
+Subject: [PATCH 062/182] Limit allocations to avoid out-of-memory
+
+Corrupt files could cause very large allocations, limit them to something
+more reasonable.
+
+Bug: 17769851
+Change-Id: Ib0f722fd6fddff873bd7a547aac456e608c34c84
+(cherry picked from commit dedaca6f04ac9f95fabe3b64d44cd1a2050f079e)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 84149fa..07ae4c0 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -2504,16 +2504,24 @@ status_t MPEG4Source::start(MetaData *params) {
+         mWantsNALFragments = false;
+     }
+ 
++    int32_t tmp;
++    CHECK(mFormat->findInt32(kKeyMaxInputSize, &tmp));
++    size_t max_size = tmp;
++
++    // A somewhat arbitrary limit that should be sufficient for 8k video frames
++    // If you see the message below for a valid input stream: increase the limit
++    if (max_size > 64 * 1024 * 1024) {
++        ALOGE("bogus max input size: %zu", max_size);
++        return ERROR_MALFORMED;
++    }
+     mGroup = new MediaBufferGroup;
+-
+-    int32_t max_size;
+-    CHECK(mFormat->findInt32(kKeyMaxInputSize, &max_size));
+-
+     mGroup->add_buffer(new MediaBuffer(max_size));
+ 
+     mSrcBuffer = new (std::nothrow) uint8_t[max_size];
+     if (mSrcBuffer == NULL) {
+         // file probably specified a bad max size
++        delete mGroup;
++        mGroup = NULL;
+         return ERROR_MALFORMED;
+     }
+ 
+-- 
+2.7.4
+

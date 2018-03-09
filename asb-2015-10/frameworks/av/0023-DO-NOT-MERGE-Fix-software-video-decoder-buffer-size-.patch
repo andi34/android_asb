@@ -1,0 +1,34 @@
+From 41eb89fdab2952bd697f35c40334dc77ad84cc99 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 16 Jun 2015 14:50:36 -0700
+Subject: [PATCH 023/182] DO NOT MERGE - Fix software video decoder buffer size
+ calculation
+
+Various software video decoders would specify the buffer size as if it were
+fully cropped, which then failed a sanity check in SoftwareRenderer.
+They now return the full buffer size.
+
+Bug: 21717327
+Bug: 21443020
+Change-Id: I19fcd091827ebd52a95a5509281a07ccc156e0e5
+(cherry picked from commit 3ecc9db40b1fb9c7f807a5892e5c9625aac1fb06)
+---
+ media/libstagefright/codecs/on2/dec/SoftVPX.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+index 476e986..2bae2ad 100644
+--- a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
++++ b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+@@ -151,7 +151,7 @@ void SoftVPX::onQueueFilled(OMX_U32 portIndex) {
+             }
+ 
+             outHeader->nOffset = 0;
+-            outHeader->nFilledLen = (width * height * 3) / 2;
++            outHeader->nFilledLen = (mWidth * mHeight * 3) / 2;
+             outHeader->nFlags = EOSseen ? OMX_BUFFERFLAG_EOS : 0;
+             outHeader->nTimeStamp = inHeader->nTimeStamp;
+ 
+-- 
+2.7.4
+

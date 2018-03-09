@@ -1,0 +1,38 @@
+From c9d549ff57226d2406ce60f96ec1087e50de7ccb Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 5 Oct 2015 10:46:11 -0700
+Subject: [PATCH 066/182] Don't crash when there's no conceal frame
+
+Bug: 24630158
+Change-Id: If042aebebb58c218eb7bbf01dcddbcbd05dca1d6
+(cherry picked from commit 257b3bc581bbc65318a4cc2d3c22a07a4429dc1d)
+---
+ media/libstagefright/codecs/m4v_h263/dec/src/conceal.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/conceal.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/conceal.cpp
+index e9ead01..03e4119 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/conceal.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/conceal.cpp
+@@ -19,6 +19,7 @@
+ #include "vlc_decode.h"
+ #include "bitstream.h"
+ #include "scaling.h"
++#include "log/log.h"
+ 
+ /* ====================================================================== /
+ Function : ConcealTexture_I()
+@@ -137,6 +138,10 @@ Modified:   6/04/2001 rewrote the function
+ ****************************************************************************/
+ void CopyVopMB(Vop *curr, uint8 *prevFrame, int mbnum, int width_Y, int height)
+ {
++    if (curr == NULL || prevFrame == NULL) {
++        ALOGE("b/24630158");
++        return;
++    }
+     int width_C = width_Y >> 1;
+     int row = MB_SIZE;
+     uint8              *y1, *y2, *u1, *u2, *v1, *v2;
+-- 
+2.7.4
+

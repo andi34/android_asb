@@ -1,0 +1,48 @@
+From 0bd52e86debbda5ac893f1462c8ca3f5aa01412b Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Mon, 8 Jun 2015 14:01:42 -0700
+Subject: [PATCH 022/182] DO NOT MERGE - SoftwareRenderer: sanity check buffer
+ size before copying data.
+
+Bug: 21443020
+Change-Id: I63cf86217b8201fb41809c23e4b752b845a93ee2
+(cherry picked from commit 760f92f8b6da9c9cf128cb18fe3c09402fdde6cd)
+---
+ media/libstagefright/colorconversion/SoftwareRenderer.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/media/libstagefright/colorconversion/SoftwareRenderer.cpp b/media/libstagefright/colorconversion/SoftwareRenderer.cpp
+index 77f21b7..990d554 100644
+--- a/media/libstagefright/colorconversion/SoftwareRenderer.cpp
++++ b/media/libstagefright/colorconversion/SoftwareRenderer.cpp
+@@ -164,6 +164,9 @@ void SoftwareRenderer::render(
+                 buf->stride, buf->height,
+                 0, 0, mCropWidth - 1, mCropHeight - 1);
+     } else if (mColorFormat == OMX_COLOR_FormatYUV420Planar) {
++        if ((size_t)mWidth * mHeight * 3 / 2 > size) {
++            goto skip_copying;
++        }
+         const uint8_t *src_y = (const uint8_t *)data;
+         const uint8_t *src_u = (const uint8_t *)data + mWidth * mHeight;
+         const uint8_t *src_v = src_u + (mWidth / 2 * mHeight / 2);
+@@ -193,6 +196,9 @@ void SoftwareRenderer::render(
+         }
+     } else {
+         CHECK_EQ(mColorFormat, OMX_TI_COLOR_FormatYUV420PackedSemiPlanar);
++        if ((size_t)mWidth * mHeight * 3 / 2 > size) {
++            goto skip_copying;
++        }
+ 
+         const uint8_t *src_y =
+             (const uint8_t *)data;
+@@ -228,6 +234,7 @@ void SoftwareRenderer::render(
+         }
+     }
+ 
++skip_copying:
+     CHECK_EQ(0, mapper.unlock(buf->handle));
+ 
+     if ((err = mNativeWindow->queueBuffer(mNativeWindow.get(), buf,
+-- 
+2.7.4
+

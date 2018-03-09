@@ -1,0 +1,61 @@
+From 01c82e61eeb46fdeaac0887f736e0a102b43d3e1 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Wed, 12 Aug 2015 10:08:41 -0700
+Subject: [PATCH 040/182] libstagefright: fix possible overflow in amrwbenc.
+
+Bug: 23142203
+Change-Id: I309df51e4df6412655f04cc093d792bf6c7944f7
+(cherry picked from commit 9dd01777aa14bbb90a6cdccf97383bb4e3d717a5)
+---
+ media/libstagefright/codecs/amrwbenc/src/util.c | 19 +++++++++++--------
+ 1 file changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/media/libstagefright/codecs/amrwbenc/src/util.c b/media/libstagefright/codecs/amrwbenc/src/util.c
+index 76ab1b1..333140d 100644
+--- a/media/libstagefright/codecs/amrwbenc/src/util.c
++++ b/media/libstagefright/codecs/amrwbenc/src/util.c
+@@ -35,9 +35,10 @@ void Set_zero(
+ 	     )
+ {
+ 	Word32 num = (Word32)L;
+-	do{
++	while (num > 0) {
+ 		*x++ = 0;
+-	}while(--num !=0);
++                --num;
++	}
+ }
+ 
+ 
+@@ -54,20 +55,22 @@ void Copy(
+ 	 )
+ {
+ 	Word32	temp1,temp2,num;
++        if (L <= 0) {
++                return;
++        }
+ 	if(L&1)
+ 	{
+ 		temp1 = *x++;
+ 		*y++ = temp1;
+ 	}
+ 	num = (Word32)(L>>1);
+-	temp1 = *x++;
+-	temp2 = *x++;
+-	do{
+-		*y++ = temp1;
+-		*y++ = temp2;
++	while (num > 0) {
+ 		temp1 = *x++;
+ 		temp2 = *x++;
+-	}while(--num!=0);
++		*y++ = temp1;
++		*y++ = temp2;
++                --num;
++	}
+ }
+ 
+ 
+-- 
+2.7.4
+

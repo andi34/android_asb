@@ -1,0 +1,41 @@
+From 21f26452a3b1fc241ca570d61882146a14eceb13 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Wed, 1 Jul 2015 13:05:50 -0700
+Subject: [PATCH 019/182] Check buffer size before using it
+
+Bug: 21814993
+Change-Id: Idaac61b4b9f4058b94e84093644593ba315d72ff
+(cherry picked from commit c1a104aaad2d84a57bf5d87dd030d2bef56bf541)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 346e535..c2f7220 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -3181,6 +3181,10 @@ status_t MPEG4Source::read(
+             CHECK(mBuffer == NULL);
+             return err;
+         }
++        if (size > mBuffer->size()) {
++            ALOGE("buffer too small: %zu > %zu", size, mBuffer->size());
++            return ERROR_BUFFER_TOO_SMALL;
++        }
+     }
+ 
+     if (!mIsAVC || mWantsNALFragments) {
+@@ -3435,6 +3439,10 @@ status_t MPEG4Source::fragmentedRead(
+             ALOGV("acquire_buffer returned %d", err);
+             return err;
+         }
++        if (size > mBuffer->size()) {
++            ALOGE("buffer too small: %zu > %zu", size, mBuffer->size());
++            return ERROR_BUFFER_TOO_SMALL;
++        }
+     }
+ 
+     const Sample *smpl = &mCurrentSamples[mCurrentSampleIndex];
+-- 
+2.7.4
+

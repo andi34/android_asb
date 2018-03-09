@@ -1,0 +1,127 @@
+From d5d62f2388187af7dc313be77cc81f3fad5fd4d4 Mon Sep 17 00:00:00 2001
+From: Ray Essick <essick@google.com>
+Date: Fri, 2 Jun 2017 13:07:19 -0700
+Subject: [PATCH 158/182] better manage buffer for libstagefright_soft_mpeg4enc
+
+Existing code allocated buffer, adjusted pointer to use it, and would
+adjust the pointer back when it came time to free the space. The problem
+was that the adjustment was based on user-supplied values and if the
+user changed those values between alloc and free (which was possible),
+the code ended up free()ing the wrong address.
+
+We fix this by keeping an extra pointer -- the unmodified allocation --
+which we use for the subsequent free() calls. This makes the free()
+independent of any changes to values that the user provides.
+
+Bug: 36075363
+Test: ran poc against patched nyc-mr2-dev tree
+Change-Id: I7013ff5883a945c4647517b2980c76a6558f23d2
+(cherry picked from commit 90d2dd403bc8faa421cfc6b26930e5aa69879943)
+---
+ .../codecs/m4v_h263/enc/src/mp4enc_api.cpp         | 28 ++++++++++------------
+ .../codecs/m4v_h263/enc/src/mp4lib_int.h           |  1 +
+ 2 files changed, 13 insertions(+), 16 deletions(-)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp b/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
+index c2b7c8d..7ab8f45 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/src/mp4enc_api.cpp
+@@ -773,7 +773,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+             || (size_t)(size + (size >> 1)) > SIZE_MAX / sizeof(PIXEL)) {
+         goto CLEAN_UP;
+     }
+-    video->currVop->yChan = (PIXEL *)M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for currVop Y */
++    video->currVop->allChan = video->currVop->yChan = (PIXEL *)M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for currVop Y */
+     if (video->currVop->yChan == NULL) goto CLEAN_UP;
+     video->currVop->uChan = video->currVop->yChan + size;/* Memory for currVop U */
+     video->currVop->vChan = video->currVop->uChan + (size >> 2);/* Memory for currVop V */
+@@ -791,7 +791,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+ 
+     video->prevBaseVop = (Vop *) M4VENC_MALLOC(sizeof(Vop));         /* Memory for Previous Base Vop */
+     if (video->prevBaseVop == NULL) goto CLEAN_UP;
+-    video->prevBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for prevBaseVop Y */
++    video->prevBaseVop->allChan = video->prevBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for prevBaseVop Y */
+     if (video->prevBaseVop->yChan == NULL) goto CLEAN_UP;
+     video->prevBaseVop->uChan = video->prevBaseVop->yChan + size; /* Memory for prevBaseVop U */
+     video->prevBaseVop->vChan = video->prevBaseVop->uChan + (size >> 2); /* Memory for prevBaseVop V */
+@@ -808,7 +808,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+     {
+         video->nextBaseVop = (Vop *) M4VENC_MALLOC(sizeof(Vop));         /* Memory for Next Base Vop */
+         if (video->nextBaseVop == NULL) goto CLEAN_UP;
+-        video->nextBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for nextBaseVop Y */
++        video->nextBaseVop->allChan = video->nextBaseVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for nextBaseVop Y */
+         if (video->nextBaseVop->yChan == NULL) goto CLEAN_UP;
+         video->nextBaseVop->uChan = video->nextBaseVop->yChan + size; /* Memory for nextBaseVop U */
+         video->nextBaseVop->vChan = video->nextBaseVop->uChan + (size >> 2); /* Memory for nextBaseVop V */
+@@ -825,7 +825,7 @@ OSCL_EXPORT_REF Bool    PVInitVideoEncoder(VideoEncControls *encoderControl, Vid
+     {
+         video->prevEnhanceVop = (Vop *) M4VENC_MALLOC(sizeof(Vop));      /* Memory for Previous Enhancement Vop */
+         if (video->prevEnhanceVop == NULL) goto CLEAN_UP;
+-        video->prevEnhanceVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for Previous Ehancement Y */
++        video->prevEnhanceVop->allChan = video->prevEnhanceVop->yChan = (PIXEL *) M4VENC_MALLOC(sizeof(PIXEL) * (size + (size >> 1))); /* Memory for Previous Ehancement Y */
+         if (video->prevEnhanceVop->yChan == NULL) goto CLEAN_UP;
+         video->prevEnhanceVop->uChan = video->prevEnhanceVop->yChan + size; /* Memory for Previous Enhancement U */
+         video->prevEnhanceVop->vChan = video->prevEnhanceVop->uChan + (size >> 2); /* Memory for Previous Enhancement V */
+@@ -1196,39 +1196,35 @@ OSCL_EXPORT_REF Bool    PVCleanUpVideoEncoder(VideoEncControls *encoderControl)
+ 
+         if (video->currVop)
+         {
+-            if (video->currVop->yChan)
++            if (video->currVop->allChan)
+             {
+-                video->currVop->yChan -= offset;
+-                M4VENC_FREE(video->currVop->yChan);
++                M4VENC_FREE(video->currVop->allChan);
+             }
+             M4VENC_FREE(video->currVop);
+         }
+ 
+         if (video->nextBaseVop)
+         {
+-            if (video->nextBaseVop->yChan)
++            if (video->nextBaseVop->allChan)
+             {
+-                video->nextBaseVop->yChan -= offset;
+-                M4VENC_FREE(video->nextBaseVop->yChan);
++                M4VENC_FREE(video->nextBaseVop->allChan);
+             }
+             M4VENC_FREE(video->nextBaseVop);
+         }
+ 
+         if (video->prevBaseVop)
+         {
+-            if (video->prevBaseVop->yChan)
++            if (video->prevBaseVop->allChan)
+             {
+-                video->prevBaseVop->yChan -= offset;
+-                M4VENC_FREE(video->prevBaseVop->yChan);
++                M4VENC_FREE(video->prevBaseVop->allChan);
+             }
+             M4VENC_FREE(video->prevBaseVop);
+         }
+         if (video->prevEnhanceVop)
+         {
+-            if (video->prevEnhanceVop->yChan)
++            if (video->prevEnhanceVop->allChan)
+             {
+-                video->prevEnhanceVop->yChan -= offset;
+-                M4VENC_FREE(video->prevEnhanceVop->yChan);
++                M4VENC_FREE(video->prevEnhanceVop->allChan);
+             }
+             M4VENC_FREE(video->prevEnhanceVop);
+         }
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h b/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h
+index 3bc9421..b05099c 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h
++++ b/media/libstagefright/codecs/m4v_h263/enc/src/mp4lib_int.h
+@@ -39,6 +39,7 @@ typedef struct tagBitstream
+ 
+ typedef struct tagVOP
+ {
++    PIXEL   *allChan;           /* [yuv]Chan point into this buffer */
+     PIXEL   *yChan;             /* The Y component */
+     PIXEL   *uChan;             /* The U component */
+     PIXEL   *vChan;             /* The V component */
+-- 
+2.7.4
+

@@ -1,0 +1,54 @@
+From afcaff48d27cd461adad6923f5f20896ae88d294 Mon Sep 17 00:00:00 2001
+From: "Joshua J. Drake" <android-open-source@qoop.org>
+Date: Wed, 8 Apr 2015 23:23:55 -0500
+Subject: [PATCH 013/182] Fix several ineffective integer overflow checks
+
+Commit edd4a76 (which addressed bugs 15328708, 15342615, 15342751) added
+several integer overflow checks. Unfortunately, those checks fail to take into
+account integer promotion rules and are thus themselves subject to an integer
+overflow. Cast the sizeof() operator to a uint64_t to force promotion while
+multiplying.
+
+Bug: 20139950
+
+(cherry picked from commit e2e812e58e8d2716b00d7d82db99b08d3afb4b32)
+
+Change-Id: I080eb3fa147601f18cedab86e0360406c3963d7b
+---
+ media/libstagefright/SampleTable.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/media/libstagefright/SampleTable.cpp b/media/libstagefright/SampleTable.cpp
+index 4d8d703..a7ceecb 100644
+--- a/media/libstagefright/SampleTable.cpp
++++ b/media/libstagefright/SampleTable.cpp
+@@ -333,7 +333,7 @@ status_t SampleTable::setTimeToSampleParams(
+     }
+ 
+     mTimeToSampleCount = U32_AT(&header[4]);
+-    uint64_t allocSize = mTimeToSampleCount * 2 * sizeof(uint32_t);
++    uint64_t allocSize = mTimeToSampleCount * 2 * (uint64_t)sizeof(uint32_t);
+     if (allocSize > SIZE_MAX) {
+         return ERROR_OUT_OF_RANGE;
+     }
+@@ -379,7 +379,7 @@ status_t SampleTable::setCompositionTimeToSampleParams(
+     }
+ 
+     mNumCompositionTimeDeltaEntries = numEntries;
+-    uint64_t allocSize = numEntries * 2 * sizeof(uint32_t);
++    uint64_t allocSize = numEntries * 2 * (uint64_t)sizeof(uint32_t);
+     if (allocSize > SIZE_MAX) {
+         return ERROR_OUT_OF_RANGE;
+     }
+@@ -429,7 +429,7 @@ status_t SampleTable::setSyncSampleParams(off64_t data_offset, size_t data_size)
+         ALOGV("Table of sync samples is empty or has only a single entry!");
+     }
+ 
+-    uint64_t allocSize = mNumSyncSamples * sizeof(uint32_t);
++    uint64_t allocSize = mNumSyncSamples * (uint64_t)sizeof(uint32_t);
+     if (allocSize > SIZE_MAX) {
+         return ERROR_OUT_OF_RANGE;
+     }
+-- 
+2.7.4
+

@@ -1,0 +1,28 @@
+From ab40ac80a6b7bf78bcf45402e31518b8bd3e42fa Mon Sep 17 00:00:00 2001
+From: Wonsik Kim <wonsik@google.com>
+Date: Thu, 7 Sep 2017 16:17:05 -0700
+Subject: [PATCH 176/182] m4v_h263: fix global buffer overflow
+
+Bug: 65025028
+Test: run POC
+Change-Id: Ifa5cf0e3ced7188ed70849b04b57828518ccb5bf
+---
+ media/libstagefright/codecs/m4v_h263/dec/src/vlc_decode.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/m4v_h263/dec/src/vlc_decode.cpp b/media/libstagefright/codecs/m4v_h263/dec/src/vlc_decode.cpp
+index f7192b1..7202f98 100644
+--- a/media/libstagefright/codecs/m4v_h263/dec/src/vlc_decode.cpp
++++ b/media/libstagefright/codecs/m4v_h263/dec/src/vlc_decode.cpp
+@@ -560,7 +560,7 @@ int PV_VlcDecMCBPC_com_inter_H263(BitstreamDecVideo *stream)
+ 
+     BitstreamShow13Bits(stream, &code);
+ 
+-    if (code == 0)
++    if (code < 8)
+     {
+         return VLC_CODE_ERROR;
+     }
+-- 
+2.7.4
+

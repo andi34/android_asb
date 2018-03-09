@@ -1,0 +1,50 @@
+From c88d6b7133524ce48380f17a05ca374effd8c446 Mon Sep 17 00:00:00 2001
+From: "Joshua J. Drake" <android-open-source@qoop.org>
+Date: Wed, 8 Apr 2015 23:53:10 -0500
+Subject: [PATCH 003/182] Fix integer underflow in ESDS processing
+
+Several arithmetic operations within parseESDescriptor could underflow, leading
+to an out-of-bounds read operation. Ensure that subtractions from 'size' do not
+cause it to wrap around.
+
+Bug: 20139950
+
+(cherry picked from commit 07c0f59d6c48874982d2b5c713487612e5af465a)
+
+Change-Id: I377d21051e07ca654ea1f7037120429d3f71924a
+---
+ media/libstagefright/ESDS.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/media/libstagefright/ESDS.cpp b/media/libstagefright/ESDS.cpp
+index 4a0c35c..c76bc4a 100644
+--- a/media/libstagefright/ESDS.cpp
++++ b/media/libstagefright/ESDS.cpp
+@@ -136,6 +136,8 @@ status_t ESDS::parseESDescriptor(size_t offset, size_t size) {
+     --size;
+ 
+     if (streamDependenceFlag) {
++        if (size < 2)
++            return ERROR_MALFORMED;
+         offset += 2;
+         size -= 2;
+     }
+@@ -145,11 +147,15 @@ status_t ESDS::parseESDescriptor(size_t offset, size_t size) {
+             return ERROR_MALFORMED;
+         }
+         unsigned URLlength = mData[offset];
++        if (URLlength >= size)
++            return ERROR_MALFORMED;
+         offset += URLlength + 1;
+         size -= URLlength + 1;
+     }
+ 
+     if (OCRstreamFlag) {
++        if (size < 2)
++            return ERROR_MALFORMED;
+         offset += 2;
+         size -= 2;
+ 
+-- 
+2.7.4
+

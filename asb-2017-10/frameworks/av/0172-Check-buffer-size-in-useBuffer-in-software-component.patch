@@ -1,0 +1,44 @@
+From b2b569798807616f5a586767861edb99dd315ec8 Mon Sep 17 00:00:00 2001
+From: Dongwon Kang <dwkang@google.com>
+Date: Mon, 24 Jul 2017 13:59:51 -0700
+Subject: [PATCH 172/182] Check buffer size in useBuffer in software components
+
+Test: No more crash from oob read/write with running poc.
+Bug: 63522430
+Change-Id: I232d256eacdfaa9347902fe9b42650999f0d2d85
+(cherry picked from commit 4e79910fdb303fd28a37a9401bed1b7fbccb1373)
+CVE-2017-0817
+---
+ media/libstagefright/omx/SimpleSoftOMXComponent.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+index fd55e88..4a7bd4f 100644
+--- a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
++++ b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+@@ -199,6 +199,13 @@ OMX_ERRORTYPE SimpleSoftOMXComponent::useBuffer(
+     Mutex::Autolock autoLock(mLock);
+     CHECK_LT(portIndex, mPorts.size());
+ 
++    PortInfo *port = &mPorts.editItemAt(portIndex);
++    if (size < port->mDef.nBufferSize) {
++        ALOGE("b/63522430, Buffer size is too small.");
++        android_errorWriteLog(0x534e4554, "63522430");
++        return OMX_ErrorBadParameter;
++    }
++
+     *header = new OMX_BUFFERHEADERTYPE;
+     (*header)->nSize = sizeof(OMX_BUFFERHEADERTYPE);
+     (*header)->nVersion.s.nVersionMajor = 1;
+@@ -221,8 +228,6 @@ OMX_ERRORTYPE SimpleSoftOMXComponent::useBuffer(
+     (*header)->nOutputPortIndex = portIndex;
+     (*header)->nInputPortIndex = portIndex;
+ 
+-    PortInfo *port = &mPorts.editItemAt(portIndex);
+-
+     CHECK(mState == OMX_StateLoaded || port->mDef.bEnabled == OMX_FALSE);
+ 
+     CHECK_LT(port->mBuffers.size(), port->mDef.nBufferCountActual);
+-- 
+2.7.4
+

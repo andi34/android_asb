@@ -1,0 +1,39 @@
+From 4ead4180e6a70df2d738b9be1a960b04500a3167 Mon Sep 17 00:00:00 2001
+From: Nick Kralevich <nnk@google.com>
+Date: Thu, 20 Aug 2015 09:56:39 -0700
+Subject: [PATCH 049/182] IMediaPlayer.cpp: make sure structures are
+ initialized to 0
+
+Credit https://code.google.com/p/android/issues/detail?id=183310
+
+Bug: 23515142
+Change-Id: Idbd66fb148bd0ac1dd78f8651d0164f2a41e2427
+(cherry picked from commit b73b826cc16291b33649402497efbe0f946413bd)
+(cherry picked from commit 0981df6e3db106bfb7a56a2b668c012fcc34dd2c)
+---
+ media/libmedia/IMediaPlayer.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/media/libmedia/IMediaPlayer.cpp b/media/libmedia/IMediaPlayer.cpp
+index e79bcd2..9b57902 100644
+--- a/media/libmedia/IMediaPlayer.cpp
++++ b/media/libmedia/IMediaPlayer.cpp
+@@ -510,6 +510,7 @@ status_t BnMediaPlayer::onTransact(
+             CHECK_INTERFACE(IMediaPlayer, data, reply);
+ 
+             struct sockaddr_in endpoint;
++            memset(&endpoint, 0, sizeof(endpoint));
+             int amt = data.readInt32();
+             if (amt == sizeof(endpoint)) {
+                 data.read(&endpoint, sizeof(struct sockaddr_in));
+@@ -524,6 +525,7 @@ status_t BnMediaPlayer::onTransact(
+             CHECK_INTERFACE(IMediaPlayer, data, reply);
+ 
+             struct sockaddr_in endpoint;
++            memset(&endpoint, 0, sizeof(endpoint));
+             status_t res = getRetransmitEndpoint(&endpoint);
+ 
+             reply->writeInt32(res);
+-- 
+2.7.4
+

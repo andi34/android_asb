@@ -1,0 +1,75 @@
+From 23927dfba4fdbfc49ad2834e42d0789361ad9bff Mon Sep 17 00:00:00 2001
+From: Pawin Vongmasa <pawin@google.com>
+Date: Wed, 20 Apr 2016 15:51:48 -0700
+Subject: [PATCH 096/182] SampleTable.cpp: Fixed a regression caused by a fix
+ for bug 28076789.
+
+Detail: Before the original fix
+(Id207f369ab7b27787d83f5d8fc48dc53ed9fcdc9) for 28076789, the
+code allowed a time-to-sample table size to be 0. The change
+made in that fix disallowed such situation, which in fact should
+be allowed. This current patch allows it again while maintaining
+the security of the previous fix.
+
+Bug: 28288202
+Bug: 28076789
+Change-Id: I1c9a60c7f0cfcbd3d908f24998dde15d5136a295
+---
+ media/libstagefright/SampleTable.cpp       | 7 +++++--
+ media/libstagefright/include/SampleTable.h | 1 +
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/SampleTable.cpp b/media/libstagefright/SampleTable.cpp
+index 63cd91b..7b15c58 100644
+--- a/media/libstagefright/SampleTable.cpp
++++ b/media/libstagefright/SampleTable.cpp
+@@ -121,6 +121,7 @@ SampleTable::SampleTable(const sp<DataSource> &source)
+       mSampleSizeFieldSize(0),
+       mDefaultSampleSize(0),
+       mNumSampleSizes(0),
++      mHasTimeToSample(false),
+       mTimeToSampleCount(0),
+       mTimeToSample(),
+       mSampleTimeEntries(NULL),
+@@ -159,7 +160,7 @@ bool SampleTable::isValid() const {
+     return mChunkOffsetOffset >= 0
+         && mSampleToChunkOffset >= 0
+         && mSampleSizeOffset >= 0
+-        && !mTimeToSample.empty();
++        && mHasTimeToSample;
+ }
+ 
+ status_t SampleTable::setChunkOffsetParams(
+@@ -322,7 +323,7 @@ status_t SampleTable::setSampleSizeParams(
+ 
+ status_t SampleTable::setTimeToSampleParams(
+         off64_t data_offset, size_t data_size) {
+-    if (!mTimeToSample.empty() || data_size < 8) {
++    if (mHasTimeToSample || data_size < 8) {
+         return ERROR_MALFORMED;
+     }
+ 
+@@ -361,6 +362,8 @@ status_t SampleTable::setTimeToSampleParams(
+     for (size_t i = 0; i < mTimeToSample.size(); ++i) {
+         mTimeToSample.editItemAt(i) = ntohl(mTimeToSample[i]);
+     }
++
++    mHasTimeToSample = true;
+     return OK;
+ }
+ 
+diff --git a/media/libstagefright/include/SampleTable.h b/media/libstagefright/include/SampleTable.h
+index b259daa..caa028a 100644
+--- a/media/libstagefright/include/SampleTable.h
++++ b/media/libstagefright/include/SampleTable.h
+@@ -109,6 +109,7 @@ private:
+     uint32_t mDefaultSampleSize;
+     uint32_t mNumSampleSizes;
+ 
++    bool mHasTimeToSample;
+     uint32_t mTimeToSampleCount;
+     Vector<uint32_t> mTimeToSample;
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,60 @@
+From 4687c69850daf673d6841607e182e5a966effb18 Mon Sep 17 00:00:00 2001
+From: Pawin Vongmasa <pawin@google.com>
+Date: Mon, 22 May 2017 18:24:30 -0700
+Subject: [PATCH 159/182] RESTRICT AUTOMERGE Check the buffer index from
+ acquireBuffer
+
+Test: Run the POC
+Test: Small CtsMediaTestCases
+Bug: 37563942
+Change-Id: I8ddfbc91a08d96de1f732e6776d6f90997042f6b
+(cherry picked from commit 77e1eb5988ed2b9abff0fec19663d1ec094af192)
+---
+ media/libstagefright/omx/GraphicBufferSource.cpp | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/media/libstagefright/omx/GraphicBufferSource.cpp b/media/libstagefright/omx/GraphicBufferSource.cpp
+index 44f0be7..7727c2b 100644
+--- a/media/libstagefright/omx/GraphicBufferSource.cpp
++++ b/media/libstagefright/omx/GraphicBufferSource.cpp
+@@ -346,6 +346,12 @@ void GraphicBufferSource::suspend(bool suspend) {
+             } else if (err != OK) {
+                 ALOGW("suspend: acquireBuffer returned err=%d", err);
+                 break;
++            } else if (item.mBuf < 0 ||
++                    item.mBuf >= BufferQueue::NUM_BUFFER_SLOTS) {
++                // Invalid buffer index
++                ALOGW("suspend: corrupted buffer index (%d)",
++                        item.mBuf);
++                break;
+             }
+ 
+             --mNumFramesAvailable;
+@@ -396,6 +402,10 @@ bool GraphicBufferSource::fillCodecBuffer_l() {
+         // now what? fake end-of-stream?
+         ALOGW("fillCodecBuffer_l: acquireBuffer returned err=%d", err);
+         return false;
++    } else if (item.mBuf < 0 || item.mBuf >= BufferQueue::NUM_BUFFER_SLOTS) {
++        // Invalid buffer index
++        ALOGW("fillCodecBuffer_l: corrupted buffer index (%d)", item.mBuf);
++        return false;
+     }
+ 
+     mNumFramesAvailable--;
+@@ -696,6 +706,13 @@ void GraphicBufferSource::onFrameAvailable() {
+         BufferQueue::BufferItem item;
+         status_t err = mBufferQueue->acquireBuffer(&item, 0);
+         if (err == OK) {
++            if (item.mBuf < 0 ||
++                    item.mBuf >= BufferQueue::NUM_BUFFER_SLOTS) {
++                // Invalid buffer index
++                ALOGW("onFrameAvailable: corrupted buffer index (%d)",
++                        item.mBuf);
++                return;
++            }
+             // If this is the first time we're seeing this buffer, add it to our
+             // slot table.
+             if (item.mGraphicBuffer != NULL) {
+-- 
+2.7.4
+

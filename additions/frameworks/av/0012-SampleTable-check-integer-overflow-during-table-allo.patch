@@ -1,0 +1,57 @@
+From 3e66cdac82eb921163199aedcfaf1b4a743b3d92 Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Mon, 28 Jul 2014 09:54:57 -0700
+Subject: [PATCH 012/182] SampleTable: check integer overflow during table
+ alloc
+
+Bug: 15328708
+Bug: 15342615
+Bug: 15342751
+Change-Id: I6bb110a1eba46506799c73be8ff9a4f71c7e7053
+(cherry picked from commit edd4a76eb4747bd19ed122df46fa46b452c12a0d)
+---
+ media/libstagefright/SampleTable.cpp | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/media/libstagefright/SampleTable.cpp b/media/libstagefright/SampleTable.cpp
+index 0872c1c..4d8d703 100644
+--- a/media/libstagefright/SampleTable.cpp
++++ b/media/libstagefright/SampleTable.cpp
+@@ -333,6 +333,10 @@ status_t SampleTable::setTimeToSampleParams(
+     }
+ 
+     mTimeToSampleCount = U32_AT(&header[4]);
++    uint64_t allocSize = mTimeToSampleCount * 2 * sizeof(uint32_t);
++    if (allocSize > SIZE_MAX) {
++        return ERROR_OUT_OF_RANGE;
++    }
+     mTimeToSample = new uint32_t[mTimeToSampleCount * 2];
+ 
+     size_t size = sizeof(uint32_t) * mTimeToSampleCount * 2;
+@@ -375,6 +379,11 @@ status_t SampleTable::setCompositionTimeToSampleParams(
+     }
+ 
+     mNumCompositionTimeDeltaEntries = numEntries;
++    uint64_t allocSize = numEntries * 2 * sizeof(uint32_t);
++    if (allocSize > SIZE_MAX) {
++        return ERROR_OUT_OF_RANGE;
++    }
++
+     mCompositionTimeDeltaEntries = new uint32_t[2 * numEntries];
+ 
+     if (mDataSource->readAt(
+@@ -420,6 +429,11 @@ status_t SampleTable::setSyncSampleParams(off64_t data_offset, size_t data_size)
+         ALOGV("Table of sync samples is empty or has only a single entry!");
+     }
+ 
++    uint64_t allocSize = mNumSyncSamples * sizeof(uint32_t);
++    if (allocSize > SIZE_MAX) {
++        return ERROR_OUT_OF_RANGE;
++    }
++
+     mSyncSamples = new uint32_t[mNumSyncSamples];
+     size_t size = mNumSyncSamples * sizeof(uint32_t);
+     if (mDataSource->readAt(mSyncSampleOffset + 8, mSyncSamples, size)
+-- 
+2.7.4
+

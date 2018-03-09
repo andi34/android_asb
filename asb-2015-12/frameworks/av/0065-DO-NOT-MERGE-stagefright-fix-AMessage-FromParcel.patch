@@ -1,0 +1,69 @@
+From 1673e0523629e1e855f2a27d54a55fedf5c50d13 Mon Sep 17 00:00:00 2001
+From: Flanker <i@flanker017.me>
+Date: Fri, 11 Sep 2015 19:05:47 +0800
+Subject: [PATCH 065/182] DO NOT MERGE stagefright: fix AMessage::FromParcel
+
+Add check for incoming mNumItems. Also add check readCString return
+value.
+
+Fix style & add log.
+
+Bug: 24123723
+
+Change-Id: If41a5312c27d868f481893eef56019b6807c39b7
+(cherry picked from commit 3737a3fa121796131ea5b782230e65dad9ccf90f)
+---
+ media/libstagefright/foundation/AMessage.cpp | 25 ++++++++++++++++++++++---
+ 1 file changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/media/libstagefright/foundation/AMessage.cpp b/media/libstagefright/foundation/AMessage.cpp
+index dc42f91..1300f16 100644
+--- a/media/libstagefright/foundation/AMessage.cpp
++++ b/media/libstagefright/foundation/AMessage.cpp
+@@ -453,13 +453,23 @@ sp<AMessage> AMessage::FromParcel(const Parcel &parcel) {
+     sp<AMessage> msg = new AMessage(what);
+ 
+     msg->mNumItems = static_cast<size_t>(parcel.readInt32());
++    if (msg->mNumItems > kMaxNumItems) {
++        ALOGE("Too large number of items clipped.");
++        msg->mNumItems = kMaxNumItems;
++    }
+ 
+     for (size_t i = 0; i < msg->mNumItems; ++i) {
+         Item *item = &msg->mItems[i];
+ 
+-        item->mName = AAtomizer::Atomize(parcel.readCString());
+-        item->mType = static_cast<Type>(parcel.readInt32());
++        const char *name = parcel.readCString();
++        if (name == NULL) {
++            ALOGE("Failed reading name for an item. Parsing aborted.");
++            msg->mNumItems = i;
++            break;
++        }
+ 
++        item->mName = AAtomizer::Atomize(name);
++        item->mType = static_cast<Type>(parcel.readInt32());
+         switch (item->mType) {
+             case kTypeInt32:
+             {
+@@ -493,7 +503,16 @@ sp<AMessage> AMessage::FromParcel(const Parcel &parcel) {
+ 
+             case kTypeString:
+             {
+-                item->u.stringValue = new AString(parcel.readCString());
++                const char *stringValue = parcel.readCString();
++                if (stringValue == NULL) {
++                    ALOGE("Failed reading string value from a parcel. "
++                        "Parsing aborted.");
++                    msg->mNumItems = i;
++                    continue;
++                    // The loop will terminate subsequently.
++                } else {
++                    item->u.stringValue = new AString(stringValue);
++                }
+                 break;
+             }
+ 
+-- 
+2.7.4
+

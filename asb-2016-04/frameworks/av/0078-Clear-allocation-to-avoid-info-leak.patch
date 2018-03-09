@@ -1,0 +1,86 @@
+From dd30f8d30d8cbb674dbe26e58875d9a4f4b99d20 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 22 Feb 2016 13:05:15 -0800
+Subject: [PATCH 078/182] Clear allocation to avoid info leak
+
+Bug: 26914474
+Change-Id: Ie1a86e86d78058d041149fe599a4996e7f8185cf
+(cherry picked from commit f7a388203a1632084dbe3307d7e3265f689bc11e)
+---
+ media/libmedia/IOMX.cpp | 59 +++++++++++++++++++++++++++----------------------
+ 1 file changed, 32 insertions(+), 27 deletions(-)
+
+diff --git a/media/libmedia/IOMX.cpp b/media/libmedia/IOMX.cpp
+index 10747f3..787c828 100644
+--- a/media/libmedia/IOMX.cpp
++++ b/media/libmedia/IOMX.cpp
+@@ -598,34 +598,39 @@ status_t BnOMX::onTransact(
+ 
+             size_t size = data.readInt32();
+ 
+-            void *params = malloc(size);
+-            data.read(params, size);
+-
+-            status_t err;
+-            switch (code) {
+-                case GET_PARAMETER:
+-                    err = getParameter(node, index, params, size);
+-                    break;
+-                case SET_PARAMETER:
+-                    err = setParameter(node, index, params, size);
+-                    break;
+-                case GET_CONFIG:
+-                    err = getConfig(node, index, params, size);
+-                    break;
+-                case SET_CONFIG:
+-                    err = setConfig(node, index, params, size);
+-                    break;
+-                case SET_INTERNAL_OPTION:
+-                {
+-                    InternalOptionType type =
+-                        (InternalOptionType)data.readInt32();
+-
+-                    err = setInternalOption(node, index, type, params, size);
+-                    break;
++            status_t err = NO_MEMORY;
++            void *params = calloc(size, 1);
++            if (params) {
++                err = data.read(params, size);
++                if (err != OK) {
++                    android_errorWriteLog(0x534e4554, "26914474");
++                } else {
++                    switch (code) {
++                        case GET_PARAMETER:
++                            err = getParameter(node, index, params, size);
++                            break;
++                        case SET_PARAMETER:
++                            err = setParameter(node, index, params, size);
++                            break;
++                        case GET_CONFIG:
++                            err = getConfig(node, index, params, size);
++                            break;
++                        case SET_CONFIG:
++                            err = setConfig(node, index, params, size);
++                            break;
++                        case SET_INTERNAL_OPTION:
++                        {
++                            InternalOptionType type =
++                                (InternalOptionType)data.readInt32();
++
++                            err = setInternalOption(node, index, type, params, size);
++                            break;
++                        }
++
++                        default:
++                            TRESPASS();
++                    }
+                 }
+-
+-                default:
+-                    TRESPASS();
+             }
+ 
+             reply->writeInt32(err);
+-- 
+2.7.4
+

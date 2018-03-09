@@ -1,0 +1,60 @@
+From 7d90c961fc08f523954294238f5736ecc6cca036 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 18 Aug 2015 14:32:16 -0700
+Subject: [PATCH 027/182] libstagefright: fix overflow in
+ MPEG4Source::parseSampleAuxiliaryInformationOffsets.
+
+Bug: 23270724
+Change-Id: Id7ba55c7bf6860fbfc892bbb6378aac644c82da4
+(cherry picked from commit c51ab7dd82bf4e24666fc72a55e03e2f530204d5)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index fce810c..40f33ca 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -39,6 +39,10 @@
+ #include <media/stagefright/MetaData.h>
+ #include <utils/String8.h>
+ 
++#ifndef UINT32_MAX
++#define UINT32_MAX       (4294967295U)
++#endif
++
+ namespace android {
+ 
+ class MPEG4Source : public MediaSource {
+@@ -2702,13 +2706,27 @@ status_t MPEG4Source::parseSampleAuxiliaryInformationOffsets(off64_t offset, off
+         return ERROR_IO;
+     }
+     offset += 4;
++    if (entrycount == 0) {
++        return OK;
++    }
++    if (entrycount > UINT32_MAX / 8) {
++        return ERROR_MALFORMED;
++    }
+ 
+     if (entrycount > mCurrentSampleInfoOffsetsAllocSize) {
+-        mCurrentSampleInfoOffsets = (uint64_t*) realloc(mCurrentSampleInfoOffsets, entrycount * 8);
++        uint64_t *newPtr = (uint64_t *)realloc(mCurrentSampleInfoOffsets, entrycount * 8);
++        if (newPtr == NULL) {
++            return NO_MEMORY;
++        }
++        mCurrentSampleInfoOffsets = newPtr;
+         mCurrentSampleInfoOffsetsAllocSize = entrycount;
+     }
+     mCurrentSampleInfoOffsetCount = entrycount;
+ 
++    if (mCurrentSampleInfoOffsets == NULL) {
++        return OK;
++    }
++
+     for (size_t i = 0; i < entrycount; i++) {
+         if (version == 0) {
+             uint32_t tmp;
+-- 
+2.7.4
+

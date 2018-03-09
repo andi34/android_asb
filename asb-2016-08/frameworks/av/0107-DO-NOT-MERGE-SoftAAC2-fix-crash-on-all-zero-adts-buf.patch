@@ -1,0 +1,41 @@
+From 9b757827ff4d369e9ecbcdd496c1967e2a996f93 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Wed, 8 Jun 2016 15:00:08 -0700
+Subject: [PATCH 107/182] DO NOT MERGE SoftAAC2: fix crash on all-zero adts
+ buffer
+
+Bug: 29153599
+Change-Id: Ieb70a90cf31927165de7a840bfdd3ee2c76f4cbd
+(cherry picked from commit d85c4490b26d9fcefd32757a624cc4f6fdeb7e84)
+---
+ media/libstagefright/codecs/aacdec/SoftAAC2.cpp | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/media/libstagefright/codecs/aacdec/SoftAAC2.cpp b/media/libstagefright/codecs/aacdec/SoftAAC2.cpp
+index 7acedbc..a9da1cc 100644
+--- a/media/libstagefright/codecs/aacdec/SoftAAC2.cpp
++++ b/media/libstagefright/codecs/aacdec/SoftAAC2.cpp
+@@ -458,11 +458,15 @@ void SoftAAC2::onQueueFilled(OMX_U32 portIndex) {
+                 } else {
+                     adtsHeaderSize = (protectionAbsent ? 7 : 9);
+ 
+-                    inBuffer[0] = (UCHAR *)adtsHeader + adtsHeaderSize;
+-                    inBufferLength[0] = aac_frame_length - adtsHeaderSize;
+-
+-                    inHeader->nOffset += adtsHeaderSize;
+-                    inHeader->nFilledLen -= adtsHeaderSize;
++                    if (aac_frame_length < adtsHeaderSize) {
++                        signalError = true;
++                    } else {
++                        inBuffer[0] = (UCHAR *)adtsHeader + adtsHeaderSize;
++                        inBufferLength[0] = aac_frame_length - adtsHeaderSize;
++
++                        inHeader->nOffset += adtsHeaderSize;
++                        inHeader->nFilledLen -= adtsHeaderSize;
++                    }
+                 }
+             }
+ 
+-- 
+2.7.4
+

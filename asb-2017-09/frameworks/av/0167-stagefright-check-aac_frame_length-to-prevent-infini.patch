@@ -1,0 +1,33 @@
+From d1fe6ffe47bd0e4a8ffe8dfa41cda91029a8f4aa Mon Sep 17 00:00:00 2001
+From: Chong Zhang <chz@google.com>
+Date: Fri, 7 Jul 2017 18:25:16 -0700
+Subject: [PATCH 167/182] stagefright: check aac_frame_length to prevent
+ infinite loop
+
+bug: 62673179
+Change-Id: I5da44822ad2ff59d396d1df42f34cd0a5620e134
+(cherry picked from commit 6e2bcf40e4083be3a0fbb13d03293a78301e66ef)
+CVE-2017-0775
+---
+ media/libstagefright/mpeg2ts/ESQueue.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/media/libstagefright/mpeg2ts/ESQueue.cpp b/media/libstagefright/mpeg2ts/ESQueue.cpp
+index 8f9c9c8..b4884e2 100644
+--- a/media/libstagefright/mpeg2ts/ESQueue.cpp
++++ b/media/libstagefright/mpeg2ts/ESQueue.cpp
+@@ -460,6 +460,11 @@ sp<ABuffer> ElementaryStreamQueue::dequeueAccessUnitAAC() {
+         bits.skipBits(2);
+ 
+         unsigned aac_frame_length = bits.getBits(13);
++        if (aac_frame_length == 0){
++            ALOGE("b/62673179, Invalid AAC frame length!");
++            android_errorWriteLog(0x534e4554, "62673179");
++            return NULL;
++        }
+ 
+         bits.skipBits(11);  // adts_buffer_fullness
+ 
+-- 
+2.7.4
+

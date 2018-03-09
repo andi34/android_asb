@@ -1,0 +1,42 @@
+From febb4c9d98ad4a27a96fc42024e4f790a781a25a Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Thu, 16 Jul 2015 15:04:12 -0700
+Subject: [PATCH 031/182] MatroskaExtractor: detect infinite loop when parsing
+ NALs
+
+Bug: 21335999
+Change-Id: I76bd34610e52048ffcf16e41aa6175afc8a14ee4
+(cherry picked from commit 2dcf6138ebc9c5688aeae151d2fbde55a2826128)
+---
+ media/libstagefright/matroska/MatroskaExtractor.cpp | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/matroska/MatroskaExtractor.cpp b/media/libstagefright/matroska/MatroskaExtractor.cpp
+index cf20428..25d0cf1 100644
+--- a/media/libstagefright/matroska/MatroskaExtractor.cpp
++++ b/media/libstagefright/matroska/MatroskaExtractor.cpp
+@@ -23,6 +23,7 @@
+ #include "mkvparser.hpp"
+ 
+ #include <media/stagefright/foundation/ADebug.h>
++#include <media/stagefright/foundation/AUtils.h>
+ #include <media/stagefright/foundation/hexdump.h>
+ #include <media/stagefright/DataSource.h>
+ #include <media/stagefright/MediaBuffer.h>
+@@ -563,7 +564,12 @@ status_t MatroskaSource::read(
+                     TRESPASS();
+             }
+ 
+-            if (srcOffset + mNALSizeLen + NALsize > srcSize) {
++            if (srcOffset + mNALSizeLen + NALsize <= srcOffset + mNALSizeLen) {
++                frame->release();
++                frame = NULL;
++
++                return ERROR_MALFORMED;
++            } else if (srcOffset + mNALSizeLen + NALsize > srcSize) {
+                 break;
+             }
+ 
+-- 
+2.7.4
+

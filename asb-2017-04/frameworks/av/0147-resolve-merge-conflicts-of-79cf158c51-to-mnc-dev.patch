@@ -1,0 +1,42 @@
+From 94bf86b0062d55b5704b55b9bae8cfe39144651e Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Mon, 13 Feb 2017 14:19:40 -0800
+Subject: [PATCH 147/182] resolve merge conflicts of 79cf158c51 to mnc-dev
+
+AOSP-Change-Id: Ied32e83215e386c801c02991a0b2fa4baa25b643
+
+CVE-2017-0558
+
+(cherry picked from commit 50358a80b1724f6cf1bcdf003e1abf9cc141b122)
+
+Change-Id: Ic2e40c7d6aec8427444a1fd145726e490e994d08
+---
+ media/libstagefright/wifi-display/rtp/RTPSender.cpp | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/media/libstagefright/wifi-display/rtp/RTPSender.cpp b/media/libstagefright/wifi-display/rtp/RTPSender.cpp
+index 1887b8b..5b7a09d 100644
+--- a/media/libstagefright/wifi-display/rtp/RTPSender.cpp
++++ b/media/libstagefright/wifi-display/rtp/RTPSender.cpp
+@@ -766,9 +766,15 @@ status_t RTPSender::parseTSFB(const uint8_t *data, size_t size) {
+ }
+ 
+ status_t RTPSender::parseAPP(const uint8_t *data, size_t size) {
+-    if (!memcmp("late", &data[8], 4)) {
+-        int64_t avgLatencyUs = (int64_t)U64_AT(&data[12]);
+-        int64_t maxLatencyUs = (int64_t)U64_AT(&data[20]);
++    static const size_t late_offset = 8;
++    static const char late_string[] = "late";
++    static const size_t avgLatencyUs_offset = late_offset + sizeof(late_string) - 1;
++    static const size_t maxLatencyUs_offset = avgLatencyUs_offset + sizeof(int64_t);
++
++    if ((size >= (maxLatencyUs_offset + sizeof(int64_t)))
++            && !memcmp(late_string, &data[late_offset], sizeof(late_string) - 1)) {
++        int64_t avgLatencyUs = (int64_t)U64_AT(&data[avgLatencyUs_offset]);
++        int64_t maxLatencyUs = (int64_t)U64_AT(&data[maxLatencyUs_offset]);
+ 
+         sp<AMessage> notify = mNotify->dup();
+         notify->setInt32("what", kWhatInformSender);
+-- 
+2.7.4
+

@@ -1,0 +1,689 @@
+From 21f648f5261700c13d9972c9a5c0a91c9dcb3d4e Mon Sep 17 00:00:00 2001
+From: Eric Laurent <elaurent@google.com>
+Date: Fri, 19 Jun 2015 15:33:57 -0700
+Subject: [PATCH 011/182] DO NOT MERGE - audio effects: fix heap overflow
+
+Check consistency of effect command reply sizes before
+copying to reply address.
+
+Also add null pointer check on reply size.
+Also remove unused parameter warning.
+
+Bug: 21953516.
+Change-Id: I4cf00c12eaed696af28f3b7613f7e36f47a160c4
+---
+ media/libeffects/downmix/EffectDownmix.c           |  18 +--
+ .../libeffects/loudness/EffectLoudnessEnhancer.cpp |  12 +-
+ .../libeffects/lvm/wrapper/Bundle/EffectBundle.cpp | 137 +++++++--------------
+ .../libeffects/lvm/wrapper/Reverb/EffectReverb.cpp |  30 +++--
+ media/libeffects/preprocessing/PreProcessing.cpp   |  35 +++---
+ media/libeffects/visualizer/EffectVisualizer.cpp   |  25 ++--
+ 6 files changed, 103 insertions(+), 154 deletions(-)
+
+diff --git a/media/libeffects/downmix/EffectDownmix.c b/media/libeffects/downmix/EffectDownmix.c
+index f17a6e8..d571f17 100644
+--- a/media/libeffects/downmix/EffectDownmix.c
++++ b/media/libeffects/downmix/EffectDownmix.c
+@@ -160,8 +160,8 @@ void Downmix_testIndexComputation(uint32_t mask) {
+ /*--- Effect Library Interface Implementation ---*/
+ 
+ int32_t DownmixLib_Create(const effect_uuid_t *uuid,
+-        int32_t sessionId,
+-        int32_t ioId,
++        int32_t sessionId __unused,
++        int32_t ioId __unused,
+         effect_handle_t *pHandle) {
+     int ret;
+     int i;
+@@ -384,7 +384,7 @@ static int Downmix_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdS
+ 
+     switch (cmdCode) {
+     case EFFECT_CMD_INIT:
+-        if (pReplyData == NULL || *replySize != sizeof(int)) {
++        if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         *(int *) pReplyData = Downmix_Init(pDwmModule);
+@@ -392,7 +392,7 @@ static int Downmix_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdS
+ 
+     case EFFECT_CMD_SET_CONFIG:
+         if (pCmdData == NULL || cmdSize != sizeof(effect_config_t)
+-                || pReplyData == NULL || *replySize != sizeof(int)) {
++                || pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         *(int *) pReplyData = Downmix_Configure(pDwmModule,
+@@ -407,7 +407,7 @@ static int Downmix_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdS
+         ALOGV("Downmix_Command EFFECT_CMD_GET_PARAM pCmdData %p, *replySize %d, pReplyData: %p",
+                 pCmdData, *replySize, pReplyData);
+         if (pCmdData == NULL || cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)) ||
+-                pReplyData == NULL ||
++                pReplyData == NULL || replySize == NULL ||
+                 *replySize < (int) sizeof(effect_param_t) + 2 * sizeof(int32_t)) {
+             return -EINVAL;
+         }
+@@ -424,7 +424,7 @@ static int Downmix_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdS
+         ALOGV("Downmix_Command EFFECT_CMD_SET_PARAM cmdSize %d pCmdData %p, *replySize %d, " \
+                 "pReplyData %p", cmdSize, pCmdData, *replySize, pReplyData);
+         if (pCmdData == NULL || (cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)))
+-                || pReplyData == NULL || *replySize != (int)sizeof(int32_t)) {
++                || pReplyData == NULL || replySize == NULL || *replySize != (int)sizeof(int32_t)) {
+             return -EINVAL;
+         }
+         effect_param_t *cmd = (effect_param_t *) pCmdData;
+@@ -443,7 +443,7 @@ static int Downmix_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdS
+         break;
+ 
+     case EFFECT_CMD_ENABLE:
+-        if (pReplyData == NULL || *replySize != sizeof(int)) {
++        if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         if (pDownmixer->state != DOWNMIX_STATE_INITIALIZED) {
+@@ -455,7 +455,7 @@ static int Downmix_Command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdS
+         break;
+ 
+     case EFFECT_CMD_DISABLE:
+-        if (pReplyData == NULL || *replySize != sizeof(int)) {
++        if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         if (pDownmixer->state != DOWNMIX_STATE_ACTIVE) {
+@@ -670,7 +670,7 @@ int Downmix_Configure(downmix_module_t *pDwmModule, effect_config_t *pConfig, bo
+  *----------------------------------------------------------------------------
+  */
+ 
+-int Downmix_Reset(downmix_object_t *pDownmixer, bool init) {
++int Downmix_Reset(downmix_object_t *pDownmixer __unused, bool init __unused) {
+     // nothing to do here
+     return 0;
+ }
+diff --git a/media/libeffects/loudness/EffectLoudnessEnhancer.cpp b/media/libeffects/loudness/EffectLoudnessEnhancer.cpp
+index 91ed677..5510caf 100644
+--- a/media/libeffects/loudness/EffectLoudnessEnhancer.cpp
++++ b/media/libeffects/loudness/EffectLoudnessEnhancer.cpp
+@@ -189,8 +189,8 @@ int LE_init(LoudnessEnhancerContext *pContext)
+ //
+ 
+ int LELib_Create(const effect_uuid_t *uuid,
+-                         int32_t sessionId,
+-                         int32_t ioId,
++                         int32_t sessionId __unused,
++                         int32_t ioId __unused,
+                          effect_handle_t *pHandle) {
+     ALOGV("LELib_Create()");
+     int ret;
+@@ -327,7 +327,7 @@ int LE_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+         break;
+     case EFFECT_CMD_SET_CONFIG:
+         if (pCmdData == NULL || cmdSize != sizeof(effect_config_t)
+-                || pReplyData == NULL || *replySize != sizeof(int)) {
++                || pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         *(int *) pReplyData = LE_setConfig(pContext,
+@@ -344,7 +344,7 @@ int LE_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+         LE_reset(pContext);
+         break;
+     case EFFECT_CMD_ENABLE:
+-        if (pReplyData == NULL || *replySize != sizeof(int)) {
++        if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         if (pContext->mState != LOUDNESS_ENHANCER_STATE_INITIALIZED) {
+@@ -368,7 +368,7 @@ int LE_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+     case EFFECT_CMD_GET_PARAM: {
+         if (pCmdData == NULL ||
+             cmdSize != (int)(sizeof(effect_param_t) + sizeof(uint32_t)) ||
+-            pReplyData == NULL ||
++            pReplyData == NULL || replySize == NULL ||
+             *replySize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) + sizeof(uint32_t))) {
+             return -EINVAL;
+         }
+@@ -394,7 +394,7 @@ int LE_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+     case EFFECT_CMD_SET_PARAM: {
+         if (pCmdData == NULL ||
+             cmdSize != (int)(sizeof(effect_param_t) + sizeof(uint32_t) + sizeof(uint32_t)) ||
+-            pReplyData == NULL || *replySize != sizeof(int32_t)) {
++            pReplyData == NULL || replySize == NULL || *replySize != sizeof(int32_t)) {
+             return -EINVAL;
+         }
+         *(int32_t *)pReplyData = 0;
+diff --git a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+index 85232e7..9fcfba3 100644
+--- a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
++++ b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+@@ -2752,7 +2752,7 @@ int Effect_command(effect_handle_t  self,
+ 
+     switch (cmdCode){
+         case EFFECT_CMD_INIT:
+-            if (pReplyData == NULL || *replySize != sizeof(int)){
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)){
+                 ALOGV("\tLVM_ERROR, EFFECT_CMD_INIT: ERROR for effect type %d",
+                         pContext->EffectType);
+                 return -EINVAL;
+@@ -2779,10 +2779,8 @@ int Effect_command(effect_handle_t  self,
+ 
+         case EFFECT_CMD_SET_CONFIG:
+             //ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_SET_CONFIG start");
+-            if (pCmdData    == NULL||
+-                cmdSize     != sizeof(effect_config_t)||
+-                pReplyData  == NULL||
+-                *replySize  != sizeof(int)){
++            if (pCmdData    == NULL || cmdSize     != sizeof(effect_config_t) ||
++                    pReplyData  == NULL || replySize == NULL || *replySize  != sizeof(int)) {
+                 ALOGV("\tLVM_ERROR : Effect_command cmdCode Case: "
+                         "EFFECT_CMD_SET_CONFIG: ERROR");
+                 return -EINVAL;
+@@ -2792,8 +2790,7 @@ int Effect_command(effect_handle_t  self,
+             break;
+ 
+         case EFFECT_CMD_GET_CONFIG:
+-            if (pReplyData == NULL ||
+-                *replySize != sizeof(effect_config_t)) {
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(effect_config_t)) {
+                 ALOGV("\tLVM_ERROR : Effect_command cmdCode Case: "
+                         "EFFECT_CMD_GET_CONFIG: ERROR");
+                 return -EINVAL;
+@@ -2811,30 +2808,27 @@ int Effect_command(effect_handle_t  self,
+         case EFFECT_CMD_GET_PARAM:{
+             //ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_GET_PARAM start");
+ 
+-            if(pContext->EffectType == LVM_BASS_BOOST){
+-                if (pCmdData == NULL ||
+-                        cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)) ||
+-                        pReplyData == NULL ||
+-                        *replySize < (int) (sizeof(effect_param_t) + sizeof(int32_t))){
+-                    ALOGV("\tLVM_ERROR : BassBoost_command cmdCode Case: "
+-                            "EFFECT_CMD_GET_PARAM: ERROR");
+-                    return -EINVAL;
+-                }
+-                effect_param_t *p = (effect_param_t *)pCmdData;
++            effect_param_t *p = (effect_param_t *)pCmdData;
++
++            if (pCmdData == NULL || cmdSize < sizeof(effect_param_t) ||
++                    cmdSize < (sizeof(effect_param_t) + p->psize) ||
++                    pReplyData == NULL || replySize == NULL ||
++                    *replySize < (sizeof(effect_param_t) + p->psize)) {
++                ALOGV("\tLVM_ERROR : EFFECT_CMD_GET_PARAM: ERROR");
++                return -EINVAL;
++            }
+ 
+-                memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
++            memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
+ 
+-                p = (effect_param_t *)pReplyData;
++            p = (effect_param_t *)pReplyData;
+ 
+-                int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
++            int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
+ 
++            if(pContext->EffectType == LVM_BASS_BOOST){
+                 p->status = android::BassBoost_getParameter(pContext,
+                                                             p->data,
+                                                             (size_t  *)&p->vsize,
+                                                             p->data + voffset);
+-
+-                *replySize = sizeof(effect_param_t) + voffset + p->vsize;
+-
+                 //ALOGV("\tBassBoost_command EFFECT_CMD_GET_PARAM "
+                 //        "*pCmdData %d, *replySize %d, *pReplyData %d ",
+                 //        *(int32_t *)((char *)pCmdData + sizeof(effect_param_t)),
+@@ -2843,29 +2837,11 @@ int Effect_command(effect_handle_t  self,
+             }
+ 
+             if(pContext->EffectType == LVM_VIRTUALIZER){
+-                if (pCmdData == NULL ||
+-                        cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)) ||
+-                        pReplyData == NULL ||
+-                        *replySize < (int) (sizeof(effect_param_t) + sizeof(int32_t))){
+-                    ALOGV("\tLVM_ERROR : Virtualizer_command cmdCode Case: "
+-                            "EFFECT_CMD_GET_PARAM: ERROR");
+-                    return -EINVAL;
+-                }
+-                effect_param_t *p = (effect_param_t *)pCmdData;
+-
+-                memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
+-
+-                p = (effect_param_t *)pReplyData;
+-
+-                int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
+-
+                 p->status = android::Virtualizer_getParameter(pContext,
+                                                              (void *)p->data,
+                                                              (size_t  *)&p->vsize,
+                                                               p->data + voffset);
+ 
+-                *replySize = sizeof(effect_param_t) + voffset + p->vsize;
+-
+                 //ALOGV("\tVirtualizer_command EFFECT_CMD_GET_PARAM "
+                 //        "*pCmdData %d, *replySize %d, *pReplyData %d ",
+                 //        *(int32_t *)((char *)pCmdData + sizeof(effect_param_t)),
+@@ -2875,29 +2851,11 @@ int Effect_command(effect_handle_t  self,
+             if(pContext->EffectType == LVM_EQUALIZER){
+                 //ALOGV("\tEqualizer_command cmdCode Case: "
+                 //        "EFFECT_CMD_GET_PARAM start");
+-                if (pCmdData == NULL ||
+-                    cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)) ||
+-                    pReplyData == NULL ||
+-                    *replySize < (int) (sizeof(effect_param_t) + sizeof(int32_t))) {
+-                    ALOGV("\tLVM_ERROR : Equalizer_command cmdCode Case: "
+-                            "EFFECT_CMD_GET_PARAM");
+-                    return -EINVAL;
+-                }
+-                effect_param_t *p = (effect_param_t *)pCmdData;
+-
+-                memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
+-
+-                p = (effect_param_t *)pReplyData;
+-
+-                int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
+-
+                 p->status = android::Equalizer_getParameter(pContext,
+                                                             p->data,
+                                                             &p->vsize,
+                                                             p->data + voffset);
+ 
+-                *replySize = sizeof(effect_param_t) + voffset + p->vsize;
+-
+                 //ALOGV("\tEqualizer_command EFFECT_CMD_GET_PARAM *pCmdData %d, *replySize %d, "
+                 //       "*pReplyData %08x %08x",
+                 //        *(int32_t *)((char *)pCmdData + sizeof(effect_param_t)), *replySize,
+@@ -2907,35 +2865,19 @@ int Effect_command(effect_handle_t  self,
+             }
+             if(pContext->EffectType == LVM_VOLUME){
+                 //ALOGV("\tVolume_command cmdCode Case: EFFECT_CMD_GET_PARAM start");
+-                if (pCmdData == NULL ||
+-                        cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)) ||
+-                        pReplyData == NULL ||
+-                        *replySize < (int) (sizeof(effect_param_t) + sizeof(int32_t))){
+-                    ALOGV("\tLVM_ERROR : Volume_command cmdCode Case: "
+-                            "EFFECT_CMD_GET_PARAM: ERROR");
+-                    return -EINVAL;
+-                }
+-                effect_param_t *p = (effect_param_t *)pCmdData;
+-
+-                memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
+-
+-                p = (effect_param_t *)pReplyData;
+-
+-                int voffset = ((p->psize - 1) / sizeof(int32_t) + 1) * sizeof(int32_t);
+-
+                 p->status = android::Volume_getParameter(pContext,
+                                                          (void *)p->data,
+                                                          (size_t  *)&p->vsize,
+                                                          p->data + voffset);
+ 
+-                *replySize = sizeof(effect_param_t) + voffset + p->vsize;
+-
+                 //ALOGV("\tVolume_command EFFECT_CMD_GET_PARAM "
+                 //        "*pCmdData %d, *replySize %d, *pReplyData %d ",
+                 //        *(int32_t *)((char *)pCmdData + sizeof(effect_param_t)),
+                 //        *replySize,
+                 //        *(int16_t *)((char *)pReplyData + sizeof(effect_param_t) + voffset));
+             }
++            *replySize = sizeof(effect_param_t) + voffset + p->vsize;
++
+             //ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_GET_PARAM end");
+         } break;
+         case EFFECT_CMD_SET_PARAM:{
+@@ -2946,10 +2888,9 @@ int Effect_command(effect_handle_t  self,
+                 //       *replySize,
+                 //       *(int16_t *)((char *)pCmdData + sizeof(effect_param_t) + sizeof(int32_t)));
+ 
+-                if (pCmdData   == NULL||
+-                    cmdSize    != (int)(sizeof(effect_param_t) + sizeof(int32_t) +sizeof(int16_t))||
+-                    pReplyData == NULL||
+-                    *replySize != sizeof(int32_t)){
++                if (pCmdData   == NULL ||
++                        cmdSize    != (sizeof(effect_param_t) + sizeof(int32_t) +sizeof(int16_t)) ||
++                        pReplyData == NULL || replySize == NULL || *replySize != sizeof(int32_t)) {
+                     ALOGV("\tLVM_ERROR : BassBoost_command cmdCode Case: "
+                             "EFFECT_CMD_SET_PARAM: ERROR");
+                     return -EINVAL;
+@@ -2979,10 +2920,11 @@ int Effect_command(effect_handle_t  self,
+               //        *replySize,
+               //        *(int16_t *)((char *)pCmdData + sizeof(effect_param_t) + sizeof(int32_t)));
+ 
+-                if (pCmdData   == NULL||
+-                    cmdSize    != (int)(sizeof(effect_param_t) + sizeof(int32_t) +sizeof(int16_t))||
+-                    pReplyData == NULL||
+-                    *replySize != sizeof(int32_t)){
++                if (pCmdData   == NULL ||
++                        // legal parameters are int16_t or int32_t
++                        cmdSize    > (sizeof(effect_param_t) + sizeof(int32_t) +sizeof(int32_t)) ||
++                        cmdSize    < (sizeof(effect_param_t) + sizeof(int32_t) +sizeof(int16_t)) ||
++                        pReplyData == NULL || replySize == NULL || *replySize != sizeof(int32_t)) {
+                     ALOGV("\tLVM_ERROR : Virtualizer_command cmdCode Case: "
+                             "EFFECT_CMD_SET_PARAM: ERROR");
+                     return -EINVAL;
+@@ -3014,8 +2956,8 @@ int Effect_command(effect_handle_t  self,
+                //        *replySize,
+                //        *(int16_t *)((char *)pCmdData + sizeof(effect_param_t) + sizeof(int32_t)));
+ 
+-                if (pCmdData == NULL || cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)) ||
+-                    pReplyData == NULL || *replySize != sizeof(int32_t)) {
++                if (pCmdData == NULL || cmdSize < (sizeof(effect_param_t) + sizeof(int32_t)) ||
++                        pReplyData == NULL || replySize == NULL || *replySize != sizeof(int32_t)) {
+                     ALOGV("\tLVM_ERROR : Equalizer_command cmdCode Case: "
+                             "EFFECT_CMD_SET_PARAM: ERROR");
+                     return -EINVAL;
+@@ -3033,10 +2975,10 @@ int Effect_command(effect_handle_t  self,
+                 //        *replySize,
+                 //        *(int16_t *)((char *)pCmdData + sizeof(effect_param_t) +sizeof(int32_t)));
+ 
+-                if (    pCmdData   == NULL||
+-                        cmdSize    < (int)(sizeof(effect_param_t) + sizeof(int32_t))||
+-                        pReplyData == NULL||
+-                        *replySize != sizeof(int32_t)){
++                if (pCmdData   == NULL ||
++                        cmdSize    < (sizeof(effect_param_t) + sizeof(int32_t)) ||
++                        pReplyData == NULL || replySize == NULL ||
++                        *replySize != sizeof(int32_t)) {
+                     ALOGV("\tLVM_ERROR : Volume_command cmdCode Case: "
+                             "EFFECT_CMD_SET_PARAM: ERROR");
+                     return -EINVAL;
+@@ -3052,7 +2994,7 @@ int Effect_command(effect_handle_t  self,
+ 
+         case EFFECT_CMD_ENABLE:
+             ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_ENABLE start");
+-            if (pReplyData == NULL || *replySize != sizeof(int)){
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+                 ALOGV("\tLVM_ERROR : Effect_command cmdCode Case: EFFECT_CMD_ENABLE: ERROR");
+                 return -EINVAL;
+             }
+@@ -3062,7 +3004,7 @@ int Effect_command(effect_handle_t  self,
+ 
+         case EFFECT_CMD_DISABLE:
+             //ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_DISABLE start");
+-            if (pReplyData == NULL || *replySize != sizeof(int)){
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+                 ALOGV("\tLVM_ERROR : Effect_command cmdCode Case: EFFECT_CMD_DISABLE: ERROR");
+                 return -EINVAL;
+             }
+@@ -3072,6 +3014,11 @@ int Effect_command(effect_handle_t  self,
+         case EFFECT_CMD_SET_DEVICE:
+         {
+             ALOGV("\tEffect_command cmdCode Case: EFFECT_CMD_SET_DEVICE start");
++            if (pCmdData   == NULL){
++                ALOGV("\tLVM_ERROR : Effect_command cmdCode Case: EFFECT_CMD_SET_DEVICE: ERROR");
++                return -EINVAL;
++            }
++
+             uint32_t device = *(uint32_t *)pCmdData;
+ 
+             if (pContext->EffectType == LVM_BASS_BOOST) {
+@@ -3158,8 +3105,8 @@ int Effect_command(effect_handle_t  self,
+                 break;
+             }
+ 
+-            if (pCmdData == NULL ||
+-                cmdSize != 2 * sizeof(uint32_t)) {
++            if (pCmdData == NULL || cmdSize != 2 * sizeof(uint32_t) || pReplyData == NULL ||
++                    replySize == NULL || *replySize < 2*sizeof(int32_t)) {
+                 ALOGV("\tLVM_ERROR : Effect_command cmdCode Case: "
+                         "EFFECT_CMD_SET_VOLUME: ERROR");
+                 return -EINVAL;
+diff --git a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+index 8a96212..2e22532 100644
+--- a/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
++++ b/media/libeffects/lvm/wrapper/Reverb/EffectReverb.cpp
+@@ -188,8 +188,8 @@ int Reverb_LoadPreset       (ReverbContext   *pContext);
+ /* Effect Library Interface Implementation */
+ 
+ extern "C" int EffectCreate(const effect_uuid_t *uuid,
+-                            int32_t             sessionId,
+-                            int32_t             ioId,
++                            int32_t             sessionId __unused,
++                            int32_t             ioId __unused,
+                             effect_handle_t  *pHandle){
+     int ret;
+     int i;
+@@ -1912,7 +1912,7 @@ int Reverb_command(effect_handle_t  self,
+             //ALOGV("\tReverb_command cmdCode Case: "
+             //        "EFFECT_CMD_INIT start");
+ 
+-            if (pReplyData == NULL || *replySize != sizeof(int)){
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)){
+                 ALOGV("\tLVM_ERROR : Reverb_command cmdCode Case: "
+                         "EFFECT_CMD_INIT: ERROR");
+                 return -EINVAL;
+@@ -1923,10 +1923,8 @@ int Reverb_command(effect_handle_t  self,
+         case EFFECT_CMD_SET_CONFIG:
+             //ALOGV("\tReverb_command cmdCode Case: "
+             //        "EFFECT_CMD_SET_CONFIG start");
+-            if (pCmdData == NULL ||
+-                cmdSize != sizeof(effect_config_t) ||
+-                pReplyData == NULL ||
+-                *replySize != sizeof(int)) {
++            if (pCmdData == NULL || cmdSize != sizeof(effect_config_t) ||
++                    pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+                 ALOGV("\tLVM_ERROR : Reverb_command cmdCode Case: "
+                         "EFFECT_CMD_SET_CONFIG: ERROR");
+                 return -EINVAL;
+@@ -1936,8 +1934,7 @@ int Reverb_command(effect_handle_t  self,
+             break;
+ 
+         case EFFECT_CMD_GET_CONFIG:
+-            if (pReplyData == NULL ||
+-                *replySize != sizeof(effect_config_t)) {
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(effect_config_t)) {
+                 ALOGV("\tLVM_ERROR : Reverb_command cmdCode Case: "
+                         "EFFECT_CMD_GET_CONFIG: ERROR");
+                 return -EINVAL;
+@@ -1955,15 +1952,16 @@ int Reverb_command(effect_handle_t  self,
+         case EFFECT_CMD_GET_PARAM:{
+             //ALOGV("\tReverb_command cmdCode Case: "
+             //        "EFFECT_CMD_GET_PARAM start");
+-            if (pCmdData == NULL ||
+-                    cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)) ||
+-                    pReplyData == NULL ||
+-                    *replySize < (int) (sizeof(effect_param_t) + sizeof(int32_t))){
++            effect_param_t *p = (effect_param_t *)pCmdData;
++
++            if (pCmdData == NULL || cmdSize < sizeof(effect_param_t) ||
++                    cmdSize < (sizeof(effect_param_t) + p->psize) ||
++                    pReplyData == NULL || replySize == NULL ||
++                    *replySize < (sizeof(effect_param_t) + p->psize)) {
+                 ALOGV("\tLVM_ERROR : Reverb_command cmdCode Case: "
+                         "EFFECT_CMD_GET_PARAM: ERROR");
+                 return -EINVAL;
+             }
+-            effect_param_t *p = (effect_param_t *)pCmdData;
+ 
+             memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
+ 
+@@ -1994,8 +1992,8 @@ int Reverb_command(effect_handle_t  self,
+             //        *replySize,
+             //        *(int16_t *)((char *)pCmdData + sizeof(effect_param_t) + sizeof(int32_t)));
+ 
+-            if (pCmdData == NULL || (cmdSize < (int)(sizeof(effect_param_t) + sizeof(int32_t)))
+-                    || pReplyData == NULL || *replySize != (int)sizeof(int32_t)) {
++            if (pCmdData == NULL || (cmdSize < (sizeof(effect_param_t) + sizeof(int32_t))) ||
++                    pReplyData == NULL ||  replySize == NULL || *replySize != sizeof(int32_t)) {
+                 ALOGV("\tLVM_ERROR : Reverb_command cmdCode Case: "
+                         "EFFECT_CMD_SET_PARAM: ERROR");
+                 return -EINVAL;
+diff --git a/media/libeffects/preprocessing/PreProcessing.cpp b/media/libeffects/preprocessing/PreProcessing.cpp
+index 25586e8..1eb5d40 100644
+--- a/media/libeffects/preprocessing/PreProcessing.cpp
++++ b/media/libeffects/preprocessing/PreProcessing.cpp
+@@ -575,16 +575,18 @@ int  NsCreate(preproc_effect_t *effect)
+     return 0;
+ }
+ 
+-int NsGetParameter(preproc_effect_t     *effect,
+-                   void              *pParam,
+-                   size_t            *pValueSize,
+-                   void              *pValue)
++int NsGetParameter(preproc_effect_t  *effect __unused,
++                   void              *pParam __unused,
++                   uint32_t          *pValueSize __unused,
++                   void              *pValue __unused)
+ {
+     int status = 0;
+     return status;
+ }
+ 
+-int NsSetParameter (preproc_effect_t *effect, void *pParam, void *pValue)
++int NsSetParameter (preproc_effect_t *effect __unused,
++                    void *pParam __unused,
++                    void *pValue __unused)
+ {
+     int status = 0;
+     return status;
+@@ -1434,16 +1436,17 @@ int PreProcessingFx_Command(effect_handle_t  self,
+             }
+             break;
+ 
+-        case EFFECT_CMD_GET_PARAM:{
+-            if (pCmdData == NULL ||
+-                    cmdSize < (int)sizeof(effect_param_t) ||
+-                    pReplyData == NULL ||
+-                    *replySize < (int)sizeof(effect_param_t)){
++        case EFFECT_CMD_GET_PARAM: {
++            effect_param_t *p = (effect_param_t *)pCmdData;
++
++            if (pCmdData == NULL || cmdSize < sizeof(effect_param_t) ||
++                    cmdSize < (sizeof(effect_param_t) + p->psize) ||
++                    pReplyData == NULL || replySize == NULL ||
++                    *replySize < (sizeof(effect_param_t) + p->psize)){
+                 ALOGV("PreProcessingFx_Command cmdCode Case: "
+                         "EFFECT_CMD_GET_PARAM: ERROR");
+                 return -EINVAL;
+             }
+-            effect_param_t *p = (effect_param_t *)pCmdData;
+ 
+             memcpy(pReplyData, pCmdData, sizeof(effect_param_t) + p->psize);
+ 
+@@ -1461,8 +1464,8 @@ int PreProcessingFx_Command(effect_handle_t  self,
+ 
+         case EFFECT_CMD_SET_PARAM:{
+             if (pCmdData == NULL||
+-                    cmdSize < (int)sizeof(effect_param_t) ||
+-                    pReplyData == NULL ||
++                    cmdSize < sizeof(effect_param_t) ||
++                    pReplyData == NULL || replySize == NULL ||
+                     *replySize != sizeof(int32_t)){
+                 ALOGV("PreProcessingFx_Command cmdCode Case: "
+                         "EFFECT_CMD_SET_PARAM: ERROR");
+@@ -1483,7 +1486,7 @@ int PreProcessingFx_Command(effect_handle_t  self,
+         } break;
+ 
+         case EFFECT_CMD_ENABLE:
+-            if (pReplyData == NULL || *replySize != sizeof(int)){
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)){
+                 ALOGV("PreProcessingFx_Command cmdCode Case: EFFECT_CMD_ENABLE: ERROR");
+                 return -EINVAL;
+             }
+@@ -1491,7 +1494,7 @@ int PreProcessingFx_Command(effect_handle_t  self,
+             break;
+ 
+         case EFFECT_CMD_DISABLE:
+-            if (pReplyData == NULL || *replySize != sizeof(int)){
++            if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)){
+                 ALOGV("PreProcessingFx_Command cmdCode Case: EFFECT_CMD_DISABLE: ERROR");
+                 return -EINVAL;
+             }
+@@ -1711,7 +1714,7 @@ int PreProcessingFx_GetDescriptor(effect_handle_t   self,
+ 
+ int PreProcessingFx_ProcessReverse(effect_handle_t     self,
+                                    audio_buffer_t    *inBuffer,
+-                                   audio_buffer_t    *outBuffer)
++                                   audio_buffer_t    *outBuffer __unused)
+ {
+     preproc_effect_t * effect = (preproc_effect_t *)self;
+     int    status = 0;
+diff --git a/media/libeffects/visualizer/EffectVisualizer.cpp b/media/libeffects/visualizer/EffectVisualizer.cpp
+index dc403ab..18bdb78 100644
+--- a/media/libeffects/visualizer/EffectVisualizer.cpp
++++ b/media/libeffects/visualizer/EffectVisualizer.cpp
+@@ -422,21 +422,21 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+ 
+     switch (cmdCode) {
+     case EFFECT_CMD_INIT:
+-        if (pReplyData == NULL || *replySize != sizeof(int)) {
++        if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         *(int *) pReplyData = Visualizer_init(pContext);
+         break;
+     case EFFECT_CMD_SET_CONFIG:
+         if (pCmdData == NULL || cmdSize != sizeof(effect_config_t)
+-                || pReplyData == NULL || *replySize != sizeof(int)) {
++                || pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         *(int *) pReplyData = Visualizer_setConfig(pContext,
+                 (effect_config_t *) pCmdData);
+         break;
+     case EFFECT_CMD_GET_CONFIG:
+-        if (pReplyData == NULL ||
++        if (pReplyData == NULL || replySize == NULL ||
+             *replySize != sizeof(effect_config_t)) {
+             return -EINVAL;
+         }
+@@ -446,7 +446,7 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+         Visualizer_reset(pContext);
+         break;
+     case EFFECT_CMD_ENABLE:
+-        if (pReplyData == NULL || *replySize != sizeof(int)) {
++        if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         if (pContext->mState != VISUALIZER_STATE_INITIALIZED) {
+@@ -457,7 +457,7 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+         *(int *)pReplyData = 0;
+         break;
+     case EFFECT_CMD_DISABLE:
+-        if (pReplyData == NULL || *replySize != sizeof(int)) {
++        if (pReplyData == NULL || replySize == NULL || *replySize != sizeof(int)) {
+             return -EINVAL;
+         }
+         if (pContext->mState != VISUALIZER_STATE_ACTIVE) {
+@@ -470,7 +470,7 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+     case EFFECT_CMD_GET_PARAM: {
+         if (pCmdData == NULL ||
+             cmdSize != (int)(sizeof(effect_param_t) + sizeof(uint32_t)) ||
+-            pReplyData == NULL ||
++            pReplyData == NULL || replySize == NULL ||
+             *replySize < (int)(sizeof(effect_param_t) + sizeof(uint32_t) + sizeof(uint32_t))) {
+             return -EINVAL;
+         }
+@@ -508,7 +508,7 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+     case EFFECT_CMD_SET_PARAM: {
+         if (pCmdData == NULL ||
+             cmdSize != (int)(sizeof(effect_param_t) + sizeof(uint32_t) + sizeof(uint32_t)) ||
+-            pReplyData == NULL || *replySize != sizeof(int32_t)) {
++            pReplyData == NULL || replySize == NULL || *replySize != sizeof(int32_t)) {
+             return -EINVAL;
+         }
+         *(int32_t *)pReplyData = 0;
+@@ -544,10 +544,11 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+         break;
+ 
+ 
+-    case VISUALIZER_CMD_CAPTURE:
+-        if (pReplyData == NULL || *replySize != pContext->mCaptureSize) {
+-            ALOGV("VISUALIZER_CMD_CAPTURE() error *replySize %d pContext->mCaptureSize %d",
+-                    *replySize, pContext->mCaptureSize);
++    case VISUALIZER_CMD_CAPTURE: {
++        uint32_t captureSize = pContext->mCaptureSize;
++        if (pReplyData == NULL || replySize == NULL || *replySize != captureSize) {
++            ALOGV("VISUALIZER_CMD_CAPTURE() error *replySize %" PRIu32 " captureSize %" PRIu32,
++                    *replySize, captureSize);
+             return -EINVAL;
+         }
+         if (pContext->mState == VISUALIZER_STATE_ACTIVE) {
+@@ -592,7 +593,7 @@ int Visualizer_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
+         } else {
+             memset(pReplyData, 0x80, pContext->mCaptureSize);
+         }
+-
++        }
+         break;
+ 
+     case VISUALIZER_CMD_MEASURE: {
+-- 
+2.7.4
+

@@ -1,0 +1,32 @@
+From 777bc81e036cd13691c83793c8afbcb4415a13c0 Mon Sep 17 00:00:00 2001
+From: Lajos Molnar <lajos@google.com>
+Date: Tue, 27 Jun 2017 13:58:07 -0700
+Subject: [PATCH 170/182] stagefright: avoid buffer overflow in base64 decoder
+
+Bug: 62673128
+Change-Id: Id5f04b772aaca3184879bd5bca453ad9e82c7f94
+(cherry picked from commit 5e96386ab7a5391185f6b3ed9ea06f3e23ed253b)
+CVE-2017-0809
+---
+ media/libstagefright/foundation/base64.cpp | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/media/libstagefright/foundation/base64.cpp b/media/libstagefright/foundation/base64.cpp
+index 9581986..0360b97 100644
+--- a/media/libstagefright/foundation/base64.cpp
++++ b/media/libstagefright/foundation/base64.cpp
+@@ -74,9 +74,8 @@ sp<ABuffer> decodeBase64(const AString &s) {
+         accum = (accum << 6) | value;
+ 
+         if (((i + 1) % 4) == 0) {
+-            out[j++] = (accum >> 16);
+-
+-            if (j < outLen) { out[j++] = (accum >> 8) & 0xff; } 
++            if (j < outLen) { out[j++] = (accum >> 16); }
++            if (j < outLen) { out[j++] = (accum >> 8) & 0xff; }
+             if (j < outLen) { out[j++] = accum & 0xff; }
+ 
+             accum = 0;
+-- 
+2.7.4
+

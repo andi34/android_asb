@@ -1,0 +1,38 @@
+From 56b2745fe5379be6af2121e11e04449026ec1f66 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 23 Feb 2016 14:48:46 -0800
+Subject: [PATCH 080/182] Also fix out of bounds access for normal read
+
+Previous fix accidentally only fixed the fragmented read case.
+
+Bug: 27208621
+Change-Id: Ie16f1920b84c8aba613842659238fcd5925694ad
+(cherry picked from commit 87afa840a40af570278e93251cfc5e55a6a3d92e)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index 929a004..72ccee9 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -3385,7 +3385,15 @@ status_t MPEG4Source::read(
+                     continue;
+                 }
+ 
+-                CHECK(dstOffset + 4 <= mBuffer->size());
++                if (dstOffset > SIZE_MAX - 4 ||
++                        dstOffset + 4 > SIZE_MAX - nalLength ||
++                        dstOffset + 4 + nalLength > mBuffer->size()) {
++                    ALOGE("b/27208621 : %zu %zu", dstOffset, mBuffer->size());
++                    android_errorWriteLog(0x534e4554, "27208621");
++                    mBuffer->release();
++                    mBuffer = NULL;
++                    return ERROR_MALFORMED;
++                }
+ 
+                 dstData[dstOffset++] = 0;
+                 dstData[dstOffset++] = 0;
+-- 
+2.7.4
+

@@ -1,0 +1,175 @@
+From 66501a5bed68d06486d930ece51f5dbbf9ee4c6f Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Fri, 8 Apr 2016 10:04:48 -0700
+Subject: [PATCH 089/182] h264dec: check for overflows when calculating
+ allocation size.
+
+Bug: 27855419
+Change-Id: Idabedca52913ec31ea5cb6a6109ab94e3fb2badd
+(cherry picked from commit a3dd713893658baf50df88b261aba83bb0c40687)
+---
+ media/libstagefright/codecs/on2/h264dec/inc/H264SwDecApi.h  |  2 +-
+ .../libstagefright/codecs/on2/h264dec/source/DecTestBench.c |  9 ++++++---
+ .../codecs/on2/h264dec/source/EvaluationTestBench.c         |  9 ++++++---
+ .../libstagefright/codecs/on2/h264dec/source/H264SwDecApi.c | 13 ++++++++++---
+ .../codecs/on2/h264dec/source/TestBenchMultipleInstance.c   |  7 +++++--
+ .../codecs/on2/h264dec/source/h264bsd_decoder.c             |  2 +-
+ .../libstagefright/codecs/on2/h264dec/source/h264bsd_util.h |  2 +-
+ 7 files changed, 30 insertions(+), 14 deletions(-)
+
+diff --git a/media/libstagefright/codecs/on2/h264dec/inc/H264SwDecApi.h b/media/libstagefright/codecs/on2/h264dec/inc/H264SwDecApi.h
+index fe112bc..9814e73 100755
+--- a/media/libstagefright/codecs/on2/h264dec/inc/H264SwDecApi.h
++++ b/media/libstagefright/codecs/on2/h264dec/inc/H264SwDecApi.h
+@@ -161,7 +161,7 @@ extern "C"
+     void H264SwDecTrace(char *);
+ 
+     /* function prototype for memory allocation */
+-    void* H264SwDecMalloc(u32 size);
++    void* H264SwDecMalloc(u32 size, u32 num);
+ 
+     /* function prototype for memory free */
+     void H264SwDecFree(void *ptr);
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/DecTestBench.c b/media/libstagefright/codecs/on2/h264dec/source/DecTestBench.c
+index dcf2ef6..55c0065 100755
+--- a/media/libstagefright/codecs/on2/h264dec/source/DecTestBench.c
++++ b/media/libstagefright/codecs/on2/h264dec/source/DecTestBench.c
+@@ -700,18 +700,21 @@ void H264SwDecTrace(char *string)
+         library function malloc for allocation of memory.
+ 
+ ------------------------------------------------------------------------------*/
+-void* H264SwDecMalloc(u32 size)
++void* H264SwDecMalloc(u32 size, u32 num)
+ {
++    if (size > UINT32_MAX / num) {
++        return NULL;
++    }
+ 
+ #if defined(CHECK_MEMORY_USAGE)
+     /* Note that if the decoder has to free and reallocate some of the buffers
+      * the total value will be invalid */
+     static u32 numBytes = 0;
+-    numBytes += size;
++    numBytes += size * num;
+     DEBUG(("Allocated %d bytes, total %d\n", size, numBytes));
+ #endif
+ 
+-    return malloc(size);
++    return malloc(size * num);
+ }
+ 
+ /*------------------------------------------------------------------------------
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/EvaluationTestBench.c b/media/libstagefright/codecs/on2/h264dec/source/EvaluationTestBench.c
+index aadc75f..e756a1f 100755
+--- a/media/libstagefright/codecs/on2/h264dec/source/EvaluationTestBench.c
++++ b/media/libstagefright/codecs/on2/h264dec/source/EvaluationTestBench.c
+@@ -85,7 +85,7 @@ int main(int argc, char **argv)
+     rewind(finput);
+ 
+     /* allocate memory for stream buffer, exit if unsuccessful */
+-    byteStrm = byteStrmStart = (u8 *)H264SwDecMalloc(sizeof(u8)*strmLen);
++    byteStrm = byteStrmStart = (u8 *)H264SwDecMalloc(sizeof(u8), strmLen);
+     if (byteStrm == NULL)
+     {
+         printf("UNABLE TO ALLOCATE MEMORY\n");
+@@ -298,9 +298,12 @@ void H264SwDecTrace(char *string)
+         library function malloc for allocation of memory.
+ 
+ ------------------------------------------------------------------------------*/
+-void* H264SwDecMalloc(u32 size)
++void* H264SwDecMalloc(u32 size, u32 num)
+ {
+-    return malloc(size);
++    if (size > UINT32_MAX / num) {
++        return NULL;
++    }
++    return malloc(size * num);
+ }
+ 
+ /*------------------------------------------------------------------------------
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/H264SwDecApi.c b/media/libstagefright/codecs/on2/h264dec/source/H264SwDecApi.c
+index 2bb4c4d..a6f39dc 100644
+--- a/media/libstagefright/codecs/on2/h264dec/source/H264SwDecApi.c
++++ b/media/libstagefright/codecs/on2/h264dec/source/H264SwDecApi.c
+@@ -35,6 +35,8 @@
+ /*------------------------------------------------------------------------------
+     1. Include headers
+ ------------------------------------------------------------------------------*/
++#include <log/log.h>
++
+ #include <stdlib.h>
+ #include "basetype.h"
+ #include "h264bsd_container.h"
+@@ -75,8 +77,13 @@ H264DEC_EVALUATION      Compile evaluation version, restricts number of frames
+ void H264SwDecTrace(char *string) {
+ }
+ 
+-void* H264SwDecMalloc(u32 size) {
+-    return malloc(size);
++void* H264SwDecMalloc(u32 size, u32 num) {
++    if (size > UINT32_MAX / num) {
++        ALOGE("can't allocate %u * %u bytes", size, num);
++        android_errorWriteLog(0x534e4554, "27855419");
++        return NULL;
++    }
++    return malloc(size * num);
+ }
+ 
+ void H264SwDecFree(void *ptr) {
+@@ -140,7 +147,7 @@ H264SwDecRet H264SwDecInit(H264SwDecInst *decInst, u32 noOutputReordering)
+         return(H264SWDEC_PARAM_ERR);
+     }
+ 
+-    pDecCont = (decContainer_t *)H264SwDecMalloc(sizeof(decContainer_t));
++    pDecCont = (decContainer_t *)H264SwDecMalloc(sizeof(decContainer_t), 1);
+ 
+     if (pDecCont == NULL)
+     {
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/TestBenchMultipleInstance.c b/media/libstagefright/codecs/on2/h264dec/source/TestBenchMultipleInstance.c
+index 42170d3..9a386bb 100755
+--- a/media/libstagefright/codecs/on2/h264dec/source/TestBenchMultipleInstance.c
++++ b/media/libstagefright/codecs/on2/h264dec/source/TestBenchMultipleInstance.c
+@@ -413,9 +413,12 @@ void H264SwDecTrace(char *string)
+     Function name:  H264SwDecmalloc
+ 
+ ------------------------------------------------------------------------------*/
+-void* H264SwDecMalloc(u32 size)
++void* H264SwDecMalloc(u32 size, u32 num)
+ {
+-    return malloc(size);
++    if (size > UINT32_MAX / num) {
++        return NULL;
++    }
++    return malloc(size * num);
+ }
+ 
+ /*------------------------------------------------------------------------------
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_decoder.c b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_decoder.c
+index a816871..0ac480f 100644
+--- a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_decoder.c
++++ b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_decoder.c
+@@ -101,7 +101,7 @@ u32 h264bsdInit(storage_t *pStorage, u32 noOutputReordering)
+      * specific NEON optimized "memset" for clearing the structure */
+     size = (sizeof(macroblockLayer_t) + 63) & ~0x3F;
+ 
+-    pStorage->mbLayer = (macroblockLayer_t*)H264SwDecMalloc(size);
++    pStorage->mbLayer = (macroblockLayer_t*)H264SwDecMalloc(size, 1);
+     if (!pStorage->mbLayer)
+         return HANTRO_NOK;
+ 
+diff --git a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_util.h b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_util.h
+index cb3adda..40dfa9b 100755
+--- a/media/libstagefright/codecs/on2/h264dec/source/h264bsd_util.h
++++ b/media/libstagefright/codecs/on2/h264dec/source/h264bsd_util.h
+@@ -140,7 +140,7 @@
+ /* macro to allocate memory */
+ #define ALLOCATE(ptr, count, type) \
+ { \
+-    (ptr) = H264SwDecMalloc((count) * sizeof(type)); \
++    (ptr) = H264SwDecMalloc(sizeof(type), (count)); \
+ }
+ 
+ /* macro to free allocated memory */
+-- 
+2.7.4
+

@@ -1,0 +1,223 @@
+From c92771e37d1ad22f2c1f2f4621bb8515e727f6bb Mon Sep 17 00:00:00 2001
+From: Eino-Ville Talvala <etalvala@google.com>
+Date: Wed, 13 Jan 2016 10:07:04 -0800
+Subject: [PATCH 076/182] Camera: Disallow dumping clients directly
+
+Camera service dumps should only be initiated through
+ICameraService::dump.
+
+Bug: 26265403
+Change-Id: If3ca4718ed74bf33ad8a416192689203029e2803
+(cherry picked from commit c9ab2b0bb05a7e19fb057e79b36e232809d70122)
+---
+ services/camera/libcameraservice/CameraService.cpp            | 10 +++++++++-
+ services/camera/libcameraservice/CameraService.h              |  8 +++++++-
+ services/camera/libcameraservice/api1/Camera2Client.cpp       |  4 ++++
+ services/camera/libcameraservice/api1/Camera2Client.h         |  2 ++
+ services/camera/libcameraservice/api1/CameraClient.cpp        |  4 ++++
+ services/camera/libcameraservice/api1/CameraClient.h          |  4 +++-
+ services/camera/libcameraservice/api2/CameraDeviceClient.cpp  |  4 ++++
+ services/camera/libcameraservice/api2/CameraDeviceClient.h    |  2 ++
+ services/camera/libcameraservice/api_pro/ProCamera2Client.cpp |  4 ++++
+ services/camera/libcameraservice/api_pro/ProCamera2Client.h   |  2 ++
+ services/camera/libcameraservice/common/Camera2ClientBase.cpp |  2 +-
+ services/camera/libcameraservice/common/Camera2ClientBase.h   |  2 +-
+ 12 files changed, 43 insertions(+), 5 deletions(-)
+
+diff --git a/services/camera/libcameraservice/CameraService.cpp b/services/camera/libcameraservice/CameraService.cpp
+index 5957d97..ef2b1fa 100644
+--- a/services/camera/libcameraservice/CameraService.cpp
++++ b/services/camera/libcameraservice/CameraService.cpp
+@@ -984,6 +984,14 @@ void CameraService::BasicClient::disconnect() {
+     mClientPid = 0;
+ }
+ 
++status_t CameraService::BasicClient::dump(int, const Vector<String16>&) {
++    // No dumping of clients directly over Binder,
++    // must go through CameraService::dump
++    android_errorWriteWithInfoLog(SN_EVENT_LOG_ID, "26265403",
++            IPCThreadState::self()->getCallingUid(), NULL, 0);
++    return OK;
++}
++
+ status_t CameraService::BasicClient::startCameraOps() {
+     int32_t res;
+ 
+@@ -1221,7 +1229,7 @@ status_t CameraService::dump(int fd, const Vector<String16>& args) {
+             hasClient = true;
+             result = String8::format("  Device is open. Client instance dump:\n");
+             write(fd, result.string(), result.size());
+-            client->dump(fd, args);
++            client->dumpClient(fd, args);
+         }
+         if (!hasClient) {
+             result = String8::format("\nNo active camera clients yet.\n");
+diff --git a/services/camera/libcameraservice/CameraService.h b/services/camera/libcameraservice/CameraService.h
+index ad6a582..7f3691a 100644
+--- a/services/camera/libcameraservice/CameraService.h
++++ b/services/camera/libcameraservice/CameraService.h
+@@ -55,6 +55,9 @@ public:
+     class Client;
+     class BasicClient;
+ 
++    // Event log ID
++    static const int SN_EVENT_LOG_ID = 0x534e4554;
++
+     // Implementation of BinderService<T>
+     static char const* getServiceName() { return "media.camera"; }
+ 
+@@ -144,7 +147,10 @@ public:
+             return mRemoteBinder;
+         }
+ 
+-        virtual status_t      dump(int fd, const Vector<String16>& args) = 0;
++        // Disallows dumping over binder interface
++        virtual status_t      dump(int fd, const Vector<String16>& args);
++        // Internal dump method to be called by CameraService
++        virtual status_t      dumpClient(int fd, const Vector<String16>& args) = 0;
+ 
+     protected:
+         BasicClient(const sp<CameraService>& cameraService,
+diff --git a/services/camera/libcameraservice/api1/Camera2Client.cpp b/services/camera/libcameraservice/api1/Camera2Client.cpp
+index b093946..131048e 100644
+--- a/services/camera/libcameraservice/api1/Camera2Client.cpp
++++ b/services/camera/libcameraservice/api1/Camera2Client.cpp
+@@ -158,6 +158,10 @@ Camera2Client::~Camera2Client() {
+ }
+ 
+ status_t Camera2Client::dump(int fd, const Vector<String16>& args) {
++    return BasicClient::dump(fd, args);
++}
++
++status_t Camera2Client::dumpClient(int fd, const Vector<String16>& args) {
+     String8 result;
+     result.appendFormat("Client2[%d] (%p) Client: %s PID: %d, dump:\n",
+             mCameraId,
+diff --git a/services/camera/libcameraservice/api1/Camera2Client.h b/services/camera/libcameraservice/api1/Camera2Client.h
+index fe0bf74..dfcf836 100644
+--- a/services/camera/libcameraservice/api1/Camera2Client.h
++++ b/services/camera/libcameraservice/api1/Camera2Client.h
+@@ -98,6 +98,8 @@ public:
+ 
+     virtual status_t dump(int fd, const Vector<String16>& args);
+ 
++    virtual status_t dumpClient(int fd, const Vector<String16>& args);
++
+     /**
+      * Interface used by CameraDeviceBase
+      */
+diff --git a/services/camera/libcameraservice/api1/CameraClient.cpp b/services/camera/libcameraservice/api1/CameraClient.cpp
+index bd6805d..2e3a2ed 100644
+--- a/services/camera/libcameraservice/api1/CameraClient.cpp
++++ b/services/camera/libcameraservice/api1/CameraClient.cpp
+@@ -112,6 +112,10 @@ CameraClient::~CameraClient() {
+ }
+ 
+ status_t CameraClient::dump(int fd, const Vector<String16>& args) {
++    return BasicClient::dump(fd, args);
++}
++
++status_t CameraClient::dumpClient(int fd, const Vector<String16>& args) {
+     const size_t SIZE = 256;
+     char buffer[SIZE];
+ 
+diff --git a/services/camera/libcameraservice/api1/CameraClient.h b/services/camera/libcameraservice/api1/CameraClient.h
+index 4b89564..a270f90 100644
+--- a/services/camera/libcameraservice/api1/CameraClient.h
++++ b/services/camera/libcameraservice/api1/CameraClient.h
+@@ -69,7 +69,9 @@ public:
+ 
+     status_t initialize(camera_module_t *module);
+ 
+-    status_t dump(int fd, const Vector<String16>& args);
++    virtual status_t dump(int fd, const Vector<String16>& args);
++
++    virtual status_t dumpClient(int fd, const Vector<String16>& args);
+ 
+ private:
+ 
+diff --git a/services/camera/libcameraservice/api2/CameraDeviceClient.cpp b/services/camera/libcameraservice/api2/CameraDeviceClient.cpp
+index 1cdf8dc..ab7057f 100644
+--- a/services/camera/libcameraservice/api2/CameraDeviceClient.cpp
++++ b/services/camera/libcameraservice/api2/CameraDeviceClient.cpp
+@@ -480,6 +480,10 @@ status_t CameraDeviceClient::flush() {
+ }
+ 
+ status_t CameraDeviceClient::dump(int fd, const Vector<String16>& args) {
++    return BasicClient::dump(fd, args);
++}
++
++status_t CameraDeviceClient::dumpClient(int fd, const Vector<String16>& args) {
+     String8 result;
+     result.appendFormat("CameraDeviceClient[%d] (%p) PID: %d, dump:\n",
+             mCameraId,
+diff --git a/services/camera/libcameraservice/api2/CameraDeviceClient.h b/services/camera/libcameraservice/api2/CameraDeviceClient.h
+index b9c16aa..99df386 100644
+--- a/services/camera/libcameraservice/api2/CameraDeviceClient.h
++++ b/services/camera/libcameraservice/api2/CameraDeviceClient.h
+@@ -109,6 +109,8 @@ public:
+ 
+     virtual status_t      dump(int fd, const Vector<String16>& args);
+ 
++    virtual status_t      dumpClient(int fd, const Vector<String16>& args);
++
+     /**
+      * Device listener interface
+      */
+diff --git a/services/camera/libcameraservice/api_pro/ProCamera2Client.cpp b/services/camera/libcameraservice/api_pro/ProCamera2Client.cpp
+index 1a7a7a7..27156b1 100644
+--- a/services/camera/libcameraservice/api_pro/ProCamera2Client.cpp
++++ b/services/camera/libcameraservice/api_pro/ProCamera2Client.cpp
+@@ -331,6 +331,10 @@ status_t ProCamera2Client::getCameraInfo(int cameraId,
+ }
+ 
+ status_t ProCamera2Client::dump(int fd, const Vector<String16>& args) {
++    return BasicClient::dump(fd, args);
++}
++
++status_t ProCamera2Client::dumpClient(int fd, const Vector<String16>& args) {
+     String8 result;
+     result.appendFormat("ProCamera2Client[%d] (%p) PID: %d, dump:\n",
+             mCameraId,
+diff --git a/services/camera/libcameraservice/api_pro/ProCamera2Client.h b/services/camera/libcameraservice/api_pro/ProCamera2Client.h
+index 8a0f547..137c272 100644
+--- a/services/camera/libcameraservice/api_pro/ProCamera2Client.h
++++ b/services/camera/libcameraservice/api_pro/ProCamera2Client.h
+@@ -88,6 +88,8 @@ public:
+ 
+     virtual status_t      dump(int fd, const Vector<String16>& args);
+ 
++    virtual status_t      dumpClient(int fd, const Vector<String16>& args);
++
+     // Callbacks from camera service
+     virtual void onExclusiveLockStolen();
+ 
+diff --git a/services/camera/libcameraservice/common/Camera2ClientBase.cpp b/services/camera/libcameraservice/common/Camera2ClientBase.cpp
+index 2d1253f..b6ad042 100644
+--- a/services/camera/libcameraservice/common/Camera2ClientBase.cpp
++++ b/services/camera/libcameraservice/common/Camera2ClientBase.cpp
+@@ -117,7 +117,7 @@ Camera2ClientBase<TClientBase>::~Camera2ClientBase() {
+ }
+ 
+ template <typename TClientBase>
+-status_t Camera2ClientBase<TClientBase>::dump(int fd,
++status_t Camera2ClientBase<TClientBase>::dumpClient(int fd,
+                                               const Vector<String16>& args) {
+     String8 result;
+     result.appendFormat("Camera2ClientBase[%d] (%p) PID: %d, dump:\n",
+diff --git a/services/camera/libcameraservice/common/Camera2ClientBase.h b/services/camera/libcameraservice/common/Camera2ClientBase.h
+index 61e44f0..c12793a 100644
+--- a/services/camera/libcameraservice/common/Camera2ClientBase.h
++++ b/services/camera/libcameraservice/common/Camera2ClientBase.h
+@@ -55,7 +55,7 @@ public:
+     virtual ~Camera2ClientBase();
+ 
+     virtual status_t      initialize(camera_module_t *module);
+-    virtual status_t      dump(int fd, const Vector<String16>& args);
++    virtual status_t      dumpClient(int fd, const Vector<String16>& args);
+ 
+     /**
+      * CameraDeviceBase::NotificationListener implementation
+-- 
+2.7.4
+

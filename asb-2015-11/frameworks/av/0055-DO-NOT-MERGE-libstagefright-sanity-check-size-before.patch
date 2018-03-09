@@ -1,0 +1,70 @@
+From 575336a34b25b86dbcfbbb0f4279e77af8cdd9c6 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Tue, 1 Sep 2015 11:14:18 -0700
+Subject: [PATCH 055/182] DO NOT MERGE - libstagefright: sanity check size
+ before dereferencing pointer in Utils.cpp
+
+Also remove some CHECK's.
+
+Bug: 23680780
+Change-Id: I62d0941e203e40209fa6fbe3f923f3efdc5a6c23
+(cherry picked from commit 7bb772e0c643ff3292599cf485b9dbf232bf39a4)
+(cherry picked from commit 9d916c771ca32cb2d0df27b85ce3e17bb6b48eaf)
+---
+ media/libstagefright/Utils.cpp | 21 ++++++++++++++++-----
+ 1 file changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/media/libstagefright/Utils.cpp b/media/libstagefright/Utils.cpp
+index 80d8cef..090c891 100644
+--- a/media/libstagefright/Utils.cpp
++++ b/media/libstagefright/Utils.cpp
+@@ -160,8 +160,10 @@ status_t convertMetaDataToMessage(
+ 
+         const uint8_t *ptr = (const uint8_t *)data;
+ 
+-        CHECK(size >= 7);
+-        CHECK_EQ((unsigned)ptr[0], 1u);  // configurationVersion == 1
++        if (size < 7 || ptr[0] != 1) {  // configurationVersion == 1
++            ALOGE("b/23680780");
++            return BAD_VALUE;
++        }
+         uint8_t profile = ptr[1];
+         uint8_t level = ptr[3];
+ 
+@@ -187,7 +189,10 @@ status_t convertMetaDataToMessage(
+         buffer->setRange(0, 0);
+ 
+         for (size_t i = 0; i < numSeqParameterSets; ++i) {
+-            CHECK(size >= 2);
++            if (size < 2) {
++                ALOGE("b/23680780");
++                return BAD_VALUE;
++            }
+             size_t length = U16_AT(ptr);
+ 
+             ptr += 2;
+@@ -216,13 +221,19 @@ status_t convertMetaDataToMessage(
+         }
+         buffer->setRange(0, 0);
+ 
+-        CHECK(size >= 1);
++        if (size < 1) {
++            ALOGE("b/23680780");
++            return BAD_VALUE;
++        }
+         size_t numPictureParameterSets = *ptr;
+         ++ptr;
+         --size;
+ 
+         for (size_t i = 0; i < numPictureParameterSets; ++i) {
+-            CHECK(size >= 2);
++            if (size < 2) {
++                ALOGE("b/23680780");
++                return BAD_VALUE;
++            }
+             size_t length = U16_AT(ptr);
+ 
+             ptr += 2;
+-- 
+2.7.4
+

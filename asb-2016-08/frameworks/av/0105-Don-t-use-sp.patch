@@ -1,0 +1,117 @@
+From 6a3270e0ead138475e6ab8144ef2d93c7bd819e1 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 7 Jun 2016 12:26:43 -0700
+Subject: [PATCH 105/182] Don't use sp<>&
+
+because they may end up pointing to NULL after a NULL check was performed.
+
+Bug: 28166152
+Change-Id: Iab2ea30395b620628cc6f3d067dd4f6fcda824fe
+(cherry picked from commit fc47a301b7b2b044eddaedc98861d55193ec7dc0)
+---
+ include/media/IMediaDeathNotifier.h    |  2 +-
+ media/libmedia/IMediaDeathNotifier.cpp |  2 +-
+ media/libmedia/mediaplayer.cpp         | 12 ++++++------
+ media/libmedia/mediarecorder.cpp       |  2 +-
+ 4 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/include/media/IMediaDeathNotifier.h b/include/media/IMediaDeathNotifier.h
+index bb3d0d8..aca6678 100644
+--- a/include/media/IMediaDeathNotifier.h
++++ b/include/media/IMediaDeathNotifier.h
+@@ -30,7 +30,7 @@ public:
+     virtual ~IMediaDeathNotifier() { removeObitRecipient(this); }
+ 
+     virtual void died() = 0;
+-    static const sp<IMediaPlayerService>& getMediaPlayerService();
++    static const sp<IMediaPlayerService> getMediaPlayerService();
+ 
+ private:
+     IMediaDeathNotifier &operator=(const IMediaDeathNotifier &);
+diff --git a/media/libmedia/IMediaDeathNotifier.cpp b/media/libmedia/IMediaDeathNotifier.cpp
+index 9db5b1b..4ac0be4 100644
+--- a/media/libmedia/IMediaDeathNotifier.cpp
++++ b/media/libmedia/IMediaDeathNotifier.cpp
+@@ -31,7 +31,7 @@ sp<IMediaDeathNotifier::DeathNotifier> IMediaDeathNotifier::sDeathNotifier;
+ SortedVector< wp<IMediaDeathNotifier> > IMediaDeathNotifier::sObitRecipients;
+ 
+ // establish binder interface to MediaPlayerService
+-/*static*/const sp<IMediaPlayerService>&
++/*static*/const sp<IMediaPlayerService>
+ IMediaDeathNotifier::getMediaPlayerService()
+ {
+     ALOGV("getMediaPlayerService");
+diff --git a/media/libmedia/mediaplayer.cpp b/media/libmedia/mediaplayer.cpp
+index 0f6d897..370bd2d 100644
+--- a/media/libmedia/mediaplayer.cpp
++++ b/media/libmedia/mediaplayer.cpp
+@@ -141,7 +141,7 @@ status_t MediaPlayer::setDataSource(
+     ALOGV("setDataSource(%s)", url);
+     status_t err = BAD_VALUE;
+     if (url != NULL) {
+-        const sp<IMediaPlayerService>& service(getMediaPlayerService());
++        const sp<IMediaPlayerService> service(getMediaPlayerService());
+         if (service != 0) {
+             sp<IMediaPlayer> player(service->create(this, mAudioSessionId));
+             if ((NO_ERROR != doSetRetransmitEndpoint(player)) ||
+@@ -158,7 +158,7 @@ status_t MediaPlayer::setDataSource(int fd, int64_t offset, int64_t length)
+ {
+     ALOGV("setDataSource(%d, %lld, %lld)", fd, offset, length);
+     status_t err = UNKNOWN_ERROR;
+-    const sp<IMediaPlayerService>& service(getMediaPlayerService());
++    const sp<IMediaPlayerService> service(getMediaPlayerService());
+     if (service != 0) {
+         sp<IMediaPlayer> player(service->create(this, mAudioSessionId));
+         if ((NO_ERROR != doSetRetransmitEndpoint(player)) ||
+@@ -174,7 +174,7 @@ status_t MediaPlayer::setDataSource(const sp<IStreamSource> &source)
+ {
+     ALOGV("setDataSource");
+     status_t err = UNKNOWN_ERROR;
+-    const sp<IMediaPlayerService>& service(getMediaPlayerService());
++    const sp<IMediaPlayerService> service(getMediaPlayerService());
+     if (service != 0) {
+         sp<IMediaPlayer> player(service->create(this, mAudioSessionId));
+         if ((NO_ERROR != doSetRetransmitEndpoint(player)) ||
+@@ -782,7 +782,7 @@ void MediaPlayer::notify(int msg, int ext1, int ext2, const Parcel *obj)
+ {
+     ALOGV("decode(%s)", url);
+     status_t status;
+-    const sp<IMediaPlayerService>& service = getMediaPlayerService();
++    const sp<IMediaPlayerService> service = getMediaPlayerService();
+     if (service != 0) {
+         status = service->decode(url, pSampleRate, pNumChannels, pFormat, heap, pSize);
+     } else {
+@@ -806,7 +806,7 @@ void MediaPlayer::died()
+ {
+     ALOGV("decode(%d, %lld, %lld)", fd, offset, length);
+     status_t status;
+-    const sp<IMediaPlayerService>& service = getMediaPlayerService();
++    const sp<IMediaPlayerService> service = getMediaPlayerService();
+     if (service != 0) {
+         status = service->decode(fd, offset, length, pSampleRate,
+                                  pNumChannels, pFormat, heap, pSize);
+@@ -834,7 +834,7 @@ status_t MediaPlayer::setNextMediaPlayer(const sp<MediaPlayer>& next) {
+ 
+ status_t MediaPlayer::updateProxyConfig(
+         const char *host, int32_t port, const char *exclusionList) {
+-    const sp<IMediaPlayerService>& service = getMediaPlayerService();
++    const sp<IMediaPlayerService> service = getMediaPlayerService();
+ 
+     if (service != NULL) {
+         return service->updateProxyConfig(host, port, exclusionList);
+diff --git a/media/libmedia/mediarecorder.cpp b/media/libmedia/mediarecorder.cpp
+index 3710e46..04cf60b 100644
+--- a/media/libmedia/mediarecorder.cpp
++++ b/media/libmedia/mediarecorder.cpp
+@@ -618,7 +618,7 @@ MediaRecorder::MediaRecorder() : mSurfaceMediaSource(NULL)
+ {
+     ALOGV("constructor");
+ 
+-    const sp<IMediaPlayerService>& service(getMediaPlayerService());
++    const sp<IMediaPlayerService> service(getMediaPlayerService());
+     if (service != NULL) {
+         mMediaRecorder = service->createMediaRecorder();
+     }
+-- 
+2.7.4
+

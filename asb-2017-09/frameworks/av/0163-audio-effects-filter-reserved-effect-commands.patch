@@ -1,0 +1,50 @@
+From 6e73baca978c121d93ba373b3f095665a3a79209 Mon Sep 17 00:00:00 2001
+From: Eric Laurent <elaurent@google.com>
+Date: Thu, 15 Jun 2017 18:43:46 -0700
+Subject: [PATCH 163/182] audio effects: filter reserved effect commands
+
+Block effect commands reserved for framework use when
+received on server side IAudioEffect. Applications have no reason
+to use these commands and they present a unnecessary attack surface.
+
+Bug: 62019992
+Test: run CTS tests for audio effects
+Change-Id: Ie680d5d5650f99dbabf93891703e1cde2c2e852d
+(cherry picked from commit c7ab309ecbb289cd1296430f724166a26bd45afe)
+CVE-2017-0768
+---
+ services/audioflinger/Effects.cpp | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/services/audioflinger/Effects.cpp b/services/audioflinger/Effects.cpp
+index 693f7e9..586ab23 100644
+--- a/services/audioflinger/Effects.cpp
++++ b/services/audioflinger/Effects.cpp
+@@ -1148,6 +1148,24 @@ status_t AudioFlinger::EffectHandle::command(uint32_t cmdCode,
+     ALOGVV("command(), cmdCode: %d, mHasControl: %d, mEffect: %p",
+             cmdCode, mHasControl, mEffect.unsafe_get());
+ 
++    // reject commands reserved for internal use by audio framework if coming from outside
++    // of audioserver
++    switch(cmdCode) {
++        case EFFECT_CMD_ENABLE:
++        case EFFECT_CMD_DISABLE:
++        case EFFECT_CMD_SET_PARAM:
++        case EFFECT_CMD_SET_PARAM_DEFERRED:
++        case EFFECT_CMD_SET_PARAM_COMMIT:
++        case EFFECT_CMD_GET_PARAM:
++            break;
++        default:
++            if (cmdCode >= EFFECT_CMD_FIRST_PROPRIETARY) {
++                break;
++            }
++            android_errorWriteLog(0x534e4554, "62019992");
++            return BAD_VALUE;
++    }
++
+     AutoMutex _l(mLock);
+     sp<EffectModule> effect = mEffect.promote();
+     if (effect == 0 || mDisconnected) {
+-- 
+2.7.4
+

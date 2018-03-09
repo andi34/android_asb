@@ -1,0 +1,40 @@
+From 3309d24ed4b8a83b0d053bc7a2eda5045ab19d37 Mon Sep 17 00:00:00 2001
+From: Alexy Joseph <alexyj@codeaurora.org>
+Date: Fri, 17 May 2013 13:03:00 -0700
+Subject: [PATCH 081/182] stagefright: Remove assert for corrupt clips for
+ AMRNB
+
+Corrupt AMR NB clips were crashing media player
+This was due to the assert in the AMRNB decoder.
+To avoid this, post error and exit if corrupt
+clip is played.
+CRs-Fixed: 486681
+
+Change-Id: I8f6809a896b91aaffa8f5ae17d8ae4a3920a4b73
+---
+ media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp b/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp
+index 3320688..1924067 100644
+--- a/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp
++++ b/media/libstagefright/codecs/amrnb/dec/SoftAMR.cpp
+@@ -352,7 +352,14 @@ void SoftAMR::onQueueFilled(OMX_U32 portIndex) {
+             }
+ 
+             size_t frameSize = getFrameSize(mode);
+-            CHECK_GE(inHeader->nFilledLen, frameSize);
++            if (inHeader->nFilledLen < frameSize) {
++                ALOGE("Filled length vs frameSize %d vs %d. Corrupt clip?",
++                   inHeader->nFilledLen, frameSize);
++
++                notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
++                mSignalledError = true;
++                return;
++            }
+ 
+             int16_t *outPtr = (int16_t *)outHeader->pBuffer;
+ 
+-- 
+2.7.4
+

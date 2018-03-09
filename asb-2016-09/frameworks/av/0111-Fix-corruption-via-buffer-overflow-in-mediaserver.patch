@@ -1,0 +1,62 @@
+From 78c5bc52abd0d53d59f7c5346690d5071cb567f6 Mon Sep 17 00:00:00 2001
+From: Ray Essick <essick@google.com>
+Date: Wed, 6 Jul 2016 10:13:25 -0700
+Subject: [PATCH 111/182] Fix corruption via buffer overflow in mediaserver
+
+change unbound sprintf() to snprintf() so network-provided values
+can't overflow the buffers.
+
+Applicable to all K/L/M/N branches.
+
+Bug: 25747670
+Change-Id: Id6a5120c2d08a6fbbd47deffb680ecf82015f4f6
+(cherry picked from commit b2396a52aa1620a68bba4d776b136b03707f7556)
+---
+ media/libstagefright/rtsp/ASessionDescription.cpp | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/media/libstagefright/rtsp/ASessionDescription.cpp b/media/libstagefright/rtsp/ASessionDescription.cpp
+index a9b3330..e8cc5e1 100644
+--- a/media/libstagefright/rtsp/ASessionDescription.cpp
++++ b/media/libstagefright/rtsp/ASessionDescription.cpp
+@@ -17,6 +17,7 @@
+ //#define LOG_NDEBUG 0
+ #define LOG_TAG "ASessionDescription"
+ #include <utils/Log.h>
++#include <cutils/log.h>
+ 
+ #include "ASessionDescription.h"
+ 
+@@ -211,12 +212,12 @@ void ASessionDescription::getFormatType(
+ 
+     *PT = x;
+ 
+-    char key[20];
+-    sprintf(key, "a=rtpmap:%lu", x);
++    char key[32];
++    snprintf(key, sizeof(key), "a=rtpmap:%lu", x);
+ 
+     CHECK(findAttribute(index, key, desc));
+ 
+-    sprintf(key, "a=fmtp:%lu", x);
++    snprintf(key, sizeof(key), "a=fmtp:%lu", x);
+     if (!findAttribute(index, key, params)) {
+         params->clear();
+     }
+@@ -228,8 +229,11 @@ bool ASessionDescription::getDimensions(
+     *width = 0;
+     *height = 0;
+ 
+-    char key[20];
+-    sprintf(key, "a=framesize:%lu", PT);
++    char key[33];
++    snprintf(key, sizeof(key), "a=framesize:%lu", PT);
++    if (PT > 9999999) {
++        android_errorWriteLog(0x534e4554, "25747670");
++    }
+     AString value;
+     if (!findAttribute(index, key, &value)) {
+         return false;
+-- 
+2.7.4
+

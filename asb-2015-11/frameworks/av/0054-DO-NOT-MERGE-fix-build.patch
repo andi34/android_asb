@@ -1,0 +1,28 @@
+From b22bb7077cf115e2f5f617585dc4b8227053cdb5 Mon Sep 17 00:00:00 2001
+From: Wonsik Kim <wonsik@google.com>
+Date: Fri, 11 Sep 2015 16:14:18 +0900
+Subject: [PATCH 054/182] DO NOT MERGE fix build
+
+Bug: 23707088
+
+Change-Id: Ib0d6cbc52710f33310d21b2eae1f243f0f8e8bca
+(cherry picked from commit 9104e704e43c9a6e691af52bb6f0aca71467979b)
+---
+ media/libstagefright/OggExtractor.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/media/libstagefright/OggExtractor.cpp b/media/libstagefright/OggExtractor.cpp
+index 8a93d1c..da94587 100644
+--- a/media/libstagefright/OggExtractor.cpp
++++ b/media/libstagefright/OggExtractor.cpp
+@@ -21,6 +21,7 @@
+ #include "include/OggExtractor.h"
+ 
+ #include <cutils/properties.h>
++#include <media/stagefright/foundation/ABuffer.h>
+ #include <media/stagefright/foundation/ADebug.h>
+ #include <media/stagefright/foundation/base64.h>
+ #include <media/stagefright/DataSource.h>
+-- 
+2.7.4
+

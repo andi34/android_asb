@@ -1,0 +1,152 @@
+From 36a8243bafe0ba67ad8af01cb6b1d7d57f562858 Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Thu, 25 Jun 2015 11:46:54 -0700
+Subject: [PATCH 030/182] DO NOT MERGE libstagefright: Fix crash in
+ convertMetaDataToMessage
+
+- The ABuffer used for the Message has a preset value of 1024, if
+  flattening the meta data exceeds this value, a check fails hence
+  the crash.
+- This change creates a new ABuffer if the buffer size would exceed
+  the buffer capacity.
+
+Bug: 22771132
+
+CRs-Fixed: 857850
+
+(cherry picked from commit 4bce636865bdf0e2a79fc9a5d9a69107649c850d)
+
+Change-Id: Ia0a963e9872f646791e75b710ff9e227a66af4f9
+---
+ media/libstagefright/Utils.cpp | 66 ++++++++++++++++++++++++++++++++----------
+ 1 file changed, 51 insertions(+), 15 deletions(-)
+
+diff --git a/media/libstagefright/Utils.cpp b/media/libstagefright/Utils.cpp
+index 216a329..80d8cef 100644
+--- a/media/libstagefright/Utils.cpp
++++ b/media/libstagefright/Utils.cpp
+@@ -68,6 +68,23 @@ uint64_t hton64(uint64_t x) {
+     return ((uint64_t)htonl(x & 0xffffffff) << 32) | htonl(x >> 32);
+ }
+ 
++static status_t copyNALUToABuffer(sp<ABuffer> *buffer, const uint8_t *ptr, size_t length) {
++    if (((*buffer)->size() + 4 + length) > ((*buffer)->capacity() - (*buffer)->offset())) {
++        sp<ABuffer> tmpBuffer = new (std::nothrow) ABuffer((*buffer)->size() + 4 + length + 1024);
++        if (tmpBuffer.get() == NULL || tmpBuffer->base() == NULL) {
++            return NO_MEMORY;
++        }
++        memcpy(tmpBuffer->data(), (*buffer)->data(), (*buffer)->size());
++        tmpBuffer->setRange(0, (*buffer)->size());
++        (*buffer) = tmpBuffer;
++    }
++
++    memcpy((*buffer)->data() + (*buffer)->size(), "\x00\x00\x00\x01", 4);
++    memcpy((*buffer)->data() + (*buffer)->size() + 4, ptr, length);
++    (*buffer)->setRange((*buffer)->offset(), (*buffer)->size() + 4 + length);
++    return OK;
++}
++
+ status_t convertMetaDataToMessage(
+         const sp<MetaData> &meta, sp<AMessage> *format) {
+     format->clear();
+@@ -163,7 +180,10 @@ status_t convertMetaDataToMessage(
+         ptr += 6;
+         size -= 6;
+ 
+-        sp<ABuffer> buffer = new ABuffer(1024);
++        sp<ABuffer> buffer = new (std::nothrow) ABuffer(1024);
++        if (buffer.get() == NULL || buffer->base() == NULL) {
++            return NO_MEMORY;
++        }
+         buffer->setRange(0, 0);
+ 
+         for (size_t i = 0; i < numSeqParameterSets; ++i) {
+@@ -173,11 +193,13 @@ status_t convertMetaDataToMessage(
+             ptr += 2;
+             size -= 2;
+ 
+-            CHECK(size >= length);
+-
+-            memcpy(buffer->data() + buffer->size(), "\x00\x00\x00\x01", 4);
+-            memcpy(buffer->data() + buffer->size() + 4, ptr, length);
+-            buffer->setRange(0, buffer->size() + 4 + length);
++            if (size < length) {
++                return BAD_VALUE;
++            }
++            status_t err = copyNALUToABuffer(&buffer, ptr, length);
++            if (err != OK) {
++                return err;
++            }
+ 
+             ptr += length;
+             size -= length;
+@@ -188,7 +210,10 @@ status_t convertMetaDataToMessage(
+ 
+         msg->setBuffer("csd-0", buffer);
+ 
+-        buffer = new ABuffer(1024);
++        buffer = new (std::nothrow) ABuffer(1024);
++        if (buffer.get() == NULL || buffer->base() == NULL) {
++            return NO_MEMORY;
++        }
+         buffer->setRange(0, 0);
+ 
+         CHECK(size >= 1);
+@@ -203,11 +228,13 @@ status_t convertMetaDataToMessage(
+             ptr += 2;
+             size -= 2;
+ 
+-            CHECK(size >= length);
+-
+-            memcpy(buffer->data() + buffer->size(), "\x00\x00\x00\x01", 4);
+-            memcpy(buffer->data() + buffer->size() + 4, ptr, length);
+-            buffer->setRange(0, buffer->size() + 4 + length);
++            if (size < length) {
++                return BAD_VALUE;
++            }
++            status_t err = copyNALUToABuffer(&buffer, ptr, length);
++            if (err != OK) {
++                return err;
++            }
+ 
+             ptr += length;
+             size -= length;
+@@ -225,7 +252,10 @@ status_t convertMetaDataToMessage(
+         esds.getCodecSpecificInfo(
+                 &codec_specific_data, &codec_specific_data_size);
+ 
+-        sp<ABuffer> buffer = new ABuffer(codec_specific_data_size);
++        sp<ABuffer> buffer = new (std::nothrow) ABuffer(codec_specific_data_size);
++        if (buffer.get() == NULL || buffer->base() == NULL) {
++            return NO_MEMORY;
++        }
+ 
+         memcpy(buffer->data(), codec_specific_data,
+                codec_specific_data_size);
+@@ -234,7 +264,10 @@ status_t convertMetaDataToMessage(
+         buffer->meta()->setInt64("timeUs", 0);
+         msg->setBuffer("csd-0", buffer);
+     } else if (meta->findData(kKeyVorbisInfo, &type, &data, &size)) {
+-        sp<ABuffer> buffer = new ABuffer(size);
++        sp<ABuffer> buffer = new (std::nothrow) ABuffer(size);
++        if (buffer.get() == NULL || buffer->base() == NULL) {
++            return NO_MEMORY;
++        }
+         memcpy(buffer->data(), data, size);
+ 
+         buffer->meta()->setInt32("csd", true);
+@@ -245,7 +278,10 @@ status_t convertMetaDataToMessage(
+             return -EINVAL;
+         }
+ 
+-        buffer = new ABuffer(size);
++        buffer = new (std::nothrow) ABuffer(size);
++        if (buffer.get() == NULL || buffer->base() == NULL) {
++            return NO_MEMORY;
++        }
+         memcpy(buffer->data(), data, size);
+ 
+         buffer->meta()->setInt32("csd", true);
+-- 
+2.7.4
+

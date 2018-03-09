@@ -1,0 +1,35 @@
+From a544d1c95148e47305a366c9af38a91eb6ac4398 Mon Sep 17 00:00:00 2001
+From: Jeff Tinker <jtinker@google.com>
+Date: Mon, 9 Oct 2017 11:52:18 -0700
+Subject: [PATCH 177/182] Fix information disclosure in mediadrmserver
+
+Test:poc provided in bug
+bug:62872384
+Change-Id: I3d104a2a64a0cb81e9fd5b04c4def1fbee64da2d
+---
+ media/libmedia/IDrm.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/media/libmedia/IDrm.cpp b/media/libmedia/IDrm.cpp
+index f7a9a75..02286f2 100644
+--- a/media/libmedia/IDrm.cpp
++++ b/media/libmedia/IDrm.cpp
+@@ -415,8 +415,13 @@ IMPLEMENT_META_INTERFACE(Drm, "android.drm.IDrm");
+ 
+ void BnDrm::readVector(const Parcel &data, Vector<uint8_t> &vector) const {
+     uint32_t size = data.readInt32();
+-    vector.insertAt((size_t)0, size);
+-    data.read(vector.editArray(), size);
++    if (vector.insertAt((size_t)0, size) < 0) {
++        vector.clear();
++    }
++    if (data.read(vector.editArray(), size) != NO_ERROR) {
++        vector.clear();
++        android_errorWriteWithInfoLog(0x534e4554, "62872384", -1, NULL, 0);
++    }
+ }
+ 
+ void BnDrm::writeVector(Parcel *reply, Vector<uint8_t> const &vector) const {
+-- 
+2.7.4
+

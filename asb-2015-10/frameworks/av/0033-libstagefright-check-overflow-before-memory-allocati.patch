@@ -1,0 +1,29 @@
+From 3b7cb6488d70ccf88eea92a2c1a8f6ca64f8abdb Mon Sep 17 00:00:00 2001
+From: Wei Jia <wjia@google.com>
+Date: Fri, 21 Aug 2015 16:49:51 -0700
+Subject: [PATCH 033/182] libstagefright: check overflow before memory
+ allocation in OMXCodec.cpp
+
+Bug: 23416608
+Change-Id: I4dacd38ed42db8f4887c3ee386dc909451f4346f
+---
+ media/libstagefright/OMXCodec.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/media/libstagefright/OMXCodec.cpp b/media/libstagefright/OMXCodec.cpp
+index 43736ad..4b3ad68 100644
+--- a/media/libstagefright/OMXCodec.cpp
++++ b/media/libstagefright/OMXCodec.cpp
+@@ -1542,6 +1542,9 @@ status_t OMXCodec::allocateBuffersOnPort(OMX_U32 portIndex) {
+             def.nBufferCountActual, def.nBufferSize,
+             portIndex == kPortIndexInput ? "input" : "output");
+ 
++    if (def.nBufferSize != 0 && def.nBufferCountActual > SIZE_MAX / def.nBufferSize) {
++        return BAD_VALUE;
++    }
+     size_t totalSize = def.nBufferCountActual * def.nBufferSize;
+     mDealer[portIndex] = new MemoryDealer(totalSize, "OMXCodec");
+ 
+-- 
+2.7.4
+

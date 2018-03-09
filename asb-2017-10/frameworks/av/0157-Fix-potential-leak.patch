@@ -1,0 +1,29 @@
+From d8dacc1dc567129e11b9c133ce1ee8ba9f7d5a4e Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 9 May 2017 14:17:06 -0700
+Subject: [PATCH 157/182] Fix potential leak
+
+Fix potential memory leak introduced with bugfix for bug 31449945.
+
+Bug: 36389123
+Change-Id: I5a9a3551692d6cba385b45c4c7a465aa377a62b1
+(cherry picked from commit a0721999eccd22d900eb6dec7e48f835f28ce999)
+---
+ media/libstagefright/MPEG4Extractor.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/media/libstagefright/MPEG4Extractor.cpp b/media/libstagefright/MPEG4Extractor.cpp
+index abd2e13..a4e5c52 100644
+--- a/media/libstagefright/MPEG4Extractor.cpp
++++ b/media/libstagefright/MPEG4Extractor.cpp
+@@ -2285,6 +2285,7 @@ status_t MPEG4Extractor::parseMetaData(off64_t offset, size_t size) {
+                     if (sscanf(mLastCommentData,
+                                " %*x %x %x %*x", &delay, &padding) == 2) {
+                         if (mLastTrack == NULL) {
++                            delete[] buffer;
+                             return ERROR_MALFORMED;
+                         }
+                         mLastTrack->meta->setInt32(kKeyEncoderDelay, delay);
+-- 
+2.7.4
+

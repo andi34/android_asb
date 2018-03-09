@@ -1,0 +1,28 @@
+From 47301ba2b74259d80dc33bfb1e613f76648c6d06 Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Thu, 14 Jul 2016 15:32:08 -0700
+Subject: [PATCH 118/182] DO NOT MERGE - Fix build
+
+Change-Id: Iff47bb735778fb275abeee573c636856b839feb5
+---
+ media/libstagefright/codecs/on2/dec/SoftVPX.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+index 5d039ef..1691d03 100644
+--- a/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
++++ b/media/libstagefright/codecs/on2/dec/SoftVPX.cpp
+@@ -27,6 +27,10 @@
+ #include "vpx/vpx_codec.h"
+ #include "vpx/vp8dx.h"
+ 
++#ifndef UINT32_MAX
++#define UINT32_MAX       (4294967295U)
++#endif
++
+ namespace android {
+ 
+ SoftVPX::SoftVPX(
+-- 
+2.7.4
+

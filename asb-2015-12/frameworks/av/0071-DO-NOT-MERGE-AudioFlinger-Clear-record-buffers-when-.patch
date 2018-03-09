@@ -1,0 +1,29 @@
+From f6172fae3b718e7ec0ba9bbdd0fbb8e57913cf7f Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Thu, 24 Sep 2015 15:08:13 -0700
+Subject: [PATCH 071/182] DO NOT MERGE - AudioFlinger: Clear record buffers
+ when starting RecordThread
+
+Bug: 24211743
+Bug: 24267152
+Change-Id: I58c55e56b85067b71e4e300f947b4dfc159637ba
+(cherry picked from commit ab0ea0fe9a1e4afad5b39e094f6640318aefdd33)
+---
+ services/audioflinger/Threads.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/services/audioflinger/Threads.cpp b/services/audioflinger/Threads.cpp
+index a9eaa8a..994c7db 100644
+--- a/services/audioflinger/Threads.cpp
++++ b/services/audioflinger/Threads.cpp
+@@ -5223,6 +5223,7 @@ void AudioFlinger::RecordThread::readInputParameters()
+     mBufferSize = mInput->stream->common.get_buffer_size(&mInput->stream->common);
+     mFrameCount = mBufferSize / mFrameSize;
+     mRsmpInBuffer = new int16_t[mFrameCount * mChannelCount];
++    memset(mRsmpInBuffer, 0, mFrameCount * mChannelCount * sizeof(mRsmpInBuffer[0]));
+ 
+     if (mSampleRate != mReqSampleRate && mChannelCount <= FCC_2 && mReqChannelCount <= FCC_2)
+     {
+-- 
+2.7.4
+

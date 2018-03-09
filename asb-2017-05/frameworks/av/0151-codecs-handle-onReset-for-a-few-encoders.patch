@@ -1,0 +1,234 @@
+From e1f74f2d95a120b28a97aadd464dcdb5b5b29273 Mon Sep 17 00:00:00 2001
+From: Wonsik Kim <wonsik@google.com>
+Date: Fri, 10 Feb 2017 14:29:40 +0900
+Subject: [PATCH 151/182] codecs: handle onReset() for a few encoders
+
+Test: Run PoC binaries
+Bug: 34749392
+Bug: 34705519
+Change-Id: I3356eb615b0e79272d71d72578d363671038c6dd
+---
+ .../codecs/aacenc/SoftAACEncoder.cpp               | 14 ++++++--
+ .../libstagefright/codecs/aacenc/SoftAACEncoder.h  |  2 ++
+ .../codecs/aacenc/SoftAACEncoder2.cpp              | 22 ++++++------
+ .../libstagefright/codecs/aacenc/SoftAACEncoder2.h |  2 ++
+ .../codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp       | 39 +++++++++++++---------
+ .../codecs/m4v_h263/enc/SoftMPEG4Encoder.h         |  2 ++
+ .../codecs/on2/enc/SoftVPXEncoder.cpp              |  4 +++
+ .../libstagefright/codecs/on2/enc/SoftVPXEncoder.h |  2 ++
+ 8 files changed, 59 insertions(+), 28 deletions(-)
+
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp b/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
+index ab0a228..96bbb85 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder.cpp
+@@ -62,8 +62,7 @@ SoftAACEncoder::SoftAACEncoder(
+ }
+ 
+ SoftAACEncoder::~SoftAACEncoder() {
+-    delete[] mInputFrame;
+-    mInputFrame = NULL;
++    onReset();
+ 
+     if (mEncoderHandle) {
+         CHECK_EQ(VO_ERR_NONE, mApiHandle->Uninit(mEncoderHandle));
+@@ -579,6 +578,17 @@ void SoftAACEncoder::onQueueFilled(OMX_U32 portIndex) {
+     }
+ }
+ 
++void SoftAACEncoder::onReset() {
++    delete[] mInputFrame;
++    mInputFrame = NULL;
++    mInputSize = 0;
++
++    mSentCodecSpecificData = false;
++    mInputTimeUs = -1ll;
++    mSawInputEOS = false;
++    mSignalledError = false;
++}
++
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder.h b/media/libstagefright/codecs/aacenc/SoftAACEncoder.h
+index d148eb7..981cbbb 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder.h
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder.h
+@@ -43,6 +43,8 @@ protected:
+ 
+     virtual void onQueueFilled(OMX_U32 portIndex);
+ 
++    virtual void onReset();
++
+ private:
+     enum {
+         kNumBuffers             = 4,
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
+index 16301a9..428476e 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.cpp
+@@ -59,8 +59,7 @@ SoftAACEncoder2::SoftAACEncoder2(
+ SoftAACEncoder2::~SoftAACEncoder2() {
+     aacEncClose(&mAACEncoder);
+ 
+-    delete[] mInputFrame;
+-    mInputFrame = NULL;
++    onReset();
+ }
+ 
+ void SoftAACEncoder2::initPorts() {
+@@ -406,14 +405,6 @@ void SoftAACEncoder2::onQueueFilled(OMX_U32 portIndex) {
+         BufferInfo *outInfo = *outQueue.begin();
+         OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
+ 
+-        if (outHeader->nOffset + encInfo.confSize > outHeader->nAllocLen) {
+-            ALOGE("b/34617444");
+-            android_errorWriteLog(0x534e4554,"34617444");
+-            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+-            mSignalledError = true;
+-            return;
+-        }
+-
+         outHeader->nFilledLen = encInfo.confSize;
+         outHeader->nFlags = OMX_BUFFERFLAG_CODECCONFIG;
+ 
+@@ -606,6 +597,17 @@ void SoftAACEncoder2::onQueueFilled(OMX_U32 portIndex) {
+     }
+ }
+ 
++void SoftAACEncoder2::onReset() {
++    delete[] mInputFrame;
++    mInputFrame = NULL;
++    mInputSize = 0;
++
++    mSentCodecSpecificData = false;
++    mInputTimeUs = -1ll;
++    mSawInputEOS = false;
++    mSignalledError = false;
++}
++
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h
+index 2603f4f..0c44754 100644
+--- a/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h
++++ b/media/libstagefright/codecs/aacenc/SoftAACEncoder2.h
+@@ -42,6 +42,8 @@ protected:
+ 
+     virtual void onQueueFilled(OMX_U32 portIndex);
+ 
++    virtual void onReset();
++
+ private:
+     enum {
+         kNumBuffers             = 4,
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+index 8f7fc44..ae29be4 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
++++ b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.cpp
+@@ -112,6 +112,7 @@ SoftMPEG4Encoder::SoftMPEG4Encoder(
+ 
+ SoftMPEG4Encoder::~SoftMPEG4Encoder() {
+     ALOGV("Destruct SoftMPEG4Encoder");
++    onReset();
+     releaseEncoder();
+     List<BufferInfo *> &outQueue = getPortQueue(1);
+     List<BufferInfo *> &inQueue = getPortQueue(0);
+@@ -221,23 +222,16 @@ OMX_ERRORTYPE SoftMPEG4Encoder::initEncoder() {
+ }
+ 
+ OMX_ERRORTYPE SoftMPEG4Encoder::releaseEncoder() {
+-    if (!mStarted) {
+-        return OMX_ErrorNone;
++    if (mEncParams) {
++        delete mEncParams;
++        mEncParams = NULL;
+     }
+-
+-    PVCleanUpVideoEncoder(mHandle);
+-
+-    delete mInputFrameData;
+-    mInputFrameData = NULL;
+-
+-    delete mEncParams;
+-    mEncParams = NULL;
+-
+-    delete mHandle;
+-    mHandle = NULL;
+-
+-    mStarted = false;
+-
++ 
++    if (mHandle) {
++        delete mHandle;
++        mHandle = NULL;
++    }
++ 
+     return OMX_ErrorNone;
+ }
+ 
+@@ -835,6 +829,19 @@ void SoftMPEG4Encoder::releaseGrallocData(buffer_handle_t buffer) {
+     }
+ }
+ 
++void SoftMPEG4Encoder::onReset() {
++    if (!mStarted) {
++        return;
++    }
++
++    PVCleanUpVideoEncoder(mHandle);
++
++    free(mInputFrameData);
++    mInputFrameData = NULL;
++
++    mStarted = false;
++}
++
+ }  // namespace android
+ 
+ android::SoftOMXComponent *createSoftOMXComponent(
+diff --git a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h
+index cc4ea8f..7e90b79 100644
+--- a/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h
++++ b/media/libstagefright/codecs/m4v_h263/enc/SoftMPEG4Encoder.h
+@@ -42,6 +42,8 @@ struct SoftMPEG4Encoder : public SimpleSoftOMXComponent {
+             OMX_INDEXTYPE index, const OMX_PTR params);
+ 
+     virtual void onQueueFilled(OMX_U32 portIndex);
++	
++    virtual void onReset();
+ 
+     // Override SoftOMXComponent methods
+ 
+diff --git a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+index de993c5..0e23f92 100644
+--- a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
++++ b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.cpp
+@@ -955,6 +955,10 @@ OMX_ERRORTYPE SoftVPXEncoder::getExtensionIndex(
+     return SimpleSoftOMXComponent::getExtensionIndex(name, index);
+ }
+ 
++void SoftVPXEncoder::onReset() {
++    releaseEncoder();
++}
++
+ }  // namespace android
+ 
+ 
+diff --git a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h
+index 076830f..276a245 100644
+--- a/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h
++++ b/media/libstagefright/codecs/on2/enc/SoftVPXEncoder.h
+@@ -87,6 +87,8 @@ protected:
+     // encoding of the frame
+     virtual void onQueueFilled(OMX_U32 portIndex);
+ 
++    virtual void onReset();
++
+     virtual OMX_ERRORTYPE getExtensionIndex(
+             const char *name, OMX_INDEXTYPE *index);
+ 
+-- 
+2.7.4
+

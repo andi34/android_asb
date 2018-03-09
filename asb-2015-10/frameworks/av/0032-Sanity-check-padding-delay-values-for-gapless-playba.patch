@@ -1,0 +1,33 @@
+From 6032bae0aee0aaa5991adca4da56912cebca6968 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 18 Aug 2015 09:55:24 -0700
+Subject: [PATCH 032/182] Sanity check padding/delay values for gapless
+ playback
+
+Bug: 23306638
+Change-Id: I2b5160e0f58f90d3f67c3964f41f5734ec0da053
+---
+ media/libstagefright/SkipCutBuffer.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/media/libstagefright/SkipCutBuffer.cpp b/media/libstagefright/SkipCutBuffer.cpp
+index 773854f..4d15d7e 100644
+--- a/media/libstagefright/SkipCutBuffer.cpp
++++ b/media/libstagefright/SkipCutBuffer.cpp
+@@ -25,6 +25,13 @@
+ namespace android {
+ 
+ SkipCutBuffer::SkipCutBuffer(int32_t skip, int32_t cut) {
++
++    if (skip < 0 || cut < 0 || cut > 64 * 1024) {
++        ALOGW("out of range skip/cut: %d/%d, using passthrough instead", skip, cut);
++        skip = 0;
++        cut = 0;
++    }
++
+     mFrontPadding = skip;
+     mBackPadding = cut;
+     mWriteHead = 0;
+-- 
+2.7.4
+

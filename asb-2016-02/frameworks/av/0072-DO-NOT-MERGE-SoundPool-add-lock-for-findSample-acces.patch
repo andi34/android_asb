@@ -1,0 +1,141 @@
+From 04748105ecc88b483aa62e543262ac73779cd52c Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Wed, 2 Dec 2015 15:55:23 -0800
+Subject: [PATCH 072/182] DO NOT MERGE SoundPool: add lock for findSample
+ access from SoundPoolThread
+
+Sample decoding still occurs in SoundPoolThread
+without holding the SoundPool lock.
+
+Bug: 25781119
+Change-Id: I11fde005aa9cf5438e0390a0d2dfe0ec1dd282e8
+(cherry picked from commit 3d6a7149802928ecf3f58b7218b0e82699b492df)
+---
+ include/media/SoundPool.h    |  4 +--
+ media/libmedia/SoundPool.cpp | 61 ++++++++++++++++++++++++++++++--------------
+ 2 files changed, 44 insertions(+), 21 deletions(-)
+
+diff --git a/include/media/SoundPool.h b/include/media/SoundPool.h
+index 2dd78cc..1b21a36 100644
+--- a/include/media/SoundPool.h
++++ b/include/media/SoundPool.h
+@@ -188,6 +188,7 @@ public:
+ 
+     // called from SoundPoolThread
+     void sampleLoaded(int sampleID);
++    sp<Sample> findSample(int sampleID);
+ 
+     // called from AudioTrack thread
+     void done_l(SoundChannel* channel);
+@@ -199,8 +200,7 @@ public:
+ private:
+     SoundPool() {} // no default constructor
+     bool startThreads();
+-    void doLoad(sp<Sample>& sample);
+-    sp<Sample> findSample(int sampleID) { return mSamples.valueFor(sampleID); }
++    sp<Sample> findSample_l(int sampleID);
+     SoundChannel* findChannel (int channelID);
+     SoundChannel* findNextChannel (int channelID);
+     SoundChannel* allocateChannel_l(int priority);
+diff --git a/media/libmedia/SoundPool.cpp b/media/libmedia/SoundPool.cpp
+index 22e9fad..a2b5e30 100644
+--- a/media/libmedia/SoundPool.cpp
++++ b/media/libmedia/SoundPool.cpp
+@@ -179,6 +179,17 @@ bool SoundPool::startThreads()
+     return mDecodeThread != NULL;
+ }
+ 
++sp<Sample> SoundPool::findSample(int sampleID)
++{
++    Mutex::Autolock lock(&mLock);
++    return findSample_l(sampleID);
++}
++
++sp<Sample> SoundPool::findSample_l(int sampleID)
++{
++    return mSamples.valueFor(sampleID);
++}
++
+ SoundChannel* SoundPool::findChannel(int channelID)
+ {
+     for (int i = 0; i < mMaxChannels; ++i) {
+@@ -202,29 +213,42 @@ SoundChannel* SoundPool::findNextChannel(int channelID)
+ int SoundPool::load(const char* path, int priority)
+ {
+     ALOGV("load: path=%s, priority=%d", path, priority);
+-    Mutex::Autolock lock(&mLock);
+-    sp<Sample> sample = new Sample(++mNextSampleID, path);
+-    mSamples.add(sample->sampleID(), sample);
+-    doLoad(sample);
+-    return sample->sampleID();
++    int sampleID;
++    {
++        Mutex::Autolock lock(&mLock);
++        sampleID = ++mNextSampleID;
++        sp<Sample> sample = new Sample(sampleID, path);
++        mSamples.add(sampleID, sample);
++        sample->startLoad();
++    }
++    // mDecodeThread->loadSample() must be called outside of mLock.
++    // mDecodeThread->loadSample() may block on mDecodeThread message queue space;
++    // the message queue emptying may block on SoundPool::findSample().
++    //
++    // It theoretically possible that sample loads might decode out-of-order.
++    mDecodeThread->loadSample(sampleID);
++    return sampleID;
+ }
+ 
+ int SoundPool::load(int fd, int64_t offset, int64_t length, int priority)
+ {
+     ALOGV("load: fd=%d, offset=%lld, length=%lld, priority=%d",
+             fd, offset, length, priority);
+-    Mutex::Autolock lock(&mLock);
+-    sp<Sample> sample = new Sample(++mNextSampleID, fd, offset, length);
+-    mSamples.add(sample->sampleID(), sample);
+-    doLoad(sample);
+-    return sample->sampleID();
+-}
+-
+-void SoundPool::doLoad(sp<Sample>& sample)
+-{
+-    ALOGV("doLoad: loading sample sampleID=%d", sample->sampleID());
+-    sample->startLoad();
+-    mDecodeThread->loadSample(sample->sampleID());
++    int sampleID;
++    {
++        Mutex::Autolock lock(&mLock);
++        sampleID = ++mNextSampleID;
++        sp<Sample> sample = new Sample(sampleID, fd, offset, length);
++        mSamples.add(sampleID, sample);
++        sample->startLoad();
++    }
++    // mDecodeThread->loadSample() must be called outside of mLock.
++    // mDecodeThread->loadSample() may block on mDecodeThread message queue space;
++    // the message queue emptying may block on SoundPool::findSample().
++    //
++    // It theoretically possible that sample loads might decode out-of-order.
++    mDecodeThread->loadSample(sampleID);
++    return sampleID;
+ }
+ 
+ bool SoundPool::unload(int sampleID)
+@@ -239,7 +263,6 @@ int SoundPool::play(int sampleID, float leftVolume, float rightVolume,
+ {
+     ALOGV("play sampleID=%d, leftVolume=%f, rightVolume=%f, priority=%d, loop=%d, rate=%f",
+             sampleID, leftVolume, rightVolume, priority, loop, rate);
+-    sp<Sample> sample;
+     SoundChannel* channel;
+     int channelID;
+ 
+@@ -249,7 +272,7 @@ int SoundPool::play(int sampleID, float leftVolume, float rightVolume,
+         return 0;
+     }
+     // is sample ready?
+-    sample = findSample(sampleID);
++    sp<Sample> sample(findSample_l(sampleID));
+     if ((sample == 0) || (sample->state() != Sample::READY)) {
+         ALOGW("  sample %d not READY", sampleID);
+         return 0;
+-- 
+2.7.4
+

@@ -1,0 +1,35 @@
+From 6ac16c4ceaaf567a63fee602d711a3c64478968d Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Tue, 16 May 2017 12:04:50 -0700
+Subject: [PATCH 162/182] EffectBundle: Check value size for get preset name
+
+Test: CTS testAllEffectsEqualizer_CVE_2017_0401
+Bug: 37536407
+Change-Id: I347af04677fc49a01efb549f06ff81d1a00dc4d0
+(cherry picked from commit fa5c6c9)
+CVE-2017-0767
+---
+ media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+index c8a8b42..a3624a9 100644
+--- a/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
++++ b/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+@@ -2146,6 +2146,13 @@ int Equalizer_getParameter(EffectContext     *pContext,
+             }
+             break;
+         }
++
++        if (*pValueSize < 1) {
++            status = -EINVAL;
++            android_errorWriteLog(0x534e4554, "37536407");
++            break;
++        }
++
+         name = (char *)pValue;
+         strncpy(name, EqualizerGetPresetName(param2), *pValueSize - 1);
+         name[*pValueSize - 1] = 0;
+-- 
+2.7.4
+

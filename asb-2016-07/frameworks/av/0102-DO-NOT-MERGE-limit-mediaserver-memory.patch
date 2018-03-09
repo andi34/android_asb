@@ -1,0 +1,246 @@
+From 69d8a6ae70e08024b8fcf8902becba86041fbbd4 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Fri, 13 May 2016 10:43:19 -0700
+Subject: [PATCH 102/182] DO NOT MERGE limit mediaserver memory
+
+Limit mediaserver using rlimit, to prevent it from bringing down the system
+via the low memory killer.
+Default max is 65% of total RAM, but can be customized via system property.
+
+Bug: 28471206
+Bug: 28615448
+Change-Id: I14fac1e12b5f3983be08a21bfbfc54feedbf3f16
+(cherry picked from commit 1438f0b215040eb92e2b1e799f757ad32d5f8f22)
+---
+ media/libmedia/Android.mk              |   1 +
+ media/libmedia/MediaUtils.cpp          | 125 +++++++++++++++++++++++++++++++++
+ media/libmedia/MediaUtils.h            |  35 +++++++++
+ media/mediaserver/Android.mk           |   1 +
+ media/mediaserver/main_mediaserver.cpp |   8 ++-
+ 5 files changed, 169 insertions(+), 1 deletion(-)
+ create mode 100644 media/libmedia/MediaUtils.cpp
+ create mode 100644 media/libmedia/MediaUtils.h
+
+diff --git a/media/libmedia/Android.mk b/media/libmedia/Android.mk
+index 56e7787..6dbca51 100644
+--- a/media/libmedia/Android.mk
++++ b/media/libmedia/Android.mk
+@@ -34,6 +34,7 @@ LOCAL_SRC_FILES:= \
+     IRemoteDisplay.cpp \
+     IRemoteDisplayClient.cpp \
+     IStreamSource.cpp \
++    MediaUtils.cpp \
+     Metadata.cpp \
+     mediarecorder.cpp \
+     IMediaMetadataRetriever.cpp \
+diff --git a/media/libmedia/MediaUtils.cpp b/media/libmedia/MediaUtils.cpp
+new file mode 100644
+index 0000000..83b8af3
+--- /dev/null
++++ b/media/libmedia/MediaUtils.cpp
+@@ -0,0 +1,125 @@
++/*
++ * Copyright (C) 2016 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++// for property functions below
++#define __STDINT_LIMITS
++#include <stdint.h>
++#define __STDC_FORMAT_MACROS
++#include <inttypes.h>
++
++
++#define LOG_TAG "MediaUtils"
++#define LOG_NDEBUG 0
++#include <utils/Log.h>
++
++#include <cutils/properties.h>
++#include <sys/resource.h>
++#include <unistd.h>
++
++#include "MediaUtils.h"
++
++namespace android {
++
++// following property functions borrowed from lmp properties.c
++static intmax_t property_get_imax(const char *key, intmax_t lower_bound, intmax_t upper_bound,
++        intmax_t default_value) {
++    if (!key) {
++        return default_value;
++    }
++
++    intmax_t result = default_value;
++    char buf[PROPERTY_VALUE_MAX] = {'\0',};
++    char *end = NULL;
++
++    int len = property_get(key, buf, "");
++    if (len > 0) {
++        int tmp = errno;
++        errno = 0;
++
++        // Infer base automatically
++        result = strtoimax(buf, &end, /*base*/0);
++        if ((result == INTMAX_MIN || result == INTMAX_MAX) && errno == ERANGE) {
++            // Over or underflow
++            result = default_value;
++            ALOGV("%s(%s,%" PRIdMAX ") - overflow", __FUNCTION__, key, default_value);
++        } else if (result < lower_bound || result > upper_bound) {
++            // Out of range of requested bounds
++            result = default_value;
++            ALOGV("%s(%s,%" PRIdMAX ") - out of range", __FUNCTION__, key, default_value);
++        } else if (end == buf) {
++            // Numeric conversion failed
++            result = default_value;
++            ALOGV("%s(%s,%" PRIdMAX ") - numeric conversion failed",
++                    __FUNCTION__, key, default_value);
++        }
++
++        errno = tmp;
++    }
++
++    return result;
++}
++
++static int64_t property_get_int64(const char *key, int64_t default_value) {
++    return (int64_t)property_get_imax(key, INT64_MIN, INT64_MAX, default_value);
++}
++
++void limitProcessMemory(
++    const char *property,
++    size_t numberOfBytes,
++    size_t percentageOfTotalMem) {
++
++    long pageSize = sysconf(_SC_PAGESIZE);
++    long numPages = sysconf(_SC_PHYS_PAGES);
++    size_t maxMem = SIZE_MAX;
++
++    if (pageSize > 0 && numPages > 0) {
++        if (size_t(numPages) < SIZE_MAX / size_t(pageSize)) {
++            maxMem = size_t(numPages) * size_t(pageSize);
++        }
++        ALOGV("physMem: %zu", maxMem);
++        if (percentageOfTotalMem > 100) {
++            ALOGW("requested %zu%% of total memory, using 100%%", percentageOfTotalMem);
++            percentageOfTotalMem = 100;
++        }
++        maxMem = maxMem / 100 * percentageOfTotalMem;
++        if (numberOfBytes < maxMem) {
++            maxMem = numberOfBytes;
++        }
++        ALOGV("requested limit: %zu", maxMem);
++    } else {
++        ALOGW("couldn't determine total RAM");
++    }
++
++    int64_t propVal = property_get_int64(property, maxMem);
++    if (propVal > 0 && uint64_t(propVal) <= SIZE_MAX) {
++        maxMem = propVal;
++    }
++    ALOGV("actual limit: %zu", maxMem);
++
++    struct rlimit limit;
++    getrlimit(RLIMIT_AS, &limit);
++    ALOGV("original limits: %lld/%lld", (long long)limit.rlim_cur, (long long)limit.rlim_max);
++    limit.rlim_cur = maxMem;
++    setrlimit(RLIMIT_AS, &limit);
++    limit.rlim_cur = -1;
++    limit.rlim_max = -1;
++    getrlimit(RLIMIT_AS, &limit);
++    ALOGV("new limits: %lld/%lld", (long long)limit.rlim_cur, (long long)limit.rlim_max);
++
++}
++
++
++} // namespace android
+diff --git a/media/libmedia/MediaUtils.h b/media/libmedia/MediaUtils.h
+new file mode 100644
+index 0000000..f80dd30
+--- /dev/null
++++ b/media/libmedia/MediaUtils.h
+@@ -0,0 +1,35 @@
++/*
++ * Copyright (C) 2016 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef _MEDIA_UTILS_H
++#define _MEDIA_UTILS_H
++
++namespace android {
++
++/**
++   Limit the amount of memory a process can allocate using setrlimit(RLIMIT_AS).
++   The value to use will be read from the specified system property, or if the
++   property doesn't exist it will use the specified number of bytes or the
++   specified percentage of total memory, whichever is smaller.
++*/
++void limitProcessMemory(
++    const char *property,
++    size_t numberOfBytes,
++    size_t percentageOfTotalMem);
++
++}   // namespace android
++
++#endif  // _MEDIA_UTILS_H
+diff --git a/media/mediaserver/Android.mk b/media/mediaserver/Android.mk
+index 1ac647a..b417bad 100644
+--- a/media/mediaserver/Android.mk
++++ b/media/mediaserver/Android.mk
+@@ -30,6 +30,7 @@ LOCAL_STATIC_LIBRARIES := \
+ 
+ LOCAL_C_INCLUDES := \
+     frameworks/av/media/libmediaplayerservice \
++    frameworks/av/media/libmedia \
+     frameworks/av/services/medialog \
+     frameworks/av/services/audioflinger \
+     frameworks/av/services/camera/libcameraservice
+diff --git a/media/mediaserver/main_mediaserver.cpp b/media/mediaserver/main_mediaserver.cpp
+index d5207d5..e3fd4db 100644
+--- a/media/mediaserver/main_mediaserver.cpp
++++ b/media/mediaserver/main_mediaserver.cpp
+@@ -33,12 +33,18 @@
+ #include "CameraService.h"
+ #include "MediaLogService.h"
+ #include "MediaPlayerService.h"
++#include "MediaUtils.h"
+ #include "AudioPolicyService.h"
+ 
+ using namespace android;
+ 
+-int main(int argc, char** argv)
++int main(int argc __unused, char** argv)
+ {
++    limitProcessMemory(
++        "ro.media.maxmem", /* property that defines limit */
++        SIZE_MAX, /* upper limit in bytes */
++        65 /* upper limit as percentage of physical RAM */);
++
+     signal(SIGPIPE, SIG_IGN);
+     char value[PROPERTY_VALUE_MAX];
+     bool doLog = (property_get("ro.test_harness", value, "0") > 0) && (atoi(value) == 1);
+-- 
+2.7.4
+

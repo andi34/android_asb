@@ -1,0 +1,66 @@
+From fe33f8613bfcdedb0012fb1e270b06065749d58a Mon Sep 17 00:00:00 2001
+From: "Joshua J. Drake" <android-open-source@qoop.org>
+Date: Sat, 15 Aug 2015 08:17:03 -0500
+Subject: [PATCH 036/182] Prevent integer issues in ID3::Iterator::findFrame
+
+Integer overflows could occur a few places within findFrame. These can lead to
+out-of-bounds reads and potentially infinite loops. Ensure that arithmetic does
+not wrap around to prevent these behaviors.
+
+Bug: 23285192
+Change-Id: I72a61df7d5719d1d3f2bd0b37fba86f0f4bbedee
+---
+ media/libstagefright/id3/ID3.cpp | 23 +++++++++++++++++++++--
+ 1 file changed, 21 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index 8e2cbd1..6681215 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -656,6 +656,11 @@ void ID3::Iterator::findFrame() {
+ 
+             mFrameSize += 6;
+ 
++            // Prevent integer overflow in validation
++            if (SIZE_MAX - mOffset <= mFrameSize) {
++                return;
++            }
++
+             if (mOffset + mFrameSize > mParent.mSize) {
+                 ALOGV("partial frame at offset %d (size = %d, bytes-remaining = %d)",
+                      mOffset, mFrameSize, mParent.mSize - mOffset - 6);
+@@ -685,7 +690,7 @@ void ID3::Iterator::findFrame() {
+                 return;
+             }
+ 
+-            size_t baseSize;
++            size_t baseSize = 0;
+             if (mParent.mVersion == ID3_V2_4) {
+                 if (!ParseSyncsafeInteger(
+                             &mParent.mData[mOffset + 4], &baseSize)) {
+@@ -695,7 +700,21 @@ void ID3::Iterator::findFrame() {
+                 baseSize = U32_AT(&mParent.mData[mOffset + 4]);
+             }
+ 
+-            mFrameSize = 10 + baseSize;
++            if (baseSize == 0) {
++                return;
++            }
++
++            // Prevent integer overflow when adding
++            if (SIZE_MAX - 10 <= baseSize) {
++                return;
++            }
++
++            mFrameSize = 10 + baseSize; // add tag id, size field and flags
++
++            // Prevent integer overflow in validation
++            if (SIZE_MAX - mOffset <= mFrameSize) {
++                return;
++            }
+ 
+             if (mOffset + mFrameSize > mParent.mSize) {
+                 ALOGV("partial frame at offset %d (size = %d, bytes-remaining = %d)",
+-- 
+2.7.4
+
