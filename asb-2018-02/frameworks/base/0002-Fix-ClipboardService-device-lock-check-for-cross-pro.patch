@@ -1,0 +1,56 @@
+From 286a7b90d8444fc8c36d26f83c18006ec8d25b59 Mon Sep 17 00:00:00 2001
+From: Siyamed Sinir <siyamed@google.com>
+Date: Wed, 13 Sep 2017 12:19:41 -0700
+Subject: [PATCH 2/2] Fix ClipboardService device lock check for cross profile
+
+ClipboardService.isDeviceLocked should clear callingIdentity before
+accessing KeyguardManager.
+
+Test: bit CtsDevicePolicyManagerTestCases:com.android.cts.devicepolicy.ManagedProfileTest
+
+Bug: 64934810
+Change-Id: I712abfe8d542cd1be9c1816f407c8912321ac480
+CVE-2017-0846
+---
+ .../android/server/clipboard/ClipboardService.java | 25 ++++++++++++++--------
+ 1 file changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/services/core/java/com/android/server/clipboard/ClipboardService.java b/services/core/java/com/android/server/clipboard/ClipboardService.java
+index 96a66b34..636f2f5 100644
+--- a/services/core/java/com/android/server/clipboard/ClipboardService.java
++++ b/services/core/java/com/android/server/clipboard/ClipboardService.java
+@@ -309,15 +309,22 @@ public class ClipboardService extends IClipboard.Stub {
+ 
+     private boolean isDeviceLocked() {
+         boolean isLocked = false;
+-        KeyguardManager keyguardManager = (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
+-        boolean inKeyguardRestrictedInputMode = keyguardManager.inKeyguardRestrictedInputMode();
+-        if (inKeyguardRestrictedInputMode) {
+-            isLocked = true;
+-        } else {
+-            PowerManager powerManager = (PowerManager)mContext.getSystemService(Context.POWER_SERVICE);
+-            isLocked = !powerManager.isScreenOn();
+-        }
+-        return isLocked;
++        final long token = Binder.clearCallingIdentity();
++        try {
++            final KeyguardManager keyguardManager = (KeyguardManager) mContext.getSystemService(
++                    Context.KEYGUARD_SERVICE);
++            boolean inKeyguardRestrictedInputMode = keyguardManager.inKeyguardRestrictedInputMode();
++            if (inKeyguardRestrictedInputMode) {
++               isLocked = true;
++            } else {
++               PowerManager powerManager = (PowerManager)mContext.getSystemService(
++                 Context.POWER_SERVICE);
++               isLocked = !powerManager.isScreenOn();
++            }
++            return isLocked;
++        } finally {
++            Binder.restoreCallingIdentity(token);
++        }
+     }
+ 
+     private final void checkUriOwnerLocked(Uri uri, int uid) {
+-- 
+2.7.4
+
