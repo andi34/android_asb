@@ -1,0 +1,42 @@
+From c569b8b910708d58db9de308ea1efe7936600900 Mon Sep 17 00:00:00 2001
+From: Ajay Panicker <apanicke@google.com>
+Date: Wed, 10 Jan 2018 16:12:50 -0800
+Subject: [PATCH 04/10] AVRCP: Check the number of text attributes requested
+
+Test: Build
+Bug: 69478941
+Change-Id: Ibc456511c8d7339213f08b07d70f5e25be140d68
+(cherry picked from commit 249bb665b1020e81547246f5b29ed9040d696388)
+(cherry picked from commit 2f2043f18463a5c963c138d24346870b1066e7a6)
+---
+ stack/avrc/avrc_pars_tg.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/stack/avrc/avrc_pars_tg.c b/stack/avrc/avrc_pars_tg.c
+index 3f3fe93..a07c4bb 100644
+--- a/stack/avrc/avrc_pars_tg.c
++++ b/stack/avrc/avrc_pars_tg.c
+@@ -21,6 +21,7 @@
+ #include "avrc_api.h"
+ #include "avrc_defs.h"
+ #include "avrc_int.h"
++#include "log/log.h"
+ 
+ /*****************************************************************************
+ **  Global data
+@@ -169,6 +170,12 @@ static tAVRC_STS avrc_pars_vendor_cmd(tAVRC_MSG_VENDOR *p_msg, tAVRC_COMMAND *p_
+             status = AVRC_STS_INTERNAL_ERR;
+             break;
+         }
++
++        if (p_result->get_cur_app_val.num_attr > AVRC_MAX_APP_ATTR_SIZE) {
++            android_errorWriteLog(0x534e4554, "63146237");
++            p_result->get_cur_app_val.num_attr = AVRC_MAX_APP_ATTR_SIZE;
++        }
++
+         p_u8 = p_result->get_cur_app_val.attrs;
+         for (xx=0, yy=0; xx< p_result->get_cur_app_val.num_attr; xx++)
+         {
+-- 
+2.7.4
+

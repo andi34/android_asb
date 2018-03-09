@@ -1,0 +1,38 @@
+From 925a207ac5cc3f697423e26aed224024f0d3808c Mon Sep 17 00:00:00 2001
+From: Myles Watson <mylesgw@google.com>
+Date: Thu, 11 Jan 2018 20:43:47 -0800
+Subject: [PATCH 08/10] SDP: Include the offset in sdp_disc_server_rsp
+
+The commit
+  SDP: Pass the bounds to process_service_*_rsp
+with the change ID
+  Icf53d4d05f99b5e0a2b3f4d3735b6fbfd62adaa3
+omitted the offset when calculating the end of the message.
+
+Bug: 68161546
+Test: Connect a headset
+Change-Id: I6266b51e3871ed6ce9932161e4ab66de90af4ce6
+(cherry picked from commit 1ff9151b7de9cff6aab3919d151542e7244cc0e5)
+Merged-In: I6266b51e3871ed6ce9932161e4ab66de90af4ce6
+(cherry picked from commit c379fc0f7a158e7028771bcf9dea19987f771a8e)
+(cherry picked from commit 1313abd1761c39e8619a77964f8c42e3e72b5fee)
+---
+ stack/sdp/sdp_discovery.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/stack/sdp/sdp_discovery.c b/stack/sdp/sdp_discovery.c
+index c402974..7a5333e 100644
+--- a/stack/sdp/sdp_discovery.c
++++ b/stack/sdp/sdp_discovery.c
+@@ -235,7 +235,7 @@ void sdp_disc_server_rsp (tCONN_CB *p_ccb, BT_HDR *p_msg)
+ 
+     /* Got a reply!! Check what we got back */
+     p = (UINT8 *)(p_msg + 1) + p_msg->offset;
+-    uint8_t* p_end = (uint8_t*)(p_msg + 1) + p_msg->len;
++    uint8_t* p_end = p + p_msg->len;
+ 
+     BE_STREAM_TO_UINT8 (rsp_pdu, p);
+ 
+-- 
+2.7.4
+

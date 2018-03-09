@@ -1,0 +1,54 @@
+From 6dff8430de5301674363b5b183ce1a5b4badc623 Mon Sep 17 00:00:00 2001
+From: Moritz Horstmann <dev@peterzweg.at>
+Date: Thu, 8 Mar 2018 13:59:07 +0100
+Subject: [PATCH] Bump security patch level to 2018-03-05
+
+CVEs fixed in this topic:
+CVE-2017-13248
+CVE-2017-13249
+CVE-2017-13250
+CVE-2017-13251
+CVE-2017-13254
+CVE-2017-13255
+CVE-2017-13256
+CVE-2017-13257
+CVE-2017-13258
+CVE-2017-13259
+CVE-2017-13260
+CVE-2017-13261
+CVE-2017-13262
+CVE-2017-13264
+CVE-2017-13266
+CVE-2017-13268
+CVE-2017-13269
+CVE-2017-13272
+
+CVEs not affecting Android 7.1:
+CVE-2017-13252 8.0/8.1 only
+CVE-2017-13253 8.0/8.1 only
+CVE-2017-13263 8.0/8.1 only
+
+Not applied:
+CVE-2017-13265 Affects 7.1.2, but is not used in any of our builds
+
+Change-Id: I21c988578280cc85e958303bb2c0e4663a5757ad
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 42fa3a8..3a6d002 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2018-02-05
++    PLATFORM_SECURITY_PATCH := 2018-03-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

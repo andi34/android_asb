@@ -1,0 +1,99 @@
+From 26f78ba753dc3c1e00edc8dcc3210a190387deec Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Mon, 8 Jan 2018 11:37:05 -0800
+Subject: [PATCH 02/10] Removed alarm callback execution statistics
+
+Updating the alarm state after the callback returns can be problematic
+in case the callback itself deleted the alarm.
+
+Bug: 67110137
+Test: Manual
+Change-Id: Id4de06eebedb792cadd63d09efb68672e9bddc69
+Merged-In: Id4de06eebedb792cadd63d09efb68672e9bddc69
+(cherry picked from commit 04574e1cde3b0d46b59b4b6ebab935ac60af9f97)
+(cherry picked from commit 90ffe3f90a7589e4ff9e5e8bdf353cdcdfe88764)
+(cherry picked from commit 935ee775421e0c8a14f26669d9ab99f110ceb7d5)
+---
+ osi/src/alarm.c | 26 ++++++++------------------
+ 1 file changed, 8 insertions(+), 18 deletions(-)
+
+diff --git a/osi/src/alarm.c b/osi/src/alarm.c
+index 69ded69..5f9e42c 100644
+--- a/osi/src/alarm.c
++++ b/osi/src/alarm.c
+@@ -64,7 +64,6 @@ typedef struct {
+   size_t rescheduled_count;
+   size_t total_updates;
+   period_ms_t last_update_ms;
+-  stat_t callback_execution;
+   stat_t overdue_scheduling;
+   stat_t premature_scheduling;
+ } alarm_stats_t;
+@@ -136,8 +135,7 @@ static void callback_dispatch(void *context);
+ static bool timer_create_internal(const clockid_t clock_id, timer_t *timer);
+ static void update_scheduling_stats(alarm_stats_t *stats,
+                                     period_ms_t now_ms,
+-                                    period_ms_t deadline_ms,
+-                                    period_ms_t execution_delta_ms);
++                                    period_ms_t deadline_ms);
+ 
+ static void update_stat(stat_t *stat, period_ms_t delta)
+ {
+@@ -614,14 +612,12 @@ static void alarm_queue_ready(fixed_queue_t *queue,
+   pthread_mutex_lock(&alarm->callback_lock);
+   pthread_mutex_unlock(&monitor);
+ 
+-  period_ms_t t0 = now();
+-  callback(data);
+-  period_ms_t t1 = now();
+-
+   // Update the statistics
+-  assert(t1 >= t0);
+-  period_ms_t delta = t1 - t0;
+-  update_scheduling_stats(&alarm->stats, t0, deadline, delta);
++  update_scheduling_stats(&alarm->stats, now(), deadline);
++
++  // NOTE: Do NOT access "alarm" after the callback, as a safety precaution
++  // in case the callback itself deleted the alarm.
++  callback(data);
+ 
+   pthread_mutex_unlock(&alarm->callback_lock);
+ }
+@@ -695,14 +691,11 @@ static bool timer_create_internal(const clockid_t clock_id, timer_t *timer) {
+ 
+ static void update_scheduling_stats(alarm_stats_t *stats,
+                                     period_ms_t now_ms,
+-                                    period_ms_t deadline_ms,
+-                                    period_ms_t execution_delta_ms)
++                                    period_ms_t deadline_ms)
+ {
+   stats->total_updates++;
+   stats->last_update_ms = now_ms;
+ 
+-  update_stat(&stats->callback_execution, execution_delta_ms);
+-
+   if (deadline_ms < now_ms) {
+     // Overdue scheduling
+     period_ms_t delta_ms = now_ms - deadline_ms;
+@@ -755,7 +748,7 @@ void alarm_debug_dump(int fd)
+     dprintf(fd, "%-51s: %zu / %zu / %zu / %zu\n",
+             "    Action counts (sched/resched/exec/cancel)",
+             stats->scheduled_count, stats->rescheduled_count,
+-            stats->callback_execution.count, stats->canceled_count);
++            stats->total_updates, stats->canceled_count);
+ 
+     dprintf(fd, "%-51s: %zu / %zu\n",
+             "    Deviation counts (overdue/premature)",
+@@ -768,9 +761,6 @@ void alarm_debug_dump(int fd)
+             (unsigned long long) alarm->period,
+             (long long)(alarm->deadline - just_now));
+ 
+-    dump_stat(fd, &stats->callback_execution,
+-              "    Callback execution time in ms (total/max/avg)");
+-
+     dump_stat(fd, &stats->overdue_scheduling,
+               "    Overdue scheduling time in ms (total/max/avg)");
+ 
+-- 
+2.7.4
+

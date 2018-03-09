@@ -1,0 +1,104 @@
+From 3bee756b9596bc64b401c14b7246ba209db32462 Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Thu, 11 Jan 2018 17:28:16 -0800
+Subject: [PATCH 03/10] Allocate/free the SDP connection timers only during
+ stack startup/shutdown
+
+This avoids freeing the sdp_conn_timer within the alarm callback itself.
+
+Bug: 67110137
+Test: Manual
+Change-Id: I775b4b532cd42cf207258c53c6052a167a124627
+Merged-In: I775b4b532cd42cf207258c53c6052a167a124627
+(cherry picked from commit ef6a4a0c9d9220a7d909863349d7a0c0b967d54c)
+(cherry picked from commit 0dbe21d88e05a43d6882248144e4e9128f4c1928)
+(cherry picked from commit ec16f7d8c7e359a68ffe6b76e88add2210bf2cbd)
+---
+ stack/btu/btu_init.c  |  2 ++
+ stack/sdp/sdp_main.c  | 11 +++++++++++
+ stack/sdp/sdp_utils.c |  6 +++---
+ stack/sdp/sdpint.h    |  1 +
+ 4 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/stack/btu/btu_init.c b/stack/btu/btu_init.c
+index 688ed88..9f9ed0a 100644
+--- a/stack/btu/btu_init.c
++++ b/stack/btu/btu_init.c
+@@ -115,6 +115,8 @@ void btu_free_core(void)
+       /* Free the mandatory core stack components */
+       l2c_free();
+ 
++      sdp_free();
++
+ #if BLE_INCLUDED == TRUE
+       gatt_free();
+ #endif
+diff --git a/stack/sdp/sdp_main.c b/stack/sdp/sdp_main.c
+index c888817..7cbe2d3 100644
+--- a/stack/sdp/sdp_main.c
++++ b/stack/sdp/sdp_main.c
+@@ -85,6 +85,10 @@ void sdp_init (void)
+     /* Clears all structures and local SDP database (if Server is enabled) */
+     memset (&sdp_cb, 0, sizeof (tSDP_CB));
+ 
++    for (int i = 0; i < SDP_MAX_CONNECTIONS; i++) {
++        sdp_cb.ccb[i].sdp_conn_timer = alarm_new("sdp.sdp_conn_timer");
++    }
++
+     /* Initialize the L2CAP configuration. We only care about MTU and flush */
+     sdp_cb.l2cap_my_cfg.mtu_present       = TRUE;
+     sdp_cb.l2cap_my_cfg.mtu               = SDP_MTU_SIZE;
+@@ -139,6 +143,13 @@ void sdp_init (void)
+     }
+ }
+ 
++void sdp_free(void) {
++    for (int i = 0; i < SDP_MAX_CONNECTIONS; i++) {
++        alarm_free(sdp_cb.ccb[i].sdp_conn_timer);
++        sdp_cb.ccb[i].sdp_conn_timer = NULL;
++    }
++}
++
+ #if (defined(SDP_DEBUG) && SDP_DEBUG == TRUE)
+ /*******************************************************************************
+ **
+diff --git a/stack/sdp/sdp_utils.c b/stack/sdp/sdp_utils.c
+index a6f0ba6..aa1bfb5 100644
+--- a/stack/sdp/sdp_utils.c
++++ b/stack/sdp/sdp_utils.c
+@@ -120,8 +120,9 @@ tCONN_CB *sdpu_allocate_ccb (void)
+     {
+         if (p_ccb->con_state == SDP_STATE_IDLE)
+         {
++            alarm_t* alarm = p_ccb->sdp_conn_timer;
+             memset(p_ccb, 0, sizeof(tCONN_CB));
+-            p_ccb->sdp_conn_timer = alarm_new("sdp.sdp_conn_timer");
++            p_ccb->sdp_conn_timer = alarm;
+             return (p_ccb);
+         }
+     }
+@@ -143,8 +144,7 @@ tCONN_CB *sdpu_allocate_ccb (void)
+ void sdpu_release_ccb (tCONN_CB *p_ccb)
+ {
+     /* Ensure timer is stopped */
+-    alarm_free(p_ccb->sdp_conn_timer);
+-    p_ccb->sdp_conn_timer = NULL;
++    alarm_cancel(p_ccb->sdp_conn_timer);
+ 
+     /* Drop any response pointer we may be holding */
+     p_ccb->con_state = SDP_STATE_IDLE;
+diff --git a/stack/sdp/sdpint.h b/stack/sdp/sdpint.h
+index 05414cd..71dab92 100644
+--- a/stack/sdp/sdpint.h
++++ b/stack/sdp/sdpint.h
+@@ -246,6 +246,7 @@ extern tSDP_CB *sdp_cb_ptr;
+ 
+ /* Functions provided by sdp_main.c */
+ extern void     sdp_init (void);
++extern void     sdp_free(void);
+ extern void     sdp_disconnect (tCONN_CB*p_ccb, UINT16 reason);
+ 
+ #if (defined(SDP_DEBUG) && SDP_DEBUG == TRUE)
+-- 
+2.7.4
+
