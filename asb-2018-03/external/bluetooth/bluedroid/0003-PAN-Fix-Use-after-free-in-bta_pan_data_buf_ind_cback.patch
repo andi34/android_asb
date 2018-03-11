@@ -1,4 +1,4 @@
-From a720b91764a44ed20467cf203a6cc74065ced567 Mon Sep 17 00:00:00 2001
+From 21229077978a20a251bd244fb013e49fb57846a2 Mon Sep 17 00:00:00 2001
 From: Myles Watson <mylesgw@google.com>
 Date: Wed, 10 Jan 2018 09:51:28 -0800
 Subject: [PATCH 3/9] PAN: Fix Use-after-free in bta_pan_data_buf_ind_cback
@@ -16,10 +16,10 @@ CVE-2017-13257
  2 files changed, 6 insertions(+), 9 deletions(-)
 
 diff --git a/bta/pan/bta_pan_act.c b/bta/pan/bta_pan_act.c
-index 4b4ff20..ba4a409 100644
+index 2f67c84..2349251 100644
 --- a/bta/pan/bta_pan_act.c
 +++ b/bta/pan/bta_pan_act.c
-@@ -171,6 +171,11 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
+@@ -172,6 +172,11 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
      BT_HDR * p_event;
      BT_HDR *p_new_buf;
  
@@ -30,16 +30,16 @@ index 4b4ff20..ba4a409 100644
 +
      if ( sizeof(tBTA_PAN_DATA_PARAMS) > p_buf->offset )
      {
-         /* offset smaller than data structure in front of actual data */
+         if (sizeof(BT_HDR) + sizeof(tBTA_PAN_DATA_PARAMS) + p_buf->len >
 @@ -179,7 +184,6 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
-           android_errorWriteLog(0x534e4554, "63146237");
-           APPL_TRACE_ERROR2("%s: received buffer length too large: %d", __func__,
-                            p_buf->len);
--          GKI_freebuf(p_buf);
-           return;
+             android_errorWriteLog(0x534e4554, "63146237");
+             APPL_TRACE_ERROR("%s: received buffer length too large: %d", __func__,
+                              p_buf->len);
+-            GKI_freebuf(p_buf);
+             return;
          }
-         p_new_buf = (BT_HDR *)GKI_getpoolbuf( PAN_POOL_ID );
-@@ -194,7 +198,6 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
+ 
+@@ -196,7 +200,6 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
              memcpy( (UINT8 *)(p_new_buf+1)+sizeof(tBTA_PAN_DATA_PARAMS), (UINT8 *)(p_buf+1)+p_buf->offset, p_buf->len );
              p_new_buf->len    = p_buf->len;
              p_new_buf->offset = sizeof(tBTA_PAN_DATA_PARAMS);
@@ -47,7 +47,7 @@ index 4b4ff20..ba4a409 100644
          }
      }
      else
-@@ -209,13 +212,6 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
+@@ -211,13 +214,6 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
      ((tBTA_PAN_DATA_PARAMS *)p_new_buf)->forward = forward;
  
  
@@ -62,10 +62,10 @@ index 4b4ff20..ba4a409 100644
      if ((p_event = (BT_HDR *) GKI_getbuf(sizeof(BT_HDR))) != NULL)
      {
 diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
-index 4bda848..f9a645b 100644
+index 509e7f3..44a23d7 100644
 --- a/stack/bnep/bnep_main.c
 +++ b/stack/bnep/bnep_main.c
-@@ -649,6 +649,7 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+@@ -650,6 +650,7 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
      if (bnep_cb.p_data_buf_cb)
      {
          (*bnep_cb.p_data_buf_cb)(p_bcb->handle, p_src_addr, p_dst_addr, protocol, p_buf, fw_ext_present);

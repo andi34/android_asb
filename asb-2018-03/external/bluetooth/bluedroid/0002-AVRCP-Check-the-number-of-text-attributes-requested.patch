@@ -1,4 +1,4 @@
-From 6c4c33abc7053f2f117521cf61b0cd348cede30f Mon Sep 17 00:00:00 2001
+From 5ec7d4e5e1ba1c95129c28b51dfef205431573ce Mon Sep 17 00:00:00 2001
 From: Ajay Panicker <apanicke@google.com>
 Date: Wed, 10 Jan 2018 16:12:50 -0800
 Subject: [PATCH 2/9] AVRCP: Check the number of text attributes requested

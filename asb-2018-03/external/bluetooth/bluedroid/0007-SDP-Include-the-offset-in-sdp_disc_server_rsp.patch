@@ -1,4 +1,4 @@
-From 36516beb689bfe6e7931ca0ecc06f280daf6b33a Mon Sep 17 00:00:00 2001
+From 61d71a1c829ed9534d8c5dae2ac15bb39a6f09eb Mon Sep 17 00:00:00 2001
 From: Myles Watson <mylesgw@google.com>
 Date: Thu, 11 Jan 2018 20:43:47 -0800
 Subject: [PATCH 7/9] SDP: Include the offset in sdp_disc_server_rsp

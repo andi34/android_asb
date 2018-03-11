@@ -1,4 +1,4 @@
-From 3587325165b9c494ca6f3988a82e6cb4b92b24e5 Mon Sep 17 00:00:00 2001
+From 50fc043167e935b2251419d02c96edaa2af3dfe5 Mon Sep 17 00:00:00 2001
 From: Myles Watson <mylesgw@google.com>
 Date: Thu, 11 Jan 2018 14:20:26 -0800
 Subject: [PATCH 9/9] BNEP: Check received frame type
@@ -13,7 +13,7 @@ CVE-2017-13269
  1 file changed, 7 insertions(+)
 
 diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
-index aa29033..930a181 100644
+index 6c3c2d0..ac5686a 100644
 --- a/stack/bnep/bnep_main.c
 +++ b/stack/bnep/bnep_main.c
 @@ -484,6 +484,13 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)

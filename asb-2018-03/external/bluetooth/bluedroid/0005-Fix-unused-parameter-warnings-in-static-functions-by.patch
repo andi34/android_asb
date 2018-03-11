@@ -1,4 +1,4 @@
-From 7b9f86f8e330bbb080bf1591905dbcd96f1bf237 Mon Sep 17 00:00:00 2001
+From 2c8c52463c27ba5d454212a648f4b9c12c05fb87 Mon Sep 17 00:00:00 2001
 From: "Mike J. Chen" <mjchen@google.com>
 Date: Fri, 31 Jan 2014 17:13:29 -0800
 Subject: [PATCH 5/9] Fix unused parameter warnings in static functions by

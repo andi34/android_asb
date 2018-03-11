@@ -1,4 +1,4 @@
-From b4b4a9e8e2aa8f23345df542fb1c696dd5ac15fd Mon Sep 17 00:00:00 2001
+From 5d6287bc0f6813095435558855ddbdae0dfd81a4 Mon Sep 17 00:00:00 2001
 From: Hansong Zhang <hsz@google.com>
 Date: Wed, 10 Jan 2018 13:43:25 -0800
 Subject: [PATCH 4/9] Fix unexpected behavior in reading BNEP packets
@@ -17,7 +17,7 @@ CVE-2017-13258, CVE-2017-13260, CVE-2017-13261, CVE-2017-13262
  2 files changed, 32 insertions(+), 6 deletions(-)
 
 diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
-index f9a645b..aa29033 100644
+index 44a23d7..6c3c2d0 100644
 --- a/stack/bnep/bnep_main.c
 +++ b/stack/bnep/bnep_main.c
 @@ -35,6 +35,7 @@
@@ -55,7 +55,7 @@ index f9a645b..aa29033 100644
          }
  
          GKI_freebuf (p_buf);
-@@ -578,6 +579,8 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+@@ -579,6 +580,8 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
              while (extension_present && p && rem_len)
              {
                  ext_type = *p++;
@@ -65,7 +65,7 @@ index f9a645b..aa29033 100644
                  ext_type &= 0x7F;
  
 diff --git a/stack/bnep/bnep_utils.c b/stack/bnep/bnep_utils.c
-index 5a9c352..c9ba3fe 100644
+index dde7fee..f904ad4 100644
 --- a/stack/bnep/bnep_utils.c
 +++ b/stack/bnep/bnep_utils.c
 @@ -22,6 +22,8 @@
@@ -77,7 +77,7 @@ index 5a9c352..c9ba3fe 100644
  #include <stdio.h>
  #include <string.h>
  #include "gki.h"
-@@ -834,6 +836,13 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+@@ -831,6 +833,13 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
          break;
  
      case BNEP_SETUP_CONNECTION_REQUEST_MSG:
@@ -91,7 +91,7 @@ index 5a9c352..c9ba3fe 100644
          len = *p++;
          if (*rem_len < ((2 * len) + 1))
          {
-@@ -856,6 +865,13 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+@@ -859,6 +868,13 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
          break;
  
      case BNEP_FILTER_NET_TYPE_SET_MSG:
@@ -105,7 +105,7 @@ index 5a9c352..c9ba3fe 100644
          BE_STREAM_TO_UINT16 (len, p);
          if (*rem_len < (len + 2))
          {
-@@ -883,6 +899,13 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
+@@ -885,6 +901,13 @@ UINT8 *bnep_process_control_packet (tBNEP_CONN *p_bcb, UINT8 *p, UINT16 *rem_len
          break;
  
      case BNEP_FILTER_MULTI_ADDR_SET_MSG:

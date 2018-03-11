@@ -1,4 +1,4 @@
-From e92e8eb64d4bc31e491b961c2ee95fbe38ad6565 Mon Sep 17 00:00:00 2001
+From 8850bb3244361a097c9555eedbf15d10456c0468 Mon Sep 17 00:00:00 2001
 From: Pavlin Radoslavov <pavlin@google.com>
 Date: Fri, 7 Jul 2017 01:48:40 -0700
 Subject: [PATCH 14/15] Disable PAN Reverse Tethering when connection
@@ -20,7 +20,7 @@ CVE-2017-0783
  1 file changed, 36 insertions(+)
 
 diff --git a/stack/pan/pan_main.c b/stack/pan/pan_main.c
-index 6cbe1ce..fb29438 100644
+index 6cbe1ce..94080f6 100644
 --- a/stack/pan/pan_main.c
 +++ b/stack/pan/pan_main.c
 @@ -223,6 +223,42 @@ void pan_conn_ind_cb (UINT16 handle,
@@ -55,7 +55,7 @@ index 6cbe1ce..fb29438 100644
 +    }
 +    if (!is_valid_interaction)
 +    {
-+        PAN_TRACE_ERROR2(
++        PAN_TRACE_ERROR2 (
 +            "PAN Connection failed because of invalid PAN profile roles "
 +            "interaction: Remote UUID 0x%x Local UUID 0x%x",
 +            remote_uuid->uu.uuid16, local_uuid->uu.uuid16);

@@ -1,42 +1,48 @@
-From 91f555181f54ddaa48b404821e66bc200a5b346c Mon Sep 17 00:00:00 2001
+From ed73536b17fb58d904d5278096beba2bbd9018cc Mon Sep 17 00:00:00 2001
 From: Pavlin Radoslavov <pavlin@google.com>
-Date: Mon, 17 Jul 2017 15:41:12 -0700
+Date: Mon, 17 Jul 2017 17:21:16 -0700
 Subject: [PATCH 10/15] Free p_pending_data from tBNEP_CONN to avoid potential
  memory leaks
 
 Bug: 63146105
 Test: External script
+
+CVE-2017-0781
+
 Change-Id: I1281779ccf38d1d2dfb1a6dc0e45c0e533cabbca
 Merged-In: I1281779ccf38d1d2dfb1a6dc0e45c0e533cabbca
 (cherry picked from commit 4982eb5df30cbcbee5c8b8807be95fdc6dfa63c5)
 (cherry picked from commit a654681c5558904a8abfa1bbab8eafb651c13231)
-CVE-2017-0781
+(cherry picked from commit 64a12d3b6e71d9161837f28ce18c34d924c2bafc)
+(cherry picked from commit 8f18afd26c02ae3d46bf14d6e36017965dee0394)
 ---
- stack/bnep/bnep_main.c  | 1 +
- stack/bnep/bnep_utils.c | 1 +
- 2 files changed, 2 insertions(+)
+ stack/bnep/bnep_main.c  | 2 ++
+ stack/bnep/bnep_utils.c | 2 ++
+ 2 files changed, 4 insertions(+)
 
 diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
-index b1904fe..4bda848 100644
+index b1904fe..509e7f3 100644
 --- a/stack/bnep/bnep_main.c
 +++ b/stack/bnep/bnep_main.c
-@@ -564,6 +564,7 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+@@ -564,6 +564,8 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
              p_bcb->con_state != BNEP_STATE_CONNECTED &&
              extension_present && p && rem_len)
          {
-+            GKI_freebuf(p_bcb->p_pending_data);
++            if (p_bcb->p_pending_data)
++                GKI_freebuf (p_bcb->p_pending_data);
              p_bcb->p_pending_data = (BT_HDR *)GKI_getbuf (rem_len + sizeof(BT_HDR));
              if (p_bcb->p_pending_data)
              {
 diff --git a/stack/bnep/bnep_utils.c b/stack/bnep/bnep_utils.c
-index 59a0387..e06ebb8 100644
+index 59a0387..42a8855 100644
 --- a/stack/bnep/bnep_utils.c
 +++ b/stack/bnep/bnep_utils.c
-@@ -148,6 +148,7 @@ void bnepu_release_bcb (tBNEP_CONN *p_bcb)
+@@ -148,6 +148,8 @@ void bnepu_release_bcb (tBNEP_CONN *p_bcb)
  
      /* Drop any response pointer we may be holding */
      p_bcb->con_state        = BNEP_STATE_IDLE;
-+    GKI_freebuf(p_bcb->p_pending_data);
++    if (p_bcb->p_pending_data)
++        GKI_freebuf (p_bcb->p_pending_data);
      p_bcb->p_pending_data   = NULL;
  
      /* Free transmit queue */

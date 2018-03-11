@@ -1,4 +1,4 @@
-From 47ddc1658c23361db520ac8b5a2e75a86f9ee563 Mon Sep 17 00:00:00 2001
+From be9924d4ca080df0df4f6d48cfe16242a08a02cc Mon Sep 17 00:00:00 2001
 From: Stanley Tng <stng@google.com>
 Date: Wed, 10 Jan 2018 13:13:15 -0800
 Subject: [PATCH 8/9] Remove memory reference to invalid mem in error log
