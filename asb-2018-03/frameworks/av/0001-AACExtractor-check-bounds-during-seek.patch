@@ -1,0 +1,31 @@
+From 2d7660ba32d020a23b1dd8c01b16d4ef9dab25bf Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Thu, 11 Jan 2018 14:38:23 -0800
+Subject: [PATCH] AACExtractor: check bounds during seek
+
+Bug: 70239507
+Test: stagefright -a poc.aac
+Change-Id: I61225a04c76fe8855bd2591fb14b734099fa3be6
+(cherry picked from commit 0790581021d89ae1d7242e5eb1197bfd12725c85)
+---
+ media/libstagefright/AACExtractor.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/media/libstagefright/AACExtractor.cpp b/media/libstagefright/AACExtractor.cpp
+index 45e8a30..9e46876 100644
+--- a/media/libstagefright/AACExtractor.cpp
++++ b/media/libstagefright/AACExtractor.cpp
+@@ -292,6 +292,10 @@ status_t AACSource::read(
+     if (options && options->getSeekTo(&seekTimeUs, &mode)) {
+         if (mFrameDurationUs > 0) {
+             int64_t seekFrame = seekTimeUs / mFrameDurationUs;
++            if (seekFrame < 0 || seekFrame >= (int64_t)mOffsetVector.size()) {
++                android_errorWriteLog(0x534e4554, "70239507");
++                return ERROR_MALFORMED;
++            }
+             mCurrentTimeUs = seekFrame * mFrameDurationUs;
+ 
+             mOffset = mOffsetVector.itemAt(seekFrame);
+-- 
+2.7.4
+

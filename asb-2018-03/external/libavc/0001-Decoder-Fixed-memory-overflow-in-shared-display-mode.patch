@@ -1,0 +1,41 @@
+From 4805793ce20c606ccf68df434a1d768b7420c9c7 Mon Sep 17 00:00:00 2001
+From: Ritu Baldwa <ritu.baldwa@ittiam.com>
+Date: Wed, 27 Dec 2017 17:45:30 +0530
+Subject: [PATCH 1/2] Decoder: Fixed memory overflow in shared display mode.
+
+The factor multiplication should happen only at the source,
+not at the destination.
+
+Bug: 71375536
+Test: manual
+Change-Id: Ib5f00b87150a0533880346fac5464b0b1a802c36
+(cherry picked from commit c3b026a87d7da17ca5196e1973137b8691e60bde)
+---
+ decoder/ih264d_utils.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/decoder/ih264d_utils.c b/decoder/ih264d_utils.c
+index 4f6deca..165764d 100644
+--- a/decoder/ih264d_utils.c
++++ b/decoder/ih264d_utils.c
+@@ -1042,12 +1042,15 @@ WORD32 ih264d_get_next_display_field(dec_struct_t * ps_dec,
+                         buf = ps_dec->disp_bufs[i].buf[1];
+                         buf += ps_dec->disp_bufs[i].u4_ofst[1];
+                         pv_disp_op->s_disp_frm_buf.pv_u_buf = buf
+-                                        + pic_buf->u2_crop_offset_uv;
++                                        + (pic_buf->u2_crop_offset_uv
++                                           / YUV420SP_FACTOR);
+ 
+                         buf = ps_dec->disp_bufs[i].buf[2];
+                         buf += ps_dec->disp_bufs[i].u4_ofst[2];
+                         pv_disp_op->s_disp_frm_buf.pv_v_buf = buf
+-                                        + pic_buf->u2_crop_offset_uv;
++                                        + (pic_buf->u2_crop_offset_uv
++                                           / YUV420SP_FACTOR);
++
+                     }
+                 }
+             }
+-- 
+2.7.4
+

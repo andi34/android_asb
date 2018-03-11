@@ -1,0 +1,58 @@
+From d971b5d2802a73983ab146a0c4a2d0e61c1a02cf Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Tue, 9 Jan 2018 17:16:35 -0800
+Subject: [PATCH 1/8] Fix unexpected behavior in SDP
+
+Bug: 68776054
+Bug: 68817966
+Test: Bluetooth SDP still works
+Change-Id: I4eef22679a313b88d7e8ec463b29dbb592c6b5b9
+(cherry picked from commit 5d6b1b1316afecebd939f77e3d01ab0a400e68a9)
+CVE-2017-13255 / CVE-2017-13256
+---
+ stack/sdp/sdp_server.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/stack/sdp/sdp_server.c b/stack/sdp/sdp_server.c
+index 23d72a3..4db19a0 100644
+--- a/stack/sdp/sdp_server.c
++++ b/stack/sdp/sdp_server.c
+@@ -22,6 +22,7 @@
+  *  This is mainly dealing with client requests
+  *
+  ******************************************************************************/
++#include <cutils/log.h>
+ 
+ #include <stdlib.h>
+ #include <string.h>
+@@ -363,6 +364,13 @@ static void process_service_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
+         return;
+     }
+ 
++    if (max_list_len < 4) 
++    {
++        sdpu_build_n_send_error(p_ccb, trans_num, SDP_ILLEGAL_PARAMETER, NULL);
++        android_errorWriteLog(0x534e4554, "68776054");
++        return;
++    }
++
+     /* Check if this is a continuation request */
+     if (*p_req)
+     {
+@@ -624,6 +632,13 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
+ 
+     memcpy(&attr_seq_sav, &attr_seq, sizeof(tSDP_ATTR_SEQ)) ;
+ 
++    if (max_list_len < 4) 
++    {
++        sdpu_build_n_send_error(p_ccb, trans_num, SDP_ILLEGAL_PARAMETER, NULL);
++        android_errorWriteLog(0x534e4554, "68817966");
++        return;
++    }
++
+     /* Check if this is a continuation request */
+     if (*p_req)
+     {
+-- 
+2.7.4
+

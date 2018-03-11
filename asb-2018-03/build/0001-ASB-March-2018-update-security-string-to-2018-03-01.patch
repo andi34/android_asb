@@ -1,0 +1,63 @@
+From 80e36d8552254b8bac86e08dabf96b7c822c9dc6 Mon Sep 17 00:00:00 2001
+From: MSe <mse1969@posteo.de>
+Date: Sat, 10 Mar 2018 12:13:05 +0100
+Subject: [PATCH] ASB March 2018, update security string to 2018-03-01
+
+Implemented patches:
+==========================================
+Media framework
+CVE-2017-13248	A-70349612	Critical
+CVE-2017-13249	A-70399408	Critical
+CVE-2017-13250	A-71375536	Critical
+CVE-2017-13251	A-69269702	Critical
+CVE-2017-13264	A-70294343	High
+CVE-2017-13254	A-70239507	High
+
+System
+CVE-2017-13255	A-68776054	Critical
+CVE-2017-13256	A-68817966	Critical
+CVE-2017-13266	A-69478941	Critical
+CVE-2017-13257	A-67110692	High
+CVE-2017-13258	A-67863755	High
+CVE-2017-13259	A-68161546[2]	High
+CVE-2017-13260	A-69177251	High
+CVE-2017-13261	A-69177292	High
+CVE-2017-13262	A-69271284	High
+CVE-2017-13266	A-69478941	Moderate
+CVE-2017-13268	A-67058064	Moderate
+CVE-2017-13269	A-68818034	Moderate
+
+NOT Implemented, because not relevant
+==========================================
+Framework
+CVE-2017-13263	A-69383160[2]	Moderate  8.x only
+
+Media Framework
+CVE-2017-13252	A-70526702	High	  8.x only
+CVE-2017-13253	A-71389378	High	  8.x only
+
+System
+CVE-2017-13272	A-67110137[2]	Critical  7.x/8.x only
+CVE-2017-13265	A-36232423[2,3] Moderate  7.x/8.x only
+
+Change-Id: I7d241a7d859cfadcb9d9aa700cb29e9495dbe902
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index c44c1da..21852e2 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-02-01
++  PLATFORM_SECURITY_PATCH := 2018-03-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

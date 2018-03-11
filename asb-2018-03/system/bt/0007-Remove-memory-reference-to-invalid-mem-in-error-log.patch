@@ -1,0 +1,37 @@
+From 06f0e6d82b38b2deb1fae9e02f7c630f2e46aadd Mon Sep 17 00:00:00 2001
+From: Stanley Tng <stng@google.com>
+Date: Wed, 10 Jan 2018 13:13:15 -0800
+Subject: [PATCH 7/8] Remove memory reference to invalid mem in error log
+
+Remove the memory reference to an invalid memory inside an error log
+message.
+
+Test: Edit code to force the error condition and make sure the new error
+log does not crashed.
+Bug: 67058064
+Merged-In: I55ec6d8b53e5987cd7721e0ae3ffccc11d6638a0
+Change-Id: I55ec6d8b53e5987cd7721e0ae3ffccc11d6638a0
+(cherry picked from commit 11cd7277a1d0da9013a8381cddbfc096e9adaed6)
+(cherry picked from commit d10bc94f5ec64122382ed73a261c5f4d0a0fa195)
+CVE-2017-13268
+---
+ stack/smp/smp_utils.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/stack/smp/smp_utils.c b/stack/smp/smp_utils.c
+index 3e592f2..da54fdf 100644
+--- a/stack/smp/smp_utils.c
++++ b/stack/smp/smp_utils.c
+@@ -294,8 +294,7 @@ BOOLEAN  smp_send_msg_to_L2CAP(BD_ADDR rem_bda, BT_HDR *p_toL2CAP)
+     if ((l2cap_ret = L2CA_SendFixedChnlData (fixed_cid, rem_bda, p_toL2CAP)) == L2CAP_DW_FAILED)
+     {
+         smp_cb.total_tx_unacked -= 1;
+-        SMP_TRACE_ERROR("SMP   failed to pass msg:0x%0x to L2CAP",
+-                         *((UINT8 *)(p_toL2CAP + 1) + p_toL2CAP->offset));
++        SMP_TRACE_ERROR("SMP failed to pass msg to L2CAP");
+         return FALSE;
+     }
+     else
+-- 
+2.7.4
+
