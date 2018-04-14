@@ -1,0 +1,45 @@
+From bf1f598ed0160826f238813a2b4d9dd0c77c3726 Mon Sep 17 00:00:00 2001
+From: Chris Craik <ccraik@google.com>
+Date: Thu, 8 Feb 2018 15:58:34 -0800
+Subject: [PATCH] Add bounds checking for transparency lookup
+
+Bug: 71361451
+Test: manual test with sample app
+
+Change-Id: Icaa626cfc93115fe1cc2f42040b396c2318bb6e4
+(cherry picked from commit 53f97a2dd69b5b74e0fae2108ebab9276760aa47)
+(cherry picked from commit ebd849ed8aa77c0e1dad7a08df4a55845a067b76)
+---
+ framesequence/jni/FrameSequence_gif.cpp | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/framesequence/jni/FrameSequence_gif.cpp b/framesequence/jni/FrameSequence_gif.cpp
+index 3ba09dc..ed47834 100644
+--- a/framesequence/jni/FrameSequence_gif.cpp
++++ b/framesequence/jni/FrameSequence_gif.cpp
+@@ -111,12 +111,14 @@ FrameSequence_gif::FrameSequence_gif(Stream* stream) :
+     }
+ #endif
+ 
+-    if (mGif->SColorMap) {
++    const ColorMapObject* cmap = mGif->SColorMap;
++    if (cmap) {
+         // calculate bg color
+         GraphicsControlBlock gcb;
+         DGifSavedExtensionToGCB(mGif, 0, &gcb);
+-        if (gcb.TransparentColor == NO_TRANSPARENT_COLOR) {
+-            mBgColor = gifColorToColor8888(mGif->SColorMap->Colors[mGif->SBackGroundColor]);
++        if (gcb.TransparentColor == NO_TRANSPARENT_COLOR
++                && mGif->SBackGroundColor < cmap->ColorCount) {
++            mBgColor = gifColorToColor8888(cmap->Colors[mGif->SBackGroundColor]);
+         }
+     }
+ }
+@@ -358,4 +360,3 @@ static RegistryEntry gEntry = {
+         acceptsBuffers,
+ };
+ static Registry gRegister(gEntry);
+-
+-- 
+2.7.4
+

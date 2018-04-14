@@ -1,0 +1,37 @@
+From 8fc513e3866a649e627e9928ecc097b340a1cb9a Mon Sep 17 00:00:00 2001
+From: SchallRauch <alex.mueller@vfemail.net>
+Date: Fri, 5 May 2017 02:43:44 +0200
+Subject: [PATCH 1/2] manifest: use updated svox tag to fix picotts
+
+PicoTTS is currently broken in AOSP on 64bit nougat builds.
+It was fixed in AOSP master and made it into oreo release, but never
+made it into nougat release.
+https://android-review.googlesource.com/302872
+It is in an updated nougat preview tag though, so we can switch to it.
+
+The svox repo can't be forked due to the following:
+https://github.com/github/dmca/blob/master/2014/2014-12-22-Cambridge-Mobile.md
+
+BUGBASH-475
+
+Change-Id: I2ab74ba6428614ef8824f52669c37b52daa59927
+---
+ aosp.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/aosp.xml b/aosp.xml
+index bd566a6..a6db8d7 100644
+--- a/aosp.xml
++++ b/aosp.xml
+@@ -289,7 +289,7 @@
+   <project path="external/squashfs-tools" name="platform/external/squashfs-tools" groups="pdk" />
+   <project path="external/srtp" name="platform/external/srtp" groups="pdk" />
+   <project path="external/strace" name="platform/external/strace" groups="pdk" />
+-  <project path="external/svox" name="platform/external/svox" groups="pdk" />
++  <project path="external/svox" name="platform/external/svox" groups="pdk" revision="refs/tags/android-n-mr2-preview-2" />
+   <project path="external/tagsoup" name="platform/external/tagsoup" groups="pdk" />
+   <project path="external/testng" name="platform/external/testng" groups="pdk" />
+   <project path="external/tcpdump" name="platform/external/tcpdump" groups="pdk" />
+-- 
+2.7.4
+

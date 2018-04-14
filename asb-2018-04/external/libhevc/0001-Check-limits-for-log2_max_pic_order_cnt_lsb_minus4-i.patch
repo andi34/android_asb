@@ -1,0 +1,33 @@
+From 3b34cda4ab542b894e9fbc39020a70bfc5c373cc Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Fri, 19 Jan 2018 14:13:55 +0530
+Subject: [PATCH 1/2] Check limits for log2_max_pic_order_cnt_lsb_minus4 in sps
+
+Bug: 71766721
+
+According to the spec, the value of log2_max_pic_order_cnt_lsb_minus4
+shall be in the range of 0 to 12, inclusive.
+
+Change-Id: Ibd199b6dea246c2fac6214c21e49f27d95c07659
+(cherry picked from commit 4d32ff55cf3eeeb3a319517176ed2a2c6c376fe1)
+(cherry picked from commit daaece3e79db33f6c473bb54a39933d387a9bf95)
+---
+ decoder/ihevcd_parse_headers.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index 8348fc6..ad17726 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1324,6 +1324,8 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+         return IHEVCD_UNSUPPORTED_BIT_DEPTH;
+ 
+     UEV_PARSE("log2_max_pic_order_cnt_lsb_minus4", value, ps_bitstrm);
++    if(value < 0 || value > 12)
++        return IHEVCD_INVALID_PARAMETER;
+     ps_sps->i1_log2_max_pic_order_cnt_lsb = value + 4;
+ 
+     BITS_PARSE("sps_sub_layer_ordering_info_present_flag", value, ps_bitstrm, 1);
+-- 
+2.7.4
+

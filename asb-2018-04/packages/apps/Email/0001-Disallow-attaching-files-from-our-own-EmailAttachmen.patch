@@ -1,0 +1,36 @@
+From c2e3f2c37febbc548a906d88dceaf84fc65a98dc Mon Sep 17 00:00:00 2001
+From: Ekin Oguz <ekinoguz@google.com>
+Date: Mon, 29 Jan 2018 13:11:35 -0800
+Subject: [PATCH] Disallow attaching files from our own
+ EmailAttachmentProvider.
+
+This is to backport a security fix reported in b/71814449 and
+b/72569023. Fix is using the same approach as b/27308057, which is to
+prevent Compose from accepting URIs with our own email attachment
+provider.
+
+Bug: b/71814449
+Change-Id: Ib9df21648d00d2ef2da9fac05cc39fee253de8e2
+(cherry picked from commit 7227751994624bdb2ba958714cc861b8bab41634)
+(cherry picked from commit c3e0aba2a604ce7c3807d65df1e6a2b848287019)
+---
+ src/com/android/email/activity/ComposeActivityEmail.java | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/com/android/email/activity/ComposeActivityEmail.java b/src/com/android/email/activity/ComposeActivityEmail.java
+index cdfea0b..5783531 100644
+--- a/src/com/android/email/activity/ComposeActivityEmail.java
++++ b/src/com/android/email/activity/ComposeActivityEmail.java
+@@ -74,4 +74,9 @@ public class ComposeActivityEmail extends ComposeActivity
+     protected String getEmailProviderAuthority() {
+         return EmailContent.AUTHORITY;
+     }
++
++    @Override
++    protected String getEmailAttachmentProviderAuthority() {
++        return EmailContent.Attachment.ATTACHMENT_PROVIDER_AUTHORITY;
++    }
+ }
+-- 
+2.7.4
+

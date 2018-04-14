@@ -1,0 +1,62 @@
+From 38d2ba0ef897e3b6f2dee46789020c5369a49c84 Mon Sep 17 00:00:00 2001
+From: Haynes Mathew George <hgeorge@codeaurora.org>
+Date: Mon, 22 Jun 2015 14:16:42 -0700
+Subject: [PATCH 4/5] libmediaplayerservice:Fix deadlock on gapless start
+ failure
+
+Return error back to the application if start of next MediaPlayer
+instance as part of gapless transition fails.
+Test: compiles
+authored-by: Ashish Jain <ashishj@codeaurora.org>
+Change-Id: I77c570074c7c98c996122e275161ba88298e56fc
+(cherry picked from commit 9eadf496fa84603cf3ec5889990b79db8e378400)
+(cherry picked from commit 6cb337596796996c3095dc8017eb36beba00dab2)
+---
+ media/libmediaplayerservice/MediaPlayerService.cpp | 25 ++++++++++++++++++----
+ 1 file changed, 21 insertions(+), 4 deletions(-)
+
+diff --git a/media/libmediaplayerservice/MediaPlayerService.cpp b/media/libmediaplayerservice/MediaPlayerService.cpp
+index b428a6f..d477088 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.cpp
++++ b/media/libmediaplayerservice/MediaPlayerService.cpp
+@@ -1311,16 +1311,33 @@ void MediaPlayerService::Client::notify(
+     Client* client = static_cast<Client*>(spListener.get());
+ 
+     sp<IMediaPlayerClient> c;
++    sp<Client> nextClient;
++    status_t errStartNext = NO_ERROR;
+     {
+         Mutex::Autolock l(client->mLock);
+         c = client->mClient;
+         if (msg == MEDIA_PLAYBACK_COMPLETE && client->mNextClient != NULL) {
++            nextClient = client->mNextClient;
++
+             if (client->mAudioOutput != NULL)
+                 client->mAudioOutput->switchToNextOutput();
+-            client->mNextClient->start();
+-            if (client->mNextClient->mClient != NULL) {
+-                client->mNextClient->mClient->notify(
+-                        MEDIA_INFO, MEDIA_INFO_STARTED_AS_NEXT, 0, obj);
++
++            errStartNext = nextClient->start();
++        }
++    }
++
++    if (nextClient != NULL) {
++        sp<IMediaPlayerClient> nc;
++        {
++            Mutex::Autolock l(nextClient->mLock);
++            nc = nextClient->mClient;
++        }
++        if (nc != NULL) {
++            if (errStartNext == NO_ERROR) {
++                nc->notify(MEDIA_INFO, MEDIA_INFO_STARTED_AS_NEXT, 0, obj);
++            } else {
++                nc->notify(MEDIA_ERROR, MEDIA_ERROR_UNKNOWN , 0, obj);
++                ALOGE("gapless:start playback for next track failed, err(%d)", errStartNext);
+             }
+         }
+     }
+-- 
+2.7.4
+

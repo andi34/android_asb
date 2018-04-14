@@ -1,0 +1,41 @@
+From 313710017e5f3e4aa1797373eae6923f0c695b2c Mon Sep 17 00:00:00 2001
+From: Ritu Baldwa <ritu.baldwa@ittiam.com>
+Date: Tue, 16 Jan 2018 13:41:30 +0530
+Subject: [PATCH 1/2] Decoder: Fixed reset values in parse sps.
+
+Memset to zero whenever new sps occurs.
+
+Bug: 70897394
+Test: manual
+Change-Id: I5936fd55265ff8ad2b275a72b175cdb540bb7933
+(cherry picked from commit 9c32ad7126890dfaa79fd29affaaf07de335fa3a)
+(cherry picked from commit 3e3e81ede5229c5a9c6b7bf6a63844ecf07ae3ae)
+---
+ decoder/ih264d_parse_headers.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/decoder/ih264d_parse_headers.c b/decoder/ih264d_parse_headers.c
+index 2314003..b669331 100644
+--- a/decoder/ih264d_parse_headers.c
++++ b/decoder/ih264d_parse_headers.c
+@@ -30,6 +30,8 @@
+  * \author  AI
+  **************************************************************************
+  */
++#include <string.h>
++
+ #include "ih264_typedefs.h"
+ #include "ih264_macros.h"
+ #include "ih264_platform_macros.h"
+@@ -564,6 +566,8 @@ WORD32 ih264d_parse_sps(dec_struct_t *ps_dec, dec_bit_stream_t *ps_bitstrm)
+     /*--------------------------------------------------------------------*/
+ 
+     ps_seq = ps_dec->pv_scratch_sps_pps;
++    memset(ps_seq, 0, sizeof(dec_seq_params_t));
++
+     if(ps_dec->i4_header_decoded & 1)
+     {
+         *ps_seq = *ps_dec->ps_cur_sps;
+-- 
+2.7.4
+

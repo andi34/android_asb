@@ -1,0 +1,32 @@
+From d1a713ebf8b2c84eeff3ae46117d56f59eb7283d Mon Sep 17 00:00:00 2001
+From: Moritz Horstmann <dev@peterzweg.at>
+Date: Sun, 8 Apr 2018 02:04:19 +0200
+Subject: [PATCH 2/2] manifest: Track specific revision of svox to fix security
+ vulnerability
+
+Unfortunately, github does not allow us to fork svox, so we'll use
+the particular commit ID which fixes CVE-2017-13285 RCE vulnerability.
+Even though this revision originates from Oreo, the difference to the
+current nougat branch is negligible.
+
+Change-Id: Ib0e6e7c7be8ff60584e1c6cb5fb677d87e1dbc12
+---
+ aosp.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/aosp.xml b/aosp.xml
+index a6db8d7..7f88a4a 100644
+--- a/aosp.xml
++++ b/aosp.xml
+@@ -289,7 +289,7 @@
+   <project path="external/squashfs-tools" name="platform/external/squashfs-tools" groups="pdk" />
+   <project path="external/srtp" name="platform/external/srtp" groups="pdk" />
+   <project path="external/strace" name="platform/external/strace" groups="pdk" />
+-  <project path="external/svox" name="platform/external/svox" groups="pdk" revision="refs/tags/android-n-mr2-preview-2" />
++  <project path="external/svox" name="platform/external/svox" groups="pdk" revision="cee78199bbfae81f54a40671db47096f5f32cdad" />
+   <project path="external/tagsoup" name="platform/external/tagsoup" groups="pdk" />
+   <project path="external/testng" name="platform/external/testng" groups="pdk" />
+   <project path="external/tcpdump" name="platform/external/tcpdump" groups="pdk" />
+-- 
+2.7.4
+
