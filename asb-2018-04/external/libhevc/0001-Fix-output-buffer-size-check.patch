@@ -1,0 +1,34 @@
+From 0a381a2f055cb7a078c347a570cb8dea1c491b3e Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Tue, 23 Jan 2018 18:03:49 +0530
+Subject: [PATCH 1/2] Fix output buffer size check
+
+Bug: 72165027
+Test: ran poc before/after
+
+For output buffer size check, the parameter wd is set to larger
+of disp_wd and disp_strd.
+
+Change-Id: I1fc745753762b8a8e943165d0bf6525c500fb020
+(cherry picked from commit ce8a8db32e9b2054c5dc119fbbec542bf8e848b6)
+---
+ decoder/ihevcd_utils.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/decoder/ihevcd_utils.c b/decoder/ihevcd_utils.c
+index 14cdd2b..14c36ba 100755
+--- a/decoder/ihevcd_utils.c
++++ b/decoder/ihevcd_utils.c
+@@ -695,6 +695,9 @@ IHEVCD_ERROR_T ihevcd_check_out_buf_size(codec_t *ps_codec)
+         return (IHEVCD_ERROR_T)IHEVCD_SUCCESS;
+     }
+ 
++    if(ps_codec->i4_disp_strd > (WORD32)wd)
++        wd = ps_codec->i4_disp_strd;
++
+     if(ps_codec->e_chroma_fmt == IV_YUV_420P)
+         u4_min_num_out_bufs = MIN_OUT_BUFS_420;
+     else if(ps_codec->e_chroma_fmt == IV_YUV_422ILE)
+-- 
+2.7.4
+

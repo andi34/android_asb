@@ -1,0 +1,33 @@
+From 328284f20c2e1b2d9485dc9b6f111f58e58d0449 Mon Sep 17 00:00:00 2001
+From: Etan Cohen <etancohen@google.com>
+Date: Fri, 2 Feb 2018 08:07:20 -0800
+Subject: [PATCH 3/4] [RTT] ParcelableRttResults parcel code fix
+
+ParcelableRttResults was unparceled incorrectly.
+
+Bug: 70398564
+Test: exploit provided in bug no longer works
+Change-Id: Ifd6de547e9861bbebc399b43d0cc2899a8160813
+(cherry picked from commit e1e5a2409c8bef2481e68d9329f87bb8037afa45)
+---
+ wifi/java/android/net/wifi/RttManager.java | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/wifi/java/android/net/wifi/RttManager.java b/wifi/java/android/net/wifi/RttManager.java
+index 503e4a2..ea07033 100644
+--- a/wifi/java/android/net/wifi/RttManager.java
++++ b/wifi/java/android/net/wifi/RttManager.java
+@@ -730,8 +730,8 @@ public class RttManager {
+                     }
+                     dest.writeByte(result.LCR.id);
+                     if (result.LCR.id != (byte) 0xFF) {
+-                        dest.writeInt((byte) result.LCR.data.length);
+-                        dest.writeByte(result.LCR.id);
++                        dest.writeByte((byte) result.LCR.data.length);
++                        dest.writeByteArray(result.LCR.data);
+                     }
+                 }
+             } else {
+-- 
+2.7.4
+

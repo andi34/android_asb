@@ -1,0 +1,73 @@
+From a17dc1f1dd3915f8752df313bd8dfb2408e56ee3 Mon Sep 17 00:00:00 2001
+From: Jean-Michel Trivi <jmtrivi@google.com>
+Date: Fri, 12 Jan 2018 10:08:32 -0800
+Subject: [PATCH] MPEG-4 AAC Decoder: check against invalid height info
+
+In CProgramConfig_ReadHeightExt prevent stack overflow
+ from invalid FrontElementHeightInfo array value.
+
+Bug: 70637599
+Test: see bug
+Change-Id: I145414d81d7a7be711672c12f44b537c12eea308
+(cherry picked from commit 772c7f5542e64f4a380e13e6263ab668694c7c4d)
+---
+ libMpegTPDec/src/tpdec_asc.cpp | 23 +++++++++++++++++++----
+ 1 file changed, 19 insertions(+), 4 deletions(-)
+
+diff --git a/libMpegTPDec/src/tpdec_asc.cpp b/libMpegTPDec/src/tpdec_asc.cpp
+index bae271e..e697b48 100644
+--- a/libMpegTPDec/src/tpdec_asc.cpp
++++ b/libMpegTPDec/src/tpdec_asc.cpp
+@@ -118,7 +118,9 @@ int  CProgramConfig_IsValid ( const CProgramConfig *pPce )
+ 
+ /*
+  * Read the extension for height info.
+- * return 0 if successfull or -1 if the CRC failed.
++ * return 0 if successfull,
++ *       -1 if the CRC failed,
++ *       -2 if invalid HeightInfo.
+  */
+ static
+ int CProgramConfig_ReadHeightExt(
+@@ -146,15 +148,21 @@ int CProgramConfig_ReadHeightExt(
+ 
+     for (i=0; i < pPce->NumFrontChannelElements; i++)
+     {
+-      pPce->FrontElementHeightInfo[i] = (UCHAR) FDKreadBits(bs,2);
++      if ((pPce->FrontElementHeightInfo[i] = (UCHAR) FDKreadBits(bs,2)) >= PC_NUM_HEIGHT_LAYER) {
++        err = -2; /* height information is out of the valid range */
++      }
+     }
+     for (i=0; i < pPce->NumSideChannelElements; i++)
+     {
+-      pPce->SideElementHeightInfo[i] = (UCHAR) FDKreadBits(bs,2);
++      if ((pPce->SideElementHeightInfo[i] = (UCHAR) FDKreadBits(bs,2)) >= PC_NUM_HEIGHT_LAYER) {
++        err = -2; /* height information is out of the valid range */
++      }
+     }
+     for (i=0; i < pPce->NumBackChannelElements; i++)
+     {
+-      pPce->BackElementHeightInfo[i] = (UCHAR) FDKreadBits(bs,2);
++      if ((pPce->BackElementHeightInfo[i] = (UCHAR) FDKreadBits(bs,2)) >= PC_NUM_HEIGHT_LAYER) {
++        err = -2; /* height information is out of the valid range */
++      }
+     }
+     FDKbyteAlign(bs, alignmentAnchor);
+ 
+@@ -163,6 +171,13 @@ int CProgramConfig_ReadHeightExt(
+       /* CRC failed */
+       err = -1;
+     }
++    if (err!=0) {
++      /* Reset whole height information in case an error occured during parsing. The return
++         value ensures that pPce->isValid is set to 0 and implicit channel mapping is used. */
++      FDKmemclear(pPce->FrontElementHeightInfo, sizeof(pPce->FrontElementHeightInfo));
++      FDKmemclear(pPce->SideElementHeightInfo, sizeof(pPce->SideElementHeightInfo));
++      FDKmemclear(pPce->BackElementHeightInfo, sizeof(pPce->BackElementHeightInfo));
++    }
+   }
+   else {
+     /* No valid extension data found -> restore the initial bitbuffer state */
+-- 
+2.7.4
+

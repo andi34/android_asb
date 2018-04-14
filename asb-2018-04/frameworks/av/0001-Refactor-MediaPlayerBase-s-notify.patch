@@ -1,0 +1,357 @@
+From 867c67af517acd1f6a9ecfbaf06b4dcf2b55b242 Mon Sep 17 00:00:00 2001
+From: Pawin Vongmasa <pawin@google.com>
+Date: Sun, 17 Dec 2017 02:31:18 -0800
+Subject: [PATCH 1/3] Refactor MediaPlayerBase's notify
+
+Test: make cts -j123 && cts-tradefed run cts-dev -m \
+CtsMediaTestCases --compatibility:module-arg \
+CtsMediaTestCases:include-annotation:\
+android.platform.test.annotations.RequiresDevice
+
+Bug: 70546581
+Change-Id: Ia3a8eb99c2faf6935c63800ba08f65970cede48e
+(cherry picked from commit 082e4f75a383f957a6ed9186ca0692b694e1ce45)
+---
+ include/media/MediaPlayerInterface.h               | 30 +++++-----
+ media/libmediaplayerservice/MediaPlayerFactory.cpp |  5 +-
+ media/libmediaplayerservice/MediaPlayerFactory.h   |  3 +-
+ media/libmediaplayerservice/MediaPlayerService.cpp | 39 ++++++-------
+ media/libmediaplayerservice/MediaPlayerService.h   | 68 +++++++++++++---------
+ 5 files changed, 77 insertions(+), 68 deletions(-)
+
+diff --git a/include/media/MediaPlayerInterface.h b/include/media/MediaPlayerInterface.h
+index de82554..27e294f 100644
+--- a/include/media/MediaPlayerInterface.h
++++ b/include/media/MediaPlayerInterface.h
+@@ -65,14 +65,17 @@ enum player_type {
+ // duration below which we do not allow deep audio buffering
+ #define AUDIO_SINK_MIN_DEEP_BUFFER_DURATION_US 5000000
+ 
+-// callback mechanism for passing messages to MediaPlayer object
+-typedef void (*notify_callback_f)(void* cookie,
+-        int msg, int ext1, int ext2, const Parcel *obj);
+-
+ // abstract base class - use MediaPlayerInterface
+ class MediaPlayerBase : public RefBase
+ {
+ public:
++    // callback mechanism for passing messages to MediaPlayer object
++    class Listener : public RefBase {
++    public:
++        virtual void notify(int msg, int ext1, int ext2, const Parcel *obj) = 0;
++        virtual ~Listener() {}
++    };
++
+     // AudioSink: abstraction layer for audio output
+     class AudioSink : public RefBase {
+     public:
+@@ -144,7 +147,7 @@ public:
+         virtual String8     getParameters(const String8& /* keys */) { return String8::empty(); }
+     };
+ 
+-                        MediaPlayerBase() : mCookie(0), mNotify(0) {}
++                        MediaPlayerBase() {}
+     virtual             ~MediaPlayerBase() {}
+     virtual status_t    initCheck() = 0;
+     virtual bool        hardwareOutput() = 0;
+@@ -245,22 +248,22 @@ public:
+     };
+ 
+     void        setNotifyCallback(
+-            void* cookie, notify_callback_f notifyFunc) {
++            const sp<Listener> &listener) {
+         Mutex::Autolock autoLock(mNotifyLock);
+-        mCookie = cookie; mNotify = notifyFunc;
++        mListener = listener;
+     }
+ 
+     void        sendEvent(int msg, int ext1=0, int ext2=0,
+                           const Parcel *obj=NULL) {
+-        notify_callback_f notifyCB;
+-        void* cookie;
++        sp<Listener> listener;
+         {
+             Mutex::Autolock autoLock(mNotifyLock);
+-            notifyCB = mNotify;
+-            cookie = mCookie;
++            listener = mListener;
+         }
+ 
+-        if (notifyCB) notifyCB(cookie, msg, ext1, ext2, obj);
++        if (listener != NULL) {
++            listener->notify(msg, ext1, ext2, obj);
++        }
+     }
+ 
+     virtual status_t dump(int /* fd */, const Vector<String16>& /* args */) const {
+@@ -271,8 +274,7 @@ private:
+     friend class MediaPlayerService;
+ 
+     Mutex               mNotifyLock;
+-    void*               mCookie;
+-    notify_callback_f   mNotify;
++    sp<Listener>        mListener;
+ };
+ 
+ // Implement this class for media players that use the AudioFlinger software mixer
+diff --git a/media/libmediaplayerservice/MediaPlayerFactory.cpp b/media/libmediaplayerservice/MediaPlayerFactory.cpp
+index d5d12f7..860020f 100644
+--- a/media/libmediaplayerservice/MediaPlayerFactory.cpp
++++ b/media/libmediaplayerservice/MediaPlayerFactory.cpp
+@@ -134,8 +134,7 @@ player_type MediaPlayerFactory::getPlayerType(const sp<IMediaPlayer>& client,
+ 
+ sp<MediaPlayerBase> MediaPlayerFactory::createPlayer(
+         player_type playerType,
+-        void* cookie,
+-        notify_callback_f notifyFunc,
++        const sp<MediaPlayerBase::Listener> &listener,
+         pid_t pid) {
+     sp<MediaPlayerBase> p;
+     IFactory* factory;
+@@ -160,7 +159,7 @@ sp<MediaPlayerBase> MediaPlayerFactory::createPlayer(
+ 
+     init_result = p->initCheck();
+     if (init_result == NO_ERROR) {
+-        p->setNotifyCallback(cookie, notifyFunc);
++        p->setNotifyCallback(listener);
+     } else {
+         ALOGE("Failed to create player object of type %d, initCheck failed"
+               " (res = %d)", playerType, init_result);
+diff --git a/media/libmediaplayerservice/MediaPlayerFactory.h b/media/libmediaplayerservice/MediaPlayerFactory.h
+index e22a56f..e88700c 100644
+--- a/media/libmediaplayerservice/MediaPlayerFactory.h
++++ b/media/libmediaplayerservice/MediaPlayerFactory.h
+@@ -65,8 +65,7 @@ class MediaPlayerFactory {
+                                      const sp<DataSource> &source);
+ 
+     static sp<MediaPlayerBase> createPlayer(player_type playerType,
+-                                            void* cookie,
+-                                            notify_callback_f notifyFunc,
++                                            const sp<MediaPlayerBase::Listener> &listener,
+                                             pid_t pid);
+ 
+     static void registerBuiltinFactories();
+diff --git a/media/libmediaplayerservice/MediaPlayerService.cpp b/media/libmediaplayerservice/MediaPlayerService.cpp
+index 6339c72..a41b650 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.cpp
++++ b/media/libmediaplayerservice/MediaPlayerService.cpp
+@@ -604,10 +604,11 @@ MediaPlayerService::Client::Client(
+     mUID = uid;
+     mRetransmitEndpointValid = false;
+     mAudioAttributes = NULL;
++    mListener = new Listener(this);
+ 
+ #if CALLBACK_ANTAGONIZER
+     ALOGD("create Antagonizer");
+-    mAntagonizer = new Antagonizer(notify, this);
++    mAntagonizer = new Antagonizer(mListener);
+ #endif
+ }
+ 
+@@ -643,7 +644,7 @@ void MediaPlayerService::Client::disconnect()
+     // and reset the player. We assume the player will serialize
+     // access to itself if necessary.
+     if (p != 0) {
+-        p->setNotifyCallback(0, 0);
++        p->setNotifyCallback(0);
+ #if CALLBACK_ANTAGONIZER
+         ALOGD("kill Antagonizer");
+         mAntagonizer->kill();
+@@ -665,7 +666,7 @@ sp<MediaPlayerBase> MediaPlayerService::Client::createPlayer(player_type playerT
+         p.clear();
+     }
+     if (p == NULL) {
+-        p = MediaPlayerFactory::createPlayer(playerType, this, notify, mPid);
++        p = MediaPlayerFactory::createPlayer(playerType, mListener, mPid);
+     }
+ 
+     if (p != NULL) {
+@@ -1272,22 +1273,18 @@ status_t MediaPlayerService::Client::getRetransmitEndpoint(
+ }
+ 
+ void MediaPlayerService::Client::notify(
+-        void* cookie, int msg, int ext1, int ext2, const Parcel *obj)
++        int msg, int ext1, int ext2, const Parcel *obj)
+ {
+-    Client* client = static_cast<Client*>(cookie);
+-    if (client == NULL) {
+-        return;
+-    }
+ 
+     sp<IMediaPlayerClient> c;
+     {
+-        Mutex::Autolock l(client->mLock);
+-        c = client->mClient;
+-        if (msg == MEDIA_PLAYBACK_COMPLETE && client->mNextClient != NULL) {
+-            if (client->mAudioOutput != NULL)
+-                client->mAudioOutput->switchToNextOutput();
+-            client->mNextClient->start();
+-            client->mNextClient->mClient->notify(MEDIA_INFO, MEDIA_INFO_STARTED_AS_NEXT, 0, obj);
++        Mutex::Autolock l(mLock);
++        c = mClient;
++        if (msg == MEDIA_PLAYBACK_COMPLETE && mNextClient != NULL) {
++            if (mAudioOutput != NULL)
++                mAudioOutput->switchToNextOutput();
++            mNextClient->start();
++            mNextClient->mClient->notify(MEDIA_INFO, MEDIA_INFO_STARTED_AS_NEXT, 0, obj);
+         }
+     }
+ 
+@@ -1295,17 +1292,17 @@ void MediaPlayerService::Client::notify(
+         MEDIA_INFO_METADATA_UPDATE == ext1) {
+         const media::Metadata::Type metadata_type = ext2;
+ 
+-        if(client->shouldDropMetadata(metadata_type)) {
++        if(shouldDropMetadata(metadata_type)) {
+             return;
+         }
+ 
+         // Update the list of metadata that have changed. getMetadata
+         // also access mMetadataUpdated and clears it.
+-        client->addNewMetadataUpdate(metadata_type);
++        addNewMetadataUpdate(metadata_type);
+     }
+ 
+     if (c != NULL) {
+-        ALOGV("[%d] notify (%p, %d, %d, %d)", client->mConnId, cookie, msg, ext1, ext2);
++        ALOGV("[%d] notify (%d, %d, %d)", mConnId, msg, ext1, ext2);
+         c->notify(msg, ext1, ext2, obj);
+     }
+ }
+@@ -1337,8 +1334,8 @@ void MediaPlayerService::Client::addNewMetadataUpdate(media::Metadata::Type meta
+ #if CALLBACK_ANTAGONIZER
+ const int Antagonizer::interval = 10000; // 10 msecs
+ 
+-Antagonizer::Antagonizer(notify_callback_f cb, void* client) :
+-    mExit(false), mActive(false), mClient(client), mCb(cb)
++Antagonizer::Antagonizer(const sp<MediaPlayerBase::Listener> &listener) :
++    mExit(false), mActive(false), mListener(listener)
+ {
+     createThread(callbackThread, this);
+ }
+@@ -1358,7 +1355,7 @@ int Antagonizer::callbackThread(void* user)
+     while (!p->mExit) {
+         if (p->mActive) {
+             ALOGV("send event");
+-            p->mCb(p->mClient, 0, 0, 0);
++            p->mListener->notify(0, 0, 0, 0);
+         }
+         usleep(interval);
+     }
+diff --git a/media/libmediaplayerservice/MediaPlayerService.h b/media/libmediaplayerservice/MediaPlayerService.h
+index e8e5360..ff384b0 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.h
++++ b/media/libmediaplayerservice/MediaPlayerService.h
+@@ -49,7 +49,7 @@ class MediaRecorderClient;
+ #if CALLBACK_ANTAGONIZER
+ class Antagonizer {
+ public:
+-    Antagonizer(notify_callback_f cb, void* client);
++    Antagonizer(const sp<MediaPlayerBase::Listener> &listener);
+     void start() { mActive = true; }
+     void stop() { mActive = false; }
+     void kill();
+@@ -57,12 +57,11 @@ private:
+     static const int interval;
+     Antagonizer();
+     static int callbackThread(void* cookie);
+-    Mutex               mLock;
+-    Condition           mCondition;
+-    bool                mExit;
+-    bool                mActive;
+-    void*               mClient;
+-    notify_callback_f   mCb;
++    Mutex                         mLock;
++    Condition                     mCondition;
++    bool                          mExit;
++    bool                          mActive;
++    sp<MediaPlayerBase::Listener> mListener;
+ };
+ #endif
+ 
+@@ -204,7 +203,6 @@ class MediaPlayerService : public BnMediaPlayerService
+ 
+     }; // AudioOutput
+ 
+-
+ public:
+     static  void                instantiate();
+ 
+@@ -326,8 +324,7 @@ private:
+         void                    setDataSource_post(const sp<MediaPlayerBase>& p,
+                                                    status_t status);
+ 
+-        static  void            notify(void* cookie, int msg,
+-                                       int ext1, int ext2, const Parcel *obj);
++                void            notify(int msg, int ext1, int ext2, const Parcel *obj);
+ 
+                 pid_t           pid() const { return mPid; }
+         virtual status_t        dump(int fd, const Vector<String16>& args);
+@@ -366,23 +363,38 @@ private:
+ 
+         status_t setAudioAttributes_l(const Parcel &request);
+ 
+-        mutable     Mutex                       mLock;
+-                    sp<MediaPlayerBase>         mPlayer;
+-                    sp<MediaPlayerService>      mService;
+-                    sp<IMediaPlayerClient>      mClient;
+-                    sp<AudioOutput>             mAudioOutput;
+-                    pid_t                       mPid;
+-                    status_t                    mStatus;
+-                    bool                        mLoop;
+-                    int32_t                     mConnId;
+-                    int                         mAudioSessionId;
+-                    audio_attributes_t *        mAudioAttributes;
+-                    uid_t                       mUID;
+-                    sp<ANativeWindow>           mConnectedWindow;
+-                    sp<IBinder>                 mConnectedWindowBinder;
+-                    struct sockaddr_in          mRetransmitEndpoint;
+-                    bool                        mRetransmitEndpointValid;
+-                    sp<Client>                  mNextClient;
++        class Listener : public MediaPlayerBase::Listener {
++        public:
++            Listener(const wp<Client> &client) : mClient(client) {}
++            virtual ~Listener() {}
++            virtual void notify(int msg, int ext1, int ext2, const Parcel *obj) {
++                sp<Client> client = mClient.promote();
++                if (client != NULL) {
++                    client->notify(msg, ext1, ext2, obj);
++                }
++            }
++        private:
++            wp<Client> mClient;
++        };
++
++        mutable     Mutex                         mLock;
++                    sp<MediaPlayerBase>           mPlayer;
++                    sp<MediaPlayerService>        mService;
++                    sp<IMediaPlayerClient>        mClient;
++                    sp<AudioOutput>               mAudioOutput;
++                    pid_t                         mPid;
++                    status_t                      mStatus;
++                    bool                          mLoop;
++                    int32_t                       mConnId;
++                    int                           mAudioSessionId;
++                    audio_attributes_t *          mAudioAttributes;
++                    uid_t                         mUID;
++                    sp<ANativeWindow>             mConnectedWindow;
++                    sp<IBinder>                   mConnectedWindowBinder;
++                    struct sockaddr_in            mRetransmitEndpoint;
++                    bool                          mRetransmitEndpointValid;
++                    sp<Client>                    mNextClient;
++                    sp<MediaPlayerBase::Listener> mListener;
+ 
+         // Metadata filters.
+         media::Metadata::Filter mMetadataAllow;  // protected by mLock
+@@ -395,7 +407,7 @@ private:
+         media::Metadata::Filter mMetadataUpdated;  // protected by mLock
+ 
+ #if CALLBACK_ANTAGONIZER
+-                    Antagonizer*                mAntagonizer;
++                    Antagonizer*                  mAntagonizer;
+ #endif
+     }; // Client
+ 
+-- 
+2.7.4
+

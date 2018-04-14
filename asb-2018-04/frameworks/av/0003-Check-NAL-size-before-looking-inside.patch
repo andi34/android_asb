@@ -1,0 +1,33 @@
+From 0a6ad89b11213c119f26ce93b49ce38ce1bf023f Mon Sep 17 00:00:00 2001
+From: Ray Essick <essick@google.com>
+Date: Tue, 6 Feb 2018 11:25:31 -0800
+Subject: [PATCH 3/3] Check NAL size before looking inside
+
+Add a check to ensure we have a non-zero size for a NAL while
+parsing before we crack said NAL open to see what type it is.
+
+Bug: 72117051
+Test: compilation
+Change-Id: Iaa3ebb2daae5d9225060a11e9adbb6757a168656
+Merged-In: I607c67a320b33b991476db30d78223cf4386c0e8
+(cherry picked from commit e0c020969d88891b0b71bb938778e9ca762e8035)
+---
+ media/libstagefright/avc_utils.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/avc_utils.cpp b/media/libstagefright/avc_utils.cpp
+index c14a85c..a097733 100644
+--- a/media/libstagefright/avc_utils.cpp
++++ b/media/libstagefright/avc_utils.cpp
+@@ -303,7 +303,7 @@ static sp<ABuffer> FindNAL(const uint8_t *data, size_t size, unsigned nalType) {
+     const uint8_t *nalStart;
+     size_t nalSize;
+     while (getNextNALUnit(&data, &size, &nalStart, &nalSize, true) == OK) {
+-        if ((nalStart[0] & 0x1f) == nalType) {
++        if (nalSize > 0 && (nalStart[0] & 0x1f) == nalType) {
+             sp<ABuffer> buffer = new ABuffer(nalSize);
+             memcpy(buffer->data(), nalStart, nalSize);
+             return buffer;
+-- 
+2.7.4
+

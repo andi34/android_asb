@@ -1,0 +1,52 @@
+From e4b706fee7a5e8cbbfbb97c08f758a2c36f29b90 Mon Sep 17 00:00:00 2001
+From: Ekin Oguz <ekinoguz@google.com>
+Date: Mon, 29 Jan 2018 13:07:34 -0800
+Subject: [PATCH] Disallow attaching files from our own
+ EmailAttachmentProvider.
+
+This is to backport a security fix reported in b/71814449 and
+b/72569023. Fix is using the same approach as b/27308057, which is to
+prevent Compose from accepting URIs with our own email attachment
+provider.
+
+Bug: b/71814449
+Change-Id: Idcc002b94bcea913383b54bcf1dc5c3e1d254ded
+(cherry picked from commit 44a5db2dc0ace4d360699c11c27d5c10b43ad628)
+---
+ src/com/android/mail/compose/ComposeActivity.java | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/mail/compose/ComposeActivity.java b/src/com/android/mail/compose/ComposeActivity.java
+index 5f125ab..489f6d8 100644
+--- a/src/com/android/mail/compose/ComposeActivity.java
++++ b/src/com/android/mail/compose/ComposeActivity.java
+@@ -1922,6 +1922,15 @@ public class ComposeActivity extends ActionBarActivity
+     }
+ 
+     /**
++     * @return the authority of EmailAttachmentProvider for this app. should be overridden in
++     * concrete app implementations. can't be known here because this project doesn't know about
++     * that sort of thing.
++     */
++    protected String getEmailAttachmentProviderAuthority() {
++        throw new UnsupportedOperationException("unimplemented, EmailAttachmentProvider unknown");
++    }
++
++    /**
+      * Helper function to handle a list of uris to attach.
+      * @return the total size of all successfully attached files.
+      */
+@@ -1942,7 +1951,9 @@ public class ComposeActivity extends ActionBarActivity
+                         }
+                     } else if (ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())) {
+                         // disallow attachments from our own EmailProvider (b/27308057)
+-                        if (getEmailProviderAuthority().equals(uri.getAuthority())) {
++                        if (getEmailProviderAuthority().equals(uri.getAuthority())
++                                || getEmailAttachmentProviderAuthority().equals(
++                                        uri.getAuthority())) {
+                             showErrorToast(getString(R.string.attachment_permission_denied));
+                             Analytics.getInstance().sendEvent(ANALYTICS_CATEGORY_ERRORS,
+                                     "send_intent_attachment", "email_provider", 0);
+-- 
+2.7.4
+
