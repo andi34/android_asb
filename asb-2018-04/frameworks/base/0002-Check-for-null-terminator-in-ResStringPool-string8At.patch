@@ -1,0 +1,40 @@
+From b871b210e7793e590b0ca53b0975461b38e3a39a Mon Sep 17 00:00:00 2001
+From: Adam Lesinski <adamlesinski@google.com>
+Date: Thu, 9 Nov 2017 17:12:17 -0800
+Subject: [PATCH 2/2] Check for null-terminator in ResStringPool::string8At
+
+All other stringAt methods check for null termination. Be consistent
+so that upper levels don't end up with huge corrupt strings.
+
+Bug: 62537081
+Test: none
+Change-Id: I17bdfb0c1e34507b66c6cad651bbdb12c5d4c417
+(cherry picked from commit 3d35a0ea307693a97583a61973e729a5e7db2687)
+(cherry picked from commit 97f8cb01149b35b1832c7f9efe85ff19edf1083e)
+(cherry picked from commit 5ec65ae909a85d13d03c030be357c8c14a50d306)
+---
+ libs/androidfw/ResourceTypes.cpp | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/libs/androidfw/ResourceTypes.cpp b/libs/androidfw/ResourceTypes.cpp
+index 1cc3563..6c78ac8 100644
+--- a/libs/androidfw/ResourceTypes.cpp
++++ b/libs/androidfw/ResourceTypes.cpp
+@@ -660,7 +660,13 @@ const char* ResStringPool::string8At(size_t idx, size_t* outLen) const
+             *outLen = decodeLength(&str);
+             size_t encLen = decodeLength(&str);
+             if ((uint32_t)(str+encLen-strings) < mStringPoolSize) {
+-                return (const char*)str;
++                // Reject malformed (non null-terminated) strings
++                if (str[encLen] != 0x00) {
++                    ALOGW("Bad string block: string #%d is not null-terminated",
++                          (int)idx);
++                    return NULL;
++                }
++              return (const char*)str;
+             } else {
+                 ALOGW("Bad string block: string #%d extends to %d, past end at %d\n",
+                         (int)idx, (int)(str+encLen-strings), (int)mStringPoolSize);
+-- 
+2.7.4
+

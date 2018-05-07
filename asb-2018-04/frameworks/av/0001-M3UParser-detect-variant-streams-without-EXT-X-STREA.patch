@@ -1,0 +1,36 @@
+From 14aec4cd034057283894971439d239322da930df Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Fri, 9 Feb 2018 12:19:35 -0800
+Subject: [PATCH 1/2] M3UParser: detect variant streams without
+ EXT-X-STREAM-INF
+
+Bug: 68399439
+Change-Id: I95207b40f23a5f927da7154f9a952046118b5cad
+(cherry picked from commit f3e0afb82f104d6e9986779ba2cf548c6aab1092)
+---
+ media/libstagefright/httplive/M3UParser.cpp | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/httplive/M3UParser.cpp b/media/libstagefright/httplive/M3UParser.cpp
+index 1658975..5bcfb0d 100644
+--- a/media/libstagefright/httplive/M3UParser.cpp
++++ b/media/libstagefright/httplive/M3UParser.cpp
+@@ -558,10 +558,13 @@ status_t M3UParser::parse(const void *_data, size_t size) {
+         }
+ 
+         if (!line.startsWith("#")) {
++            if (itemMeta == NULL) {
++                ALOGV("itemMeta == NULL");
++                return ERROR_MALFORMED;
++            }
+             if (!mIsVariantPlaylist) {
+                 int64_t durationUs;
+-                if (itemMeta == NULL
+-                        || !itemMeta->findInt64("durationUs", &durationUs)) {
++                if (!itemMeta->findInt64("durationUs", &durationUs)) {
+                     return ERROR_MALFORMED;
+                 }
+             }
+-- 
+2.7.4
+

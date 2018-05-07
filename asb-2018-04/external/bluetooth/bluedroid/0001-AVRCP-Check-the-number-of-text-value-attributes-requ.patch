@@ -1,0 +1,33 @@
+From b576990a6665e7c4bec133c5d9968bbb0a2ba2e6 Mon Sep 17 00:00:00 2001
+From: Ajay Panicker <apanicke@google.com>
+Date: Wed, 10 Jan 2018 16:58:16 -0800
+Subject: [PATCH 1/2] AVRCP: Check the number of text value attributes
+ requested
+
+Test: Builds
+Bug: 69479009
+Change-Id: I184ddfdb56c15c2b07d52a2624240738efb4d207
+(cherry picked from commit 6313da35abc93fcfb783c68f2e02427df9928ecf)
+---
+ stack/avrc/avrc_pars_tg.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/stack/avrc/avrc_pars_tg.c b/stack/avrc/avrc_pars_tg.c
+index 25e4cf1..0a10821 100755
+--- a/stack/avrc/avrc_pars_tg.c
++++ b/stack/avrc/avrc_pars_tg.c
+@@ -166,6 +166,11 @@ static tAVRC_STS avrc_pars_vendor_cmd(tAVRC_MSG_VENDOR *p_msg, tAVRC_COMMAND *p_
+                     status = AVRC_STS_INTERNAL_ERR;
+                 else
+                 {
++                    if (p_result->get_app_val_txt.num_val > AVRC_MAX_APP_ATTR_SIZE) {
++                        android_errorWriteLog(0x534e4554, "63146237");
++                        p_result->get_app_val_txt.num_val = AVRC_MAX_APP_ATTR_SIZE;
++                    }
++
+                     p_u8 = p_result->get_app_val_txt.vals;
+                     for (xx=0; xx< p_result->get_app_val_txt.num_val; xx++)
+                     {
+-- 
+2.7.4
+
