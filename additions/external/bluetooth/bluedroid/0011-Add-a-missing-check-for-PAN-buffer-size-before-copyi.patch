@@ -1,8 +1,7 @@
-From b11e4decba132cfa3705487416644f817f01f3c8 Mon Sep 17 00:00:00 2001
+From 0d6797fb589aaf8cef3f6088cce740e40b0bbbc6 Mon Sep 17 00:00:00 2001
 From: Pavlin Radoslavov <pavlin@google.com>
 Date: Wed, 12 Jul 2017 17:33:42 -0700
-Subject: [PATCH 11/15] Add a missing check for PAN buffer size before copying
- data
+Subject: [PATCH] Add a missing check for PAN buffer size before copying data
 
 Bug: 63146237
 Test: External script
@@ -17,10 +16,11 @@ Merged-In: I3e9c8a767a8a2a80ff56ccb48c56ca0d4b8c3402
 (cherry picked from commit d1145e0af3507e37d4bd25f1833e22c5c716f0ac)
 ---
  bta/pan/bta_pan_act.c | 11 +++++++++++
- 1 file changed, 11 insertions(+)
+ include/bt_target.h   |  4 ++++
+ 2 files changed, 15 insertions(+)
 
 diff --git a/bta/pan/bta_pan_act.c b/bta/pan/bta_pan_act.c
-index b29920f..2f67c84 100644
+index 0d82223..ef69547 100644
 --- a/bta/pan/bta_pan_act.c
 +++ b/bta/pan/bta_pan_act.c
 @@ -26,6 +26,8 @@
@@ -32,12 +32,12 @@ index b29920f..2f67c84 100644
  #include "bta_api.h"
  #include "bta_sys.h"
  #include "bd.h"
-@@ -172,6 +174,15 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
+@@ -206,6 +208,15 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
  
      if ( sizeof(tBTA_PAN_DATA_PARAMS) > p_buf->offset )
      {
 +        if (sizeof(BT_HDR) + sizeof(tBTA_PAN_DATA_PARAMS) + p_buf->len >
-+            GKI_get_pool_bufsize(PAN_POOL_ID)) {
++            PAN_BUF_SIZE) {
 +            android_errorWriteLog(0x534e4554, "63146237");
 +            APPL_TRACE_ERROR2("%s: received buffer length too large: %d", __func__,
 +                             p_buf->len);
@@ -48,6 +48,21 @@ index b29920f..2f67c84 100644
          /* offset smaller than data structure in front of actual data */
          p_new_buf = (BT_HDR *)GKI_getpoolbuf( PAN_POOL_ID );
          if(!p_new_buf)
+diff --git a/include/bt_target.h b/include/bt_target.h
+index ac9dc88..3e98642 100644
+--- a/include/bt_target.h
++++ b/include/bt_target.h
+@@ -657,6 +657,10 @@
+ #define AVDT_DATA_POOL_SIZE         GKI_BUF3_SIZE
+ #endif
+ 
++#ifndef PAN_BUF_SIZE
++#define PAN_BUF_SIZE                GKI_BUF3_SIZE
++#endif
++
+ #ifndef PAN_POOL_ID
+ #define PAN_POOL_ID                 GKI_POOL_ID_3
+ #endif
 -- 
 2.7.4
 
