@@ -1,0 +1,38 @@
+From 914916907948736771303ccb297d1ef4502cd61c Mon Sep 17 00:00:00 2001
+From: Rebecca Silberstein <silberst@google.com>
+Date: Thu, 23 Mar 2017 00:29:28 -0700
+Subject: [PATCH 6/6] Add NETWORK_STACK permission
+
+Add a new permission that only allows other system services to call
+networking related methods.  This permission is intended to prevent
+other apps from calling these methods that might leave networking
+services in intermediate states.
+
+Bug: 36538042
+Test: build, run wifi unit tests, boots, wifi connects
+Change-Id: Icba6ad5280e9a8863bd1c706ca34b7add8de5294
+---
+ core/res/AndroidManifest.xml | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/core/res/AndroidManifest.xml b/core/res/AndroidManifest.xml
+index a5035ee..8403e80 100644
+--- a/core/res/AndroidManifest.xml
++++ b/core/res/AndroidManifest.xml
+@@ -1223,6 +1223,13 @@
+     <permission android:name="android.permission.SCORE_NETWORKS"
+         android:protectionLevel="signature|privileged" />
+ 
++    <!-- Allows network stack services (Connectivity and Wifi) to coordinate
++         <p>Not for use by third-party or privileged applications.
++         @hide This should only be used by Connectivity and Wifi Services.
++    -->
++    <permission android:name="android.permission.NETWORK_STACK"
++        android:protectionLevel="signature" />
++
+     <!-- ======================================= -->
+     <!-- Permissions for short range, peripheral networks -->
+     <!-- ======================================= -->
+-- 
+2.7.4
+

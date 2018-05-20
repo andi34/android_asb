@@ -1,0 +1,51 @@
+From ef53369ba4a632d03495ace251f045ef77f9ff25 Mon Sep 17 00:00:00 2001
+From: Tyler Gunn <tgunn@google.com>
+Date: Wed, 14 Feb 2018 14:19:42 -0800
+Subject: [PATCH] Enhanced permission checks for TelephonyManager#endCall()
+ API.
+
+The existing permission checks require CALL permission in order to end
+an ongoing call or reject an incoming call.  The Telecom equivalent of
+this API requires MODIFY_PHONE_STATE.  Since this API IS in fact a system
+API, modifying the permission requirements to require the same
+MODIFY_PHONE_STATE permission.
+
+Test: Manual testing per bug reproduction steps.
+Bug: 67862398
+Change-Id: I8f15f6afd00466f6b861079a83e9fa03b962f63f
+(cherry picked from commit 6707357c6e198287046e76c1d6fc5edf1fcb3fee)
+(cherry picked from commit ee1901e859ed4624723d18497b70c59b0b658747)
+CVE-2017-13322
+---
+ src/com/android/phone/PhoneInterfaceManager.java | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
+index 50f90c1..ada8595 100644
+--- a/src/com/android/phone/PhoneInterfaceManager.java
++++ b/src/com/android/phone/PhoneInterfaceManager.java
+@@ -58,6 +58,7 @@ import android.telephony.TelephonyManager;
+ import android.telephony.VisualVoicemailSmsFilterSettings;
+ import android.text.TextUtils;
+ import android.util.ArraySet;
++import android.util.EventLog;
+ import android.util.Log;
+ import android.util.Pair;
+ import android.util.Slog;
+@@ -1046,7 +1047,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+      * @return true is a call was ended
+      */
+     public boolean endCallForSubscriber(int subId) {
+-        enforceCallPermission();
++        if (mApp.checkCallingOrSelfPermission(android.Manifest.permission.MODIFY_PHONE_STATE)
++                != PackageManager.PERMISSION_GRANTED) {
++            Log.i(LOG_TAG, "endCall: called without modify phone state.");
++            EventLog.writeEvent(0x534e4554, "67862398", -1, "");
++            throw new SecurityException("MODIFY_PHONE_STATE permission required.");
++        }
+         return (Boolean) sendRequest(CMD_END_CALL, null, new Integer(subId));
+     }
+ 
+-- 
+2.7.4
+

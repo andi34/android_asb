@@ -1,0 +1,45 @@
+From 30fe8eeabe9b2b25c54c6ad8902777f5349d6c99 Mon Sep 17 00:00:00 2001
+From: Fyodor Kupolov <fkupolov@google.com>
+Date: Tue, 20 Feb 2018 17:02:35 -0800
+Subject: [PATCH 2/6] Verify last array's length in readFromParcel
+
+Length of the last array in readFromParcel should be the same as
+value of mNextIndex.
+
+Test: PoC app in the bug
+Bug: 73252178
+Change-Id: I69f935949e945c3a036b19b4f88684d906079ea5
+(cherry picked from commit 3b8bc2e45048527d7682b24b96957c34433da382)
+CVE-2017-13311
+---
+ .../com/android/internal/app/procstats/SparseMappingTable.java     | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/core/java/com/android/internal/app/procstats/SparseMappingTable.java b/core/java/com/android/internal/app/procstats/SparseMappingTable.java
+index f941836..6d79d3b 100644
+--- a/core/java/com/android/internal/app/procstats/SparseMappingTable.java
++++ b/core/java/com/android/internal/app/procstats/SparseMappingTable.java
+@@ -18,6 +18,7 @@ package com.android.internal.app.procstats;
+ 
+ import android.os.Build;
+ import android.os.Parcel;
++import android.util.EventLog;
+ import android.util.Slog;
+ import libcore.util.EmptyArray;
+ 
+@@ -529,6 +530,12 @@ public class SparseMappingTable {
+             readCompactedLongArray(in, array, size);
+             mLongs.add(array);
+         }
++        // Verify that last array's length is consistent with writeToParcel
++        if (N > 0 && mLongs.get(N - 1).length != mNextIndex) {
++            EventLog.writeEvent(0x534e4554, "73252178", -1, "");
++            throw new IllegalStateException("Expected array of length " + mNextIndex + " but was "
++                    + mLongs.get(N - 1).length);
++        }
+     }
+ 
+     /**
+-- 
+2.7.4
+
