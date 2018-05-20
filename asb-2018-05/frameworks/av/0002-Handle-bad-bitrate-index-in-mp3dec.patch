@@ -1,0 +1,32 @@
+From 4dd6490fc3aed0e818adc1120ba7f370f11a58d2 Mon Sep 17 00:00:00 2001
+From: Dongwon Kang <dwkang@google.com>
+Date: Fri, 23 Feb 2018 08:59:27 -0800
+Subject: [PATCH 2/2] Handle bad bitrate index in mp3dec.
+
+Reference:
+  https://www.mp3-tech.org/programmer/frame_header.html
+
+Test: run poc with and without this patch.
+Bug: 71868329
+Change-Id: Ibf6196eba0b99459e84989ac8c13db57c816c572
+(cherry picked from commit 8b638123760bd93958f6cc2f5c7c4f5dbd0a754a)
+---
+ media/libstagefright/codecs/mp3dec/src/pvmp3_decode_header.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/mp3dec/src/pvmp3_decode_header.cpp b/media/libstagefright/codecs/mp3dec/src/pvmp3_decode_header.cpp
+index d443b7c..bc5fd79 100644
+--- a/media/libstagefright/codecs/mp3dec/src/pvmp3_decode_header.cpp
++++ b/media/libstagefright/codecs/mp3dec/src/pvmp3_decode_header.cpp
+@@ -184,7 +184,7 @@ ERROR_CODE pvmp3_decode_header(tmp3Bits  *inputStream,
+     info->emphasis           = (temp << 30) >> 30;  /* 2 */
+ 
+ 
+-    if (!info->bitrate_index || info->sampling_frequency == 3)
++    if (!info->bitrate_index || info->bitrate_index == 15 || info->sampling_frequency == 3)
+     {
+         err = UNSUPPORTED_FREE_BITRATE;
+     }
+-- 
+2.7.4
+

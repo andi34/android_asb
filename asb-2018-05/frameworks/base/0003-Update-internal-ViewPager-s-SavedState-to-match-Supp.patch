@@ -1,0 +1,65 @@
+From e4ea4ca1036a7bffe01dd7731b8bbb4ef69475c9 Mon Sep 17 00:00:00 2001
+From: Alan Viverette <alanv@google.com>
+Date: Fri, 16 Feb 2018 13:56:02 -0500
+Subject: [PATCH 3/3] Update internal ViewPager's SavedState to match Support
+ Library version
+
+Merged-In: Ic4569b21d8a26a62bba91742b442f0c3ea8bcc9e
+Change-Id: I17d085be9ce1a139e75264f1e715df7f565cd41b
+Fixes: 71992105
+Test: manual
+(cherry picked from commit 187964aca12115c7ab66f59d1ebb95e4f4130ac6)
+---
+ core/java/com/android/internal/widget/ViewPager.java | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/core/java/com/android/internal/widget/ViewPager.java b/core/java/com/android/internal/widget/ViewPager.java
+index a2c4f6a..2efe9ef 100644
+--- a/core/java/com/android/internal/widget/ViewPager.java
++++ b/core/java/com/android/internal/widget/ViewPager.java
+@@ -30,6 +30,7 @@ import android.os.Parcelable;
+ import android.util.AttributeSet;
+ import android.util.Log;
+ import android.util.MathUtils;
++import android.view.AbsSavedState;
+ import android.view.FocusFinder;
+ import android.view.Gravity;
+ import android.view.KeyEvent;
+@@ -1214,15 +1215,11 @@ public class ViewPager extends ViewGroup {
+      * state, in which case it should implement a subclass of this which
+      * contains that state.
+      */
+-    public static class SavedState extends BaseSavedState {
++    public static class SavedState extends AbsSavedState {
+         int position;
+         Parcelable adapterState;
+         ClassLoader loader;
+ 
+-        public SavedState(Parcel source) {
+-            super(source);
+-        }
+-
+         public SavedState(Parcelable superState) {
+             super(superState);
+         }
+@@ -1241,10 +1238,15 @@ public class ViewPager extends ViewGroup {
+                     + " position=" + position + "}";
+         }
+ 
+-        public static final Creator<SavedState> CREATOR = new Creator<SavedState>() {
++        public static final Creator<SavedState> CREATOR = new ClassLoaderCreator<SavedState>() {
++            @Override
++            public SavedState createFromParcel(Parcel in, ClassLoader loader) {
++                return new SavedState(in, loader);
++            }
++
+             @Override
+             public SavedState createFromParcel(Parcel in) {
+-                return new SavedState(in);
++                return new SavedState(in, null);
+             }
+             @Override
+             public SavedState[] newArray(int size) {
+-- 
+2.7.4
+

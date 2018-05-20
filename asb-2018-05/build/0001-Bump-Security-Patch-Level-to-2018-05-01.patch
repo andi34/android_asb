@@ -1,0 +1,39 @@
+From 704b55db715b480926d3b3510b03ced7269090e6 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Mon, 14 May 2018 05:57:53 +0200
+Subject: [PATCH] Bump Security Patch Level to 2018-05-01
+
+Implemented Patches
+===================
+CVE-2017-13310  A-71992105      High        Change 214984
+CVE-2017-13313  A-74114680      High        Change 214985
+CVE-2017-13315  A-70721937      High        Change 214982
+CVE-2017-13316  A-73311729      Moderate    Change 214983
+CVE-2017-13319  A-71868329      High        Change 214986
+CVE-2017-13320  A-72764648      High        Change 214987
+CVE-2017-13323  A-73826242      Moderate    Change 214988
+CVE-2017-13322  A-67862398      Moderate    Change 214989
+
+Reference Version: 6.0
+
+Change-Id: I645f2af604f833ba9d393a741f86170576b15ff1
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 74a938a..a3e299a 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-04-01
++  PLATFORM_SECURITY_PATCH := 2018-05-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+
