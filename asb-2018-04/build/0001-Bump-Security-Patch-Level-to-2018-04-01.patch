@@ -1,0 +1,54 @@
+From 7501551fd32e63567e791887f2d289cceb77d460 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Mon, 14 May 2018 05:53:50 +0200
+Subject: [PATCH] Bump Security Patch Level to 2018-04-01
+
+Implemented patches
+===================
+CVE-2017-13274  A-71360761      High            Change 211306
+CVE-2017-13276  A-70637599      Critical
+CVE-2017-13278  A-70546581      High
+CVE-2017-13279  A-68399439      High            Change 211334
+CVE-2017-13267  A-69479009      Critical        Change 211337
+CVE-2017-13287  A-71714464      High
+CVE-2017-13290  A-69384124      High            Change 211340
+CVE-2017-13294  A-71814449 [1]  Moderate
+CVE-2017-13294  A-71814449 [2]  Moderate
+CVE-2017-13295  A-62537081      Moderate        Change 211342
+CVE-2017-13298  A-72117051      High            Change 211346
+
+Skipped patches
+===============
+CVE-2017-13277  A-72165027      Critical        No libhevc
+CVE-2017-13280  A-71361451      High            No fw/ex/framesequence
+CVE-2017-13284  A-70808273      Critical        No ext/bt/bluedroid/osi
+CVE-2017-13285  A-69177126      High            Can't fork svox due to DMCA
+CVE-2017-13289  A-70398564      High            No RttManager
+CVE-2017-13296  A-70897454      High            No libavc
+CVE-2017-13297  A-71766721      High            No libhevc
+CVE-2017-13299  A-70897394      High            No libavc
+CVE-2017-13300  A-71567394*     High            Not publicly available
+
+Reference Version: 6.0
+
+Change-Id: I0db37cce05279144562ff116334876cae8024a70
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 05ba205..cea2bb3 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-03-01
++  PLATFORM_SECURITY_PATCH := 2018-04-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

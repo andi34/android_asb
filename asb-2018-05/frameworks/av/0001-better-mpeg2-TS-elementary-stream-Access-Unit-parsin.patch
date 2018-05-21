@@ -1,0 +1,55 @@
+From 3515aff263a20e6de77df4a1ed7c9d42c1c873d2 Mon Sep 17 00:00:00 2001
+From: Ray Essick <essick@google.com>
+Date: Tue, 6 Mar 2018 15:55:29 -0800
+Subject: [PATCH 1/2] better mpeg2 TS elementary stream Access Unit parsing
+
+mpeg2 es stream access units have a 3 byte prefix and a 1 byte start
+code. Searching for the next access unit started after the prefix
+instead of after the start byte.
+
+Bug: 74114680
+Test: ran POC before/after
+(cherry picked from commit 371066d073c5db289b0f38b9d2bfd3e326c78c66)
+
+Change-Id: I3c51c62355c810e1b8dbc644cad3de335b7d8108
+---
+ media/libstagefright/mpeg2ts/ESQueue.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/mpeg2ts/ESQueue.cpp b/media/libstagefright/mpeg2ts/ESQueue.cpp
+index b4884e2..0e50a1f 100644
+--- a/media/libstagefright/mpeg2ts/ESQueue.cpp
++++ b/media/libstagefright/mpeg2ts/ESQueue.cpp
+@@ -859,7 +859,9 @@ static ssize_t getNextChunkSize(
+         const uint8_t *data, size_t size) {
+     static const char kStartCode[] = "\x00\x00\x01";
+ 
+-    if (size < 3) {
++    // per ISO/IEC 14496-2 6.2.1, a chunk has a 3-byte prefix + 1-byte start code
++    // we need at least <prefix><start><next prefix> to successfully scan
++    if (size < 3 + 1 + 3) {
+         return -EAGAIN;
+     }
+ 
+@@ -867,7 +869,7 @@ static ssize_t getNextChunkSize(
+         TRESPASS();
+     }
+ 
+-    size_t offset = 3;
++    size_t offset = 4;
+     while (offset + 2 < size) {
+         if (!memcmp(&data[offset], kStartCode, 3)) {
+             return offset;
+@@ -918,6 +920,9 @@ sp<ABuffer> ElementaryStreamQueue::dequeueAccessUnitMPEG4Video() {
+                     state = EXPECT_VISUAL_OBJECT_START;
+                 } else {
+                     discard = true;
++                    offset += chunkSize;
++                    ALOGW("b/74114680, advance to next chunk");
++                    android_errorWriteLog(0x534e4554, "74114680");
+                 }
+                 break;
+             }
+-- 
+2.7.4
+
