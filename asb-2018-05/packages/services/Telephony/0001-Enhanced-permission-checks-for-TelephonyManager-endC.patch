@@ -1,4 +1,4 @@
-From 0a2b0cda2fd72726809c9528e78bd5aa034c1b16 Mon Sep 17 00:00:00 2001
+From ca92119b7b8c7f2139a5dbfeccf36780f2dd45a2 Mon Sep 17 00:00:00 2001
 From: Tyler Gunn <tgunn@google.com>
 Date: Wed, 14 Feb 2018 14:19:42 -0800
 Subject: [PATCH] Enhanced permission checks for TelephonyManager#endCall()
@@ -21,7 +21,7 @@ Change-Id: I8f15f6afd00466f6b861079a83e9fa03b962f63f
  1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
-index 31efd0f..c57c9d4 100644
+index 31efd0f..18b2b33 100644
 --- a/src/com/android/phone/PhoneInterfaceManager.java
 +++ b/src/com/android/phone/PhoneInterfaceManager.java
 @@ -22,6 +22,7 @@ import android.bluetooth.IBluetoothHeadsetPhone;
@@ -45,7 +45,7 @@ index 31efd0f..c57c9d4 100644
       */
      public boolean endCall() {
 -        enforceCallPermission();
-+        if (mApp.checkCallingOrSelfPermission(Manifest.permission.MODIFY_PHONE_STATE)
++        if (mApp.checkCallingOrSelfPermission(android.Manifest.permission.MODIFY_PHONE_STATE)
 +                != PackageManager.PERMISSION_GRANTED) {
 +            Log.i(LOG_TAG, "endCall: called without modify phone state.");
 +            EventLog.writeEvent(0x534e4554, "67862398", -1, "");
