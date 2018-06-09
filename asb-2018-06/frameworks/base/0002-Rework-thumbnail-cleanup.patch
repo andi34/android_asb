@@ -1,0 +1,197 @@
+From 6b36faebc4bbb9a07296874bb45d0aeb64f6e5a8 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 7 Nov 2017 13:52:02 -0800
+Subject: [PATCH 2/2] Rework thumbnail cleanup
+
+Bug: 63766886
+Test: ran CTS tests
+Change-Id: I1f92bb014e275eafe3f42aef1f8c817f187c6608
+(cherry picked from commit 6d2096f3889d38da60099b1b5678347de4f042bf)
+CVE-2018-9379
+---
+ core/java/android/provider/MediaStore.java  |  4 +--
+ media/java/android/media/MediaScanner.java  | 52 -----------------------------
+ media/java/android/media/MiniThumbFile.java | 52 ++++++++++++++++++++++++++++-
+ 3 files changed, 53 insertions(+), 55 deletions(-)
+
+diff --git a/core/java/android/provider/MediaStore.java b/core/java/android/provider/MediaStore.java
+index de19f81..b17657b 100644
+--- a/core/java/android/provider/MediaStore.java
++++ b/core/java/android/provider/MediaStore.java
+@@ -678,8 +678,8 @@ public final class MediaStore {
+             // Log.v(TAG, "getThumbnail: origId="+origId+", kind="+kind+", isVideo="+isVideo);
+             // If the magic is non-zero, we simply return thumbnail if it does exist.
+             // querying MediaProvider and simply return thumbnail.
+-            MiniThumbFile thumbFile = new MiniThumbFile(isVideo ? Video.Media.EXTERNAL_CONTENT_URI
+-                    : Images.Media.EXTERNAL_CONTENT_URI);
++            MiniThumbFile thumbFile = MiniThumbFile.instance(
++                    isVideo ? Video.Media.EXTERNAL_CONTENT_URI : Images.Media.EXTERNAL_CONTENT_URI);
+             Cursor c = null;
+             try {
+                 long magic = thumbFile.getMagic(origId);
+diff --git a/media/java/android/media/MediaScanner.java b/media/java/android/media/MediaScanner.java
+index 0fafe4b..4c113d9 100644
+--- a/media/java/android/media/MediaScanner.java
++++ b/media/java/android/media/MediaScanner.java
+@@ -323,7 +323,6 @@ public class MediaScanner implements AutoCloseable {
+     private final Uri mAudioUri;
+     private final Uri mVideoUri;
+     private final Uri mImagesUri;
+-    private final Uri mThumbsUri;
+     private final Uri mPlaylistsUri;
+     private final Uri mFilesUri;
+     private final Uri mFilesUriNoNotify;
+@@ -419,7 +418,6 @@ public class MediaScanner implements AutoCloseable {
+         mAudioUri = Audio.Media.getContentUri(volumeName);
+         mVideoUri = Video.Media.getContentUri(volumeName);
+         mImagesUri = Images.Media.getContentUri(volumeName);
+-        mThumbsUri = Images.Thumbnails.getContentUri(volumeName);
+         mFilesUri = Files.getContentUri(volumeName);
+         mFilesUriNoNotify = mFilesUri.buildUpon().appendQueryParameter("nonotify", "1").build();
+ 
+@@ -1283,53 +1281,6 @@ public class MediaScanner implements AutoCloseable {
+         }
+     }
+ 
+-    private void pruneDeadThumbnailFiles() {
+-        HashSet<String> existingFiles = new HashSet<String>();
+-        String directory = "/sdcard/DCIM/.thumbnails";
+-        String [] files = (new File(directory)).list();
+-        Cursor c = null;
+-        if (files == null)
+-            files = new String[0];
+-
+-        for (int i = 0; i < files.length; i++) {
+-            String fullPathString = directory + "/" + files[i];
+-            existingFiles.add(fullPathString);
+-        }
+-
+-        try {
+-            c = mMediaProvider.query(
+-                    mThumbsUri,
+-                    new String [] { "_data" },
+-                    null,
+-                    null,
+-                    null, null);
+-            Log.v(TAG, "pruneDeadThumbnailFiles... " + c);
+-            if (c != null && c.moveToFirst()) {
+-                do {
+-                    String fullPathString = c.getString(0);
+-                    existingFiles.remove(fullPathString);
+-                } while (c.moveToNext());
+-            }
+-
+-            for (String fileToDelete : existingFiles) {
+-                if (false)
+-                    Log.v(TAG, "fileToDelete is " + fileToDelete);
+-                try {
+-                    (new File(fileToDelete)).delete();
+-                } catch (SecurityException ex) {
+-                }
+-            }
+-
+-            Log.v(TAG, "/pruneDeadThumbnailFiles... " + c);
+-        } catch (RemoteException e) {
+-            // We will soon be killed...
+-        } finally {
+-            if (c != null) {
+-                c.close();
+-            }
+-        }
+-    }
+-
+     static class MediaBulkDeleter {
+         StringBuilder whereClause = new StringBuilder();
+         ArrayList<String> whereArgs = new ArrayList<String>(100);
+@@ -1373,9 +1324,6 @@ public class MediaScanner implements AutoCloseable {
+             processPlayLists();
+         }
+ 
+-        if (mOriginalCount == 0 && mImagesUri.equals(Images.Media.getContentUri("external")))
+-            pruneDeadThumbnailFiles();
+-
+         // allow GC to clean up
+         mPlayLists.clear();
+     }
+diff --git a/media/java/android/media/MiniThumbFile.java b/media/java/android/media/MiniThumbFile.java
+index 664308c..4f9dc68 100644
+--- a/media/java/android/media/MiniThumbFile.java
++++ b/media/java/android/media/MiniThumbFile.java
+@@ -51,6 +51,7 @@ public class MiniThumbFile {
+     private RandomAccessFile mMiniThumbFile;
+     private FileChannel mChannel;
+     private ByteBuffer mBuffer;
++    private ByteBuffer mEmptyBuffer;
+     private static final Hashtable<String, MiniThumbFile> sThumbFiles =
+         new Hashtable<String, MiniThumbFile>();
+ 
+@@ -127,9 +128,10 @@ public class MiniThumbFile {
+         return mMiniThumbFile;
+     }
+ 
+-    public MiniThumbFile(Uri uri) {
++    private MiniThumbFile(Uri uri) {
+         mUri = uri;
+         mBuffer = ByteBuffer.allocateDirect(BYTES_PER_MINTHUMB);
++        mEmptyBuffer = ByteBuffer.allocateDirect(BYTES_PER_MINTHUMB);
+     }
+ 
+     public synchronized void deactivate() {
+@@ -184,6 +186,54 @@ public class MiniThumbFile {
+         return 0;
+     }
+ 
++    public synchronized void eraseMiniThumb(long id) {
++        RandomAccessFile r = miniThumbDataFile();
++        if (r != null) {
++            long pos = id * BYTES_PER_MINTHUMB;
++            FileLock lock = null;
++            try {
++                mBuffer.clear();
++                mBuffer.limit(1 + 8);
++
++                lock = mChannel.lock(pos, BYTES_PER_MINTHUMB, false);
++                // check that we can read the following 9 bytes
++                // (1 for the "status" and 8 for the long)
++                if (mChannel.read(mBuffer, pos) == 9) {
++                    mBuffer.position(0);
++                    if (mBuffer.get() == 1) {
++                        long currentMagic = mBuffer.getLong();
++                        if (currentMagic == 0) {
++                            // there is no thumbnail stored here
++                            Log.i(TAG, "no thumbnail for id " + id);
++                            return;
++                        }
++                        // zero out the thumbnail slot
++                        // Log.v(TAG, "clearing slot " + id + ", magic " + currentMagic
++                        //         + " at offset " + pos);
++                        mChannel.write(mEmptyBuffer, pos);
++                    }
++                } else {
++                    // Log.v(TAG, "No slot");
++                }
++            } catch (IOException ex) {
++                Log.v(TAG, "Got exception checking file magic: ", ex);
++            } catch (RuntimeException ex) {
++                // Other NIO related exception like disk full, read only channel..etc
++                Log.e(TAG, "Got exception when reading magic, id = " + id +
++                        ", disk full or mount read-only? " + ex.getClass());
++            } finally {
++                try {
++                    if (lock != null) lock.release();
++                }
++                catch (IOException ex) {
++                    // ignore it.
++                }
++            }
++        } else {
++            // Log.v(TAG, "No data file");
++        }
++    }
++
+     public synchronized void saveMiniThumbToFile(byte[] data, long id, long magic)
+             throws IOException {
+         RandomAccessFile r = miniThumbDataFile();
+-- 
+2.7.4
+

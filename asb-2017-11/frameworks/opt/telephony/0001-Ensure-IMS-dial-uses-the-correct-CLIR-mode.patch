@@ -1,0 +1,196 @@
+From 504c5f05a9f8445cd90c32b4d4425bbadabf3c91 Mon Sep 17 00:00:00 2001
+From: Tyler Gunn <tgunn@google.com>
+Date: Tue, 29 Aug 2017 15:27:14 -0700
+Subject: [PATCH] Ensure IMS dial uses the correct CLIR mode.
+
+The IMS dial method was getting the shared pref CLIR_KEY to determine the
+CLIR mode for an outgoing call.  Everywhere else in the code, the CLIR
+mode is stored under key CLIR_KEY + phoneId, against the phoneId of the
+Gsm/Cdma phone.
+In ImsPhoneCallTracker, the default phone for the ImsPhone is the Gsm/Cdma
+phone, and we need to use that id when accessing the key.
+Also, added some more logging for oir mode sync/save.
+
+Test: Manual
+Bug: 64291602
+Merged-In: I231f8fb74c29347da2085318b9ca42d5efec5271
+Change-Id: I231f8fb74c29347da2085318b9ca42d5efec5271
+(cherry picked from commit fc138755ecc43a9ce8911cb68940596c281d6f4e)
+---
+ .../android/internal/telephony/GsmCdmaPhone.java   |  1 +
+ src/java/com/android/internal/telephony/Phone.java |  2 ++
+ .../telephony/imsphone/ImsPhoneCallTracker.java    | 34 ++++++++++++++++++++--
+ .../imsphone/ImsPhoneCallTrackerTest.java          | 31 ++++++++++++++++++++
+ 4 files changed, 66 insertions(+), 2 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/GsmCdmaPhone.java b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
+index 07afe0c..90812c5 100644
+--- a/src/java/com/android/internal/telephony/GsmCdmaPhone.java
++++ b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
+@@ -1945,6 +1945,7 @@ public class GsmCdmaPhone extends Phone {
+     private void syncClirSetting() {
+         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+         int clirSetting = sp.getInt(CLIR_KEY + getPhoneId(), -1);
++        Rlog.i(LOG_TAG, "syncClirSetting: " + CLIR_KEY + getPhoneId() + "=" + clirSetting);
+         if (clirSetting >= 0) {
+             mCi.setCLIR(clirSetting, null);
+         }
+diff --git a/src/java/com/android/internal/telephony/Phone.java b/src/java/com/android/internal/telephony/Phone.java
+index e7cfe88..95e23f4 100644
+--- a/src/java/com/android/internal/telephony/Phone.java
++++ b/src/java/com/android/internal/telephony/Phone.java
+@@ -1294,6 +1294,8 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
+         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+         SharedPreferences.Editor editor = sp.edit();
+         editor.putInt(CLIR_KEY + getPhoneId(), commandInterfaceCLIRMode);
++        Rlog.i(LOG_TAG, "saveClirSetting: " + CLIR_KEY + getPhoneId() + "=" +
++                commandInterfaceCLIRMode);
+ 
+         // Commit and log the result.
+         if (!editor.commit()) {
+diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java
+index 2a48d4e..02bd935 100644
+--- a/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java
++++ b/src/java/com/android/internal/telephony/imsphone/ImsPhoneCallTracker.java
+@@ -66,6 +66,7 @@ import com.android.ims.ImsUtInterface;
+ import com.android.ims.internal.IImsVideoCallProvider;
+ import com.android.ims.internal.ImsVideoCallProviderWrapper;
+ import com.android.ims.internal.VideoPauseTracker;
++import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.telephony.Call;
+ import com.android.internal.telephony.CallStateException;
+ import com.android.internal.telephony.CallTracker;
+@@ -101,6 +102,10 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+         void onPhoneStateChanged(PhoneConstants.State oldState, PhoneConstants.State newState);
+     }
+ 
++    public interface SharedPreferenceProxy {
++        SharedPreferences getDefaultSharedPreferences(Context context);
++    }
++
+     private static final boolean DBG = true;
+ 
+     // When true, dumps the state of ImsPhoneCallTracker after changes to foreground and background
+@@ -343,6 +348,13 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+      */
+     private boolean mShouldUpdateImsConfigOnDisconnect = false;
+ 
++    /**
++     * Default implementation for retrieving shared preferences; uses the actual PreferencesManager.
++     */
++    private SharedPreferenceProxy mSharedPreferenceProxy = (Context context) -> {
++        return PreferenceManager.getDefaultSharedPreferences(context);
++    };
++
+     //***** Events
+ 
+ 
+@@ -368,6 +380,16 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+         sendEmptyMessage(EVENT_GET_IMS_SERVICE);
+     }
+ 
++    /**
++     * Test-only method used to mock out access to the shared preferences through the
++     * {@link PreferenceManager}.
++     * @param sharedPreferenceProxy
++     */
++    @VisibleForTesting
++    public void setSharedPreferenceProxy(SharedPreferenceProxy sharedPreferenceProxy) {
++        mSharedPreferenceProxy = sharedPreferenceProxy;
++    }
++
+     private PendingIntent createIncomingCallPendingIntent() {
+         Intent intent = new Intent(ImsManager.ACTION_IMS_INCOMING_CALL);
+         intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+@@ -448,8 +470,16 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
+ 
+     public Connection dial(String dialString, int videoState, Bundle intentExtras) throws
+             CallStateException {
+-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mPhone.getContext());
+-        int oirMode = sp.getInt(Phone.CLIR_KEY, CommandsInterface.CLIR_DEFAULT);
++        int oirMode;
++        if (mSharedPreferenceProxy != null && mPhone.getDefaultPhone() != null) {
++            SharedPreferences sp = mSharedPreferenceProxy.getDefaultSharedPreferences(
++                    mPhone.getContext());
++            oirMode = sp.getInt(Phone.CLIR_KEY + mPhone.getDefaultPhone().getPhoneId(),
++                    CommandsInterface.CLIR_DEFAULT);
++        } else {
++            loge("dial; could not get default CLIR mode.");
++            oirMode = CommandsInterface.CLIR_DEFAULT;
++        }
+         return dial(dialString, oirMode, videoState, intentExtras);
+     }
+ 
+diff --git a/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java b/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java
+index 116dcdd..f765037 100644
+--- a/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java
++++ b/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java
+@@ -17,6 +17,7 @@ package com.android.internal.telephony.imsphone;
+ 
+ import android.app.PendingIntent;
+ import android.content.Intent;
++import android.content.SharedPreferences;
+ import android.os.Bundle;
+ import android.os.HandlerThread;
+ import android.os.Message;
+@@ -32,6 +33,8 @@ import com.android.ims.ImsReasonInfo;
+ import com.android.ims.ImsServiceClass;
+ import com.android.ims.internal.ImsCallSession;
+ import com.android.internal.telephony.Call;
++import com.android.internal.telephony.CallStateException;
++import com.android.internal.telephony.CommandsInterface;
+ import com.android.internal.telephony.Connection;
+ import com.android.internal.telephony.PhoneConstants;
+ import com.android.internal.telephony.TelephonyTest;
+@@ -40,6 +43,7 @@ import org.junit.After;
+ import org.junit.Assert;
+ import org.junit.Before;
+ import org.junit.Test;
++import org.mockito.ArgumentCaptor;
+ import org.mockito.Mock;
+ import org.mockito.invocation.InvocationOnMock;
+ import org.mockito.stubbing.Answer;
+@@ -70,6 +74,8 @@ public class ImsPhoneCallTrackerTest extends TelephonyTest {
+     private int mServiceId;
+     @Mock
+     private ImsCallSession mImsCallSession;
++    @Mock
++    private SharedPreferences mSharedPreferences;
+ 
+     private class ImsCTHandlerThread extends HandlerThread {
+ 
+@@ -371,6 +377,31 @@ public class ImsPhoneCallTrackerTest extends TelephonyTest {
+         assertEquals(Call.State.HOLDING, mCTUT.mBackgroundCall.getState());
+     }
+ 
++    /**
++     * Ensures that the dial method will perform a shared preferences lookup using the correct
++     * shared preference key to determine the CLIR mode.
++     */
++    @Test
++    @SmallTest
++    public void testDialClirMode() {
++        mCTUT.setSharedPreferenceProxy((Context context) -> {
++            return mSharedPreferences;
++        });
++        ArgumentCaptor<String> mStringCaptor = ArgumentCaptor.forClass(String.class);
++        doReturn(CommandsInterface.CLIR_INVOCATION).when(mSharedPreferences).getInt(
++                mStringCaptor.capture(), anyInt());
++
++        try {
++            mCTUT.dial("+17005554141", VideoProfile.STATE_AUDIO_ONLY, null);
++        } catch (CallStateException cse) {
++            cse.printStackTrace();
++            Assert.fail("unexpected exception thrown" + cse.getMessage());
++        }
++
++        // Ensure that the correct key was queried from the shared prefs.
++        assertEquals("clir_key0", mStringCaptor.getValue());
++    }
++
+     @Test
+     @SmallTest
+     public void testImsMOCallHangup() {
+-- 
+2.7.4
+

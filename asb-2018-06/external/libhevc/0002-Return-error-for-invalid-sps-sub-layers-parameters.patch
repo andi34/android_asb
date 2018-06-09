@@ -1,0 +1,41 @@
+From 3d37baa20cd46c7fbc6c683d21a79443c65318b2 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Fri, 9 Mar 2018 08:34:01 +0530
+Subject: [PATCH 2/3] Return error for invalid sps sub layers parameters
+
+Return error for negative values of max_dec_pic_buffering and
+num_reorder_pics sps parameters.
+
+Bug: 73965867
+Test: Ittiam
+Change-Id: I6035b3b2fcbd29c6bbb1223f4714ba04b4bca6b3
+(cherry picked from commit f4486cdb2ff81368baa1d6e7afcf2c06ba64e666)
+CVE-2018-9352
+---
+ decoder/ihevcd_parse_headers.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index 7e9985e..c135b9f 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1336,14 +1336,14 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+     for(; i < ps_sps->i1_sps_max_sub_layers; i++)
+     {
+         UEV_PARSE("max_dec_pic_buffering", value, ps_bitstrm);
+-        if((value + 1) > MAX_DPB_SIZE)
++        if(value < 0 || (value + 1) > MAX_DPB_SIZE)
+         {
+             return IHEVCD_INVALID_PARAMETER;
+         }
+         ps_sps->ai1_sps_max_dec_pic_buffering[i] = value + 1;
+ 
+         UEV_PARSE("num_reorder_pics", value, ps_bitstrm);
+-        if(value > ps_sps->ai1_sps_max_dec_pic_buffering[i])
++        if(value < 0 || value > ps_sps->ai1_sps_max_dec_pic_buffering[i])
+         {
+             return IHEVCD_INVALID_PARAMETER;
+         }
+-- 
+2.7.4
+

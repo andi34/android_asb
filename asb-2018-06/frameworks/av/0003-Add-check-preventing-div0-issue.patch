@@ -1,0 +1,39 @@
+From e2faa3c3bedc45dcab1952faf258f23d2c949bd3 Mon Sep 17 00:00:00 2001
+From: Ryszard Grzesica <ryszard.grzesica@sonymobile.com>
+Date: Tue, 29 Dec 2015 06:28:44 +0100
+Subject: [PATCH 3/3] Add check preventing div0 issue
+
+There might be a scenario while period is zero or after including
+precision would be zero, prevent from division in that case and
+return false (to use previously used period).
+
+Bug: 73898703
+bug: 74067957
+Test: run playback as stability test
+
+Change-Id: I3fad1060b095b7b5ea4c1f9cb3f9d42a4c503560
+(cherry picked from commit 27e47ce3c3bbc0b4dc629163de7ebbba7e80b149)
+CVE-2018-9354
+---
+ media/libstagefright/VideoFrameScheduler.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/media/libstagefright/VideoFrameScheduler.cpp b/media/libstagefright/VideoFrameScheduler.cpp
+index 03226c7..6819bba 100644
+--- a/media/libstagefright/VideoFrameScheduler.cpp
++++ b/media/libstagefright/VideoFrameScheduler.cpp
+@@ -129,6 +129,11 @@ bool VideoFrameScheduler::PLL::fit(
+         numSamplesToUse = mNumSamples;
+     }
+ 
++    if ((period >> kPrecision) == 0 ) {
++        ALOGW("Period is 0, or after including precision is 0 - would cause div0, returning");
++        return false;
++    }
++
+     int64_t sumX = 0;
+     int64_t sumXX = 0;
+     int64_t sumXY = 0;
+-- 
+2.7.4
+

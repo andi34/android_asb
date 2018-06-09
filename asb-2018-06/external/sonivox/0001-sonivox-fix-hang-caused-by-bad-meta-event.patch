@@ -1,0 +1,56 @@
+From 941fe30f67362e9712d26b57131738ed1259f72d Mon Sep 17 00:00:00 2001
+From: akirilov <akirilov@google.com>
+Date: Mon, 2 Apr 2018 14:59:10 -0700
+Subject: [PATCH] sonivox: fix hang caused by bad meta-event
+
+Bug: 69804002
+Bug: 68953854
+Bug: 68664359
+
+Test: cts-tradefed run cts --class android.security.cts.StagefrightTest --method testStagefright_bug_68953854
+
+Change-Id: I29e5ffd6f5be25180d7ed65806480257d79a884d
+Merged-In: I19b3ca2d66866039b199d2049c6234df51797b3c
+(cherry picked from commit ba9ea234666052f8415194966bcd242ea6fecf0e)
+CVE-2018-9347, CVE-2018-9348
+---
+ arm-wt-22k/lib_src/eas_smf.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/arm-wt-22k/lib_src/eas_smf.c b/arm-wt-22k/lib_src/eas_smf.c
+index 8b54b8e..3c284eb 100644
+--- a/arm-wt-22k/lib_src/eas_smf.c
++++ b/arm-wt-22k/lib_src/eas_smf.c
+@@ -29,6 +29,8 @@
+  *----------------------------------------------------------------------------
+ */
+ 
++#include "log/log.h"
++
+ #include "eas_data.h"
+ #include "eas_miditypes.h"
+ #include "eas_parser.h"
+@@ -833,6 +835,20 @@ static EAS_RESULT SMF_ParseMetaEvent (S_EAS_DATA *pEASData, S_SMF_DATA *pSMFData
+     /* get the current file position so we can skip the event */
+     if ((result = EAS_HWFilePos(pEASData->hwInstData, pSMFStream->fileHandle, &pos)) != EAS_SUCCESS)
+         return result;
++
++    /* prevent a large unsigned length from being treated as a negative length */
++    if ((EAS_I32) len < 0) {
++        /* note that EAS_I32 is a long, which can be 64-bits on some computers */
++        ALOGE("b/68953854 SMF_ParseMetaEvent, negative len = %ld\n", (EAS_I32) len);
++        return EAS_ERROR_FILE_FORMAT;
++    }
++    /* prevent numeric overflow caused by a very large len, assume pos > 0 */
++    const EAS_I32 EAS_I32_MAX = 0x7FFFFFFF;
++    if ((EAS_I32) len > (EAS_I32_MAX - pos)) {
++        ALOGE("b/68953854 SMF_ParseMetaEvent, too large len = %ld\n", (EAS_I32) len);
++        return EAS_ERROR_FILE_FORMAT;
++    }
++
+     pos += (EAS_I32) len;
+ 
+     /* end of track? */
+-- 
+2.7.4
+

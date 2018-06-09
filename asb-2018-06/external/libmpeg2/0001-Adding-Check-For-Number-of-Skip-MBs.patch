@@ -1,0 +1,36 @@
+From 320e02d03b87872700e6a044765460bfd642ae29 Mon Sep 17 00:00:00 2001
+From: "Venkatarama NG. Avadhani" <venkatarama.avadhani@ittiam.com>
+Date: Thu, 15 Mar 2018 09:17:57 +0530
+Subject: [PATCH] Adding Check For Number of Skip MBs
+
+Adding check for the value parsed into number of skip MBs. The skip MBs
+function should be called only if the number of skip MBs is more than 0.
+
+Bug: 74016277
+Test: POC before/after
+Change-Id: Iba1cc7b7e214efaeba510d180495a61105bf2125
+(cherry picked from commit 414cd5db73a8cc3cd64bdad954475becffa40478)
+CVE-2018-9341
+---
+ decoder/impeg2d_pnb_pic.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/decoder/impeg2d_pnb_pic.c b/decoder/impeg2d_pnb_pic.c
+index a3ae436..f7937a8 100644
+--- a/decoder/impeg2d_pnb_pic.c
++++ b/decoder/impeg2d_pnb_pic.c
+@@ -299,6 +299,11 @@ WORD32 impeg2d_dec_pnb_mb_params(dec_state_t *ps_dec)
+     {
+         u2_mb_addr_incr = impeg2d_get_mb_addr_incr(ps_stream);
+ 
++        if(0 == u2_mb_addr_incr)
++        {
++            return IV_FAIL;
++        }
++
+         if(ps_dec->u2_first_mb)
+         {
+             /****************************************************************/
+-- 
+2.7.4
+

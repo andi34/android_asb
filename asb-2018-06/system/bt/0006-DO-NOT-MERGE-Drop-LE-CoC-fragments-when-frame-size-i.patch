@@ -1,0 +1,72 @@
+From dd39c5f5013f7a2ea8484811313cac7b15cf201c Mon Sep 17 00:00:00 2001
+From: Stanley Tng <stng@google.com>
+Date: Wed, 28 Mar 2018 17:12:28 -0700
+Subject: [PATCH 6/6] DO NOT MERGE Drop LE CoC fragments when frame size is too
+ big
+
+Drop the LE CoC data fragments when the received fragment size is too
+big.
+
+Test: Runs LE CoC SL4A test, BleCocTest.
+Bug: 75298652
+Merged-In: I529944341e9e67a39e7ec7e740d5ada3db8cc23a
+Change-Id: I529944341e9e67a39e7ec7e740d5ada3db8cc23a
+(cherry picked from commit 8365a2ace5e89d8b81bab468f0f9bc1137d773b4)
+(cherry picked from commit 17db92e4fc3c7127c0ace625ff9735a9972eee70)
+CVE-2018-9380
+---
+ stack/l2cap/l2c_fcr.c | 23 ++++++++++++++++++-----
+ 1 file changed, 18 insertions(+), 5 deletions(-)
+
+diff --git a/stack/l2cap/l2c_fcr.c b/stack/l2cap/l2c_fcr.c
+index 5ba8b56..282b171 100644
+--- a/stack/l2cap/l2c_fcr.c
++++ b/stack/l2cap/l2c_fcr.c
+@@ -24,6 +24,7 @@
+  ******************************************************************************/
+ 
+ #include <assert.h>
++#include <log/log.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -865,7 +866,24 @@ void l2c_lcc_proc_pdu(tL2C_CCB *p_ccb, BT_HDR *p_buf)
+ 
+     }
+     else
++    {
+         p_data = p_ccb->ble_sdu;
++        if (p_buf->len > (p_ccb->ble_sdu_length - p_data->len)) {
++          L2CAP_TRACE_ERROR("%s: buffer length=%d too big. max=%d. Dropped",
++                            __func__, p_data->len,
++                            (p_ccb->ble_sdu_length - p_data->len));
++          android_errorWriteWithInfoLog(0x534e4554, "75298652", -1, NULL, 0);
++          osi_free(p_buf);
++
++          /* Throw away all pending fragments and disconnects */
++          p_ccb->is_first_seg = true;
++          osi_free(p_ccb->ble_sdu);
++          p_ccb->ble_sdu = NULL;
++          p_ccb->ble_sdu_length = 0;
++          l2cu_disconnect_chnl(p_ccb);
++          return;
++          }
++    }
+ 
+     memcpy((UINT8*)(p_data + 1) + p_data->offset + p_data->len, (UINT8*)(p_buf + 1) + p_buf->offset, p_buf->len);
+     p_data->len += p_buf->len;
+@@ -881,11 +899,6 @@ void l2c_lcc_proc_pdu(tL2C_CCB *p_ccb, BT_HDR *p_buf)
+     {
+         p_ccb->is_first_seg = FALSE;
+     }
+-    else
+-    {
+-        L2CAP_TRACE_ERROR ("%s Length in the SDU messed up",__func__);
+-        // TODO: reset every thing may be???
+-    }
+ 
+     osi_free(p_buf);
+     return;
+-- 
+2.7.4
+

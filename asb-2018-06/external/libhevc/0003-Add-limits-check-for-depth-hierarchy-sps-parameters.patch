@@ -1,0 +1,44 @@
+From 8098ba62be212605217712d72349a8d706572667 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Fri, 9 Mar 2018 16:25:56 +0530
+Subject: [PATCH 3/3] Add limits check for depth hierarchy sps parameters
+
+Bug: 73965890
+Test: run poc before/after
+
+According to the hevc specification, max_transform_hierarchy_depth_inter
+and max_transform_hierarchy_depth_intra cannot be greater than
+difference between log2_ctb_size and log2_min_transform_block_size.
+
+Change-Id: I9a6f56b029957cead3e81bd07d7fb8392a1a98a2
+(cherry picked from commit f7287c7993a0d61abccfdc530f388b366139ac1d)
+CVE-2018-9353
+---
+ decoder/ihevcd_parse_headers.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index c135b9f..fa284a9 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1423,9 +1423,17 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+     ps_sps->i1_log2_diff_max_min_pcm_coding_block_size = 0;
+ 
+     UEV_PARSE("max_transform_hierarchy_depth_inter", value, ps_bitstrm);
++    if(value < 0 || value > (ps_sps->i1_log2_ctb_size - ps_sps->i1_log2_min_transform_block_size))
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+     ps_sps->i1_max_transform_hierarchy_depth_inter = value;
+ 
+     UEV_PARSE("max_transform_hierarchy_depth_intra", value, ps_bitstrm);
++    if(value < 0 || value > (ps_sps->i1_log2_ctb_size - ps_sps->i1_log2_min_transform_block_size))
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+     ps_sps->i1_max_transform_hierarchy_depth_intra = value;
+ 
+     /* String has a d (enabled) in order to match with HM */
+-- 
+2.7.4
+

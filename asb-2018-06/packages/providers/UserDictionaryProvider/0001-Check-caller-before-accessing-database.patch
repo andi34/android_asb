@@ -1,0 +1,93 @@
+From 5f4ab2581660350fbead340f0a64cd8e8ea976e7 Mon Sep 17 00:00:00 2001
+From: Fyodor Kupolov <fkupolov@google.com>
+Date: Mon, 26 Mar 2018 15:49:03 -0700
+Subject: [PATCH] Check caller before accessing database
+
+Test: Manual using PoC app
+Bug: 75298708
+Change-Id: I9e495fd94588e9a3fccfa2da1a9a7fcfd7f2ffa7
+(cherry picked from commit 136dc9b3b628493e32446325de39b10d9bc5cb77)
+CVE-2018-9375
+---
+ .../userdictionary/UserDictionaryProvider.java     | 30 +++++++++++-----------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/src/com/android/providers/userdictionary/UserDictionaryProvider.java b/src/com/android/providers/userdictionary/UserDictionaryProvider.java
+index a7a1971..c16f004 100644
+--- a/src/com/android/providers/userdictionary/UserDictionaryProvider.java
++++ b/src/com/android/providers/userdictionary/UserDictionaryProvider.java
+@@ -148,6 +148,11 @@ public class UserDictionaryProvider extends ContentProvider {
+     @Override
+     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
+             String sortOrder) {
++        // Only the enabled IMEs and spell checkers can access this provider.
++        if (!canCallerAccessUserDictionary()) {
++            return getEmptyCursorOrThrow(projection);
++        }
++
+         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+ 
+         switch (sUriMatcher.match(uri)) {
+@@ -166,11 +171,6 @@ public class UserDictionaryProvider extends ContentProvider {
+                 throw new IllegalArgumentException("Unknown URI " + uri);
+         }
+ 
+-        // Only the enabled IMEs and spell checkers can access this provider.
+-        if (!canCallerAccessUserDictionary()) {
+-            return getEmptyCursorOrThrow(projection);
+-        }
+-
+         // If no sort order is specified use the default
+         String orderBy;
+         if (TextUtils.isEmpty(sortOrder)) {
+@@ -253,6 +253,11 @@ public class UserDictionaryProvider extends ContentProvider {
+ 
+     @Override
+     public int delete(Uri uri, String where, String[] whereArgs) {
++        // Only the enabled IMEs and spell checkers can access this provider.
++        if (!canCallerAccessUserDictionary()) {
++            return 0;
++        }
++
+         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+         int count;
+         switch (sUriMatcher.match(uri)) {
+@@ -270,11 +275,6 @@ public class UserDictionaryProvider extends ContentProvider {
+                 throw new IllegalArgumentException("Unknown URI " + uri);
+         }
+ 
+-        // Only the enabled IMEs and spell checkers can access this provider.
+-        if (!canCallerAccessUserDictionary()) {
+-            return 0;
+-        }
+-
+         getContext().getContentResolver().notifyChange(uri, null);
+         mBackupManager.dataChanged();
+         return count;
+@@ -282,6 +282,11 @@ public class UserDictionaryProvider extends ContentProvider {
+ 
+     @Override
+     public int update(Uri uri, ContentValues values, String where, String[] whereArgs) {
++        // Only the enabled IMEs and spell checkers can access this provider.
++        if (!canCallerAccessUserDictionary()) {
++            return 0;
++        }
++
+         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+         int count;
+         switch (sUriMatcher.match(uri)) {
+@@ -299,11 +304,6 @@ public class UserDictionaryProvider extends ContentProvider {
+                 throw new IllegalArgumentException("Unknown URI " + uri);
+         }
+ 
+-        // Only the enabled IMEs and spell checkers can access this provider.
+-        if (!canCallerAccessUserDictionary()) {
+-            return 0;
+-        }
+-
+         getContext().getContentResolver().notifyChange(uri, null);
+         mBackupManager.dataChanged();
+         return count;
+-- 
+2.7.4
+
