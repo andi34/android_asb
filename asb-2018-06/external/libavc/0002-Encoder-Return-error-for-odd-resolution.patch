@@ -1,0 +1,46 @@
+From 3b475f647083a98ad8682979e8e433a197b51d6a Mon Sep 17 00:00:00 2001
+From: Akshata Jadhav <akshata.jadhav@ittiam.com>
+Date: Wed, 21 Feb 2018 11:39:52 +0530
+Subject: [PATCH 2/2] Encoder: Return error for odd resolution
+
+Bug: 73625898
+Test: ran POC before/after under ASAN
+Change-Id: I9765b57f4afc6a2b6ad9cd19c8c7c5000beb9de9
+(cherry picked from commit 9fa58d4db3ef176ed54af5f602970b48624be413)
+CVE-2018-9351
+---
+ encoder/ih264e_api.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/encoder/ih264e_api.c b/encoder/ih264e_api.c
+index 69085ab..b40be55 100644
+--- a/encoder/ih264e_api.c
++++ b/encoder/ih264e_api.c
+@@ -1147,6 +1147,24 @@ static IV_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
+                         return (IV_FAIL);
+                     }
+ 
++                    if(ps_ip->s_ive_ip.u4_wd & 1)
++                    {
++                        ps_op->s_ive_op.u4_error_code |= 1
++                                        << IVE_UNSUPPORTEDPARAM;
++                        ps_op->s_ive_op.u4_error_code |=
++                                        IH264E_WIDTH_NOT_SUPPORTED;
++                        return (IV_FAIL);
++                    }
++
++                    if(ps_ip->s_ive_ip.u4_ht & 1)
++                    {
++                        ps_op->s_ive_op.u4_error_code |= 1
++                                        << IVE_UNSUPPORTEDPARAM;
++                        ps_op->s_ive_op.u4_error_code |=
++                                        IH264E_HEIGHT_NOT_SUPPORTED;
++                        return (IV_FAIL);
++                    }
++
+                     break;
+                 }
+ 
+-- 
+2.7.4
+

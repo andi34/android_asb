@@ -1,0 +1,34 @@
+From e9858ac2403c5566ba95924f532a0e24564005d7 Mon Sep 17 00:00:00 2001
+From: jiabin <jiabin@google.com>
+Date: Thu, 5 Apr 2018 17:16:20 -0700
+Subject: [PATCH 1/3] Init gain config to prevent uninit leak.
+
+In AudioPortConfig, we only initialize index for audio_gain_config, but
+not other fields. That may cause uninit leak at listAudioPorts and
+listAudioPatches.
+
+Bug: 77238250
+Bug: 77238762
+Test: try repo steps at the bug description.
+Change-Id: I57e3bd0598f9aa698a6fa3d3c0218b046de34e2f
+(cherry picked from commit ebe0777edcf3b9c6bde9771d65399e2363dc6e40)
+CVE-2018-9345, CVE-2018-9346
+---
+ services/audiopolicy/common/managerdefinitions/src/AudioPort.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/services/audiopolicy/common/managerdefinitions/src/AudioPort.cpp b/services/audiopolicy/common/managerdefinitions/src/AudioPort.cpp
+index 4e24f19..169a599 100644
+--- a/services/audiopolicy/common/managerdefinitions/src/AudioPort.cpp
++++ b/services/audiopolicy/common/managerdefinitions/src/AudioPort.cpp
+@@ -827,6 +827,7 @@ AudioPortConfig::AudioPortConfig()
+     mSamplingRate = 0;
+     mChannelMask = AUDIO_CHANNEL_NONE;
+     mFormat = AUDIO_FORMAT_INVALID;
++    memset(&mGain, 0, sizeof(struct audio_gain_config));
+     mGain.index = -1;
+ }
+ 
+-- 
+2.7.4
+

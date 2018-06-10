@@ -1,0 +1,44 @@
+From c6749f9c82b9ec387dd31f93786fa82d5837d4d3 Mon Sep 17 00:00:00 2001
+From: Ritu Baldwa <ritu.baldwa@ittiam.com>
+Date: Fri, 9 Mar 2018 16:39:07 +0530
+Subject: [PATCH 1/2] Decoder: Modify setting short term reference field flag
+
+Do not mark bottom field as short term in case of error.
+
+Bug: 73553038
+Bug: 73552574
+Bug: 73552999
+Test: poc before/after
+Change-Id: I8576861af36996a361a81f48ba9b251f0ae4e660
+(cherry picked from commit 47cc04b40c94b14841d27eb3ac0b01c3f1739180)
+CVE-2018-9350
+---
+ decoder/ih264d_dpb_mgr.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/decoder/ih264d_dpb_mgr.c b/decoder/ih264d_dpb_mgr.c
+index 8c6bb19..f9124e4 100644
+--- a/decoder/ih264d_dpb_mgr.c
++++ b/decoder/ih264d_dpb_mgr.c
+@@ -374,9 +374,6 @@ WORD32 ih264d_insert_st_node(dpb_manager_t *ps_dpb_mgr,
+         if((ps_dpb_info[i].ps_pic_buf == ps_pic_buf)
+                         && ps_dpb_info[i].u1_used_as_ref)
+         {
+-            /* Can occur only for field bottom pictures */
+-            ps_dpb_info[i].s_bot_field.u1_reference_info = IS_SHORT_TERM;
+-
+             /*signal an error in the case of frame pic*/
+             if(ps_dpb_info[i].ps_pic_buf->u1_pic_type == FRM_PIC)
+             {
+@@ -384,6 +381,8 @@ WORD32 ih264d_insert_st_node(dpb_manager_t *ps_dpb_mgr,
+             }
+             else
+             {
++                /* Can occur only for field bottom pictures */
++                ps_dpb_info[i].s_bot_field.u1_reference_info = IS_SHORT_TERM;
+                 return OK;
+             }
+         }
+-- 
+2.7.4
+
