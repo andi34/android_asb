@@ -19,10 +19,10 @@ Change-Id: I2ab74ba6428614ef8824f52669c37b52daa59927
  aosp.xml | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/aosp.xml b/aosp.xml
+diff --git a/default.xml b/default.xml
 index bd566a6..a6db8d7 100644
---- a/aosp.xml
-+++ b/aosp.xml
+--- a/default.xml
++++ b/default.xml
 @@ -289,7 +289,7 @@
    <project path="external/squashfs-tools" name="platform/external/squashfs-tools" groups="pdk" />
    <project path="external/srtp" name="platform/external/srtp" groups="pdk" />
