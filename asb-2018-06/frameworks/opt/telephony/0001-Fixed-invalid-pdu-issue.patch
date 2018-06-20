@@ -1,4 +1,4 @@
-From 4a6844e76fd4543d7c9db5ec21e15c727511aaa0 Mon Sep 17 00:00:00 2001
+From 77c69ba3fac8b9fdd580486ffed8fb4a4799f6dd Mon Sep 17 00:00:00 2001
 From: Pengquan Meng <mpq@google.com>
 Date: Fri, 23 Mar 2018 14:29:55 -0700
 Subject: [PATCH] Fixed invalid pdu issue

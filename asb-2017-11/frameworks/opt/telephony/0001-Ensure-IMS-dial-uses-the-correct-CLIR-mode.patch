@@ -1,4 +1,4 @@
-From 504c5f05a9f8445cd90c32b4d4425bbadabf3c91 Mon Sep 17 00:00:00 2001
+From 722c5d6cc6e4c937d3970a0aea8aade9ec61d65a Mon Sep 17 00:00:00 2001
 From: Tyler Gunn <tgunn@google.com>
 Date: Tue, 29 Aug 2017 15:27:14 -0700
 Subject: [PATCH] Ensure IMS dial uses the correct CLIR mode.
@@ -20,8 +20,8 @@ Change-Id: I231f8fb74c29347da2085318b9ca42d5efec5271
  .../android/internal/telephony/GsmCdmaPhone.java   |  1 +
  src/java/com/android/internal/telephony/Phone.java |  2 ++
  .../telephony/imsphone/ImsPhoneCallTracker.java    | 34 ++++++++++++++++++++--
- .../imsphone/ImsPhoneCallTrackerTest.java          | 31 ++++++++++++++++++++
- 4 files changed, 66 insertions(+), 2 deletions(-)
+ .../imsphone/ImsPhoneCallTrackerTest.java          | 33 +++++++++++++++++++++
+ 4 files changed, 68 insertions(+), 2 deletions(-)
 
 diff --git a/src/java/com/android/internal/telephony/GsmCdmaPhone.java b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
 index 07afe0c..90812c5 100644
@@ -122,18 +122,24 @@ index 2a48d4e..02bd935 100644
      }
  
 diff --git a/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java b/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java
-index 116dcdd..f765037 100644
+index 116dcdd..b22e485 100644
 --- a/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java
 +++ b/tests/telephonytests/src/com/android/internal/telephony/imsphone/ImsPhoneCallTrackerTest.java
-@@ -17,6 +17,7 @@ package com.android.internal.telephony.imsphone;
+@@ -16,10 +16,13 @@
+ package com.android.internal.telephony.imsphone;
  
  import android.app.PendingIntent;
++import android.content.Context;
  import android.content.Intent;
 +import android.content.SharedPreferences;
  import android.os.Bundle;
  import android.os.HandlerThread;
  import android.os.Message;
-@@ -32,6 +33,8 @@ import com.android.ims.ImsReasonInfo;
++import android.telecom.VideoProfile;
+ import android.telephony.PhoneNumberUtils;
+ import android.test.suitebuilder.annotation.SmallTest;
+ 
+@@ -32,6 +35,8 @@ import com.android.ims.ImsReasonInfo;
  import com.android.ims.ImsServiceClass;
  import com.android.ims.internal.ImsCallSession;
  import com.android.internal.telephony.Call;
@@ -142,7 +148,7 @@ index 116dcdd..f765037 100644
  import com.android.internal.telephony.Connection;
  import com.android.internal.telephony.PhoneConstants;
  import com.android.internal.telephony.TelephonyTest;
-@@ -40,6 +43,7 @@ import org.junit.After;
+@@ -40,6 +45,7 @@ import org.junit.After;
  import org.junit.Assert;
  import org.junit.Before;
  import org.junit.Test;
@@ -150,7 +156,7 @@ index 116dcdd..f765037 100644
  import org.mockito.Mock;
  import org.mockito.invocation.InvocationOnMock;
  import org.mockito.stubbing.Answer;
-@@ -70,6 +74,8 @@ public class ImsPhoneCallTrackerTest extends TelephonyTest {
+@@ -70,6 +76,8 @@ public class ImsPhoneCallTrackerTest extends TelephonyTest {
      private int mServiceId;
      @Mock
      private ImsCallSession mImsCallSession;
@@ -159,7 +165,7 @@ index 116dcdd..f765037 100644
  
      private class ImsCTHandlerThread extends HandlerThread {
  
-@@ -371,6 +377,31 @@ public class ImsPhoneCallTrackerTest extends TelephonyTest {
+@@ -371,6 +379,31 @@ public class ImsPhoneCallTrackerTest extends TelephonyTest {
          assertEquals(Call.State.HOLDING, mCTUT.mBackgroundCall.getState());
      }
  
