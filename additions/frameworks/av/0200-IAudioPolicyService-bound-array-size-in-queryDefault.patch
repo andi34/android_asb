@@ -1,0 +1,81 @@
+From 370ea21c3036efdb408c56019868e85081fb1c14 Mon Sep 17 00:00:00 2001
+From: Eric Laurent <elaurent@google.com>
+Date: Wed, 5 Nov 2014 12:15:36 -0800
+Subject: [PATCH] IAudioPolicyService: bound array size in
+ queryDefaultPreProcessing
+
+Bug: 18226810.
+CVE-2015-1530
+Change-Id: Ib8e2bfe835a8681aac50bf23161db14e50c9a124
+(cherry picked from commit 74adca9ad30b7f8a70d40c5237bade0d16c4ea58)
+---
+ include/media/AudioEffect.h            | 9 +++++++--
+ media/libmedia/IAudioPolicyService.cpp | 9 ++++++---
+ 2 files changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/include/media/AudioEffect.h b/include/media/AudioEffect.h
+index 05d834d..eef1b41 100644
+--- a/include/media/AudioEffect.h
++++ b/include/media/AudioEffect.h
+@@ -133,10 +133,11 @@ public:
+      *
+      * Returned value
+      *   *descriptor updated with descriptors of pre processings enabled by default
+-     *   *count      number of descriptors returned if returned status is N_ERROR.
++     *   *count      number of descriptors returned if returned status is NO_ERROR.
+      *               total number of pre processing enabled by default if returned status is
+      *               NO_MEMORY. This happens if the count passed as input is less than the number
+-     *               of descriptors to return
++     *               of descriptors to return.
++     *               *count is limited to kMaxPreProcessing on return.
+      */
+     static status_t queryDefaultPreProcessing(int audioSession,
+                                               effect_descriptor_t *descriptors,
+@@ -390,6 +391,10 @@ public:
+       */
+      static status_t guidToString(const effect_uuid_t *guid, char *str, size_t maxLen);
+ 
++     // kMaxPreProcessing is a reasonable value for the maximum number of preprocessing effects
++     // that can be applied simultaneously.
++     static const uint32_t kMaxPreProcessing = 10;
++
+ protected:
+      bool                    mEnabled;           // enable state
+      int32_t                 mSessionId;         // audio session ID
+diff --git a/media/libmedia/IAudioPolicyService.cpp b/media/libmedia/IAudioPolicyService.cpp
+index f4e65c5..0dab7e3 100644
+--- a/media/libmedia/IAudioPolicyService.cpp
++++ b/media/libmedia/IAudioPolicyService.cpp
+@@ -23,6 +23,7 @@
+ 
+ #include <binder/Parcel.h>
+ 
++#include <media/AudioEffect.h>
+ #include <media/IAudioPolicyService.h>
+ 
+ #include <system/audio.h>
+@@ -656,16 +657,18 @@ status_t BnAudioPolicyService::onTransact(
+             CHECK_INTERFACE(IAudioPolicyService, data, reply);
+             int audioSession = data.readInt32();
+             uint32_t count = data.readInt32();
++            if (count > AudioEffect::kMaxPreProcessing) {
++                count = AudioEffect::kMaxPreProcessing;
++            }
+             uint32_t retCount = count;
+-            effect_descriptor_t *descriptors =
+-                    (effect_descriptor_t *)new char[count * sizeof(effect_descriptor_t)];
++            effect_descriptor_t *descriptors = new effect_descriptor_t[count];
+             status_t status = queryDefaultPreProcessing(audioSession, descriptors, &retCount);
+             reply->writeInt32(status);
+             if (status != NO_ERROR && status != NO_MEMORY) {
+                 retCount = 0;
+             }
+             reply->writeInt32(retCount);
+-            if (retCount) {
++            if (retCount != 0) {
+                 if (retCount < count) {
+                     count = retCount;
+                 }
+-- 
+2.7.4
+
