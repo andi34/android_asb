@@ -1,0 +1,55 @@
+From 042ef26b5a0d3b098a11efa889f417152c774f84 Mon Sep 17 00:00:00 2001
+From: MSe1969 <mse1969@posteo.de>
+Date: Sun, 24 Jun 2018 20:12:20 +0200
+Subject: [PATCH] Bump Security Patch Level to 2018-06-01
+
+Implemented Patches
+===================
+CVE-2018-5146	A-77284393	Critical    Change 217156
+CVE-2018-9338	A-71361168	High	    Change 217040
+CVE-2018-9340	A-71360999	High	    Change 217040
+CVE-2018-9347	A-68664359	High	    Change 217043
+CVE-2018-9348	A-68953854	High	    Change 217043
+CVE-2018-9355	A-74016921	Critical    Change 217157
+CVE-2018-9356	A-74950468	Critical    Change 217158
+CVE-2018-9357	A-74947856	Critical    Change 217159
+CVE-2018-9358	A-73172115	High	    Change 217160
+CVE-2018-9359	A-74196706	High	    Change 217161
+CVE-2018-9360	A-74201143	High	    Change 217161
+CVE-2018-9361	A-74202041	High	    Change 217161
+CVE-2018-9362	A-72298611	High	    Change 217047
+CVE-2018-9378	A-73126106	Moderate    Change 217164
+CVE-2018-9349	A-72510002	Moderate    Change 217162
+
+Skipped Patches
+===============
+CVE-2018-9341	A-74016277	Critical    no libmpeg2 in KK
+CVE-2017-13230	A-65483665	Critical    no libhevc in KK
+CVE-2018-9345	A-77238250	High	    no AudioPort.cpp in frw/av
+CVE-2018-9346	A-77238762	High	    no AudioPort.cpp in frw/av
+CVE-2018-9374	A-72710897	Moderate    no Runtime permissions in KK
+CVE-2018-9375	A-75298708	Moderate    postponed, most probably n/a
+CVE-2018-9377	A-64752751	Moderate    not publicly available
+CVE-2018-9379	A-63766886	Moderate    postponed, most probably n/a
+
+Change-Id: I85f6f5249374fadc99df4e71118b5a30b65c97fa
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 8031045..ffd1ac4 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-05-01
++  PLATFORM_SECURITY_PATCH := 2018-06-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

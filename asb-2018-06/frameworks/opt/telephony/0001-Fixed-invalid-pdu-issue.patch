@@ -1,0 +1,80 @@
+From b98e71fccdf3d2623b1f91c69ba4b271b17e19a4 Mon Sep 17 00:00:00 2001
+From: Pengquan Meng <mpq@google.com>
+Date: Fri, 23 Mar 2018 14:29:55 -0700
+Subject: [PATCH] Fixed invalid pdu issue
+
+The device may receive invalid sms pdu, i.e the pdu contins sms header
+with an invalid seqNumber. This caused InboundSmsHandler crashed constantly.
+This CL added the range check for the seqNumber to ensure the
+InboundSmsHandler will not crash even if the seqNumber is invalid.
+
+Test: runtest -x GsmInboundSmsHandlerTest -m
+testMultiPartSmsWithInvalidSeqNumber
+Bug: 72298611
+
+Merged-In: Icf291c8530abdc2a528c5cf227cf00135281b899
+Change-Id: Icf291c8530abdc2a528c5cf227cf00135281b899
+(cherry picked from commit 9eec9d02937dd41fc94ad1c874f8467f4698df5c)
+(cherry picked from commit d2f410c0ff07c5a7b79e61bc36527b0259677de7)
+(cherry picked from commit e8955271c5ca1595ae7c495b6cd7c5f8515d65ea)
+---
+ .../internal/telephony/InboundSmsHandler.java      | 29 ++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/InboundSmsHandler.java b/src/java/com/android/internal/telephony/InboundSmsHandler.java
+index 95a650f..59ec648 100644
+--- a/src/java/com/android/internal/telephony/InboundSmsHandler.java
++++ b/src/java/com/android/internal/telephony/InboundSmsHandler.java
+@@ -38,6 +38,7 @@ import android.provider.Telephony.Sms.Intents;
+ import android.telephony.Rlog;
+ import android.telephony.SmsMessage;
+ import android.telephony.TelephonyManager;
++import android.util.EventLog;
+ 
+ import com.android.internal.util.HexDump;
+ import com.android.internal.util.State;
+@@ -591,6 +592,19 @@ public abstract class InboundSmsHandler extends StateMachine {
+         byte[][] pdus;
+         int destPort = tracker.getDestPort();
+ 
++        // Do not process when the message count is invalid.
++        if (messageCount <= 0) {
++            EventLog.writeEvent(
++                    0x534e4554 /* snetTagId */,
++                    "72298611" /* buganizer id */,
++                    -1 /* uid */,
++                    String.format(
++                            "processMessagePart: invalid messageCount = %d",
++                            messageCount));
++
++            return false;
++        }
++
+         if (messageCount == 1) {
+             // single-part message
+             pdus = new byte[][]{tracker.getPdu()};
+@@ -624,6 +638,21 @@ public abstract class InboundSmsHandler extends StateMachine {
+                     // subtract offset to convert sequence to 0-based array index
+                     int index = cursor.getInt(SEQUENCE_COLUMN) - tracker.getIndexOffset();
+ 
++                    // The invalid PDUs can be received and stored in the raw table. The range
++                    // check ensures the process not crash even if the seqNumber in the
++                    // UserDataHeader is invalid.
++                    if (index >= pdus.length || index < 0) {
++                        EventLog.writeEvent(
++                                0x534e4554 /* snetTagId */,
++                                "72298611" /* buganizer id */,
++                                -1 /* uid */,
++                                String.format(
++                                        "processMessagePart: invalid seqNumber = %d, messageCount = %d",
++                                        index + tracker.getIndexOffset(),
++                                        messageCount));
++                        continue;
++                    }
++
+                     pdus[index] = HexDump.hexStringToByteArray(cursor.getString(PDU_COLUMN));
+ 
+                     // Read the destination port from the first segment (needed for CDMA WAP PDU).
+-- 
+2.7.4
+

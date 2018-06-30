@@ -1,0 +1,122 @@
+From edde734f9f624d9a2ab9e74b7a8eea0c73979238 Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Thu, 12 Apr 2018 11:06:56 -0700
+Subject: [PATCH] Sanitize effect descriptors for AudioPolicyService binder
+ calls.
+
+Zero initialize structs before parcel read, if status is not checked.
+Sanitize parcel read audio_port_config.
+
+Test: Audio CTS, See bug for POC
+Bug: 73126106
+Merged-in: Iece43eb463385927e6babcf93654eea8aaebc29c
+Change-Id: Iece43eb463385927e6babcf93654eea8aaebc29c
+(cherry picked from commit 498bdcc90bc470a79bf8943cbac64502f7c1c091)
+CVE-2018-9378
+---
+ include/media/IAudioPolicyService.h    |  3 +++
+ media/libmedia/IAudioPolicyService.cpp | 39 ++++++++++++++++++++++++++++------
+ 2 files changed, 35 insertions(+), 7 deletions(-)
+
+diff --git a/include/media/IAudioPolicyService.h b/include/media/IAudioPolicyService.h
+index 09b9ea6..1146c87 100644
+--- a/include/media/IAudioPolicyService.h
++++ b/include/media/IAudioPolicyService.h
+@@ -111,6 +111,9 @@ public:
+                                     const Parcel& data,
+                                     Parcel* reply,
+                                     uint32_t flags = 0);
++
++private:
++    status_t sanitizeEffectDescriptor(effect_descriptor_t* desc);
+ };
+ 
+ // ----------------------------------------------------------------------------
+diff --git a/media/libmedia/IAudioPolicyService.cpp b/media/libmedia/IAudioPolicyService.cpp
+index 0dab7e3..cda57e4 100644
+--- a/media/libmedia/IAudioPolicyService.cpp
++++ b/media/libmedia/IAudioPolicyService.cpp
+@@ -460,7 +460,7 @@ status_t BnAudioPolicyService::onTransact(
+             audio_output_flags_t flags =
+                     static_cast <audio_output_flags_t>(data.readInt32());
+             bool hasOffloadInfo = data.readInt32() != 0;
+-            audio_offload_info_t offloadInfo;
++            audio_offload_info_t offloadInfo = {};
+             if (hasOffloadInfo) {
+                 data.read(&offloadInfo, sizeof(audio_offload_info_t));
+             }
+@@ -592,8 +592,11 @@ status_t BnAudioPolicyService::onTransact(
+ 
+         case GET_OUTPUT_FOR_EFFECT: {
+             CHECK_INTERFACE(IAudioPolicyService, data, reply);
+-            effect_descriptor_t desc;
+-            data.read(&desc, sizeof(effect_descriptor_t));
++            effect_descriptor_t desc = {};
++            if (data.read(&desc, sizeof(desc)) != NO_ERROR) {
++                android_errorWriteLog(0x534e4554, "73126106");
++            }
++            (void)sanitizeEffectDescriptor(&desc);
+             audio_io_handle_t output = getOutputForEffect(&desc);
+             reply->writeInt32(static_cast <int>(output));
+             return NO_ERROR;
+@@ -601,8 +604,11 @@ status_t BnAudioPolicyService::onTransact(
+ 
+         case REGISTER_EFFECT: {
+             CHECK_INTERFACE(IAudioPolicyService, data, reply);
+-            effect_descriptor_t desc;
+-            data.read(&desc, sizeof(effect_descriptor_t));
++            effect_descriptor_t desc = {};
++            if (data.read(&desc, sizeof(desc)) != NO_ERROR) {
++                android_errorWriteLog(0x534e4554, "73126106");
++            }
++            (void)sanitizeEffectDescriptor(&desc);
+             audio_io_handle_t io = data.readInt32();
+             uint32_t strategy = data.readInt32();
+             int session = data.readInt32();
+@@ -661,7 +667,7 @@ status_t BnAudioPolicyService::onTransact(
+                 count = AudioEffect::kMaxPreProcessing;
+             }
+             uint32_t retCount = count;
+-            effect_descriptor_t *descriptors = new effect_descriptor_t[count];
++            effect_descriptor_t *descriptors = new effect_descriptor_t[count]{};
+             status_t status = queryDefaultPreProcessing(audioSession, descriptors, &retCount);
+             reply->writeInt32(status);
+             if (status != NO_ERROR && status != NO_MEMORY) {
+@@ -680,7 +686,7 @@ status_t BnAudioPolicyService::onTransact(
+ 
+         case IS_OFFLOAD_SUPPORTED: {
+             CHECK_INTERFACE(IAudioPolicyService, data, reply);
+-            audio_offload_info_t info;
++            audio_offload_info_t info = {};
+             data.read(&info, sizeof(audio_offload_info_t));
+             bool isSupported = isOffloadSupported(info);
+             reply->writeInt32(isSupported);
+@@ -692,6 +698,25 @@ status_t BnAudioPolicyService::onTransact(
+     }
+ }
+ 
++/** returns true if string overflow was prevented by zero termination */
++template <size_t size>
++static bool preventStringOverflow(char (&s)[size]) {
++    if (strnlen(s, size) < size) return false;
++    s[size - 1] = '\0';
++    return true;
++}
++
++/** returns BAD_VALUE if sanitization was required. */
++status_t BnAudioPolicyService::sanitizeEffectDescriptor(effect_descriptor_t* desc)
++{
++    if (preventStringOverflow(desc->name)
++        | /* always */ preventStringOverflow(desc->implementor)) {
++        android_errorWriteLog(0x534e4554, "73126106"); // SafetyNet logging
++        return BAD_VALUE;
++    }
++    return NO_ERROR;
++}
++
+ // ----------------------------------------------------------------------------
+ 
+ }; // namespace android
+-- 
+2.7.4
+

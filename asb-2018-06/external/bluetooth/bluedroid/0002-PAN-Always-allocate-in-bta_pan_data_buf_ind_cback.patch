@@ -1,0 +1,131 @@
+From f4b3f4057f7f4fa9aaac8fb95486580f8a207dc2 Mon Sep 17 00:00:00 2001
+From: Myles Watson <mylesgw@google.com>
+Date: Wed, 21 Mar 2018 16:45:32 -0700
+Subject: [PATCH 2/5] PAN: Always allocate in bta_pan_data_buf_ind_cback
+
+Change I63b857d031c55d3a0754e4101e330843eb422b2a caused a double
+free.  Move the free call to pan_data_buf_ind_cb().
+
+Free the buffer before every return in pan_data_buf_ind_cb.
+
+Bug: 74950468
+Test: manual tethering test with DUT sharing its connection
+Change-Id: If4526f3042699581e2cdde79a362eef0f83768eb
+Merged-In: If4526f3042699581e2cdde79a362eef0f83768eb
+(cherry picked from commit 98232b084c66368234d19fafe3076bc1c0f1b578)
+CVE-2018-9356
+---
+ bta/pan/bta_pan_act.c  | 31 +++++++++++--------------------
+ stack/bnep/bnep_main.c |  3 ---
+ stack/pan/pan_main.c   | 10 ++--------
+ 3 files changed, 13 insertions(+), 31 deletions(-)
+
+diff --git a/bta/pan/bta_pan_act.c b/bta/pan/bta_pan_act.c
+index fc5c125..519df36 100644
+--- a/bta/pan/bta_pan_act.c
++++ b/bta/pan/bta_pan_act.c
+@@ -168,17 +168,13 @@ static void bta_pan_data_flow_cb(UINT16 handle, tPAN_RESULT result)
+ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst, UINT16 protocol, BT_HDR *p_buf,
+                                    BOOLEAN ext, BOOLEAN forward)
+ {
+-    tBTA_PAN_SCB *p_scb;
+     BT_HDR * p_event;
+-    BT_HDR *p_new_buf;
+-
+-    p_scb = bta_pan_scb_by_handle(handle);
++    tBTA_PAN_SCB* p_scb = bta_pan_scb_by_handle(handle);
+     if (p_scb == NULL) {
+       return;
+     }
+ 
+     if ( sizeof(tBTA_PAN_DATA_PARAMS) > p_buf->offset )
+-    {
+         if (sizeof(BT_HDR) + sizeof(tBTA_PAN_DATA_PARAMS) + p_buf->len >
+             GKI_get_pool_bufsize(PAN_POOL_ID)) {
+             android_errorWriteLog(0x534e4554, "63146237");
+@@ -187,25 +183,20 @@ static void bta_pan_data_buf_ind_cback(UINT16 handle, BD_ADDR src, BD_ADDR dst,
+             return;
+         }
+ 
+-        /* offset smaller than data structure in front of actual data */
+-        p_new_buf = (BT_HDR *)GKI_getpoolbuf( PAN_POOL_ID );
+-        if(!p_new_buf)
+-        {
+-            APPL_TRACE_WARNING0("Cannot get a PAN GKI buffer");
+-            GKI_freebuf( p_buf );
+-            return;
+-        }
+-        else
+-        {
+-            memcpy( (UINT8 *)(p_new_buf+1)+sizeof(tBTA_PAN_DATA_PARAMS), (UINT8 *)(p_buf+1)+p_buf->offset, p_buf->len );
+-            p_new_buf->len    = p_buf->len;
+-            p_new_buf->offset = sizeof(tBTA_PAN_DATA_PARAMS);
+-        }
++    BT_HDR* p_new_buf = (BT_HDR *)GKI_getpoolbuf( PAN_POOL_ID );
++    if(!p_new_buf)
++    {
++        APPL_TRACE_WARNING0("Cannot get a PAN GKI buffer");
++        GKI_freebuf( p_buf );
++        return;
+     }
+     else
+     {
+-        p_new_buf = p_buf;
++        memcpy( (UINT8 *)(p_new_buf+1)+sizeof(tBTA_PAN_DATA_PARAMS), (UINT8 *)(p_buf+1)+p_buf->offset, p_buf->len );
++        p_new_buf->len    = p_buf->len;
++        p_new_buf->offset = sizeof(tBTA_PAN_DATA_PARAMS);
+     }
++
+     /* copy params into the space before the data */
+     bdcpy(((tBTA_PAN_DATA_PARAMS *)p_new_buf)->src, src);
+     bdcpy(((tBTA_PAN_DATA_PARAMS *)p_new_buf)->dst, dst);
+diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
+index ac5686a..e447d2a 100644
+--- a/stack/bnep/bnep_main.c
++++ b/stack/bnep/bnep_main.c
+@@ -658,10 +658,7 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+         fw_ext_present = FALSE;
+ 
+     if (bnep_cb.p_data_buf_cb)
+-    {
+         (*bnep_cb.p_data_buf_cb)(p_bcb->handle, p_src_addr, p_dst_addr, protocol, p_buf, fw_ext_present);
+-        GKI_freebuf (p_buf);
+-    }
+     else if (bnep_cb.p_data_ind_cb)
+     {
+         (*bnep_cb.p_data_ind_cb)(p_bcb->handle, p_src_addr, p_dst_addr, protocol, p, rem_len, fw_ext_present);
+diff --git a/stack/pan/pan_main.c b/stack/pan/pan_main.c
+index 94080f6..91294e5 100644
+--- a/stack/pan/pan_main.c
++++ b/stack/pan/pan_main.c
+@@ -632,11 +632,9 @@ void pan_data_buf_ind_cb (UINT16 handle,
+             if (pan_cb.pan_data_buf_ind_cb)
+                 (*pan_cb.pan_data_buf_ind_cb) (pcb->handle, src, dst, protocol, p_buf, ext, forward);
+             else if (pan_cb.pan_data_ind_cb)
+-            {
+                 (*pan_cb.pan_data_ind_cb) (pcb->handle, src, dst, protocol, p_data, len, ext, forward);
+-                GKI_freebuf (p_buf);
+-            }
+ 
++            GKI_freebuf (p_buf);
+             return;
+         }
+ 
+@@ -656,13 +654,9 @@ void pan_data_buf_ind_cb (UINT16 handle,
+     if (pan_cb.pan_data_buf_ind_cb)
+         (*pan_cb.pan_data_buf_ind_cb) (pcb->handle, src, dst, protocol, p_buf, ext, forward);
+     else if (pan_cb.pan_data_ind_cb)
+-    {
+         (*pan_cb.pan_data_ind_cb) (pcb->handle, src, dst, protocol, p_data, len, ext, forward);
+-        GKI_freebuf (p_buf);
+-    }
+-    else
+-        GKI_freebuf (p_buf);
+ 
++    GKI_freebuf (p_buf);
+     return;
+ }
+ 
+-- 
+2.7.4
+
