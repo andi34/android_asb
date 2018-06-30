@@ -1,4 +1,4 @@
-From a0acf1059b3d16b46977688c4f851c2234b232bb Mon Sep 17 00:00:00 2001
+From 75f966f937d9bd0edd44e20e5770788ca419646d Mon Sep 17 00:00:00 2001
 From: Tim Schumacher <timschumi@gmx.de>
 Date: Mon, 14 May 2018 05:54:36 +0200
 Subject: [PATCH] Bump Security Patch Level to 2018-05-01
@@ -6,8 +6,6 @@ Subject: [PATCH] Bump Security Patch Level to 2018-05-01
 Implemented Patches
 ===================
 CVE-2017-13313  A-74114680      High        Change 214967
-CVE-2017-13315  A-70721937      High
-CVE-2017-13316  A-73311729      Moderate    Change 214968
 CVE-2017-13319  A-71868329      High        Change 214969
 CVE-2017-13323  A-73826242      Moderate    Change 214970
 CVE-2017-13322  A-67862398      Moderate    Change 214972
@@ -16,6 +14,8 @@ Skipped Patches
 ===============
 CVE-2017-13310  A-71992105      High        No ViewPager
 CVE-2017-13320  A-72764648      High        No libmpeg2
+CVE-2017-13315  A-70721937      High        No DcParamObject.java
+CVE-2017-13316  A-73311729      Moderate    Not applicable
 
 Reference Version: 6.0
 

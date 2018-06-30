@@ -1,4 +1,4 @@
-From 7501551fd32e63567e791887f2d289cceb77d460 Mon Sep 17 00:00:00 2001
+From 065b559d5f47b99953a923e28af6059b9f074fb6 Mon Sep 17 00:00:00 2001
 From: Tim Schumacher <timschumi@gmx.de>
 Date: Mon, 14 May 2018 05:53:50 +0200
 Subject: [PATCH] Bump Security Patch Level to 2018-04-01
@@ -6,14 +6,9 @@ Subject: [PATCH] Bump Security Patch Level to 2018-04-01
 Implemented patches
 ===================
 CVE-2017-13274  A-71360761      High            Change 211306
-CVE-2017-13276  A-70637599      Critical
-CVE-2017-13278  A-70546581      High
 CVE-2017-13279  A-68399439      High            Change 211334
 CVE-2017-13267  A-69479009      Critical        Change 211337
-CVE-2017-13287  A-71714464      High
 CVE-2017-13290  A-69384124      High            Change 211340
-CVE-2017-13294  A-71814449 [1]  Moderate
-CVE-2017-13294  A-71814449 [2]  Moderate
 CVE-2017-13295  A-62537081      Moderate        Change 211342
 CVE-2017-13298  A-72117051      High            Change 211346
 
@@ -28,6 +23,11 @@ CVE-2017-13296  A-70897454      High            No libavc
 CVE-2017-13297  A-71766721      High            No libhevc
 CVE-2017-13299  A-70897394      High            No libavc
 CVE-2017-13300  A-71567394*     High            Not publicly available
+CVE-2017-13278  A-70546581      High            Not applicable without major changes
+CVE-2017-13294  A-71814449 [1]  Moderate        Not applicable (Pixel bulletin)
+CVE-2017-13294  A-71814449 [2]  Moderate        Not applicable (Pixel bulletin)
+CVE-2017-13287  A-71714464      High            No VerifyCredentialResponse
+CVE-2017-13276  A-70637599      Critical        Not applicable without major changes
 
 Reference Version: 6.0
 
