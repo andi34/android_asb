@@ -1,0 +1,47 @@
+From b07c153b212733de381ba44dfde05787bb4db123 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Fri, 30 Mar 2018 16:27:37 -0700
+Subject: [PATCH 1/2] DO NOT MERGE Fix unexpected behavior in smp_sm_event
+
+Bug: 74121126
+Test: manual
+Change-Id: Ie5dd841d6461ad057c4ab572007f38c5446aba53
+(cherry picked from commit 652798b2f2d6c90e0fc95c00ccfb91e2870b03d4)
+---
+ stack/smp/smp_main.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/stack/smp/smp_main.c b/stack/smp/smp_main.c
+index f8e450c..1fa64ce 100644
+--- a/stack/smp/smp_main.c
++++ b/stack/smp/smp_main.c
+@@ -20,10 +20,12 @@
+ 
+ #if SMP_INCLUDED == TRUE
+ 
++    #include <cutils/log.h>
+     #include <string.h>
+     #include "smp_int.h"
+ 
+ 
++
+ const char * const smp_state_name [] =
+ {
+     "SMP_ST_IDLE",
+@@ -431,6 +433,13 @@ void smp_sm_event(tSMP_CB *p_cb, tSMP_EVENT event, void *p_data)
+     UINT8           curr_state = p_cb->state;
+     tSMP_SM_TBL     state_table;
+     UINT8           action, entry, i;
++
++    if (p_cb->role >= 2) {
++        SMP_TRACE_DEBUG1("Invalid role: %d", p_cb->role);
++        android_errorWriteLog(0x534e4554, "74121126");
++        return;
++    }
++
+     tSMP_ENTRY_TBL  entry_table =  smp_entry_table[p_cb->role];
+ 
+     SMP_TRACE_EVENT0("main smp_sm_event");
+-- 
+2.7.4
+

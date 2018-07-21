@@ -1,0 +1,34 @@
+From eac4d789b0d52cae32f25235f5893a5c6892994f Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Thu, 26 Apr 2018 14:22:39 -0700
+Subject: [PATCH] DO NOT MERGE Truncate newline and tab characters in
+ BluetoothDevice name
+
+Test: manual
+Bug: 73173182
+Change-Id: I7f2201cab36adf7f01d1a794d783cb78a536811f
+(cherry picked from commit 24da173b63b17a0bc6c80b2fcfefa7fe4574a15b)
+---
+ core/java/android/bluetooth/BluetoothDevice.java | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/android/bluetooth/BluetoothDevice.java b/core/java/android/bluetooth/BluetoothDevice.java
+index cd74faa..d174a1f 100644
+--- a/core/java/android/bluetooth/BluetoothDevice.java
++++ b/core/java/android/bluetooth/BluetoothDevice.java
+@@ -637,7 +637,11 @@ public final class BluetoothDevice implements Parcelable {
+             return null;
+         }
+         try {
+-            return sService.getRemoteName(this);
++            String name = sService.getRemoteName(this);
++            if (name != null) {
++                return name.replaceAll("[\\t\\n\\r]+", " ");
++            }
++            return null;
+         } catch (RemoteException e) {Log.e(TAG, "", e);}
+         return null;
+     }
+-- 
+2.7.4
+

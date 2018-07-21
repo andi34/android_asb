@@ -1,0 +1,38 @@
+From 6de83cf69d3bfd468ab8680143ed656d13d11947 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Thu, 10 May 2018 00:16:13 -0700
+Subject: [PATCH] Make sure server response doesn't exceed maximum allowable
+ length
+
+Bug: 78787521
+Test: try sending response bigger than BTGATT_MAX_ATTR_LEN
+Change-Id: I51b12483cced7e4c0d967acf5bb42559ef169fe7
+Merged-In: I51b12483cced7e4c0d967acf5bb42559ef169fe7
+(cherry picked from commit 0f34ae9398ed017465c0cac7387be9e6951c07be)
+(cherry picked from commit c2813a2b6e6dda20e9a25947a4cf5adf6a4f4132)
+---
+ jni/com_android_bluetooth_gatt.cpp | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/jni/com_android_bluetooth_gatt.cpp b/jni/com_android_bluetooth_gatt.cpp
+index 1ffac4e..a4e5322 100644
+--- a/jni/com_android_bluetooth_gatt.cpp
++++ b/jni/com_android_bluetooth_gatt.cpp
+@@ -1241,7 +1241,13 @@ static void gattServerSendResponseNative (JNIEnv *env, jobject object,
+ 
+     if (val != NULL)
+     {
+-        response.attr_value.len = (uint16_t) env->GetArrayLength(val);
++        if (env->GetArrayLength(val) < BTGATT_MAX_ATTR_LEN) {
++            response.attr_value.len = (uint16_t)env->GetArrayLength(val);
++        } else {
++            android_errorWriteLog(0x534e4554, "78787521");
++            response.attr_value.len = BTGATT_MAX_ATTR_LEN;
++        }
++
+         jbyte* array = env->GetByteArrayElements(val, 0);
+ 
+         for (int i = 0; i != response.attr_value.len; ++i)
+-- 
+2.7.4
+
