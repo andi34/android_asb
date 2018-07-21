@@ -1,0 +1,39 @@
+From 87aa883573b3f014325dd0ccccc822c483afb236 Mon Sep 17 00:00:00 2001
+From: Martijn Coenen <maco@google.com>
+Date: Wed, 4 Apr 2018 11:46:56 +0200
+Subject: [PATCH 1/3] Don't pad before calling writeInPlace().
+
+writeInplace() itself already pads securely, by masking off
+the padded bytes. If the padding is done before calling
+writeInplace(), no mask is applied, and heap data can leak.
+
+Bug: 77237570
+Test: builds
+Change-Id: Ide27a0002d4ed4196530430760245b971f6a3f44
+Merged-In: Ide27a0002d4ed4196530430760245b971f6a3f44
+
+(cherry picked from commit f8542381b72a7bb2452a5278a00ca8c34edbf8a0)
+(cherry picked from commit 732132b765cd7b667f16cf32f0fe4c852d7d44dd)
+
+Change-Id: Id65e4573e18ab68b804f1cf63a6977a71da01e5d
+CVE-2018-9421
+---
+ libs/binder/Parcel.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index 19ce3eb..63e1660 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -1284,7 +1284,7 @@ status_t Parcel::write(const FlattenableHelperInterface& val)
+     if (err) return err;
+ 
+     // payload
+-    void* const buf = this->writeInplace(pad_size(len));
++    void* const buf = this->writeInplace(len);
+     if (buf == NULL)
+         return BAD_VALUE;
+ 
+-- 
+2.7.4
+

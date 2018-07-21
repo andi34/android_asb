@@ -1,0 +1,64 @@
+From a7549dcd8adb83db1e5a4996f1388b65d3f49984 Mon Sep 17 00:00:00 2001
+From: Naveen Kumar P <naveenkumar.p@ittiam.com>
+Date: Fri, 13 Apr 2018 13:55:43 +0530
+Subject: [PATCH] Return error for invalid st/lt sps parameters
+
+When num_short_term_ref_pic_sets or num_long_term_ref_pics_sps in
+sps is out of range, error is returned.
+
+Bug: 77599438
+Test: poc before/after
+Change-Id: I652d27849438c3ea2d42fc6e9abb8aeb25ebdc22
+(cherry picked from commit b93923e2883a2d1a4eb46290c3b15a84da808d66)
+CVE-2018-9423
+---
+ common/ihevc_defs.h            |  2 +-
+ decoder/ihevcd_parse_headers.c | 10 ++++++++--
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/common/ihevc_defs.h b/common/ihevc_defs.h
+index a2b7eda..c4e34ba 100644
+--- a/common/ihevc_defs.h
++++ b/common/ihevc_defs.h
+@@ -274,7 +274,7 @@ typedef enum {
+ #define SPS_MAX_SUB_LAYERS  7
+ 
+ /* Maximum long term reference pics */
+-#define MAX_LTREF_PICS_SPS 16
++#define MAX_LTREF_PICS_SPS 32
+ 
+ #define MAX_STREF_PICS_SPS 64
+ 
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index fa284a9..fe5851d 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1481,10 +1481,12 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+ 
+     }
+     UEV_PARSE("num_short_term_ref_pic_sets", value, ps_bitstrm);
++    if(value < 0 || value > MAX_STREF_PICS_SPS)
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+     ps_sps->i1_num_short_term_ref_pic_sets = value;
+ 
+-    ps_sps->i1_num_short_term_ref_pic_sets = CLIP3(ps_sps->i1_num_short_term_ref_pic_sets, 0, MAX_STREF_PICS_SPS);
+-
+     for(i = 0; i < ps_sps->i1_num_short_term_ref_pic_sets; i++)
+         ihevcd_short_term_ref_pic_set(ps_bitstrm, &ps_sps->as_stref_picset[0], ps_sps->i1_num_short_term_ref_pic_sets, i, &ps_sps->as_stref_picset[i]);
+ 
+@@ -1494,6 +1496,10 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+     if(ps_sps->i1_long_term_ref_pics_present_flag)
+     {
+         UEV_PARSE("num_long_term_ref_pics_sps", value, ps_bitstrm);
++        if(value < 0 || value > MAX_LTREF_PICS_SPS)
++        {
++            return IHEVCD_INVALID_PARAMETER;
++        }
+         ps_sps->i1_num_long_term_ref_pics_sps = value;
+ 
+         for(i = 0; i < ps_sps->i1_num_long_term_ref_pics_sps; i++)
+-- 
+2.7.4
+

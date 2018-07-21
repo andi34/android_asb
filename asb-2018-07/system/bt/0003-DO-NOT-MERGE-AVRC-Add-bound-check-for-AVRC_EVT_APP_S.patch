@@ -1,0 +1,33 @@
+From c30874027d0847fb02e86370a8efa6fd9fb33cee Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Fri, 11 May 2018 11:36:29 -0700
+Subject: [PATCH 3/5] DO NOT MERGE AVRC: Add bound check for
+ AVRC_EVT_APP_SETTING_CHANGE
+
+Test: manual
+Bug: 73782082
+Change-Id: I4e384a2f8c0d8c4af03bd5865b2e907321419c86
+(cherry picked from commit 0061dd6ae30ebcebce695c212c8bc0ceb276710e)
+CVE-2018-9413
+---
+ stack/avrc/avrc_pars_ct.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/stack/avrc/avrc_pars_ct.c b/stack/avrc/avrc_pars_ct.c
+index 20790d1..1818c52 100644
+--- a/stack/avrc/avrc_pars_ct.c
++++ b/stack/avrc/avrc_pars_ct.c
+@@ -122,6 +122,10 @@ void avrc_parse_notification_rsp (UINT8 *p_stream, tAVRC_REG_NOTIF_RSP *p_rsp)
+ 
+         case AVRC_EVT_APP_SETTING_CHANGE:
+             BE_STREAM_TO_UINT8(p_rsp->param.player_setting.num_attr, p_stream);
++            if (p_rsp->param.player_setting.num_attr > AVRC_MAX_APP_SETTINGS) {
++              android_errorWriteLog(0x534e4554, "73782082");
++              p_rsp->param.player_setting.num_attr = AVRC_MAX_APP_SETTINGS;
++            }
+             for (int index = 0; index < p_rsp->param.player_setting.num_attr; index++)
+             {
+                 BE_STREAM_TO_UINT8(p_rsp->param.player_setting.attr_id[index], p_stream);
+-- 
+2.7.4
+

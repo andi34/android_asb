@@ -1,0 +1,58 @@
+From e48e66f2db40313bb88068de20825604009e940b Mon Sep 17 00:00:00 2001
+From: Adam Vartanian <flooey@google.com>
+Date: Thu, 10 May 2018 19:23:41 +0100
+Subject: [PATCH] Fix probable prime confidence calculations.
+
+This fix from upstream fixes a problem where the number of iterations
+used to confirm that a number is prime was based off the length of the
+key rather than the length of the factors p and q.  Fewer iterations
+are called for for a longer number, so this resulted in a
+lower-than-expected confidence in the primality of the key factors.
+
+This only affects apps that use RSAKeyPairGenerator directly (which is
+not a public API), rather than those that use
+java.security.KeyPairGenerator.
+
+Upstream commits:
+
+https://github.com/bcgit/bc-java/commit/73780ac522b7795fc165630aba8d5f5729acc839
+https://github.com/bcgit/bc-java/commit/22467b6e8fe19717ecdf201c0cf91bacf04a55ad
+
+Bug: 79148652
+Test: make
+Change-Id: I759a226afc9dbd948611eed99ad89ab7f59b09f8
+(cherry picked from commit 91719e3c1be2eb206a50a49a5d172884d65eba1c)
+CVE-2018-9426
+---
+ .../java/org/bouncycastle/crypto/generators/RSAKeyPairGenerator.java  | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bcprov/src/main/java/org/bouncycastle/crypto/generators/RSAKeyPairGenerator.java b/bcprov/src/main/java/org/bouncycastle/crypto/generators/RSAKeyPairGenerator.java
+index f23f654..beb1aee 100644
+--- a/bcprov/src/main/java/org/bouncycastle/crypto/generators/RSAKeyPairGenerator.java
++++ b/bcprov/src/main/java/org/bouncycastle/crypto/generators/RSAKeyPairGenerator.java
+@@ -20,12 +20,10 @@ public class RSAKeyPairGenerator
+     private static final BigInteger ONE = BigInteger.valueOf(1);
+ 
+     private RSAKeyGenerationParameters param;
+-    private int iterations;
+ 
+     public void init(KeyGenerationParameters param)
+     {
+         this.param = (RSAKeyGenerationParameters)param;
+-        this.iterations = getNumberOfIterations(this.param.getStrength(), this.param.getCertainty());
+     }
+ 
+     public AsymmetricCipherKeyPair generateKeyPair()
+@@ -191,6 +189,8 @@ public class RSAKeyPairGenerator
+ 
+     protected boolean isProbablePrime(BigInteger x)
+     {
++        int iterations = getNumberOfIterations(x.bitLength(), param.getCertainty());
++
+         /*
+          * Primes class for FIPS 186-4 C.3 primality checking
+          */
+-- 
+2.7.4
+

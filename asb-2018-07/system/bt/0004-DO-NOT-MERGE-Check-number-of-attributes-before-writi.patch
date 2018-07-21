@@ -1,0 +1,43 @@
+From 8c1c684abaaae83dab6bc774d3db695bdd3edd8d Mon Sep 17 00:00:00 2001
+From: Ajay Panicker <apanicke@google.com>
+Date: Fri, 11 May 2018 12:03:07 -0700
+Subject: [PATCH 4/5] DO NOT MERGE: Check number of attributes before writing
+ to a buffer
+
+Bug: 73824150
+Test: Compile
+Change-Id: I2a28a503cd74758e707d1e591b55c278d2299f45
+(cherry picked from commit f6db54f071f6974e18b10bb0c2cfcf397cd4c980)
+CVE-2018-9418
+---
+ btif/src/btif_rc.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/btif/src/btif_rc.c b/btif/src/btif_rc.c
+index 6572fd7..133277a 100644
+--- a/btif/src/btif_rc.c
++++ b/btif/src/btif_rc.c
+@@ -42,6 +42,7 @@
+ #include "btif_util.h"
+ #include "bt_common.h"
+ #include "device/include/interop.h"
++#include "log/log.h"
+ #include "uinput.h"
+ #include "bdaddr.h"
+ #include "osi/include/list.h"
+@@ -2764,6 +2765,12 @@ static void handle_app_cur_val_response (tBTA_AV_META_MSG *pmeta_msg, tAVRC_GET_
+     bdcpy(rc_addr.address, btif_rc_cb.rc_addr);
+ 
+     app_settings.num_attr = p_rsp->num_val;
++
++    if (app_settings.num_attr > BTRC_MAX_APP_SETTINGS) {
++      android_errorWriteLog(0x534e4554, "73824150");
++      app_settings.num_attr = BTRC_MAX_APP_SETTINGS;
++    }
++
+     for (xx = 0; xx < app_settings.num_attr; xx++)
+     {
+         app_settings.attr_ids[xx] = p_rsp->p_vals[xx].attr_id;
+-- 
+2.7.4
+

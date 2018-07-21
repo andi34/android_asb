@@ -1,0 +1,43 @@
+From 832efeeed4d9b35fb7c60fc1917a6a5905c82891 Mon Sep 17 00:00:00 2001
+From: Emilian Peev <epeev@google.com>
+Date: Fri, 11 May 2018 09:53:13 +0100
+Subject: [PATCH] Merge commit 'f9e3022c474619c69a46ae7dbe11b5b531dbad57' into
+ am-0d58d39a-0539-474e-b9c8-36cc976d15e8
+
+* commit 'f9e3022c474619c69a46ae7dbe11b5b531dbad57':
+  Camera: Initialize metadata padding field
+
+Test: Camera CTS
+Bug: 77238656
+Change-Id: I6c8b3138a0e2176228180d7b1edc9f9352d0c07f
+(cherry picked from commit 6837fddebdc0ee6afe15517a620f754d88a3da42)
+CVE-2018-9420
+---
+ camera/src/camera_metadata.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/camera/src/camera_metadata.c b/camera/src/camera_metadata.c
+index f76c99e..70074c8 100644
+--- a/camera/src/camera_metadata.c
++++ b/camera/src/camera_metadata.c
+@@ -188,7 +188,7 @@ camera_metadata_t *allocate_copy_camera_metadata_checked(
+         return NULL;
+     }
+ 
+-    void *buffer = malloc(src_size);
++    void *buffer = calloc(1, src_size);
+     memcpy(buffer, src, src_size);
+ 
+     camera_metadata_t *metadata = (camera_metadata_t*) buffer;
+@@ -205,7 +205,7 @@ camera_metadata_t *allocate_camera_metadata(size_t entry_capacity,
+ 
+     size_t memory_needed = calculate_camera_metadata_size(entry_capacity,
+                                                           data_capacity);
+-    void *buffer = malloc(memory_needed);
++    void *buffer = calloc(1, memory_needed);
+     return place_camera_metadata(buffer, memory_needed,
+                                  entry_capacity,
+                                  data_capacity);
+-- 
+2.7.4
+

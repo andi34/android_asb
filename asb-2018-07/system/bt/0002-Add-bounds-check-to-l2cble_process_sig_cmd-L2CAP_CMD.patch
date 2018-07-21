@@ -1,0 +1,42 @@
+From 9594d1bba2a6906d3e26fc7c4449b9de7a7177b9 Mon Sep 17 00:00:00 2001
+From: Ajay Panicker <apanicke@google.com>
+Date: Thu, 12 Apr 2018 17:03:09 -0700
+Subject: [PATCH 2/5] Add bounds check to l2cble_process_sig_cmd
+ L2CAP_CMD_DISC_REQ
+
+Bug: 74121659
+Test: Compiles
+Change-Id: Idf58e7b25b41ae1bd43cdd51de424b18e03cc7e8
+(cherry picked from commit ca4f8a18bce9331360144f1dbc51db1e2525bcc3)
+CVE-2018-9419
+---
+ stack/l2cap/l2c_ble.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/stack/l2cap/l2c_ble.c b/stack/l2cap/l2c_ble.c
+index 95de4e3..b2f196c 100644
+--- a/stack/l2cap/l2c_ble.c
++++ b/stack/l2cap/l2c_ble.c
+@@ -31,6 +31,7 @@
+ #include "btm_int.h"
+ #include "hcimsgs.h"
+ #include "device/include/controller.h"
++#include "log/log.h"
+ #include "stack_config.h"
+ #include "btif_debug_l2c.h"
+ 
+@@ -808,6 +809,11 @@ void l2cble_process_sig_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+             break;
+ 
+         case L2CAP_CMD_DISC_REQ:
++            if (p + 4 > p_pkt_end)
++            {
++                android_errorWriteLog(0x534e4554, "74121659");
++                return;
++            }
+             STREAM_TO_UINT16 (lcid, p);
+             STREAM_TO_UINT16 (rcid, p);
+ 
+-- 
+2.7.4
+
