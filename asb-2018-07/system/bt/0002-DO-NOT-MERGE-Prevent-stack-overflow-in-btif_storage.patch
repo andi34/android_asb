@@ -1,0 +1,31 @@
+From a9b706ba360bc4fa6a59235b1315028f56209d9b Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Thu, 26 Apr 2018 15:50:53 -0700
+Subject: [PATCH 2/2] DO NOT MERGE Prevent stack overflow in btif_storage
+
+Bug: 73963551
+Test: manual
+Change-Id: I5f7a583aad150ebf9e3d492181d80ca935c8aa3f
+(cherry picked from commit e8d311224277e9db5dc94cb94929125992f546f3)
+---
+ btif/src/btif_storage.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/btif/src/btif_storage.c b/btif/src/btif_storage.c
+index 83a5c2e..0d16246 100644
+--- a/btif/src/btif_storage.c
++++ b/btif/src/btif_storage.c
+@@ -280,6 +280,10 @@ static int prop2cfg(bt_bdaddr_t *remote_bd_addr, bt_property_t *prop)
+                 bt_uuid_t *p_uuid = (bt_uuid_t*)prop->val + i;
+                 memset(buf, 0, sizeof(buf));
+                 uuid_to_string_legacy(p_uuid, buf);
++                if (strlen(value) + strlen(buf) + 1 > (int) sizeof(value) - 1) {
++                    android_errorWriteLog(0x534e4554, "73963551");
++                    return false;
++                }
+                 strcat(value, buf);
+                 //strcat(value, ";");
+                 strcat(value, " ");
+-- 
+2.7.4
+
