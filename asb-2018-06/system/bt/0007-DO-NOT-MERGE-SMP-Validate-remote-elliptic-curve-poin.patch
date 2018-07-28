@@ -1,0 +1,108 @@
+From fac680d6dce40ebc456e4fbf88915aa63265dd82 Mon Sep 17 00:00:00 2001
+From: Andre Eisenbach <eisenbach@google.com>
+Date: Thu, 1 Mar 2018 13:27:01 -0800
+Subject: [PATCH] DO NOT MERGE SMP: Validate remote elliptic curve points
+
+Fixes: 72377774
+Test: net_test_stack_smp (where applicable)
+Change-Id: Iefcf97364493467075fadefd77d12716f71cd4f6
+(cherry picked from commit 9181ec28da94705a763edbe60bd2a87e5f882beb)
+(cherry picked from commit e11ebfc21963ae905d58c034310efeca0e7cd2ee)
+(cherry picked from commit fa3d7e1f784d3bdbf8f9d8b572a60696289211b1)
+---
+ stack/smp/p_256_ecc_pp.c | 21 +++++++++++++++++++++
+ stack/smp/p_256_ecc_pp.h |  3 +++
+ stack/smp/smp_act.c      | 14 ++++++++++++++
+ 3 files changed, 38 insertions(+)
+
+diff --git a/stack/smp/p_256_ecc_pp.c b/stack/smp/p_256_ecc_pp.c
+index 2eaebd4..832ce11 100644
+--- a/stack/smp/p_256_ecc_pp.c
++++ b/stack/smp/p_256_ecc_pp.c
+@@ -259,4 +259,25 @@ void ECC_PointMult_Bin_NAF(Point *q, Point *p, DWORD *n, uint32_t keyLength)
+     multiprecision_mersenns_mult_mod(q->y, q->y, q->z, keyLength);
+ }
+ 
++bool ECC_ValidatePoint(Point *pt)
++{
++    const size_t kl = KEY_LENGTH_DWORDS_P256;
++    p_256_init_curve(kl);
++
++    // Ensure y^2 = x^3 + a*x + b (mod p); a = -3
++
++    // y^2 mod p
++    DWORD y2_mod[KEY_LENGTH_DWORDS_P256] = {0};
++    multiprecision_mersenns_squa_mod(y2_mod, (DWORD*)pt->y, kl);
+ 
++    // Right hand side calculation
++    DWORD rhs[KEY_LENGTH_DWORDS_P256] = {0};
++    multiprecision_mersenns_squa_mod(rhs, (DWORD*)pt->x, kl);
++    DWORD three[KEY_LENGTH_DWORDS_P256] = {0};
++    three[0] = 3;
++    multiprecision_sub_mod(rhs, rhs, three, kl);
++    multiprecision_mersenns_mult_mod(rhs, rhs, (DWORD*)pt->x, kl);
++    multiprecision_add_mod(rhs, rhs, curve_p256.b, kl);
++
++    return multiprecision_compare(rhs, y2_mod, kl) == 0;
++}
+diff --git a/stack/smp/p_256_ecc_pp.h b/stack/smp/p_256_ecc_pp.h
+index fd3dc64..49f2d11 100644
+--- a/stack/smp/p_256_ecc_pp.h
++++ b/stack/smp/p_256_ecc_pp.h
+@@ -24,6 +24,7 @@
+ 
+ #pragma once
+ 
++#include <stdbool.h>
+ #include "p_256_multprecision.h"
+ 
+ typedef unsigned long  DWORD;
+@@ -56,6 +57,8 @@ typedef struct {
+ extern elliptic_curve_t curve;
+ extern elliptic_curve_t curve_p256;
+ 
++bool ECC_ValidatePoint(Point *p);
++
+ void ECC_PointMult_Bin_NAF(Point *q, Point *p, DWORD *n, uint32_t keyLength);
+ 
+ #define ECC_PointMult(q, p, n, keyLength)  ECC_PointMult_Bin_NAF(q, p, n, keyLength)
+diff --git a/stack/smp/smp_act.c b/stack/smp/smp_act.c
+index e4152a4..9e0246c 100644
+--- a/stack/smp/smp_act.c
++++ b/stack/smp/smp_act.c
+@@ -16,11 +16,13 @@
+  *
+  ******************************************************************************/
+ 
++#include <cutils/log.h>
+ #include <string.h>
+ #include "device/include/interop.h"
+ #include "include/bt_target.h"
+ #include "stack/btm/btm_int.h"
+ #include "stack/include/l2c_api.h"
++#include "stack/smp/p_256_ecc_pp.h"
+ #include "stack/smp/smp_int.h"
+ #include "utils/include/bt_utils.h"
+ 
+@@ -750,6 +752,18 @@ void smp_process_pairing_public_key(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+ 
+     STREAM_TO_ARRAY(p_cb->peer_publ_key.x, p, BT_OCTET32_LEN);
+     STREAM_TO_ARRAY(p_cb->peer_publ_key.y, p, BT_OCTET32_LEN);
++
++    Point pt;
++    memcpy(pt.x, p_cb->peer_publ_key.x, BT_OCTET32_LEN);
++    memcpy(pt.y, p_cb->peer_publ_key.y, BT_OCTET32_LEN);
++
++    if (!ECC_ValidatePoint(&pt))
++    {
++        android_errorWriteLog(0x534e4554, "72377774");
++        smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
++        return;
++    }
++
+     p_cb->flags |= SMP_PAIR_FLAG_HAVE_PEER_PUBL_KEY;
+ 
+     smp_wait_for_both_public_keys(p_cb, NULL);
+-- 
+2.7.4
+
