@@ -1,0 +1,33 @@
+From 67ef9e279444107c1d29519d2acc03c07a5ec4e6 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Tue, 29 May 2018 16:17:32 -0700
+Subject: [PATCH 5/9] Decrease length after reading from array in
+ process_service_attr_req
+
+Test: compilation
+Bug: 78136677
+Change-Id: I4807a350e2b4764a93f104ce88f23a957a7e85c0
+(cherry picked from commit 6cd2e8bf6e5707e8e77e7aca6519c58200ee58db)
+---
+ stack/sdp/sdp_server.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/stack/sdp/sdp_server.c b/stack/sdp/sdp_server.c
+index 0fb6e9a..8818984 100644
+--- a/stack/sdp/sdp_server.c
++++ b/stack/sdp/sdp_server.c
+@@ -350,9 +350,11 @@ static void process_service_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
+ 
+     /* Extract the record handle */
+     BE_STREAM_TO_UINT32 (rec_handle, p_req);
++    param_len -= sizeof(rec_handle);
+ 
+     /* Get the max list length we can send. Cap it at MTU size minus overhead */
+     BE_STREAM_TO_UINT16 (max_list_len, p_req);
++    param_len -= sizeof(max_list_len);
+ 
+     if (max_list_len > (p_ccb->rem_mtu_size - SDP_MAX_ATTR_RSPHDR_LEN))
+         max_list_len = p_ccb->rem_mtu_size - SDP_MAX_ATTR_RSPHDR_LEN;
+-- 
+2.7.4
+

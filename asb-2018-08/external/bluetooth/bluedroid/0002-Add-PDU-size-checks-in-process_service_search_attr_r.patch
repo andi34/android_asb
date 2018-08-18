@@ -1,0 +1,48 @@
+From 1d051037e5894223a593a2a0c3faf5538c002f87 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Thu, 24 May 2018 08:59:34 -0700
+Subject: [PATCH 2/9] Add PDU size checks in process_service_search_attr_rsp
+
+Bug: 79884292
+Change-Id: Icc02a6188f806f766aa8676804d74995afa08d25
+Merged-In: Icc02a6188f806f766aa8676804d74995afa08d25
+(cherry picked from commit 980f6427b183e013958acd6b70e91f58177408a6)
+---
+ stack/sdp/sdp_discovery.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/stack/sdp/sdp_discovery.c b/stack/sdp/sdp_discovery.c
+index b6d5dbd..6c50a1d 100644
+--- a/stack/sdp/sdp_discovery.c
++++ b/stack/sdp/sdp_discovery.c
+@@ -623,6 +623,13 @@ static void process_service_search_attr_rsp (tCONN_CB *p_ccb, UINT8 *p_reply,
+     /* If p_reply is NULL, we were called for the initial read */
+     if (p_reply)
+     {
++      if (p_reply + 4 /* transaction ID and length */ + sizeof(lists_byte_count) >
++        p_reply_end) {
++        android_errorWriteLog(0x534e4554, "79884292");
++        sdp_disconnect(p_ccb, SDP_INVALID_PDU_SIZE);
++        return;
++      }
++
+ #if (SDP_DEBUG_RAW == TRUE)
+         SDP_TRACE_WARNING4("ID & len: 0x%02x-%02x-%02x-%02x",
+             p_reply[0], p_reply[1], p_reply[2], p_reply[3]);
+@@ -646,6 +653,13 @@ static void process_service_search_attr_rsp (tCONN_CB *p_ccb, UINT8 *p_reply,
+         SDP_TRACE_WARNING2("list_len: %d, list_byte_count: %d",
+             p_ccb->list_len, lists_byte_count);
+ #endif
++
++        if (p_reply + lists_byte_count + 1 /* continuation */ > p_reply_end) {
++          android_errorWriteLog(0x534e4554, "79884292");
++          sdp_disconnect(p_ccb, SDP_INVALID_PDU_SIZE);
++          return;
++        }
++
+         if (p_ccb->rsp_list == NULL)
+         {
+             p_ccb->rsp_list = (UINT8 *)GKI_getbuf (SDP_MAX_LIST_BYTE_COUNT);
+-- 
+2.7.4
+

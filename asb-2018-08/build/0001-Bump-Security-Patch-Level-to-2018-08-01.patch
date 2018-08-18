@@ -1,0 +1,53 @@
+From 71a7f7e42560400e90a154d850c5635476a58639 Mon Sep 17 00:00:00 2001
+From: WolfEnders <grzwolf1@gmail.com>
+Date: Wed, 15 Aug 2018 22:24:47 +0200
+Subject: [PATCH] Bump Security Patch Level to 2018-08-01
+
+Implemented Patches
+===================
+CVE-2018-9445	A-80436257[1]	High	 223679
+CVE-2018-9451	A-79488511[2]	High	 223705
+CVE-2018-9437	A-78656554	High	 223714
+CVE-2018-9446	A-80145946	Critical 223780
+CVE-2018-9450	A-79541338	Critical 223919
+CVE-2018-9459	A-66230183	High	 223771
+CVE-2018-9455	A-78136677	High	 223920
+CVE-2018-9436	A-79164722	High	 223922
+CVE-2018-9454	A-78286118	High	 223922
+CVE-2018-9453	A-78288378	High	 223937
+CVE-2018-9435	A-79591688	Moderate 223938
+CVE-2018-9449	A-79884292	Moderate 223940
+CVE-2018-9441	A-74075873[1]	Moderate 223941
+CVE-2018-9441	A-74075873[2]	Moderate 223942
+
+Skipped
+=======
+CVE-2018-9444	A-63521984*	High	 waiting for upstream
+CVE-2018-9445	A-80436257[2]	High	 no Utils.cpp in KK
+CVE-2018-9451	A-79488511[1]	High	 no ResTable_lib_header in KK
+CVE-2018-9461	A-37629504	Moderate not applicable
+CVE-2018-9457	A-72872376	Moderate not applicable
+CVE-2017-13322	A-67862398	Moderate not applicable
+CVE-2018-9447	A-79995313	Moderate not applicable
+
+Change-Id: I662cfeb4fff8459cf240b2dd6cfd5f7268533338
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 5096f14..d5d9e41 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-07-01
++  PLATFORM_SECURITY_PATCH := 2018-08-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

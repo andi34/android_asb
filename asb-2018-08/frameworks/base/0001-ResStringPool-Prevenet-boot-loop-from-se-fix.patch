@@ -1,0 +1,45 @@
+From 4f14c252e693b6bc0a90bc6abe9233771e956fa5 Mon Sep 17 00:00:00 2001
+From: Ryan Mitchell <rtmitchell@google.com>
+Date: Mon, 21 May 2018 13:59:23 -0700
+Subject: [PATCH] ResStringPool: Prevenet boot loop from se fix
+
+Changes the logs adding in a previous security fix to warnings so
+devices with malformed APKs currently on them will not undergo DOS when
+they are upgraded to P.
+
+Bug: 79724567
+Test: run cts -m CtsAppSecurityHostTestCases \
+          -t android.appsecurity.cts.CorruptApkTests
+
+Change-Id: Ied54e4bb14abdaf79da562022c7ea6075187c1f8
+(cherry picked from commit f05f47b2c1838529e682ad8f931d3da72244b1a1)
+(cherry picked from commit c31cf80008fdb06ea8e1eab9764096653e7854b1)
+---
+ libs/androidfw/ResourceTypes.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libs/androidfw/ResourceTypes.cpp b/libs/androidfw/ResourceTypes.cpp
+index 4033607..5abf578 100644
+--- a/libs/androidfw/ResourceTypes.cpp
++++ b/libs/androidfw/ResourceTypes.cpp
+@@ -332,7 +332,7 @@ status_t ResStringPool::setTo(const void* data, size_t size, bool copyData)
+ 
+     // The chunk must be at least the size of the string pool header.
+     if (size < sizeof(ResStringPool_header)) {
+-        LOG_ALWAYS_FATAL("Bad string block: data size %zu is too small to be a string block", size);
++        ALOGW("Bad string block: data size %zu is too small to be a string block", size);
+         return (mError=BAD_TYPE);
+     }
+ 
+@@ -342,7 +342,7 @@ status_t ResStringPool::setTo(const void* data, size_t size, bool copyData)
+     if (validate_chunk(reinterpret_cast<const ResChunk_header*>(data), sizeof(ResStringPool_header),
+                        reinterpret_cast<const uint8_t*>(data) + size,
+                        "ResStringPool_header") != NO_ERROR) {
+-        LOG_ALWAYS_FATAL("Bad string block: malformed block dimensions");
++        ALOGW("Bad string block: malformed block dimensions");
+         return (mError=BAD_TYPE);
+     }
+ 
+-- 
+2.7.4
+

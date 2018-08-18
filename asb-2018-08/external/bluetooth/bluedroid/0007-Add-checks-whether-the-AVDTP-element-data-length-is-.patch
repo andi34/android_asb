@@ -1,0 +1,54 @@
+From af5912b31e0e13445ec613fe8adc0d4cb9b3e4ac Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Wed, 30 May 2018 17:56:14 -0700
+Subject: [PATCH 7/9] Add checks whether the AVDTP element data length is valid
+
+Bug: 78288378
+Test: Manual: Python script and extra logging
+Change-Id: I715b5977c833d33ff798f008fbf244effa13ea1f
+Merged-In: I715b5977c833d33ff798f008fbf244effa13ea1f
+(cherry picked from commit 9b3f96f50287d8789aff6d6895d7ae02ca6ac619)
+(cherry picked from commit ee30c88a8d49b30860d35b34a57c3037a4045678)
+---
+ stack/avdt/avdt_msg.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/stack/avdt/avdt_msg.c b/stack/avdt/avdt_msg.c
+index 5d9c2fb..3beb3be 100644
+--- a/stack/avdt/avdt_msg.c
++++ b/stack/avdt/avdt_msg.c
+@@ -26,6 +26,7 @@
+  *
+  ******************************************************************************/
+ 
++#include <log/log.h>
+ #include <string.h>
+ #include "data_types.h"
+ #include "bt_target.h"
+@@ -668,6 +669,11 @@ static UINT8 avdt_msg_prs_cfg(tAVDT_CFG *p_cfg, UINT8 *p, UINT16 len, UINT8* p_e
+ 
+             case AVDT_CAT_PROTECT:
+                 p_cfg->psc_mask &= ~AVDT_PSC_PROTECT;
++                if (p + elem_len > p_end) {
++                  err = AVDT_ERR_LENGTH;
++                  android_errorWriteLog(0x534e4554, "78288378");
++                  break;
++                }
+                 if ((elem_len + protect_offset) < AVDT_PROTECT_SIZE)
+                 {
+                     p_cfg->num_protect++;
+@@ -738,6 +744,11 @@ static UINT8 avdt_msg_prs_cfg(tAVDT_CFG *p_cfg, UINT8 *p, UINT16 len, UINT8* p_e
+                 {
+                     tmp = AVDT_CODEC_SIZE - 1;
+                 }
++                if (p + tmp > p_end) {
++                  err = AVDT_ERR_LENGTH;
++                  android_errorWriteLog(0x534e4554, "78288378");
++                  break;
++                }
+                 p_cfg->num_codec++;
+                 p_cfg->codec_info[0] = elem_len;
+                 memcpy(&p_cfg->codec_info[1], p, tmp);
+-- 
+2.7.4
+
