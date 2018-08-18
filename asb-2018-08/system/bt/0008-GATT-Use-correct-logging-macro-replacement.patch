@@ -1,0 +1,31 @@
+From cfe383373e68d8da8aee8fc153a3fede7d5cd4c2 Mon Sep 17 00:00:00 2001
+From: syphyr <syphyr@gmail.com>
+Date: Fri, 17 Aug 2018 20:31:58 +0200
+Subject: [PATCH 8/8] GATT: Use correct logging macro replacement
+
+The original commit used the LOG(ERROR) macro and
+GATT_TRACE_ERROR is the proper replacement for it.
+
+Fixes: GATT: Handle too short Error Response PDU
+
+Change-Id: I4460ab6215865b605faed5e640bf4fe47a5e4be8
+---
+ stack/gatt/gatt_cl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/stack/gatt/gatt_cl.c b/stack/gatt/gatt_cl.c
+index cace008..6a50d5e 100644
+--- a/stack/gatt/gatt_cl.c
++++ b/stack/gatt/gatt_cl.c
+@@ -571,7 +571,7 @@ void gatt_process_error_rsp(tGATT_TCB *p_tcb, tGATT_CLCB *p_clcb, UINT8 op_code,
+     if (len < 4)
+     {
+         android_errorWriteLog(0x534e4554, "79591688");
+-        ALOGE("Error response too short");
++        GATT_TRACE_ERROR("Error response too short");
+         // Specification does not clearly define what should happen if error
+         // response is too short. General rule in BT Spec 5.0 Vol 3, Part F 3.4.1.1
+         // is: "If an error code is received in the Error Response that is not
+-- 
+2.7.4
+

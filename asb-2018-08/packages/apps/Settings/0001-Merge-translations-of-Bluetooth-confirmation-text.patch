@@ -1,0 +1,1113 @@
+From 9fe8a73687ac9c29bd0e8a072897af54f129f1e0 Mon Sep 17 00:00:00 2001
+From: Antony Sargent <asargent@google.com>
+Date: Mon, 12 Feb 2018 16:17:54 -0800
+Subject: [PATCH 1/2] Merge translations of Bluetooth confirmation text
+
+This is a manual merge of the translated strings from the master branch
+of the 'bluetooth_pairing_shares_phonebook' string. The fix for this bug
+requires these translations because the fix was to slightly reword the
+confirmation text in the pairing dialog and stop substituting in the
+device name.
+
+Bug: 62672248
+Test: manual
+Change-Id: I829baada46cdb2314021d8772feb8811072e41d8
+(cherry picked from commit 732b65ca4de0bf9cedeb3f2369a2ca596e78cfd3)
+---
+ res/values-af/strings.xml     | 2 +-
+ res/values-am/strings.xml     | 2 +-
+ res/values-ar/strings.xml     | 2 +-
+ res/values-az-rAZ/strings.xml | 2 +-
+ res/values-bg/strings.xml     | 2 +-
+ res/values-bn-rBD/strings.xml | 2 +-
+ res/values-ca/strings.xml     | 2 +-
+ res/values-cs/strings.xml     | 2 +-
+ res/values-da/strings.xml     | 2 +-
+ res/values-de/strings.xml     | 2 +-
+ res/values-el/strings.xml     | 2 +-
+ res/values-en-rAU/strings.xml | 2 +-
+ res/values-en-rGB/strings.xml | 2 +-
+ res/values-en-rIN/strings.xml | 2 +-
+ res/values-es-rUS/strings.xml | 2 +-
+ res/values-es/strings.xml     | 2 +-
+ res/values-et-rEE/strings.xml | 2 +-
+ res/values-eu-rES/strings.xml | 2 +-
+ res/values-fa/strings.xml     | 2 +-
+ res/values-fi/strings.xml     | 2 +-
+ res/values-fr-rCA/strings.xml | 2 +-
+ res/values-fr/strings.xml     | 2 +-
+ res/values-gl-rES/strings.xml | 2 +-
+ res/values-gu-rIN/strings.xml | 2 +-
+ res/values-hi/strings.xml     | 2 +-
+ res/values-hr/strings.xml     | 2 +-
+ res/values-hu/strings.xml     | 2 +-
+ res/values-hy-rAM/strings.xml | 2 +-
+ res/values-in/strings.xml     | 2 +-
+ res/values-is-rIS/strings.xml | 2 +-
+ res/values-it/strings.xml     | 2 +-
+ res/values-iw/strings.xml     | 2 +-
+ res/values-ja/strings.xml     | 2 +-
+ res/values-ka-rGE/strings.xml | 2 +-
+ res/values-kk-rKZ/strings.xml | 2 +-
+ res/values-km-rKH/strings.xml | 2 +-
+ res/values-kn-rIN/strings.xml | 2 +-
+ res/values-ko/strings.xml     | 2 +-
+ res/values-ky-rKG/strings.xml | 2 +-
+ res/values-lo-rLA/strings.xml | 2 +-
+ res/values-lt/strings.xml     | 2 +-
+ res/values-lv/strings.xml     | 2 +-
+ res/values-mk-rMK/strings.xml | 2 +-
+ res/values-ml-rIN/strings.xml | 2 +-
+ res/values-mn-rMN/strings.xml | 2 +-
+ res/values-mr-rIN/strings.xml | 2 +-
+ res/values-ms-rMY/strings.xml | 2 +-
+ res/values-my-rMM/strings.xml | 2 +-
+ res/values-nb/strings.xml     | 2 +-
+ res/values-ne-rNP/strings.xml | 2 +-
+ res/values-nl/strings.xml     | 2 +-
+ res/values-pa-rIN/strings.xml | 2 +-
+ res/values-pl/strings.xml     | 2 +-
+ res/values-pt-rBR/strings.xml | 2 +-
+ res/values-pt-rPT/strings.xml | 2 +-
+ res/values-pt/strings.xml     | 2 +-
+ res/values-ro/strings.xml     | 2 +-
+ res/values-ru/strings.xml     | 2 +-
+ res/values-si-rLK/strings.xml | 2 +-
+ res/values-sk/strings.xml     | 2 +-
+ res/values-sl/strings.xml     | 2 +-
+ res/values-sq-rAL/strings.xml | 2 +-
+ res/values-sr/strings.xml     | 2 +-
+ res/values-sv/strings.xml     | 2 +-
+ res/values-sw/strings.xml     | 2 +-
+ res/values-ta-rIN/strings.xml | 2 +-
+ res/values-te-rIN/strings.xml | 2 +-
+ res/values-th/strings.xml     | 2 +-
+ res/values-tl/strings.xml     | 2 +-
+ res/values-tr/strings.xml     | 2 +-
+ res/values-uk/strings.xml     | 2 +-
+ res/values-ur-rPK/strings.xml | 2 +-
+ res/values-uz-rUZ/strings.xml | 2 +-
+ res/values-vi/strings.xml     | 2 +-
+ res/values-zh-rCN/strings.xml | 2 +-
+ res/values-zh-rHK/strings.xml | 2 +-
+ res/values-zh-rTW/strings.xml | 2 +-
+ res/values-zu/strings.xml     | 2 +-
+ 78 files changed, 78 insertions(+), 78 deletions(-)
+
+diff --git a/res/values-af/strings.xml b/res/values-af/strings.xml
+index b71efd9..7305def 100644
+--- a/res/values-af/strings.xml
++++ b/res/values-af/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Om saam te bind met:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;maak seker dit wys hierdie geheimsleutel:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Van:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Bind met hierdie toestel saam?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Om saam te bind met:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Voer daarop in:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, druk dan Return of Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Gee <xliff:g id="DEVICE_NAME">%1$s</xliff:g> toegang tot jou kontakte en oproepgeskiedenis"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Laat toegang tot jou kontakte en oproepgeskiedenis toe"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Kon nie aan <xliff:g id="DEVICE_NAME">%1$s</xliff:g> koppel nie."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Soek vir toestelle"</string>
+diff --git a/res/values-am/strings.xml b/res/values-am/strings.xml
+index 66d4f08..7d70dc6 100644
+--- a/res/values-am/strings.xml
++++ b/res/values-am/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"ከ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ጋር ለማገናኘት ይህን የይለፍ ቁልፍ ማሳየቱን አረጋግጥ፡&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"ከ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ከዚህ መሣሪያ ጋር ይጣመር?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"ከ:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> ጋር ለማጣመር ላዩ ላይ ተይብበት:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> ከዚያም ተመለስ ወይም አስገባ ተጫን::"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> የእርስዎን እውቂያዎች እና የጥሪ ታሪክ እንዲደርስበት ይፍቀዱለት"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"የእርስዎን የእውቂያዎች እና የጥሪ ታሪክ መዳረሻ ይፍቀዱ"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"ወደ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>ማገናኘት አልተቻለም።"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"መሣሪያዎችን ቃኝ"</string>
+diff --git a/res/values-ar/strings.xml b/res/values-ar/strings.xml
+index a6363ac..0353c3b 100644
+--- a/res/values-ar/strings.xml
++++ b/res/values-ar/strings.xml
+@@ -612,7 +612,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"‏للاقتران مع:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;تأكد من أنه يعرض مفتاح المرور هذا:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"‏من:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;الاقتران مع هذا الجهاز؟"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"‏للإقران مع:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>اكتب عليه:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, ثم اضغط على Return أو Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"السماح للجهاز <xliff:g id="DEVICE_NAME">%1$s</xliff:g> بالدخول إلى جهات الاتصال وسجل المكالمات"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"السماح بالوصول إلى جهات الاتصال وسجلّ المكالمات"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"تعذر الاتصال بـ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"البحث عن أجهزة"</string>
+diff --git a/res/values-az-rAZ/strings.xml b/res/values-az-rAZ/strings.xml
+index 5515ed2..8b5f24a 100644
+--- a/res/values-az-rAZ/strings.xml
++++ b/res/values-az-rAZ/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt; ilə birləşdirmək üçün, onun bu ana açarı göstərdiyinə əmin olun:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Kimdən:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Cihazınız bu cihazla cütləşsin?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Bunlarla cütlənmək üçün:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Bunu yazın:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, sonra Geri və ya Giriş basın."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Əlaqə və zəng tarixçəsinə giriş üçün <xliff:g id="DEVICE_NAME">%1$s</xliff:g> cihazına icazə verin"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Kontaktlar və zəng tarixçəsinə giriş icazəsi verin"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> cihazına qoşula bilmədi."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Cihaz axtarın"</string>
+diff --git a/res/values-bg/strings.xml b/res/values-bg/strings.xml
+index e9e530b..535a816 100644
+--- a/res/values-bg/strings.xml
++++ b/res/values-bg/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"За сдвояване със::&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Уверете се, че показва този код за достъп:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"От:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Да се сдвои ли с това устройство?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"За сдвояване със: <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> Въведете: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, след това натиснете „Return“ или „Enter“."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Разрешаване на „<xliff:g id="DEVICE_NAME">%1$s</xliff:g>“ да осъществява достъп до вашите контакти и история на обажданията"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Разрешаване на достъпа до контактите и историята на обажданията ви"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Не можа да се установи връзка със: <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Сканиране за устройства"</string>
+diff --git a/res/values-bn-rBD/strings.xml b/res/values-bn-rBD/strings.xml
+index 3f0a3a0..a9997fd 100644
+--- a/res/values-bn-rBD/strings.xml
++++ b/res/values-bn-rBD/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"এর সঙ্গে যুক্ত করতে:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;নিশ্চিত করুন যে এটি এই পাস কী দেখাচ্ছে:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"এর থেকে:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;এই ডিভাইসের সঙ্গে যুক্ত করবেন?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"এর সঙ্গে যুক্ত করতে:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>এটিতে টাইপ করুন:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, তারপর Return বা Enter টিপুন।"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>কে আপনার পরিচিতি এবং কলের ইতিহাস অ্যাক্সেস করার অনুমতি দিন"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"আপনার পরিচিতি এবং কল ইতিহাস অ্যাক্সেসের অনুমতি দিন"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> এ সংযোগ করতে পারেনি।"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"ডিভাইসগুলির জন্য স্ক্যান করুন"</string>
+diff --git a/res/values-ca/strings.xml b/res/values-ca/strings.xml
+index b1eee91..50ec304 100644
+--- a/res/values-ca/strings.xml
++++ b/res/values-ca/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Per vincular amb:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Assegura\'t que apareix aquesta contrasenya:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Vols vincular-lo amb aquest dispositiu?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Per vincular amb:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Escriu <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> en el dispositiu i, a continuació, prem la tecla de retorn."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permet que <xliff:g id="DEVICE_NAME">%1$s</xliff:g> accedeixi als contactes i a l\'historial de trucades"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permet l\'accés als contactes i a l\'historial de trucades"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"No s\'ha pogut connectar amb <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Cerca dispositius"</string>
+diff --git a/res/values-cs/strings.xml b/res/values-cs/strings.xml
+index 6a8df51..d313f7a 100644
+--- a/res/values-cs/strings.xml
++++ b/res/values-cs/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Párování se zařízením:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Zkontrolujte, zda zařízení zobrazuje tento přístupový klíč:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Ze zařízení:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Spárovat s tímto zařízením?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Párování se zařízením:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Zadejte:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> a poté stiskněte klávesu Return nebo Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Povolit zařízení <xliff:g id="DEVICE_NAME">%1$s</xliff:g> přístup k vašim kontaktům a historii volání"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Povolit přístup ke kontaktům a historii volání"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"K zařízení <xliff:g id="DEVICE_NAME">%1$s</xliff:g> se nelze připojit."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Vyhledat zařízení"</string>
+diff --git a/res/values-da/strings.xml b/res/values-da/strings.xml
+index 50bf5fa..000cb2d 100644
+--- a/res/values-da/strings.xml
++++ b/res/values-da/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Sådan parrer du med:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Sørg for, at den viser denne adgangsnøgle:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Fra:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Par med denne enhed?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Sådan parres med:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Skriv på den:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, og tryk derefter på Retur eller Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Giv <xliff:g id="DEVICE_NAME">%1$s</xliff:g> adgang til dine kontaktpersoner og din opkaldshistorik"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Giv adgang til dine kontaktpersoner og din opkaldshistorik"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Der kunne ikke oprettes forbindelse til <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Søg efter enheder"</string>
+diff --git a/res/values-de/strings.xml b/res/values-de/strings.xml
+index 94e0059..bc233fa 100644
+--- a/res/values-de/strings.xml
++++ b/res/values-de/strings.xml
+@@ -576,7 +576,7 @@
+ )  -->
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Von:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt; Mit diesem Gerät koppeln?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Gib zur Kopplung mit <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> ein und drücke anschließend die Eingabetaste."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Zulassen, dass <xliff:g id="DEVICE_NAME">%1$s</xliff:g> auf deine Kontakte und deine Anrufliste zugreifen kann"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Zugriff auf deine Kontakte und deine Anrufliste zulassen"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Keine Verbindung zu <xliff:g id="DEVICE_NAME">%1$s</xliff:g> möglich"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Scan nach Geräten"</string>
+diff --git a/res/values-el/strings.xml b/res/values-el/strings.xml
+index 0181d95..c3bedd9 100644
+--- a/res/values-el/strings.xml
++++ b/res/values-el/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Για σύζευξη με τη συσκευή:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Βεβαιωθείτε ότι εμφανίζεται το κλειδί πρόσβασης:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Από:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Να γίνει σύζευξη με αυτήν τη συσκευή;"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Για σύζευξη με:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Πληκτρολογήστε:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> και πιέστε το πλήκτρο επιστροφής (Return) ή το πλήκτρο Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Να επιτρέπεται στη συσκευή <xliff:g id="DEVICE_NAME">%1$s</xliff:g> να έχει πρόσβαση στις επαφές και το ιστορικό κλήσεών σας"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Να επιτρέπεται η πρόσβαση στις επαφές σας και στο ιστορικό κλήσεων"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Δεν ήταν δυνατή η σύνδεση με τη συσκευή <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Ανίχνευση για συσκευές"</string>
+diff --git a/res/values-en-rAU/strings.xml b/res/values-en-rAU/strings.xml
+index 361080a..e57faea 100644
+--- a/res/values-en-rAU/strings.xml
++++ b/res/values-en-rAU/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"To pair with:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Make sure that it is showing this passkey:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"From:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Pair with this device?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"To pair with:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Type on it:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, then press Return or Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Allow <xliff:g id="DEVICE_NAME">%1$s</xliff:g> to access your contacts and call history"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Allow access to your contacts and call history"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Couldn\'t connect to <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Scan for devices"</string>
+diff --git a/res/values-en-rGB/strings.xml b/res/values-en-rGB/strings.xml
+index 9a2d1d3..6a22132 100644
+--- a/res/values-en-rGB/strings.xml
++++ b/res/values-en-rGB/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"To pair with:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Make sure that it is showing this passkey:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"From:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Pair with this device?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"To pair with:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Type on it:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, then press Return or Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Allow <xliff:g id="DEVICE_NAME">%1$s</xliff:g> to access your contacts and call history"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Allow access to your contacts and call history"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Couldn\'t connect to <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Scan for devices"</string>
+diff --git a/res/values-en-rIN/strings.xml b/res/values-en-rIN/strings.xml
+index 9a2d1d3..6a22132 100644
+--- a/res/values-en-rIN/strings.xml
++++ b/res/values-en-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"To pair with:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Make sure that it is showing this passkey:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"From:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Pair with this device?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"To pair with:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Type on it:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, then press Return or Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Allow <xliff:g id="DEVICE_NAME">%1$s</xliff:g> to access your contacts and call history"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Allow access to your contacts and call history"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Couldn\'t connect to <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Scan for devices"</string>
+diff --git a/res/values-es-rUS/strings.xml b/res/values-es-rUS/strings.xml
+index 6903f4e..7a57330 100644
+--- a/res/values-es-rUS/strings.xml
++++ b/res/values-es-rUS/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Para sincronizar con&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;asegúrate de que se muestre esta clave de acceso:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;."</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"¿Desde: &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;sincronizas con este dispositivo?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Para sincronizar con:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Escribe allí:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> y luego presiona Volver o Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir que <xliff:g id="DEVICE_NAME">%1$s</xliff:g> acceda a los contactos y al historial de llamadas"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir el acceso a tus contactos y al historial de llamadas"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"No se pudo establecer conexión con <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Buscar dispositivos"</string>
+diff --git a/res/values-es/strings.xml b/res/values-es/strings.xml
+index 83986b5..0d867de 100644
+--- a/res/values-es/strings.xml
++++ b/res/values-es/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Para vincular con:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt; Comprueba que se muestre la clave:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;¿Vincular con este dispositivo?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Para vincular con:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Escribe<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> en el dispositivo y, a continuación, pulsa la tecla Intro o de retorno."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir que <xliff:g id="DEVICE_NAME">%1$s</xliff:g> acceda a tus contactos y al historial de llamadas"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir acceso a tus contactos y al historial de llamadas"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"No se ha podido establecer conexión con <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Buscar dispositivos"</string>
+diff --git a/res/values-et-rEE/strings.xml b/res/values-et-rEE/strings.xml
+index 653575b..177c15e 100644
+--- a/res/values-et-rEE/strings.xml
++++ b/res/values-et-rEE/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Sidumine seadmega&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Veenduge, et see kuvaks järgmist parooli:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Seadmelt: &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt; Kas siduda seadmega?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Siduda seadmega:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Sisestage:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, seejärel vajutage naasmis- või sisestusklahvi."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Lubage seadmel <xliff:g id="DEVICE_NAME">%1$s</xliff:g> juurde pääseda teie kontaktidele ja kõneajaloole"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Luba juurdepääs kontaktidele ja kõneajaloole"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Seadmega <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ei saanud ühendust."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Otsi seadmeid"</string>
+diff --git a/res/values-eu-rES/strings.xml b/res/values-eu-rES/strings.xml
+index 2c0f96b..f7e0ccc 100644
+--- a/res/values-eu-rES/strings.xml
++++ b/res/values-eu-rES/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Gailu honekin parekatzeko:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Ziurtatu pasakode hau erakusten duela:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Igorlea:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Gailuarekin parekatu?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Honekin parekatzeko:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Idatzi hau bertan:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, eta sakatu Itzuli edo Sartu."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Baimendu <xliff:g id="DEVICE_NAME">%1$s</xliff:g> gailuari zure kontaktuak eta deien historia atzitzea"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Baimendu kontaktuetarako eta deien historiarako sarbidea"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Ezin izan da <xliff:g id="DEVICE_NAME">%1$s</xliff:g> gailura konektatu."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Bilatu gailuak"</string>
+diff --git a/res/values-fa/strings.xml b/res/values-fa/strings.xml
+index 239f431..c15eaa8 100644
+--- a/res/values-fa/strings.xml
++++ b/res/values-fa/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"‏برای مرتبط‌سازی با:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;مطمئن شوید که دستگاه این کلیدواژه را نمایش می‌دهد:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"‏از::&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;با این دستگاه مرتبط‌سازی شود؟"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"‏برای مرتبط‌سازی با:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>روی آن تایپ کنید:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>، سپس Return یا Enter را فشار دهید."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"به <xliff:g id="DEVICE_NAME">%1$s</xliff:g> اجازه داده شود به مخاطبین و سابقه تماس شما دسترسی داشته باشد"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"اجازه دسترسی به مخاطبین و سابقه تماس"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"اتصال به <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ممکن نیست."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"اسکن برای دستگاه‌ها"</string>
+diff --git a/res/values-fi/strings.xml b/res/values-fi/strings.xml
+index e916a37..14136bd 100644
+--- a/res/values-fi/strings.xml
++++ b/res/values-fi/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Parin muodostus seuraavan laitteen kanssa:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Varmista, että laite esittää tämän koodin:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Laitteesta&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Muodostetaanko pari tämän laitteen kanssa?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Jos haluat muodostaa laiteparin laitteen <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> kanssa, kirjoita laitteelle <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> ja paina Rivinvaihto tai Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Salli laitteen <xliff:g id="DEVICE_NAME">%1$s</xliff:g> käyttää yhteystietojasi ja puheluhistoriaasi"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Anna yhteystietojesi ja puheluhistoriasi käyttöoikeus"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Yhteyden muodostaminen laitteeseen <xliff:g id="DEVICE_NAME">%1$s</xliff:g> epäonnistui."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Etsi laitteita"</string>
+diff --git a/res/values-fr-rCA/strings.xml b/res/values-fr-rCA/strings.xml
+index a950a28..639fcd2 100644
+--- a/res/values-fr-rCA/strings.xml
++++ b/res/values-fr-rCA/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Pour associer votre appareil à :&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Assurez-vous que le mot de passe &lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt; s\'affiche."</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De :&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Associer à cet appareil?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Pour l\'association à :<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Saisissez <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, puis appuyez sur « Retour » ou sur « Entrée »."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Autoriser « <xliff:g id="DEVICE_NAME">%1$s</xliff:g> » à accéder à vos contacts et à l\'historique des appels"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Autoriser l\'accès à vos contacts et à l\'historique des appels"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Impossible de se connecter à <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Recherche d\'appareils"</string>
+diff --git a/res/values-fr/strings.xml b/res/values-fr/strings.xml
+index 9f1d79b..434527e 100644
+--- a/res/values-fr/strings.xml
++++ b/res/values-fr/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Pour associer votre appareil à :&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Assurez-vous que le mot de passe &lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt; s\'affiche."</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De :&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Associer à cet appareil ?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Pour l\'association à :<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Saisissez <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, puis appuyez sur \"Retour\" ou sur \"Entrée\"."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Autoriser <xliff:g id="DEVICE_NAME">%1$s</xliff:g> à accéder à vos contacts et à l\'historique des appels"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Autoriser l\'accès à vos contacts et à l\'historique des appels"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Impossible de se connecter à <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Rechercher des appareils"</string>
+diff --git a/res/values-gl-rES/strings.xml b/res/values-gl-rES/strings.xml
+index 1d752f5..29ae883 100644
+--- a/res/values-gl-rES/strings.xml
++++ b/res/values-gl-rES/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Para sincronizar con:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Asegúrate de que está mostrando este contrasinal:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Sincronizar con este dispositivo?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Para sincronizar con:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Escribe nel:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> e, a continuación, preme Retroceso ou Intro."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir que <xliff:g id="DEVICE_NAME">%1$s</xliff:g> acceda aos teus contactos e ao historial de chamadas"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir o acceso aos teus contactos e ao historial de chamadas"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Non se puido conectar a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Buscar dispositivos"</string>
+diff --git a/res/values-gu-rIN/strings.xml b/res/values-gu-rIN/strings.xml
+index 83ca5a8..ab35c26 100644
+--- a/res/values-gu-rIN/strings.xml
++++ b/res/values-gu-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"આની સાથે જોડી કરવા માટે:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ખાતરી કરો કે તે આ પાસકી દર્શાવી રહ્યું છે:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"અહીંથી:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;આ ઉપકરણ સાથે જોડી કરીએ?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"આની સાથે જોડી કરવા:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>તેના પર લખો:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, પછી Return અથવા Enter દબાવો."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> ને તમારા સંપર્કો અને કૉલ ઇતિહાસને ઍક્સેસ કરવાની મંજૂરી આપો"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"તમારા સંપર્કો અને કૉલ ઇતિહાસના ઍક્સેસની મંજૂરી આપો"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> સાથે કનેક્ટ કરી શકાયું નથી."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"ઉપકરણો માટે સ્કૅન કરો"</string>
+diff --git a/res/values-hi/strings.xml b/res/values-hi/strings.xml
+index c0dbfd7..2901bb8 100644
+--- a/res/values-hi/strings.xml
++++ b/res/values-hi/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"इससे युग्मित करने के लिए:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;सुनिश्चित करें कि वह यह पासकी दिखा रहा है:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"इससे:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;इस डिवाइस के साथ युग्मित करें?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"इसके साथ युग्‍मित करने के लिए:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>इस पर लिखें:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, फिर Return या Enter दबाएं."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> को अपने संपर्कों तथा कॉल इतिहास ऐक्‍सेस करने की अनुमति दें"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"अपने संपर्क और कॉल इतिहास देखने की मंज़ूरी दें"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> से कनेक्‍ट नहीं किया जा सका."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"डिवाइस के लिए स्‍कैन"</string>
+diff --git a/res/values-hr/strings.xml b/res/values-hr/strings.xml
+index 87d8705..df896b8 100644
+--- a/res/values-hr/strings.xml
++++ b/res/values-hr/strings.xml
+@@ -585,7 +585,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Za uparivanje s:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Uvjerite se da prikazuje ovaj pristupni kôd:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Od:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Upariti se s ovim uređajem?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Za uparivanje s uređajem:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>upišite:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> na tom uređaju pa pritisnite tipke Return ili Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Dopusti uređaju <xliff:g id="DEVICE_NAME">%1$s</xliff:g> pristup kontaktima i povijesti poziva"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Dopustite pristup kontaktima i povijesti poziva"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nije moguće povezati se na <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Skeniranjem traži uređaje"</string>
+diff --git a/res/values-hu/strings.xml b/res/values-hu/strings.xml
+index 33b5559..b6d1ba9 100644
+--- a/res/values-hu/strings.xml
++++ b/res/values-hu/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Párosítás ezzel:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Győződjön meg arról, hogy a következő azonosítókulcs látható rajta:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Küldő:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Párosítja a készüléket?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"A(z) <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> eszközzel való párosításhoz írja be rajta a következőt: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g> <xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, majd nyomja meg a Return vagy az Enter billentyűt."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"A(z) <xliff:g id="DEVICE_NAME">%1$s</xliff:g> engedélyezése a névjegyek és híváselőzmények eléréséhez"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Hozzáférést biztosít névjegyeihez és híváslistájához"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nem sikerült csatlakozni a következőhöz: <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Eszközök keresése"</string>
+diff --git a/res/values-hy-rAM/strings.xml b/res/values-hy-rAM/strings.xml
+index 16f06cd..6682433 100644
+--- a/res/values-hy-rAM/strings.xml
++++ b/res/values-hy-rAM/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;-ի հետ զուգավորելու համար համոզվեք այն ցուցադրում է անցաբառը`:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Ումից`&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Զուգավորվե՞լ այս սարքի հետ:"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>-ի հետ զուգավորելու համար մուտքագրեք`<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, այնուհետև սեղմեք հետդարձ կամ հաստատում:"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Թույլ տալ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> սարքին օգտագործել ձեր կոնտակտներն ու զանգերի պատմությունը"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Թույլատրել կոնտակտների ու զանգերի պատմության հասանելիությունը"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Հնարավոր չեղավ միանալ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>-ին:"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Սկանավորել սարքերի համար"</string>
+diff --git a/res/values-in/strings.xml b/res/values-in/strings.xml
+index d87ecdb..1397cdb 100644
+--- a/res/values-in/strings.xml
++++ b/res/values-in/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Untuk menyandingkan dengan:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Pastikan bahwa perangkat tersebut menampilkan kode sandi:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Dari:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Sandingkan dengan perangkat ini?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Untuk menyandingkan dengan:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Ketikkan:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, kemudian tekan Kembali atau Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Izinkan <xliff:g id="DEVICE_NAME">%1$s</xliff:g> mengakses kontak dan riwayat panggilan"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Izinkan akses ke kontak dan histori panggilan Anda"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Tidak dapat tersambung ke <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Memindai perangkat"</string>
+diff --git a/res/values-is-rIS/strings.xml b/res/values-is-rIS/strings.xml
+index dc36d59..38adff9 100644
+--- a/res/values-is-rIS/strings.xml
++++ b/res/values-is-rIS/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Til að para við:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Gakktu úr skugga um að þessi aðgangslykill birtist:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Frá:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Para við þetta tæki?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Til að para við:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Sláðu inn:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> og ýttu síðan á vendihnappinn eða Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Veita <xliff:g id="DEVICE_NAME">%1$s</xliff:g> aðgang að tengiliðunum þínum og símtalaferli"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Veita aðgang að tengiliðum þínum og símtalaferli"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Ekki tókst að tengjast <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Leita að tækjum"</string>
+diff --git a/res/values-it/strings.xml b/res/values-it/strings.xml
+index e80dc14..5c8a8c0 100644
+--- a/res/values-it/strings.xml
++++ b/res/values-it/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Per l\'accoppiamento con:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Assicurati che sia visualizzata questa passkey:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Da:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Accoppiare con questo dispositivo?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Per eseguire l\'accoppiamento con <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>, digita sul dispositivo <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, quindi premi A capo o Invio."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Consenti al dispositivo <xliff:g id="DEVICE_NAME">%1$s</xliff:g> di accedere ai contatti e alla cronologia chiamate"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Consenti l\'accesso ai tuoi contatti e alla cronologia chiamate"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Impossibile collegarsi a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Cerca dispositivi"</string>
+diff --git a/res/values-iw/strings.xml b/res/values-iw/strings.xml
+index 78a7d3f..2afe975 100644
+--- a/res/values-iw/strings.xml
++++ b/res/values-iw/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"‏כדי להתאים עם:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ודא שהמכשיר מציג סיסמה זו:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"‏מאת:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;לבצע התאמה עם מכשיר זה?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"‏כדי להתאים עם:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>הקלד בו:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, ולאחר מכן הקש על Return או Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"התר ל-<xliff:g id="DEVICE_NAME">%1$s</xliff:g> לגשת אל אנשי הקשר ואל היסטוריית השיחות"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"מתן גישה אל אנשי הקשר ולהיסטוריית השיחות"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"לא הייתה אפשרות להתחבר אל <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"סרוק אחר מכשירים"</string>
+diff --git a/res/values-ja/strings.xml b/res/values-ja/strings.xml
+index 494206e..a2279c4 100644
+--- a/res/values-ja/strings.xml
++++ b/res/values-ja/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"次のデバイスをペアに設定する場合:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;次のパスキーが表示されていることを確認してください:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"発信元:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;このデバイスをペアに設定しますか？"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>をペアに設定するには、「<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>」と入力してから、ReturnキーまたはEnterキーを押します。"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"自分の連絡先や通話履歴へのアクセスを<xliff:g id="DEVICE_NAME">%1$s</xliff:g>に許可する"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"連絡先と通話履歴へのアクセスを許可する"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>に接続できませんでした。"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"デバイスのスキャン"</string>
+diff --git a/res/values-ka-rGE/strings.xml b/res/values-ka-rGE/strings.xml
+index 29cbc71..c755de3 100644
+--- a/res/values-ka-rGE/strings.xml
++++ b/res/values-ka-rGE/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;-თან დასაწყვილებლად დარწმუნდით, რომ ის გიჩვენებთ წვდომის გასაღებს:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;-ისგან. დაწყვილდეს ამ მოწყობილობასთან?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>-თან დასაწყვილებლად დაბეჭდეთ მასზე:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, შემდეგ დააწკაპუნეთ ღილაკზე Return ან Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"მიეცით <xliff:g id="DEVICE_NAME">%1$s</xliff:g>-ს თქვენს კონტაქტებსა და საუბრის ისტორიაზე წვდომის უფლება"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"კონტაქტებსა და საუბრის ისტორიაზე წვდომის დაშვება"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>-თან დაკავშირება ვერ მოხერხდა."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"სკანირება მოწყობილობების აღმოსაჩენად"</string>
+diff --git a/res/values-kk-rKZ/strings.xml b/res/values-kk-rKZ/strings.xml
+index 68c1659..ab7f1c2 100644
+--- a/res/values-kk-rKZ/strings.xml
++++ b/res/values-kk-rKZ/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Жұпталу үшін:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Оның келесі кілтсөзді көрсетуін қадағалаңыз:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Келесі құрылғыдан:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Осы құрылғымен жұпталсын ба?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Жұпталу үшін:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Теріңіз:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, одан кейін Оралу немесе Енгізу пәрменін басыңыз."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> құрылғысына контактілерге және қоңыраулар тарихына қатынасуға рұқсат ету"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Контактілер мен қоңыраулар тарихына кіруге рұқсат беру"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> құрылғысына жалғану мүмкін болмады."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Құрылғыларды скандау"</string>
+diff --git a/res/values-km-rKH/strings.xml b/res/values-km-rKH/strings.xml
+index 5515481..638c0ab 100644
+--- a/res/values-km-rKH/strings.xml
++++ b/res/values-km-rKH/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"ដើម្បី​ផ្គូផ្គង​ជា​មួយ៖&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ប្រាកដ​ថា វា​កំពុង​បង្ហាញ​​លេខ​កូដ​នេះ៖&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"ពី៖ &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ផ្គូផ្គង​ជា​មួយ​ឧបករណ៍​នេះ?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"ដើម្បី​ផ្គូផ្គង​ជា​មួយ៖ <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>វាយ​បញ្ចូល៖ <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> បន្ទាប់​មក​ចុច​ Return ឬ Enter ។"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"អនុញ្ញាតឲ្យ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ចូលប្រើទំនាក់ទំនង និងប្រវត្តិហៅចេញរបស់អ្នក"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ផ្ដល់​សិទ្ធិ​អនុញ្ញាត​ចូល​ប្រើ​ទំនាក់ទំនង​ និង​ប្រវត្តិ​ហៅ​ទូរសព្ទ​របស់អ្នក"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"មិន​អាច​តភ្ជាប់​ទៅ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ។"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"វិភាគ​រក​ឧបករណ៍"</string>
+diff --git a/res/values-kn-rIN/strings.xml b/res/values-kn-rIN/strings.xml
+index c4a649c..381da49 100644
+--- a/res/values-kn-rIN/strings.xml
++++ b/res/values-kn-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"ಇದರೊಂದಿಗೆ ಜೋಡಿಸಲು:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ಇದು ಈ ಪಾಸ್‌ಕೀ ಅನ್ನು ತೋರಿಸುತ್ತಿದೆಯೇ ಎಂಬುದನ್ನು ಖಾತ್ರಿಪಡಿಸಿಕೊಳ್ಳಿ:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"ಇದರಿಂದ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ಈ ಸಾಧನದೊಂದಿಗೆ ಜೋಡಿಸುವುದೇ?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"ಇದರೊಂದಿಗೆ ಜೋಡಿಸಲು:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>ಇದರಲ್ಲಿ ಟೈಪ್‌ ಮಾಡಿ:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, ನಂತರ ಹಿಂತಿರುಗು ಅಥವಾ ನಮೂದಿಸು ಒತ್ತಿರಿ."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ನಿಮ್ಮ ಸಂಪರ್ಕಗಳು ಹಾಗೂ ಕರೆ ಇತಿಹಾಸವನ್ನು ಪ್ರವೇಶಿಸಲು <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ಸಾಧನವನ್ನು ಅನುಮತಿಸಿ"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ನಿಮ್ಮ ಸಂಪರ್ಕಗಳು ಮತ್ತು ಕರೆ ಇತಿಹಾಸಕ್ಕೆ ಪ್ರವೇಶವನ್ನು ಅನುಮತಿಸಿ"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> ಗೆ ಸಂಪರ್ಕಪಡಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"ಸಾಧನಗಳಿಗಾಗಿ ಸ್ಕ್ಯಾನ್ ಮಾಡು"</string>
+diff --git a/res/values-ko/strings.xml b/res/values-ko/strings.xml
+index 472becc..43b8092 100644
+--- a/res/values-ko/strings.xml
++++ b/res/values-ko/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;와(과) 페어링하려면&lt;br&gt;&lt;br&gt;이 패스키(&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;)가 표시되는지 확인하세요.&lt;br&gt;&lt;br&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"출처:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;이 기기와 페어링하시겠습니까?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>와(과) 페어링하려면 <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>을(를) 입력한 다음 Return 또는 Enter 키를 누르세요."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>이(가) 주소록 및 통화 기록에 액세스하도록 허용합니다."</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"연락처 및 통화 기록 액세스 허용"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>에 연결할 수 없습니다."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"장치 검색"</string>
+diff --git a/res/values-ky-rKG/strings.xml b/res/values-ky-rKG/strings.xml
+index 0ac30d6..5ff7c67 100644
+--- a/res/values-ky-rKG/strings.xml
++++ b/res/values-ky-rKG/strings.xml
+@@ -575,7 +575,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Муну менен туташыш үчүн:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Ал бул кодду көрсөтүп жатканын текшериңиз:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Жөнөтүүчү:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Бул түзмөк менен туташсынбы?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Кийинки менен туташуу үчүн:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Андан муну терип:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, Return же Enter\'ди басыңыз."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> түзмөгүнө байланыштарыңыз жана чалуу таржымалына кирүү мүмкүнчүлүгүн бериңиз"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Байланыштар менен чалуулар таржымалын пайдалануу мүмкүнчүлүгү берилсин"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> менен байланыша албай жатат."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Түзмөктөрдү издөө"</string>
+diff --git a/res/values-lo-rLA/strings.xml b/res/values-lo-rLA/strings.xml
+index 6d8e360..9d14c57 100644
+--- a/res/values-lo-rLA/strings.xml
++++ b/res/values-lo-rLA/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"ເພື່ອຈັບຄູ່ກັບ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ໃຫ້ກວດສອບວ່າມັນສະແດງ passkey ນີ້ຢູ່:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"ຈາກ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ຈັບຄູ່ກັບອຸປະກອນນີ້ບໍ່?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"ເພື່ອຈັບຄູ່ກັບ:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>ໃຫ້ພິມ:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, ຈາກນັ້ນກົດ Return ຫຼື Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ອະ​ນຸ​ຍາດ​ໃຫ້ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ເຂົ້າ​ຫາ​ລາ​ຍ​ຊື່ ແລະ ປະ​ຫວັດ​ການ​ໂທ​ຂອງ​ທ່ານ"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ອະນຸຍາດໃຫ້ເຂົ້າເຖິງລາຍຊື່ຜູ້ຕິດຕໍ່ ແລະ ປະຫວັດການໂທຂອງທ່ານ"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"ບໍ່ສາມາດເຊື່ອມຕໍ່ຫາ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ໄດ້."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"ສະແກນຫາອຸປະກອນ"</string>
+diff --git a/res/values-lt/strings.xml b/res/values-lt/strings.xml
+index d25eef8..55b074a 100644
+--- a/res/values-lt/strings.xml
++++ b/res/values-lt/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Jei norite suporuoti su:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Įsitikinkite, kad jame rodomas šis prieigos raktas:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Iš:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Poruoti su šiuo įrenginiu?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Susieti su: <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> Įveskite: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, tada paspauskite „Grįžti“ arba „Enter“."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Leisti „<xliff:g id="DEVICE_NAME">%1$s</xliff:g>“ pasiekti kontaktus ir skambučių istoriją"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Leisti pasiekti jūsų kontaktus ir skambučių istoriją"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nepavyko prisijungti prie „<xliff:g id="DEVICE_NAME">%1$s</xliff:g>“."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Nuskaityti ieškant įrenginių"</string>
+diff --git a/res/values-lv/strings.xml b/res/values-lv/strings.xml
+index f85b89c..7513656 100644
+--- a/res/values-lv/strings.xml
++++ b/res/values-lv/strings.xml
+@@ -585,7 +585,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Lai savienotu pārī ar:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Pārliecinieties, ka tiek rādīta šī ieejas atslēga:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"No:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Vai savienot pārī ar šo ierīci?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Lai izveidotu savienojumu pārī ar ierīci <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>, ierakstiet tajā atslēgu <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> un pēc tam nospiediet ievadīšanas taustiņu."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Atļaut ierīcei <xliff:g id="DEVICE_NAME">%1$s</xliff:g> piekļūt jūsu kontaktpersonām un zvanu vēsturei"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Atļaut piekļuvi jūsu kontaktpersonām un zvanu vēsturei"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nevarēja izveidot savienojumu ar ierīci <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Skenēt ierīces"</string>
+diff --git a/res/values-mk-rMK/strings.xml b/res/values-mk-rMK/strings.xml
+index af82a46..fcccbc5 100644
+--- a/res/values-mk-rMK/strings.xml
++++ b/res/values-mk-rMK/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"За да се спари со:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Проверете дали се прикажува оваа лозинка:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Од:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Спари се со овој уред?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"За да се спари со:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Напишете на него:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, потоа притиснете „Врати“ или „Внеси“."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Дозволете <xliff:g id="DEVICE_NAME">%1$s</xliff:g> да пристапува до контактите и историјата на повици."</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Дозволете пристап до вашите контакти и историјата на повици"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Не можеше да се поврзе со <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Скенирај за уреди"</string>
+diff --git a/res/values-ml-rIN/strings.xml b/res/values-ml-rIN/strings.xml
+index ac1d01e..2f980c7 100644
+--- a/res/values-ml-rIN/strings.xml
++++ b/res/values-ml-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"ഇതുമായി ജോടിയാക്കുന്നതിന്:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;അത് ഈ പാസ്കീ തന്നെയാണ് ദൃശ്യമാക്കുന്നതെന്ന് ഉറപ്പാക്കുക:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"ഇതിൽ നിന്ന്:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ഈ ഉപകരണവുമായി ജോടിയാക്കണോ?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"ഇതുമായി ജോടിയാക്കുക:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>ഇതിൽ ടൈപ്പുചെയ്യുക:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, തുടർന്ന് മടങ്ങുക അല്ലെങ്കിൽ നൽകുക അമർത്തുക."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"നിങ്ങളുടെ കോൺടാക്റ്റുകളെയും കോൾ ചരിത്രവും ആക്സസ് ചെയ്യാൻ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> എന്നതിനെ അനുവദിക്കുക"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"കോൺടാക്‌റ്റുകളിലേക്കും കോൾ ചരിത്രത്തിലേക്കും ആക്‌സസ് അനുവദിക്കുക"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> എന്നതിലേക്ക് കണക്റ്റുചെയ്യാനായില്ല."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"ഉപകരണങ്ങൾക്കായി സ്‌കാൻ ചെയ്യുക"</string>
+diff --git a/res/values-mn-rMN/strings.xml b/res/values-mn-rMN/strings.xml
+index 27b489d..32e3c28 100644
+--- a/res/values-mn-rMN/strings.xml
++++ b/res/values-mn-rMN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Дараахтай хослуулах:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Дараах түлхүүрийг харуулж байгаа эсэхийг анхаарна уу:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Юунаас:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Энэ төхөөрөмжтэй хослуулах уу?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>-тай хослуулахын тулд дээр нь <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>-г оруулаанд Буцах буюу Оруулах товчийг дарна уу."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> таны харилцагчийн хаяг, дуудлагын түүхэнд хандахыг зөвшөөрөх"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Харилцагч болон дуудлагын түүхийн хандалтыг зөвшөөрөх"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>-д холбогдож чадсангүй."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Төхөөрөмжүүдийг скан хийх"</string>
+diff --git a/res/values-mr-rIN/strings.xml b/res/values-mr-rIN/strings.xml
+index 820c586..7852a8b 100644
+--- a/res/values-mr-rIN/strings.xml
++++ b/res/values-mr-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"यासह जोडण्यासाठी:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;हे ही पासकी दर्शवत असल्याचे सुनिश्चित करा:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"यावरून:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;हे डिव्हाइस जोडायचे?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"यासह जोडण्यासाठी:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>यावर टाइप करा:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, नंतर Return किंवा Enter दाबा."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> ला आपले संपर्क आणि कॉल इतिहासामध्‍ये प्रवेश करण्‍याची अनुमती द्या"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"तुमच्या संपर्क आणि कॉल इतिहासातील अ‍ॅक्सेसची अनुमती द्या"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> सह कनेक्ट करणे शक्य झाले नाही."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"डिव्हाइसेससाठी स्कॅन करा"</string>
+diff --git a/res/values-ms-rMY/strings.xml b/res/values-ms-rMY/strings.xml
+index c9a633c..279e4b3 100644
+--- a/res/values-ms-rMY/strings.xml
++++ b/res/values-ms-rMY/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Untuk menjadi pasangan:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Pastikan ia menunjukkan kunci laluan ini:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Dari:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Jadikan pasangan peranti ini?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Untuk berpasangan dengan:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Taip padanya:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, kemudian tekan Kembali atau Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Benarkan <xliff:g id="DEVICE_NAME">%1$s</xliff:g> mengakses kenalan dan sejarah panggilan anda"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Benarkan akses kepada kenalan dan sejarah panggilan anda"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Tidak dapat menyambung ke <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Imbas untuk mengesan peranti"</string>
+diff --git a/res/values-my-rMM/strings.xml b/res/values-my-rMM/strings.xml
+index 5ca7b61..00b92d0 100644
+--- a/res/values-my-rMM/strings.xml
++++ b/res/values-my-rMM/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">":&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;များနှင့်တွဲချိတ်စေရန် &lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;ဖြတ်သန်းခွင့်ကီးပြသစေရန် သေချာပါစေ"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">":&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;မှ ဤစက်နှင့်တွဲချိတ်မည်လား"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">":<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>နှင့်ချိတ်တွဲရန်:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>ကိုရိုက်ထည့်ကာ, Return သို့မဟုတ် Enterကိုနှိပ်ပါ"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> အားသင့်ရဲ့အဆက်အသွယ်များနှင့်ဖုန်းခေါ်ခြင်းသမိုင်းကိုရယူသုံးစွဲရန်ခွင့်ပြုပါ"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"သင်၏ အဆက်အသွယ်များနှင့် ယခင်ခေါ်ဆိုမှုများကို ရယူအသုံးချခွင့် ပြုပါ"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> ကို ချိတ်ဆက်မရပါ။"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"စက်များကိုရှာဖွေရန် စကင်ပြုလုပ်နေသည်"</string>
+diff --git a/res/values-nb/strings.xml b/res/values-nb/strings.xml
+index 2916e6a..b4509b1 100644
+--- a/res/values-nb/strings.xml
++++ b/res/values-nb/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Sånn kobler du til:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Kontroller at dette passordet vises:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Fra:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Vil du koble til denne enheten?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Sånn kobler du til: <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> Skriv inn følgende: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, og trykk deretter på Retur eller Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Gi <xliff:g id="DEVICE_NAME">%1$s</xliff:g> tilgang til kontaktene dine og anropsloggen din"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Gi tilgang til kontaktene dine og anropsloggen din"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Kunne ikke koble til <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Let etter enheter"</string>
+diff --git a/res/values-ne-rNP/strings.xml b/res/values-ne-rNP/strings.xml
+index e52bc93..15fe32f 100644
+--- a/res/values-ne-rNP/strings.xml
++++ b/res/values-ne-rNP/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> को साथ जोडी पार्न निश्चित गर्नुहोस् यसले यो पास कुञ्जी देखाइरहेको छ <xliff:g id="PASSKEY">%2$s</xliff:g>"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"बाट: &lt;br&gt; &lt;b&gt; <xliff:g id="DEVICE_NAME">%1$s</xliff:g> &lt;/ b&gt; यस उपकरणका साथ जोडा बाँध्ने हो?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>सँग जोडी गर्न यसमा टाइप गर्नुहोस्: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g> <xliff:g id="PASSKEY">%2$s</xliff:g> <xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> अनि रिटर्न वा इन्टर थिच्नुहोस्।"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>लाई तपाईंको सम्पर्क र कल इतिहास पहुँच गर्न अनुमति दिनुहोस्"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"तपाईंका सम्पर्क ठेगानाहरू र फोन सम्पर्कको इतिहासमाथि पहुँचको अनुमति दिनुहोस्"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> उपकरणसँग जडान गर्न सकेन।"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"उपकरणहरूको लागि स्क्यान गर्नुहोस्"</string>
+diff --git a/res/values-nl/strings.xml b/res/values-nl/strings.xml
+index 439d0b1..b5fd751 100644
+--- a/res/values-nl/strings.xml
++++ b/res/values-nl/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Koppelen met:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Zorg ervoor dat de volgende toegangscode wordt vermeld:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Van:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Koppelen met dit apparaat?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Koppelen met:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Typ het volgende:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> en druk op Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Toestaan dat <xliff:g id="DEVICE_NAME">%1$s</xliff:g> toegang heeft tot je contacten en oproepgeschiedenis"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Toegang geven tot je contacten en oproepgeschiedenis"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Kan geen verbinding maken met <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Zoeken naar apparaten"</string>
+diff --git a/res/values-pa-rIN/strings.xml b/res/values-pa-rIN/strings.xml
+index b8c1ce7..f92c3ed 100644
+--- a/res/values-pa-rIN/strings.xml
++++ b/res/values-pa-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"ਇਸ ਨਾਲ ਪੇਅਰ ਕਰਨ ਲਈ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ਯਕੀਨੀ ਬਣਾਓ ਕਿ ਇਹ ਇਸ ਪਾਸਕੁੰਜੀ ਨੂੰ ਦਿਖਾ ਰਿਹਾ ਹੈ:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"ਇਸਤੋਂ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ਕੀ ਇਸ ਡੀਵਾਈਸ ਨਾਲ ਪੇਅਰ ਕਰਨਾ ਹੈ?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"ਇਸ ਨਾਲ ਪੇਅਰ ਕਰਨ ਲਈ:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>ਇਸਤੇ ਟਾਈਪ ਕਰੋ:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, ਫਿਰ ਵਾਪਸ ਜਾਓ ਜਾਂ ਦਾਖਲ ਕਰੋ ਕੁੰਜੀ ਨੂੰ ਦਬਾਓ।"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ਆਪਣੇ ਸੰਪਰਕਾਂ ਅਤੇ ਕਾਲ ਇਤਿਹਾਸ ਨੂੰ ਐਕਸੈਸ ਕਰਨ ਦੀ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ਨੂੰ ਅਨੁਮਤੀ ਦਿਓ"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ਆਪਣੇ ਸੰਪਰਕਾਂ ਅਤੇ ਕਾਲ ਇਤਿਹਾਸ \'ਤੇ ਪਹੁੰਚ ਕਰਨ ਦਿਓ"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>ਨਾਲ ਕਨੈਕਟ ਨਹੀਂ ਕਰ ਸਕਿਆ।"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"ਡਿਵਾਈਸਾਂ ਲਈ ਸਕੈਨ ਕਰੋ"</string>
+diff --git a/res/values-pl/strings.xml b/res/values-pl/strings.xml
+index dec1ae8..889ab42 100644
+--- a/res/values-pl/strings.xml
++++ b/res/values-pl/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Aby sparować z urządzeniem:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Upewnij się, że jest na nim wyświetlony następujący klucz:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Od:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Sparować z tym urządzeniem?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Aby sparować z urządzeniem <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>, wpisz na nim klucz <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, a następnie naciśnij klawisz zatwierdzania."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Zezwól urządzeniu <xliff:g id="DEVICE_NAME">%1$s</xliff:g> na dostęp do Twoich kontaktów i historii połączeń"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Zezwól na dostęp do kontaktów i historii połączeń"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nie udało się nawiązać połączenia z <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Wyszukaj urządzenia"</string>
+diff --git a/res/values-pt-rBR/strings.xml b/res/values-pt-rBR/strings.xml
+index 15d972e..a4dc8b2 100644
+--- a/res/values-pt-rBR/strings.xml
++++ b/res/values-pt-rBR/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Para parear com:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Verifique se ele está mostrando a seguinte senha:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Parear com este dispositivo?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Para parear com:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Digite no dispositivo:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>. Em seguida, pressione Voltar ou Entrar."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir que <xliff:g id="DEVICE_NAME">%1$s</xliff:g> acesse seus contatos e histórico de chamadas"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir o acesso aos seus contatos e seu histórico de chamadas"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Não foi possível conectar ao <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Procurar dispositivos"</string>
+diff --git a/res/values-pt-rPT/strings.xml b/res/values-pt-rPT/strings.xml
+index 208557c..3ad5198 100644
+--- a/res/values-pt-rPT/strings.xml
++++ b/res/values-pt-rPT/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Para sincronizar com: &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Verifique se apresenta esta chave de acesso: &lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De: &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt; Sincronizar com este aparelho?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Para sincronizar com:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Introduza no mesmo:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> e, em seguida, prima Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir que o dispositivo <xliff:g id="DEVICE_NAME">%1$s</xliff:g> aceda aos contactos e ao histórico de chamadas"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir o acesso aos contactos e ao histórico de chamadas"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Não foi possível ligar a <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Procurar dispositivos"</string>
+diff --git a/res/values-pt/strings.xml b/res/values-pt/strings.xml
+index 15d972e..a4dc8b2 100644
+--- a/res/values-pt/strings.xml
++++ b/res/values-pt/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Para parear com:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Verifique se ele está mostrando a seguinte senha:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Parear com este dispositivo?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Para parear com:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Digite no dispositivo:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>. Em seguida, pressione Voltar ou Entrar."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir que <xliff:g id="DEVICE_NAME">%1$s</xliff:g> acesse seus contatos e histórico de chamadas"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permitir o acesso aos seus contatos e seu histórico de chamadas"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Não foi possível conectar ao <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Procurar dispositivos"</string>
+diff --git a/res/values-ro/strings.xml b/res/values-ro/strings.xml
+index f5bae24..7538004 100644
+--- a/res/values-ro/strings.xml
++++ b/res/values-ro/strings.xml
+@@ -585,7 +585,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Pentru asocierea cu:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;asigurați-vă că se afișează această cheie de acces:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"De la:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Asociați cu acest dispozitiv?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Pentru împerecherea cu:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Introduceți pe acesta:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, apoi apăsați tasta Return sau Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permiteți ca <xliff:g id="DEVICE_NAME">%1$s</xliff:g> să acceseze persoanele de contact și istoricul apelurilor"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Permiteți accesul la agendă și la istoricul apelurilor"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nu s-a putut conecta la <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Scanați pentru a detecta dispozitive"</string>
+diff --git a/res/values-ru/strings.xml b/res/values-ru/strings.xml
+index 893bf26..c234680 100644
+--- a/res/values-ru/strings.xml
++++ b/res/values-ru/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Для подключения к устройству&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;на нем должен отображаться этот код доступа:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Запрос от: &lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Подключиться к этому устройству?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Для подключения к устройству <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> введите на нем код <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, а затем нажмите клавишу Return или Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Открыть <xliff:g id="DEVICE_NAME">%1$s</xliff:g> доступ к списку контактов и журналу звонков"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Разрешить доступ к контактам и журналу звонков"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Не удалось подключиться к <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Поиск устройств"</string>
+diff --git a/res/values-si-rLK/strings.xml b/res/values-si-rLK/strings.xml
+index dbe2f27..e8994af 100644
+--- a/res/values-si-rLK/strings.xml
++++ b/res/values-si-rLK/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;සමග යුගල කිරීමට&lt;br&gt;එය මෙම මුර යතුර පෙන්වන්නේදැයි තහවුරු කර ගන්න:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"වෙතින්:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;මෙම උපාංගය සමඟ යුගල කරන්නද?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>: සමඟ යුගල කිරීමට එය මත <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>: ටයිප් කරන්න, ඉන්පසු Return හෝ Enter ඔබන්න."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> හට ඔබේ සම්බන්ධතා සහ ඇමතුම් ඉතිහාසය වෙත පිවිසීමට ඉඩ දෙන්න"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ඔබගේ සම්බන්ධතා සහ ඇමතුම් ඉතිහාසය වෙත ප්‍රවේශ විමට ඉඩ දෙන්න"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> වෙත සම්බන්ධ වීමට නොහැකි විය."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"උපාංග සඳහා පරිලෝකනය කරන්න"</string>
+diff --git a/res/values-sk/strings.xml b/res/values-sk/strings.xml
+index 1564a84..3174c12 100644
+--- a/res/values-sk/strings.xml
++++ b/res/values-sk/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Párovanie so zariadením:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Uistite sa, že zobrazuje tento prístupový kľúč:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Zo zariadenia:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Párovať s týmto zariadením?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Ak chcete svoje zariadenie spárovať so zariadením <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>, zadajte na ňom kód <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> a stlačte kláves Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Povoliť zariadeniu <xliff:g id="DEVICE_NAME">%1$s</xliff:g> prístup k vašim kontaktom a histórii hovorov"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Povoliť prístup ku kontaktom a histórii hovorov"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nepodarilo sa pripojiť k zariadeniu <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Vyhľadať zariadenia"</string>
+diff --git a/res/values-sl/strings.xml b/res/values-sl/strings.xml
+index 4e62d9b..afe3ce2 100644
+--- a/res/values-sl/strings.xml
++++ b/res/values-sl/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Če želite seznaniti z napravo:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Prikazano mora biti to geslo:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Od:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Ali se želite povezati s to napravo?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Če želite vzpostaviti povezavo z napravo:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>V njej vnesite:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> in pritisnite Return ali Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Dovolite napravi <xliff:g id="DEVICE_NAME">%1$s</xliff:g>, da dostopa do vaših stikov in zgodovine klicev"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Dovoli dostop do stikov in zgodovine klicev"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Povezave z napravo <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ni bilo mogoče vzpostaviti."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Išči naprave"</string>
+diff --git a/res/values-sq-rAL/strings.xml b/res/values-sq-rAL/strings.xml
+index d9869c9..ad6869d 100644
+--- a/res/values-sq-rAL/strings.xml
++++ b/res/values-sq-rAL/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Për ta çiftuar me:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;sigurohu që të tregojë këtë kod:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Nga:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Të çiftohet me këtë pajisje?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Për ta çiftuar me:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Shkruaj në të:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> dhe më pas shtyp Kthehu ose Hyr."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Lejo që <xliff:g id="DEVICE_NAME">%1$s</xliff:g> të ketë qasje te kontaktet dhe historiku i telefonatave"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Lejo qasjen te kontaktet dhe historiku i telefonatave"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Nuk mundi të lidhej me <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Skano për pajisje"</string>
+diff --git a/res/values-sr/strings.xml b/res/values-sr/strings.xml
+index a54ff96..fda00b5 100644
+--- a/res/values-sr/strings.xml
++++ b/res/values-sr/strings.xml
+@@ -585,7 +585,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Да бисте се упарили са уређајем:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Уверите се да приказује овај приступни кôд:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Са уређаја:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Желите ли да се упарите са тим уређајем?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"За упаривање са уређајем:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Унесите на њему:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, а затим притисните Return или Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Дозволите уређају <xliff:g id="DEVICE_NAME">%1$s</xliff:g> да приступа контактима и историји позива"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Дозволите приступ контактима и историји позива"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Није могуће повезати се са уређајем <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Скенирање за уређаје"</string>
+diff --git a/res/values-sv/strings.xml b/res/values-sv/strings.xml
+index d2a361b..96af86a 100644
+--- a/res/values-sv/strings.xml
++++ b/res/values-sv/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Om du vill koppla med:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt; måste lösenordet &lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt; visas i den"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Från:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Vill du koppla den till enheten?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Koppla till:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Skriv:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> och tryck sedan på Retur."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Tillåt att <xliff:g id="DEVICE_NAME">%1$s</xliff:g> får åtkomst till dina kontakter och din samtalshistorik"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Tillåt åtkomst till kontakter och sökhistorik"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Det gick inte att ansluta till <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Sök efter enheter"</string>
+diff --git a/res/values-sw/strings.xml b/res/values-sw/strings.xml
+index 1168d2a..83ec4c4 100644
+--- a/res/values-sw/strings.xml
++++ b/res/values-sw/strings.xml
+@@ -578,7 +578,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Ili kuoanisha na :&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;hakikisha inaonyesha nenosiri hili:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"From:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Llinganisha na kifaa hiki?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Kulinganisha na: <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g> <xliff:g id="DEVICE_NAME">%1$s</xliff:g> <xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> Andika: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g> <xliff:g id="PASSKEY">%2$s</xliff:g> <xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, kisha bonyeza Rejea au Ingiza."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Ruhusu <xliff:g id="DEVICE_NAME">%1$s</xliff:g> ifikie anwani zako na rekodi ya simu"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Ruhusu ufikiaji wa anwani na historia ya simu ulizopiga"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Haikuweza kuunganisha kwa <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Chunguza vifaa"</string>
+diff --git a/res/values-ta-rIN/strings.xml b/res/values-ta-rIN/strings.xml
+index ca9c98f..66ffa0a 100644
+--- a/res/values-ta-rIN/strings.xml
++++ b/res/values-ta-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"பின்வருவதுடன் இணைக்கவும்:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;இது, இந்தக் கடவுச்சொல்லைக் காட்டுகிறது என்பதை உறுதிப்படுத்தவும்:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"பின்வருவதில் இருந்து:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;இந்தச் சாதனத்தை இணைக்கவா?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"இதனுடன் இணைக்க:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>இதை உள்ளிடவும்:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, Return அல்லது Enter ஐ அழுத்தவும்."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"தொடர்புகளையும் அழைப்பு வரலாற்றையும் அணுக, <xliff:g id="DEVICE_NAME">%1$s</xliff:g>ஐ அனுமதி"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"உங்கள் தொடர்புகள் மற்றும் அழைப்பு வரலாற்றை அணுக அனுமதிக்கவும்"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> உடன் இணைக்க முடியவில்லை."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"சாதனங்களுக்கு ஸ்கேன் செய்"</string>
+diff --git a/res/values-te-rIN/strings.xml b/res/values-te-rIN/strings.xml
+index f6ca054..4f9abbf 100644
+--- a/res/values-te-rIN/strings.xml
++++ b/res/values-te-rIN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"దీనితో జత చేయడానికి:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ఇది ఈ పాస్‌కీని చూపుతోందని నిర్ధారించుకోండి:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"దీని నుండి:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ఈ పరికరంతో జత చేయాలా?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"దీనితో జత చేయడానికి:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>దీనిలో టైప్ చేయండి:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, ఆపై తిరిగి వెళ్లు లేదా Enter నొక్కండి."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"మీ పరిచయాలు మరియు కాల్ చరిత్రను ప్రాప్యత చేయడానికి <xliff:g id="DEVICE_NAME">%1$s</xliff:g>ని అనుమతించండి"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"మీ పరిచయాలకు మరియు కాల్ చరిత్రకు యాక్సెస్‌ని అనుమతించండి"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>కి కనెక్ట్ చేయడం సాధ్యపడలేదు."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"పరికరాల కోసం స్కాన్ చేయి"</string>
+diff --git a/res/values-th/strings.xml b/res/values-th/strings.xml
+index c7c8bbd..cd68a81 100644
+--- a/res/values-th/strings.xml
++++ b/res/values-th/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"หากต้องการจับคู่กับ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;ตรวจสอบให้แน่ใจว่าอุปกรณ์แสดงรหัสผ่านนี้:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"จาก:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;จับคู่กับอุปกรณ์นี้หรือไม่"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"ในการจับคู่กับ: <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> ให้พิมพ์: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> แล้วกด Return หรือ Enter"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"อนุญาตให้ <xliff:g id="DEVICE_NAME">%1$s</xliff:g> เข้าถึงรายชื่อติดต่อและประวัติการโทรของคุณ"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"ให้สิทธิ์เข้าถึงรายชื่อติดต่อและประวัติการโทร"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"ไม่สามารถเชื่อมต่อกับ <xliff:g id="DEVICE_NAME">%1$s</xliff:g>"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"สแกนหาอุปกรณ์"</string>
+diff --git a/res/values-tl/strings.xml b/res/values-tl/strings.xml
+index a0916fc..0c6308f 100644
+--- a/res/values-tl/strings.xml
++++ b/res/values-tl/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Upang makipagpares sa:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Tiyaking ipinapakita nito ang passkey na ito:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Mula sa:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Makipagpares sa device na ito?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Upang ipares sa:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Mag-type dito:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, pagkatapos ay pindutin ang Return o Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Payagan ang <xliff:g id="DEVICE_NAME">%1$s</xliff:g> na ma-access ang iyong mga contact at history ng tawag"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Payagan ang access sa iyong mga contact at history ng tawag"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Hindi makakonekta sa <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Mag-scan para sa mga device"</string>
+diff --git a/res/values-tr/strings.xml b/res/values-tr/strings.xml
+index 331df5c..3a5e831 100644
+--- a/res/values-tr/strings.xml
++++ b/res/values-tr/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Şu cihazla eşleştirmek için:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Şu parolanın göründüğünden emin olun:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Kaynak:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Bu cihaz ile eşlensin mi?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> ile eşleştirmek için cihaz üzerinde <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> yazarak Return veya Enter tuşuna basın."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> adlı cihazın kişilerime ve çağrı geçmişime erişmesine izin ver"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Kişilerinize ve çağrı geçmişinize erişime izin verin"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> adlı cihaza bağlanılamadı."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Cihazları tara"</string>
+diff --git a/res/values-uk/strings.xml b/res/values-uk/strings.xml
+index 0c85173..5cbff65 100644
+--- a/res/values-uk/strings.xml
++++ b/res/values-uk/strings.xml
+@@ -594,7 +594,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Щоб створити пару з пристроєм:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Переконайтеся, що відображається цей ключ доступу:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Від пристрою:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Створити пару з цим пристроєм?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Щоб створити пару з пристроєм: <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> Введіть на ньому: <xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, а потім натисніть \"Повернутися\" або \"Ввійти\"."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Надати пристрою <xliff:g id="DEVICE_NAME">%1$s</xliff:g> доступ до контактів та історії дзвінків"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Дозволити доступ до контактів та історії викликів"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Не вдалося з’єднатися з пристроєм <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Сканув. пристроїв"</string>
+diff --git a/res/values-ur-rPK/strings.xml b/res/values-ur-rPK/strings.xml
+index 718401b..858171d 100644
+--- a/res/values-ur-rPK/strings.xml
++++ b/res/values-ur-rPK/strings.xml
+@@ -564,7 +564,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"‏اس کے ساتھ جوڑا بنانے کیلئے:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;اس بات کو یقینی بنائیں کہ یہ اس پاس کلید کو دکھا رہا ہے:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"‏منجانب:‎&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;‎اس آلہ کے ساتھ جوڑا بنائیں؟"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"اس کے ساتھ جوڑا بنانے کیلئے:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>اس پر ٹائپ کریں:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, پھر واپس جائیں یا انٹر کریں کو دبائیں۔"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> کو اپنے رابطوں اور کال کی سرگزشت تک رسائی کی اجازت دیں"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"اپنے رابطوں اور کال کی سرگزشت تک رسائی کی اجازت دیں"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> سے مربوط نہیں ہو سکا۔"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"آلات کیلئے اسکین کریں"</string>
+diff --git a/res/values-uz-rUZ/strings.xml b/res/values-uz-rUZ/strings.xml
+index 56341ca..3702e50 100644
+--- a/res/values-uz-rUZ/strings.xml
++++ b/res/values-uz-rUZ/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;br&gt;&lt;b&gt;bilan biriktirish uchun,&lt;/b&gt;&lt;br&gt;&lt;br&gt;unda mana bu kalit so‘z ko‘rsatilayotganligini tekshiring:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>dan so‘rov&lt;/b&gt;&lt;br&gt;&lt;br&gt;Ushbu qurilma bilan biriktirilsinmi?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>bilan biriktirish uchun, uni ekranida:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> terib, Return yoki Enter tugmalarini bosing."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g> qurilmasiga kontaktlarim va qo‘ng‘iroqlar tarixiga kirish uchun ruxsat berilsin"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Kontakt va chaqiruvlar tarixiga ruxsat berish"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"<xliff:g id="DEVICE_NAME">%1$s</xliff:g>ga o‘zaro bog‘lanmadi."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Qurilmalarni izlash"</string>
+diff --git a/res/values-vi/strings.xml b/res/values-vi/strings.xml
+index 37a65bb..8c93d7f 100644
+--- a/res/values-vi/strings.xml
++++ b/res/values-vi/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Để ghép nối với:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Hãy đảm bảo thiết bị đang hiển thị mã xác nhận này:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Từ:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Ghép nối với thiết bị này?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Để ghép nối với:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Hãy nhập trên thiết bị:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g> rồi nhấn Quay lại hoặc Enter."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Cho phép <xliff:g id="DEVICE_NAME">%1$s</xliff:g> truy cập danh bạ và nhật ký cuộc gọi của bạn"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Cho phép truy cập vào danh bạ và lịch sử cuộc gọi của bạn"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Không thể kết nối với <xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Dò tìm thiết bị"</string>
+diff --git a/res/values-zh-rCN/strings.xml b/res/values-zh-rCN/strings.xml
+index 05ba648..561add8 100644
+--- a/res/values-zh-rCN/strings.xml
++++ b/res/values-zh-rCN/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"要与以下设备配对：&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;请确保其显示的配对密钥为：&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"来自：&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;要与此设备配对吗？"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"要与 <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> 设备配对，请在该设备上键入：<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>，然后按回车键。"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"允许<xliff:g id="DEVICE_NAME">%1$s</xliff:g>访问您的通讯录和通话记录"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"允许访问您的通讯录和通话记录"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"无法连接到<xliff:g id="DEVICE_NAME">%1$s</xliff:g>。"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"扫描设备"</string>
+diff --git a/res/values-zh-rHK/strings.xml b/res/values-zh-rHK/strings.xml
+index e04047a..051663c 100644
+--- a/res/values-zh-rHK/strings.xml
++++ b/res/values-zh-rHK/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"如要與下列裝置配對：&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;請確認該裝置是否顯示下列密碼金鑰：&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"來自：&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;要與這部裝置配對嗎？"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"如要與 <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> 配對，請在該裝置上輸入：<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>，然後按 Return 或 Enter 鍵。"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"允許<xliff:g id="DEVICE_NAME">%1$s</xliff:g>存取您的聯絡人和通話記錄"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"允許存取您的聯絡人和通話記錄"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"無法連接「<xliff:g id="DEVICE_NAME">%1$s</xliff:g>」。"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"掃瞄裝置"</string>
+diff --git a/res/values-zh-rTW/strings.xml b/res/values-zh-rTW/strings.xml
+index 82130c5..ddddb7d 100644
+--- a/res/values-zh-rTW/strings.xml
++++ b/res/values-zh-rTW/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"如要與下列裝置配對：&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;請確認該裝置是否顯示下列密碼金鑰：&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"來自：&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;要與這個裝置配對嗎？"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"如要與 <xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g> 配對，請輸入：<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>，然後按下 [返回] 或 [輸入]。"</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"允許「<xliff:g id="DEVICE_NAME">%1$s</xliff:g>」存取您的聯絡人和通話紀錄"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"允許存取你的聯絡人和通話紀錄"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"無法連線至「<xliff:g id="DEVICE_NAME">%1$s</xliff:g>」。"</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"掃描裝置"</string>
+diff --git a/res/values-zu/strings.xml b/res/values-zu/strings.xml
+index 3f8b025..77d4c4c 100644
+--- a/res/values-zu/strings.xml
++++ b/res/values-zu/strings.xml
+@@ -576,7 +576,7 @@
+     <string name="bluetooth_confirm_passkey_msg" msgid="3708312912841950052">"Ukuhambisa ngokubili:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Qinisekisa ukuthi ibonisa ukhiye wokungena:&lt;br&gt;&lt;b&gt;<xliff:g id="PASSKEY">%2$s</xliff:g>&lt;/b&gt;"</string>
+     <string name="bluetooth_incoming_pairing_msg" msgid="1615930853859551491">"Kusuka ku:&lt;br&gt;&lt;b&gt;<xliff:g id="DEVICE_NAME">%1$s</xliff:g>&lt;/b&gt;&lt;br&gt;&lt;br&gt;Beka eceleni namanye amadivayisi?"</string>
+     <string name="bluetooth_display_passkey_pin_msg" msgid="2796550001376088433">"Ukubhangqa ne:<xliff:g id="BOLD1_0">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="DEVICE_NAME">%1$s</xliff:g><xliff:g id="END_BOLD1">&lt;/b&gt;&lt;br&gt;&lt;br&gt;</xliff:g>Thayipha kuyona:<xliff:g id="BOLD2_1">&lt;br&gt;&lt;b&gt;</xliff:g><xliff:g id="PASSKEY">%2$s</xliff:g><xliff:g id="END_BOLD2">&lt;/b&gt;</xliff:g>, bese ucindezela inkinobho uBuyisela noma uNgena."</string>
+-    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Vumela i-<xliff:g id="DEVICE_NAME">%1$s</xliff:g> ukuthi ifinyelele koxhumana nabo nakumlando wekholi"</string>
++    <string name="bluetooth_pairing_shares_phonebook" msgid="2277931851483023208">"Vumela ukufinyelela koxhumana nabo nomlando wekholi"</string>
+     <string name="bluetooth_error_title" msgid="6850384073923533096"></string>
+     <string name="bluetooth_connecting_error_message" msgid="1397388344342081090">"Ayikwazanga ukuxhuma ku-<xliff:g id="DEVICE_NAME">%1$s</xliff:g>."</string>
+     <string name="bluetooth_preference_scan_title" msgid="2277464653118896016">"Skena amadivaysi"</string>
+-- 
+2.7.4
+

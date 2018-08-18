@@ -1,0 +1,71 @@
+From 5710dcc103040dad8d21b675dde8943cd841722b Mon Sep 17 00:00:00 2001
+From: Todd Kennedy <toddke@google.com>
+Date: Thu, 3 May 2018 10:05:04 +0100
+Subject: [PATCH 3/3] Make safe label more safe
+
+* limit the absolute maximum size of the label to 50000 characters
+[which is probably far more than necessary, but, can be dialed down]
+
+* use a string buffer while processing the string [instead of creating
+multiple string objects]
+
+Bug: 62537081
+Test: Manual. Install APK in bug and see that it can be uninstalled
+Change-Id: Ibf63c2691ad7438a123e92110d95b1f50050f8b1
+Merged-In: Ibf63c2691ad7438a123e92110d95b1f50050f8b1
+(cherry picked from commit 2263da9539daef134395226a2718ba2d7af7547d)
+---
+ core/java/android/content/pm/PackageItemInfo.java | 19 ++++++++++++++-----
+ 1 file changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/core/java/android/content/pm/PackageItemInfo.java b/core/java/android/content/pm/PackageItemInfo.java
+index bc79f41..73ae83e 100644
+--- a/core/java/android/content/pm/PackageItemInfo.java
++++ b/core/java/android/content/pm/PackageItemInfo.java
+@@ -46,6 +46,9 @@ import java.util.Comparator;
+  */
+ public class PackageItemInfo {
+     private static final float MAX_LABEL_SIZE_PX = 500f;
++    /** The maximum length of a safe label, in characters */
++    private static final int MAX_SAFE_LABEL_LENGTH = 50000;
++
+     /**
+      * Public name of this item. From the "android:name" attribute.
+      */
+@@ -173,7 +176,8 @@ public class PackageItemInfo {
+         // If the label contains new line characters it may push the UI
+         // down to hide a part of it. Labels shouldn't have new line
+         // characters, so just truncate at the first time one is seen.
+-        final int labelLength = labelStr.length();
++        final int labelLength = Math.min(labelStr.length(), MAX_SAFE_LABEL_LENGTH);
++        final StringBuffer sb = new StringBuffer(labelLength);
+         int offset = 0;
+         while (offset < labelLength) {
+             final int codePoint = labelStr.codePointAt(offset);
+@@ -185,14 +189,19 @@ public class PackageItemInfo {
+                 break;
+             }
+             // replace all non-break space to " " in order to be trimmed
++            final int charCount = Character.charCount(codePoint);
+             if (type == Character.SPACE_SEPARATOR) {
+-                labelStr = labelStr.substring(0, offset) + " " + labelStr.substring(offset +
+-                        Character.charCount(codePoint));
++                sb.append(' ');
++            } else {
++                sb.append(labelStr.charAt(offset));
++                if (charCount == 2) {
++                    sb.append(labelStr.charAt(offset + 1));
++                }
+             }
+-            offset += Character.charCount(codePoint);
++            offset += charCount;
+         }
+ 
+-        labelStr = labelStr.trim();
++        labelStr = sb.toString().trim();
+         if (labelStr.isEmpty()) {
+             return packageName;
+         }
+-- 
+2.7.4
+

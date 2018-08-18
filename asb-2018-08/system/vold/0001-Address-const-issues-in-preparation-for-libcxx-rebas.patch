@@ -1,0 +1,26 @@
+From 06a60165c6b3b258f289b4e04dab82a8425b8699 Mon Sep 17 00:00:00 2001
+From: Dan Austin <danielaustin@google.com>
+Date: Thu, 24 Mar 2016 12:26:39 -0700
+Subject: [PATCH 1/2] Address const issues in preparation for libcxx rebase.
+
+Change-Id: I5199c1eb4e874fd354beefa1232707949483e88d
+---
+ Utils.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Utils.cpp b/Utils.cpp
+index 014055b..62c7ef6 100644
+--- a/Utils.cpp
++++ b/Utils.cpp
+@@ -211,7 +211,7 @@ static status_t readMetadata(const std::string& path, std::string& fsType,
+     for (auto line : output) {
+         // Extract values from blkid output, if defined
+         const char* cline = line.c_str();
+-        char* start = strstr(cline, "TYPE=");
++        const char* start = strstr(cline, "TYPE=");
+         if (start != nullptr && sscanf(start + 5, "\"%127[^\"]\"", value) == 1) {
+             fsType = value;
+         }
+-- 
+2.7.4
+

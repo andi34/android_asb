@@ -1,0 +1,30 @@
+From fe5d046bd34dbb5417b6bb849af19b68c4c0bc70 Mon Sep 17 00:00:00 2001
+From: akirilov <akirilov@google.com>
+Date: Mon, 21 May 2018 12:56:17 -0700
+Subject: [PATCH 7/8] RESTRICT AUTOMERGE: Fixes two bluetooth bugs causing
+ remote overreads (1/2)
+
+Bug: 74075873
+Test: manual test (poc in bug)
+Change-Id: I56e87cfdf8731acca00cefac98abb2ba06f6e7ed
+(cherry picked from commit 3575ba8ca36dccf7dcdb2dbf16ed170d549911d3)
+---
+ stack/sdp/sdp_discovery.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/stack/sdp/sdp_discovery.c b/stack/sdp/sdp_discovery.c
+index 8778d99..87904fb 100644
+--- a/stack/sdp/sdp_discovery.c
++++ b/stack/sdp/sdp_discovery.c
+@@ -381,7 +381,7 @@ static void sdp_copy_raw_data (tCONN_CB *p_ccb, BOOLEAN offset)
+             type = *p++;
+             p = sdpu_get_len_from_type (p, type, &list_len);
+         }
+-        if(list_len && list_len < cpy_len )
++        if (list_len < cpy_len)
+         {
+             cpy_len = list_len;
+         }
+-- 
+2.7.4
+

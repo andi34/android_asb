@@ -1,0 +1,45 @@
+From e9eff06b18a3ddc2d19aff7f50c24f5cc7c75446 Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Fri, 1 Jun 2018 16:03:06 -0600
+Subject: [PATCH 2/2] Merge commit '635193ab36302e5f65e99c7df2f256cfd37068c7'
+ into am-b7f1a67b-2024-4274-aa7d-e88e8cceb407
+
+* commit '635193ab36302e5f65e99c7df2f256cfd37068c7':
+  Require quotes when searching for blkid keys.
+
+Bug: 80436257
+Test: manual
+Change-Id: I4cbae2d594edefa10e5e2c5236d17fe3d37818cd
+(cherry picked from commit 9a35ab6a4f0cbc47ff389f0c632218a39bf49a45)
+---
+ Utils.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Utils.cpp b/Utils.cpp
+index 62c7ef6..c91ac64 100644
+--- a/Utils.cpp
++++ b/Utils.cpp
+@@ -211,17 +211,17 @@ static status_t readMetadata(const std::string& path, std::string& fsType,
+     for (auto line : output) {
+         // Extract values from blkid output, if defined
+         const char* cline = line.c_str();
+-        const char* start = strstr(cline, "TYPE=");
++        const char* start = strstr(cline, "TYPE=\"");
+         if (start != nullptr && sscanf(start + 5, "\"%127[^\"]\"", value) == 1) {
+             fsType = value;
+         }
+ 
+-        start = strstr(cline, "UUID=");
++        start = strstr(cline, "UUID=\"");
+         if (start != nullptr && sscanf(start + 5, "\"%127[^\"]\"", value) == 1) {
+             fsUuid = value;
+         }
+ 
+-        start = strstr(cline, "LABEL=");
++        start = strstr(cline, "LABEL=\"");
+         if (start != nullptr && sscanf(start + 6, "\"%127[^\"]\"", value) == 1) {
+             fsLabel = value;
+         }
+-- 
+2.7.4
+

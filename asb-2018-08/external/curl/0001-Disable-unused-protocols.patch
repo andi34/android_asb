@@ -1,0 +1,80 @@
+From 98e48a3c0456142c8b1ed6b90eacb4eef2e2a204 Mon Sep 17 00:00:00 2001
+From: Elliott Hughes <enh@google.com>
+Date: Tue, 5 Jun 2018 13:43:52 -0700
+Subject: [PATCH] Disable unused protocols.
+
+update_engine only needs file/http/https.
+
+Bug: http://b/64610131
+Change-Id: Icf01eb132e13b243586d3a5e63d729daf8cea9b0
+(cherry picked from commit 4f2f94119e211854c834f9299b850091520838a1)
+---
+ lib/curl_config.h | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/lib/curl_config.h b/lib/curl_config.h
+index 0288018..e9b7958 100644
+--- a/lib/curl_config.h
++++ b/lib/curl_config.h
+@@ -17,22 +17,22 @@
+ /* #undef CURL_DISABLE_CRYPTO_AUTH */
+ 
+ /* to disable DICT */
+-/* #undef CURL_DISABLE_DICT */
++#define CURL_DISABLE_DICT 1
+ 
+ /* to disable FILE */
+ /* #undef CURL_DISABLE_FILE */
+ 
+ /* to disable FTP */
+-/* #undef CURL_DISABLE_FTP */
++#define CURL_DISABLE_FTP 1
+ 
+ /* to disable Gopher */
+-/* #undef CURL_DISABLE_GOPHER */
++#define CURL_DISABLE_GOPHER 1
+ 
+ /* to disable HTTP */
+ /* #undef CURL_DISABLE_HTTP */
+ 
+ /* to disable IMAP */
+-/* #undef CURL_DISABLE_IMAP */
++#define CURL_DISABLE_IMAP 1
+ 
+ /* to disable LDAP */
+ #define CURL_DISABLE_LDAP 1
+@@ -44,25 +44,25 @@
+ /* #undef CURL_DISABLE_LIBCURL_OPTION */
+ 
+ /* to disable POP3 */
+-/* #undef CURL_DISABLE_POP3 */
++#define CURL_DISABLE_POP3 1
+ 
+ /* to disable proxies */
+ /* #undef CURL_DISABLE_PROXY */
+ 
+ /* to disable RTSP */
+-/* #undef CURL_DISABLE_RTSP */
++#define CURL_DISABLE_RTSP 1
+ 
+ /* to disable SMB/CIFS */
+-/* #undef CURL_DISABLE_SMB */
++#define CURL_DISABLE_SMB 1
+ 
+ /* to disable SMTP */
+-/* #undef CURL_DISABLE_SMTP */
++#define CURL_DISABLE_SMTP 1
+ 
+ /* to disable TELNET */
+-/* #undef CURL_DISABLE_TELNET */
++#define CURL_DISABLE_TELNET 1
+ 
+ /* to disable TFTP */
+-/* #undef CURL_DISABLE_TFTP */
++#define CURL_DISABLE_TFTP 1
+ 
+ /* to disable TLS-SRP authentication */
+ /* #undef CURL_DISABLE_TLS_SRP */
+-- 
+2.7.4
+

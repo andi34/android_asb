@@ -1,0 +1,37 @@
+From 58822131195bc55354ff6764c74ac6aa45b1f052 Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Fri, 1 Jun 2018 10:49:40 -0600
+Subject: [PATCH] Ignore quotes in safe_print().
+
+If the value being printed has embedded quotes ("), then printing
+those quotes could confuse other tools when parsing the value.
+
+This is the simplest CL to fix the security issue, and we can circle
+back to think about more robust escaping in a future CL.
+
+Bug: 80436257
+Test: manual
+Change-Id: Ica17f2c5701573bceafe34f20110d230a3925483
+(cherry picked from commit efe90c297a8df591c051fdbfacb92b5283390bba)
+---
+ misc/blkid.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/misc/blkid.c b/misc/blkid.c
+index 388abad..248cacf 100644
+--- a/misc/blkid.c
++++ b/misc/blkid.c
+@@ -86,7 +86,9 @@ static void safe_print(const char *cp, int len)
+ 			fputc('^', stdout);
+ 			ch ^= 0x40; /* ^@, ^A, ^B; ^? for DEL */
+ 		}
+-		fputc(ch, stdout);
++		if (ch != '"') {
++			fputc(ch, stdout);
++		}
+ 	}
+ }
+ 
+-- 
+2.7.4
+

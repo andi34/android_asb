@@ -1,0 +1,111 @@
+From 0f05e85a043d5d9387d47936b4c578b0f980d999 Mon Sep 17 00:00:00 2001
+From: David Smith <davidas@google.com>
+Date: Tue, 1 May 2018 14:54:46 -0700
+Subject: [PATCH] Messaging ignores file URIs shared via intent
+
+Fixes b/37629504 by not creating attachments from file URIs shared via
+intent. Sharing file URIs is disallowed by Android N and later and is no
+longer supported for this app.
+
+Test: manual using the Debug command added in this change
+
+Change-Id: Ibff486c94ac703a9a4c5a80e33b934a460804a8f
+Merged-In: Ibff486c94ac703a9a4c5a80e33b934a460804a8f
+(cherry picked from commit 9deefdf182d69f98d361d9d24de1e4892923dac5)
+---
+ .../ui/conversationlist/ShareIntentActivity.java   | 13 +++++++++++++
+ src/com/android/messaging/util/DebugUtils.java     | 22 ++++++++++++++++++++++
+ 2 files changed, 35 insertions(+)
+
+diff --git a/src/com/android/messaging/ui/conversationlist/ShareIntentActivity.java b/src/com/android/messaging/ui/conversationlist/ShareIntentActivity.java
+index 83b7be9..1c91e46 100644
+--- a/src/com/android/messaging/ui/conversationlist/ShareIntentActivity.java
++++ b/src/com/android/messaging/ui/conversationlist/ShareIntentActivity.java
+@@ -35,6 +35,7 @@ import com.android.messaging.util.ContentType;
+ import com.android.messaging.util.LogUtil;
+ import com.android.messaging.util.MediaMetadataRetrieverWrapper;
+ import com.android.messaging.util.FileUtil;
++import com.android.messaging.util.UriUtil;
+ 
+ import java.io.IOException;
+ import java.util.ArrayList;
+@@ -75,6 +76,12 @@ public class ShareIntentActivity extends BaseBugleActivity implements
+         final String action = intent.getAction();
+         if (Intent.ACTION_SEND.equals(action)) {
+             final Uri contentUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
++            if (UriUtil.isFileUri(contentUri)) {
++                LogUtil.i(
++                    LogUtil.BUGLE_TAG,
++                    "Ignoring attachment from file URI which are no longer supported.");
++                return;
++            }
+             final String contentType = extractContentType(contentUri, intent.getType());
+             if (LogUtil.isLoggable(LogUtil.BUGLE_TAG, LogUtil.DEBUG)) {
+                 LogUtil.d(LogUtil.BUGLE_TAG, String.format(
+@@ -112,6 +119,12 @@ public class ShareIntentActivity extends BaseBugleActivity implements
+                 if (imageUris != null && imageUris.size() > 0) {
+                     mDraftMessage = MessageData.createSharedMessage(null);
+                     for (final Uri imageUri : imageUris) {
++                        if (UriUtil.isFileUri(imageUri)) {
++                            LogUtil.i(
++                                LogUtil.BUGLE_TAG,
++                                "Ignoring attachment from file URI which are no longer supported.");
++                            continue;
++                        }
+                         final String actualContentType = extractContentType(imageUri, contentType);
+                         addSharedImagePartToDraft(actualContentType, imageUri);
+                     }
+diff --git a/src/com/android/messaging/util/DebugUtils.java b/src/com/android/messaging/util/DebugUtils.java
+index f2c1d65..1362f83 100644
+--- a/src/com/android/messaging/util/DebugUtils.java
++++ b/src/com/android/messaging/util/DebugUtils.java
+@@ -22,12 +22,15 @@ import android.app.FragmentManager;
+ import android.app.FragmentTransaction;
+ import android.content.Context;
+ import android.content.DialogInterface;
++import android.content.Intent;
+ import android.media.MediaPlayer;
++import android.net.Uri;
+ import android.os.Environment;
+ import android.telephony.SmsMessage;
+ import android.text.TextUtils;
+ import android.widget.ArrayAdapter;
+ 
++import com.android.messaging.Factory;
+ import com.android.messaging.R;
+ import com.android.messaging.datamodel.SyncManager;
+ import com.android.messaging.datamodel.action.DumpDatabaseAction;
+@@ -179,6 +182,13 @@ public class DebugUtils {
+             }
+         });
+ 
++        arrayAdapter.add(new DebugAction("Test sharing a file URI") {
++            @Override
++            public void run() {
++                shareFileUri();
++            }
++        });
++
+         builder.setAdapter(arrayAdapter,
+                 new android.content.DialogInterface.OnClickListener() {
+             @Override
+@@ -422,4 +432,16 @@ public class DebugUtils {
+     public static boolean debugClassZeroSmsEnabled() {
+         return sDebugClassZeroSms;
+     }
++
++    /** Shares a ringtone file via file URI. */
++    private static void shareFileUri() {
++        final String packageName = "com.android.messaging";
++        final String fileName = "/system/media/audio/ringtones/Andromeda.ogg";
++
++        Intent intent = new Intent(Intent.ACTION_SEND);
++        intent.setPackage(packageName);
++        intent.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://" + fileName));
++        intent.setType("image/*");
++        Factory.get().getApplicationContext().startActivity(intent);
++    }
+ }
+-- 
+2.7.4
+

@@ -1,0 +1,70 @@
+From df3329ebb13e16bbd03db4efa8214520e6483fa7 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Mon, 2 Apr 2018 10:48:18 -0700
+Subject: [PATCH 2/2] DO NOT MERGE Fix unexpected behavior in Bluetooth pairing
+
+* Set default PBAP permission to false
+* Remove all newline and tab characters in Bluetooth device name
+
+Bug: 72872376
+Bug: 73173182
+Test: manual
+Change-Id: Ib3b99017c8da01446ce6302d43dcfb1ef8fba02c
+(cherry picked from commit 4f58c19afa6531fbc56222775dc776f8b976881c)
+---
+ src/com/android/settings/bluetooth/BluetoothPairingDialog.java     | 6 ++++--
+ .../android/settings/bluetooth/BluetoothPermissionActivity.java    | 7 ++++++-
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/src/com/android/settings/bluetooth/BluetoothPairingDialog.java b/src/com/android/settings/bluetooth/BluetoothPairingDialog.java
+index 300451d..9c368e5 100755
+--- a/src/com/android/settings/bluetooth/BluetoothPairingDialog.java
++++ b/src/com/android/settings/bluetooth/BluetoothPairingDialog.java
+@@ -30,6 +30,7 @@ import android.text.InputFilter;
+ import android.text.InputFilter.LengthFilter;
+ import android.text.InputType;
+ import android.text.TextWatcher;
++import android.util.EventLog;
+ import android.util.Log;
+ import android.view.KeyEvent;
+ import android.view.View;
+@@ -285,8 +286,9 @@ public final class BluetoothPairingDialog extends AlertActivity implements
+         } else {
+             if (mDevice.getBluetoothClass().getDeviceClass()
+                     == BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE) {
+-                contactSharing.setChecked(true);
+-                mDevice.setPhonebookAccessPermission(BluetoothDevice.ACCESS_ALLOWED);
++                contactSharing.setChecked(false);
++                mDevice.setPhonebookAccessPermission(BluetoothDevice.ACCESS_REJECTED);
++                EventLog.writeEvent(0x534e4554, "73173182", -1, "");
+             } else {
+                 contactSharing.setChecked(false);
+                 mDevice.setPhonebookAccessPermission(BluetoothDevice.ACCESS_REJECTED);
+diff --git a/src/com/android/settings/bluetooth/BluetoothPermissionActivity.java b/src/com/android/settings/bluetooth/BluetoothPermissionActivity.java
+index efcc7f9..e49f981 100644
+--- a/src/com/android/settings/bluetooth/BluetoothPermissionActivity.java
++++ b/src/com/android/settings/bluetooth/BluetoothPermissionActivity.java
+@@ -24,6 +24,7 @@ import android.content.Intent;
+ import android.content.IntentFilter;
+ import android.os.Bundle;
+ import android.support.v7.preference.Preference;
++import android.util.EventLog;
+ import android.util.Log;
+ import android.view.View;
+ import android.widget.Button;
+@@ -154,7 +155,11 @@ public class BluetoothPermissionActivity extends AlertActivity implements
+         String mRemoteName = mDevice != null ? mDevice.getAliasName() : null;
+ 
+         if (mRemoteName == null) mRemoteName = getString(R.string.unknown);
+-        return mRemoteName;
++        String nameNoNewline = mRemoteName.replaceAll("[\\t\\n\\r]+", " ");
++        if (!mRemoteName.equals(nameNoNewline)) {
++            EventLog.writeEvent(0x534e4554, "72872376", -1, "");
++        }
++        return nameNoNewline;
+     }
+ 
+     // TODO(edjee): createConnectionDialogView, createPhonebookDialogView and createMapDialogView
+-- 
+2.7.4
+

@@ -1,0 +1,30 @@
+From 3f7295ebd136bc1baec4e26e122b0a9bd0ccdb93 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Fri, 1 Jun 2018 10:48:25 -0700
+Subject: [PATCH] Fix possible out of bounds read
+
+Bug: 78656554
+Test: manual
+Change-Id: I677f827483dcc80afac57fd7ef6807e633542252
+(cherry picked from commit 3762e0615273f25b059556d5b5f65102e9c55c35)
+---
+ media/libstagefright/id3/ID3.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
+index 4e1cdf6..ca2be54 100644
+--- a/media/libstagefright/id3/ID3.cpp
++++ b/media/libstagefright/id3/ID3.cpp
+@@ -603,6 +603,9 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
+         // UCS-2
+         // API wants number of characters, not number of bytes...
+         int len = n / 2;
++        if (len == 0) {
++            return;
++        }
+         const char16_t *framedata = (const char16_t *) (frameData + 1);
+         char16_t *framedatacopy = NULL;
+         if (*framedata == 0xfffe) {
+-- 
+2.7.4
+

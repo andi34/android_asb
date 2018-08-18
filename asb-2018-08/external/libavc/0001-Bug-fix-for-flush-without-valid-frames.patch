@@ -1,0 +1,41 @@
+From 46683cad263816bd67a3028512c3d7c2d314ce47 Mon Sep 17 00:00:00 2001
+From: Hamsalekha S <hamsalekha.s@ittiam.com>
+Date: Tue, 21 Feb 2017 16:01:02 +0530
+Subject: [PATCH] Bug fix for flush without valid frames
+
+We now return fail and get out of flush mode to accept bitstream in the next call.
+
+Bug: 35585952
+Bug: 63521984
+Test: test case does not hang
+Change-Id: Id22cc98d4a47714475a67918990a181a805c4c9f
+(cherry picked from commit 10c1176f1bb631c8b082634170da8ce2d1144d30)
+---
+ decoder/ih264d_api.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/decoder/ih264d_api.c b/decoder/ih264d_api.c
+index 3ace427..094ca8e 100644
+--- a/decoder/ih264d_api.c
++++ b/decoder/ih264d_api.c
+@@ -1979,8 +1979,16 @@ WORD32 ih264d_video_decode(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
+ 
+     }
+ 
+-    if(ps_dec->u1_flushfrm && ps_dec->u1_init_dec_flag)
++    if(ps_dec->u1_flushfrm)
+     {
++        if(ps_dec->u1_init_dec_flag == 0)
++        {
++            /*Come out of flush mode and return*/
++            ps_dec->u1_flushfrm = 0;
++            return (IV_FAIL);
++        }
++
++
+ 
+         ih264d_get_next_display_field(ps_dec, ps_dec->ps_out_buffer,
+                                       &(ps_dec->s_disp_op));
+-- 
+2.7.4
+

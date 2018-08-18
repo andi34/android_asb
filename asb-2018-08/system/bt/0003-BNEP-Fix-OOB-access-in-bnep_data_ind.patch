@@ -1,0 +1,110 @@
+From a0172d9d257eef2ca4c1bf9b3f537f1d1be0ddcc Mon Sep 17 00:00:00 2001
+From: Jack He <siyuanh@google.com>
+Date: Fri, 1 Jun 2018 14:00:42 -0700
+Subject: [PATCH 3/8] BNEP: Fix OOB access in bnep_data_ind
+
+* Stop reading the L2CAP packet if packet length is 0
+* Process the buffer for BNEP_EXTENSION_CONTROL packet before advancing
+  the buffer pointer by length of payload
+* Reject BNEP_EXTENSION_CONTROL packet when the payload size is zero
+* Move error logging to more appropriate locations at where the OOB access
+  is most likely triggered
+
+Bug: 78286118
+Bug: 79164722
+Test: Send zero length L2CAP packet to BNEP, send invalid
+      BNEP_EXTENSION_CONTROL packet
+Merged-In: I7e18632b8faab1b6aaca1bff1b7f55d69962729e
+Change-Id: I7e18632b8faab1b6aaca1bff1b7f55d69962729e
+(cherry picked from commit 3c799a6e25abdf6bacb660ff7a06338836cc7356)
+(cherry picked from commit 0416340ffa61337dbaa2f6602ef85a1c32563ec2)
+---
+ stack/bnep/bnep_main.c | 42 ++++++++++++++++++++++++++++++++----------
+ 1 file changed, 32 insertions(+), 10 deletions(-)
+
+diff --git a/stack/bnep/bnep_main.c b/stack/bnep/bnep_main.c
+index 8edb712..2f761de 100644
+--- a/stack/bnep/bnep_main.c
++++ b/stack/bnep/bnep_main.c
+@@ -483,6 +483,12 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+     UINT16        protocol = 0;
+     UINT8         *p_src_addr, *p_dst_addr;
+ 
++    if (rem_len == 0)
++    {
++        android_errorWriteLog(0x534e4554, "78286118");
++        osi_free(p_buf);
++        return;
++    }
+ 
+     /* Find CCB based on CID */
+     if ((p_bcb = bnepu_find_bcb_by_cid (l2cap_cid)) == NULL)
+@@ -529,24 +535,40 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+             UINT16      org_len, new_len;
+             /* parse the extension headers and process unknown control headers */
+             org_len = rem_len;
+-            new_len = 0;
+             do {
+-                if (org_len < 2) break;
++                if (org_len < 2)
++                {
++                    android_errorWriteLog(0x534e4554, "67863755");
++                    break;
++                }
+                 ext     = *p++;
+                 length  = *p++;
+-                p += length;
+ 
+                 new_len = (length + 2);
+-                if (new_len > org_len) break;
++                if (new_len > org_len)
++                {
++                    android_errorWriteLog(0x534e4554, "67863755");
++                    break;
++                }
++
++                if ((ext & 0x7F) == BNEP_EXTENSION_FILTER_CONTROL)
++                {
++                    if (length == 0)
++                    {
++                        android_errorWriteLog(0x534e4554, "79164722");
++                        break;
++                    }
++                    if (*p > BNEP_FILTER_MULTI_ADDR_RESPONSE_MSG)
++                    {
++                        bnep_send_command_not_understood(p_bcb, *p);
++                    }
++                }
+ 
+-                if ((!(ext & 0x7F)) && (*p > BNEP_FILTER_MULTI_ADDR_RESPONSE_MSG))
+-                    bnep_send_command_not_understood (p_bcb, *p);
++                p += length;
+ 
+                 org_len -= new_len;
+             } while (ext & 0x80);
+-            android_errorWriteLog(0x534e4554, "67863755");
+         }
+-
+         osi_free(p_buf);
+         return;
+     }
+@@ -594,14 +616,14 @@ static void bnep_data_ind (UINT16 l2cap_cid, BT_HDR *p_buf)
+             {
+                 ext_type = *p++;
+                 rem_len--;
+-                android_errorWriteLog(0x534e4554, "69271284");
+                 extension_present = ext_type >> 7;
+                 ext_type &= 0x7F;
+ 
+                 /* if unknown extension present stop processing */
+-                if (ext_type)
++                if (ext_type != BNEP_EXTENSION_FILTER_CONTROL)
+                     break;
+ 
++                android_errorWriteLog(0x534e4554, "69271284");
+                 p = bnep_process_control_packet (p_bcb, p, &rem_len, TRUE);
+             }
+         }
+-- 
+2.7.4
+

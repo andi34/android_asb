@@ -1,0 +1,38 @@
+From 84c56e925cf45d050c078caeca5fcda84219b226 Mon Sep 17 00:00:00 2001
+From: Tyler Gunn <tgunn@google.com>
+Date: Mon, 4 Jun 2018 08:31:42 -0700
+Subject: [PATCH 2/2] Fix potential NPE in EmergencyCallbackModeExitDialog.
+
+Ensure NPE will not crash com.android.phone process.
+
+Test: Manual using test app provided in bug
+Bug: 79995313
+Change-Id: I83a5e94acdae4287e6a62558cffb586d35930b47
+Merged-In: I8b899023b0977e4a8963cc536602ced4f7e43769
+---
+ src/com/android/phone/EmergencyCallbackModeExitDialog.java | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/src/com/android/phone/EmergencyCallbackModeExitDialog.java b/src/com/android/phone/EmergencyCallbackModeExitDialog.java
+index b423e14..07d518f 100644
+--- a/src/com/android/phone/EmergencyCallbackModeExitDialog.java
++++ b/src/com/android/phone/EmergencyCallbackModeExitDialog.java
+@@ -80,10 +80,11 @@ public class EmergencyCallbackModeExitDialog extends Activity implements OnDismi
+ 
+         mPhone = PhoneGlobals.getInstance().getPhoneInEcm();
+         // Check if phone is in Emergency Callback Mode. If not, exit.
+-        final boolean isInEcm = Boolean.parseBoolean(
+-                SystemProperties.get(TelephonyProperties.PROPERTY_INECM_MODE));
+-        Log.i(TAG, "ECMModeExitDialog launched - isInEcm: " + isInEcm + " phone:" + mPhone);
+-        if (mPhone == null || !isInEcm) {
++        if (mPhone == null || !mPhone.isInEcm()) {
++            if (mPhone == null) {
++              android.util.EventLog.writeEvent(0x534e4554, "79995313", -1, "");
++            }
++            Log.i(TAG, "ECMModeExitDialog launched - isInEcm: false" + " phone:" + mPhone);
+             finish();
+             return;
+         }
+-- 
+2.7.4
+

@@ -1,0 +1,43 @@
+From 981dd3f245635ddb81b89dc4821bc068fbaa40c9 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Tue, 29 May 2018 17:38:39 -0700
+Subject: [PATCH 1/8] DO NOT MERGE SMP: Check p_cb->role in
+ smp_br_state_machine_event
+
+Bug: 80145946
+Test: manual
+Change-Id: Ic83eaa4be868d5a345d80cd50a6915c0af719a53
+(cherry picked from commit 519b61392a96fbd45bdcc0bfddc881167c20cc23)
+---
+ stack/smp/smp_br_main.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/stack/smp/smp_br_main.c b/stack/smp/smp_br_main.c
+index 11039ec..fc0d048 100644
+--- a/stack/smp/smp_br_main.c
++++ b/stack/smp/smp_br_main.c
+@@ -19,6 +19,7 @@
+ #include "bt_target.h"
+ 
+ #include <string.h>
++#include "log/log.h"
+ #include "smp_int.h"
+ 
+ #if BLE_INCLUDED == TRUE
+@@ -344,6 +345,13 @@ void smp_br_state_machine_event(tSMP_CB *p_cb, tSMP_BR_EVENT event, void *p_data
+         return;
+     }
+ 
++    if (p_cb->role > HCI_ROLE_SLAVE)
++    {
++        SMP_TRACE_ERROR("%s: invalid role %d", __func__, p_cb->role);
++        android_errorWriteLog(0x534e4554, "80145946");
++        return;
++    }
++
+     SMP_TRACE_DEBUG( "SMP Role: %s State: [%s (%d)], Event: [%s (%d)]",
+                       (p_cb->role == HCI_ROLE_SLAVE) ? "Slave" : "Master",
+                       smp_get_br_state_name( p_cb->br_state),
+-- 
+2.7.4
+

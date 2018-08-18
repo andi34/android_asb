@@ -1,0 +1,41 @@
+From 1773e84118cd31f0f1ea33e1f6b34e0cb5a79797 Mon Sep 17 00:00:00 2001
+From: Todd Kennedy <toddke@google.com>
+Date: Thu, 3 May 2018 09:44:55 +0100
+Subject: [PATCH] RESTRICT AUTOMERGE: Always use safe labels
+
+For display purposes, we should always be using safe labels. This
+prevents excessively long labels from preventing app uninstallation.
+
+Bug: 62537081
+Test: Manual. Install APK from bug and see that it can be uninstalled
+Change-Id: Ic0e0d47f5ff76e4a73b30988d0a024fb3ee651ae
+(cherry picked from commit 25e686d3cf555b99993e8a5c7edb2375171e5392)
+---
+ src/com/android/packageinstaller/UninstallerActivity.java | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/com/android/packageinstaller/UninstallerActivity.java b/src/com/android/packageinstaller/UninstallerActivity.java
+index ae1659f..1fb84e1 100755
+--- a/src/com/android/packageinstaller/UninstallerActivity.java
++++ b/src/com/android/packageinstaller/UninstallerActivity.java
+@@ -56,7 +56,7 @@ public class UninstallerActivity extends Activity {
+         public Dialog onCreateDialog(Bundle savedInstanceState) {
+             final PackageManager pm = getActivity().getPackageManager();
+             final DialogInfo dialogInfo = ((UninstallerActivity) getActivity()).mDialogInfo;
+-            final CharSequence appLabel = dialogInfo.appInfo.loadLabel(pm);
++            final CharSequence appLabel = dialogInfo.appInfo.loadSafeLabel(pm);
+ 
+             AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
+             StringBuilder messageBuilder = new StringBuilder();
+@@ -64,7 +64,7 @@ public class UninstallerActivity extends Activity {
+             // If the Activity label differs from the App label, then make sure the user
+             // knows the Activity belongs to the App being uninstalled.
+             if (dialogInfo.activityInfo != null) {
+-                final CharSequence activityLabel = dialogInfo.activityInfo.loadLabel(pm);
++                final CharSequence activityLabel = dialogInfo.activityInfo.loadSafeLabel(pm);
+                 if (!activityLabel.equals(appLabel)) {
+                     messageBuilder.append(
+                             getString(R.string.uninstall_activity_text, activityLabel));
+-- 
+2.7.4
+
