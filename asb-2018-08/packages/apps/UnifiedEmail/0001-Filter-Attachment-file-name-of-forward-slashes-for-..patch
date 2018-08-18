@@ -1,0 +1,32 @@
+From 14ea7d98f8f695b344b31e4c35cbbb3eed9dfbf9 Mon Sep 17 00:00:00 2001
+From: Ekin Oguz <ekinoguz@google.com>
+Date: Mon, 4 Jun 2018 13:35:50 -0700
+Subject: [PATCH] Filter Attachment file name of forward slashes for .eml
+ attachments.
+
+Bug: b/66230183
+Change-Id: I6715358a07bc5bd9de6ee877b4a235a974767536
+(cherry picked from commit 53b40fd185517ca82a0c4305570c5a5e3b83abf0)
+---
+ src/com/android/mail/providers/Attachment.java | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/com/android/mail/providers/Attachment.java b/src/com/android/mail/providers/Attachment.java
+index b8e86ed..af4b3e3 100644
+--- a/src/com/android/mail/providers/Attachment.java
++++ b/src/com/android/mail/providers/Attachment.java
+@@ -245,6 +245,11 @@ public class Attachment implements Parcelable {
+                 name = MimeUtility.getHeaderParameter(contentDisposition, "filename");
+             }
+ 
++            // Prevent passing in a file path as part of the name.
++            if (name != null) {
++                name = name.replace('/', '_');
++            }
++
+             contentType = MimeType.inferMimeType(name, part.getMimeType());
+             uri = EmlAttachmentProvider.getAttachmentUri(emlFileUri, messageId, cid);
+             contentUri = uri;
+-- 
+2.7.4
+

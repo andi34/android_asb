@@ -1,0 +1,45 @@
+From a222a2751437dbc932c6a94aefbe7691257192a0 Mon Sep 17 00:00:00 2001
+From: Ryan Mitchell <rtmitchell@google.com>
+Date: Wed, 30 May 2018 12:17:01 -0700
+Subject: [PATCH 1/2] Fix DynamicRefTable::load security bug
+
+DynamicRefTables parsed from apks are missing bounds checks that prevent
+buffer overflows. This changes verifies the bounds of the header before
+attempting to preform operations on the chunk.
+
+Bug: 79488511
+Test: run cts -m CtsAppSecurityHostTestCases \
+        -t android.appsecurity.cts.CorruptApkTests
+
+Change-Id: I02c8ad957da244fce777ac68a482e4e8fa70f846
+Merged-In: I02c8ad957da244fce777ac68a482e4e8fa70f846
+(cherry picked from commit 18a6ada4aa136da4f50f03fff91d61d448ced195)
+---
+ libs/androidfw/ResourceTypes.cpp | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/libs/androidfw/ResourceTypes.cpp b/libs/androidfw/ResourceTypes.cpp
+index 9941e46..0ea0652 100644
+--- a/libs/androidfw/ResourceTypes.cpp
++++ b/libs/androidfw/ResourceTypes.cpp
+@@ -6220,8 +6220,16 @@ status_t ResTable::parsePackage(const ResTable_package* const pkg,
+             }
+ 
+         } else if (ctype == RES_TABLE_LIBRARY_TYPE) {
++
+             if (group->dynamicRefTable.entries().size() == 0) {
+-                status_t err = group->dynamicRefTable.load((const ResTable_lib_header*) chunk);
++                const ResTable_lib_header* lib = (const ResTable_lib_header*) chunk;
++                status_t err = validate_chunk(&lib->header, sizeof(*lib),
++                                              endPos, "ResTable_lib_header");
++                if (err != NO_ERROR) {
++                    return (mError=err);
++                }
++
++                err = group->dynamicRefTable.load(lib);
+                 if (err != NO_ERROR) {
+                     return (mError=err);
+                 }
+-- 
+2.7.4
+

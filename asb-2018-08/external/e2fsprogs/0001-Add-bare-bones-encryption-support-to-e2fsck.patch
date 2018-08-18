@@ -1,0 +1,364 @@
+From 07a7be75a7442ef6c6e84f12492382a4d8aeb735 Mon Sep 17 00:00:00 2001
+From: Theodore Ts'o <tytso@mit.edu>
+Date: Tue, 14 Jul 2015 22:50:51 -0400
+Subject: [PATCH] Add bare-bones encryption support to e2fsck
+
+Bug: 22483407
+Change-Id: I4e9c4e4c855454c7458c85afba47b01eb0111b20
+Signed-off-by: Theodore Ts'o <tytso@mit.edu>
+---
+ e2fsck/e2fsck.h             |  1 +
+ e2fsck/pass1.c              | 29 +++++++++++++++++++++++--
+ e2fsck/pass2.c              | 13 ++++++++---
+ e2fsck/problem.c            |  5 +++++
+ e2fsck/problem.h            |  3 +++
+ lib/e2p/feature.c           |  2 ++
+ lib/e2p/pf.c                |  2 ++
+ lib/ext2fs/ext2_fs.h        | 53 +++++++++++++++++++++++++++++++++++++++++----
+ lib/ext2fs/ext2fs.h         |  6 +++--
+ lib/ext2fs/tst_super_size.c | 11 +++++++---
+ 10 files changed, 111 insertions(+), 14 deletions(-)
+
+diff --git a/e2fsck/e2fsck.h b/e2fsck/e2fsck.h
+index 913a596..d64df2c 100644
+--- a/e2fsck/e2fsck.h
++++ b/e2fsck/e2fsck.h
+@@ -366,6 +366,7 @@ struct e2fsck_struct {
+ 	int ext_attr_ver;
+ 	profile_t	profile;
+ 	int blocks_per_page;
++	ext2_u32_list encrypted_dirs;
+ 
+ 	/*
+ 	 * For the use of callers of the e2fsck functions; not used by
+diff --git a/e2fsck/pass1.c b/e2fsck/pass1.c
+index 50715aa..ef04b6f 100644
+--- a/e2fsck/pass1.c
++++ b/e2fsck/pass1.c
+@@ -67,6 +67,7 @@ static void mark_table_blocks(e2fsck_t ctx);
+ static void alloc_bb_map(e2fsck_t ctx);
+ static void alloc_imagic_map(e2fsck_t ctx);
+ static void mark_inode_bad(e2fsck_t ctx, ino_t ino);
++static void add_encrypted_dir(e2fsck_t ctx, ino_t ino);
+ static void handle_fs_bad_blocks(e2fsck_t ctx);
+ static void process_inodes(e2fsck_t ctx, char *block_buf);
+ static EXT2_QSORT_TYPE process_inode_cmp(const void *a, const void *b);
+@@ -216,7 +217,11 @@ int e2fsck_pass1_check_symlink(ext2_filsys fs, ext2_ino_t ino,
+ 		if (io_channel_read_blk64(fs->io, inode->i_block[0], 1, buf))
+ 			return 0;
+ 
+-		len = strnlen(buf, fs->blocksize);
++		if (inode->i_flags & EXT4_ENCRYPT_FL) {
++			len = ext2fs_le32_to_cpu(*((__u32 *)buf)) + 4;
++		} else {
++			len = strnlen(buf, fs->blocksize);
++		}
+ 		if (len == fs->blocksize)
+ 			return 0;
+ 	} else {
+@@ -228,7 +233,8 @@ int e2fsck_pass1_check_symlink(ext2_filsys fs, ext2_ino_t ino,
+ 			return 0;
+ 	}
+ 	if (len != inode->i_size)
+-		return 0;
++		if ((inode->i_flags & EXT4_ENCRYPT_FL) == 0)
++			return 0;
+ 	return 1;
+ }
+ 
+@@ -1089,6 +1095,8 @@ void e2fsck_pass1(e2fsck_t ctx)
+ 			ext2fs_mark_inode_bitmap2(ctx->inode_dir_map, ino);
+ 			e2fsck_add_dir_info(ctx, ino, 0);
+ 			ctx->fs_directory_count++;
++			if (inode->i_flags & EXT4_ENCRYPT_FL)
++				add_encrypted_dir(ctx, ino);
+ 		} else if (LINUX_S_ISREG (inode->i_mode)) {
+ 			ext2fs_mark_inode_bitmap2(ctx->inode_reg_map, ino);
+ 			ctx->fs_regular_count++;
+@@ -1355,6 +1363,23 @@ static void mark_inode_bad(e2fsck_t ctx, ino_t ino)
+ 	ext2fs_mark_inode_bitmap2(ctx->inode_bad_map, ino);
+ }
+ 
++static void add_encrypted_dir(e2fsck_t ctx, ino_t ino)
++{
++	struct		problem_context pctx;
++
++	if (!ctx->encrypted_dirs) {
++		pctx.errcode = ext2fs_u32_list_create(&ctx->encrypted_dirs, 0);
++		if (pctx.errcode)
++			goto error;
++	}
++	pctx.errcode = ext2fs_u32_list_add(ctx->encrypted_dirs, ino);
++	if (pctx.errcode == 0)
++		return;
++error:
++	fix_problem(ctx, PR_1_ALLOCATE_ENCRYPTED_DIRLIST, &pctx);
++	/* Should never get here */
++	ctx->flags |= E2F_FLAG_ABORT;
++}
+ 
+ /*
+  * This procedure will allocate the inode "bb" (badblock) map table
+diff --git a/e2fsck/pass2.c b/e2fsck/pass2.c
+index f087388..b606657 100644
+--- a/e2fsck/pass2.c
++++ b/e2fsck/pass2.c
+@@ -261,6 +261,10 @@ void e2fsck_pass2(e2fsck_t ctx)
+ 		ext2fs_free_inode_bitmap(ctx->inode_reg_map);
+ 		ctx->inode_reg_map = 0;
+ 	}
++	if (ctx->encrypted_dirs) {
++		ext2fs_u32_list_free(ctx->encrypted_dirs);
++		ctx->encrypted_dirs = 0;
++	}
+ 
+ 	clear_problem_context(&pctx);
+ 	if (ctx->large_files) {
+@@ -308,7 +312,7 @@ static int dict_de_cmp(const void *a, const void *b)
+ 	if (a_len != b_len)
+ 		return (a_len - b_len);
+ 
+-	return strncmp(de_a->name, de_b->name, a_len);
++	return memcmp(de_a->name, de_b->name, a_len);
+ }
+ 
+ /*
+@@ -453,7 +457,6 @@ static int check_dotdot(e2fsck_t ctx,
+  */
+ static int check_name(e2fsck_t ctx,
+ 		      struct ext2_dir_entry *dirent,
+-		      ext2_ino_t dir_ino EXT2FS_ATTR((unused)),
+ 		      struct problem_context *pctx)
+ {
+ 	int	i;
+@@ -732,6 +735,7 @@ static int check_dir_block(ext2_filsys fs,
+ 	static dict_t de_dict;
+ 	struct problem_context	pctx;
+ 	int	dups_found = 0;
++	int	encrypted = 0;
+ 	int	ret;
+ 
+ 	cd = (struct check_dir_struct *) priv_data;
+@@ -840,6 +844,9 @@ static int check_dir_block(ext2_filsys fs,
+ out_htree:
+ #endif /* ENABLE_HTREE */
+ 
++	if (ctx->encrypted_dirs)
++		encrypted = ext2fs_u32_list_test(ctx->encrypted_dirs, ino);
++
+ 	dict_init(&de_dict, DICTCOUNT_T_MAX, dict_de_cmp);
+ 	prev = 0;
+ 	do {
+@@ -1031,7 +1038,7 @@ out_htree:
+ 			}
+ 		}
+ 
+-		if (check_name(ctx, dirent, ino, &cd->pctx))
++		if (!encrypted && check_name(ctx, dirent, &cd->pctx))
+ 			dir_modified++;
+ 
+ 		if (check_filetype(ctx, dirent, ino, &cd->pctx))
+diff --git a/e2fsck/problem.c b/e2fsck/problem.c
+index b78b56e..2fdc8d2 100644
+--- a/e2fsck/problem.c
++++ b/e2fsck/problem.c
+@@ -964,6 +964,11 @@ static struct e2fsck_problem problem_table[] = {
+ 	  PROMPT_CLEAR, 0 },
+ 
+ 
++	/* Error allocating memory for encrypted directory list */
++	{ PR_1_ALLOCATE_ENCRYPTED_DIRLIST,
++	  N_("@A memory for encrypted @d list\n"),
++	  PROMPT_NONE, PR_FATAL },
++
+ 	/* Pass 1b errors */
+ 
+ 	/* Pass 1B: Rescan for duplicate/bad blocks */
+diff --git a/e2fsck/problem.h b/e2fsck/problem.h
+index 1887fd9..240326e 100644
+--- a/e2fsck/problem.h
++++ b/e2fsck/problem.h
+@@ -625,6 +625,9 @@ struct problem_context {
+ /* Couldn't clone file (error) */
+ #define PR_1D_CLONE_ERROR	0x013008
+ 
++/* Error allocating memory for encrypted directory list */
++#define PR_1_ALLOCATE_ENCRYPTED_DIRLIST		0x01007E
++
+ /*
+  * Pass 2 errors
+  */
+diff --git a/lib/e2p/feature.c b/lib/e2p/feature.c
+index bd8a64a..fcdf4c2 100644
+--- a/lib/e2p/feature.c
++++ b/lib/e2p/feature.c
+@@ -94,6 +94,8 @@ static struct feature feature_list[] = {
+ 			"large_dir"},
+ 	{       E2P_FEATURE_INCOMPAT, EXT4_FEATURE_INCOMPAT_INLINEDATA,
+ 			"inline_data"},
++	{       E2P_FEATURE_INCOMPAT, EXT4_FEATURE_INCOMPAT_ENCRYPT,
++			"encrypt"},
+ 	{	0, 0, 0 },
+ };
+ 
+diff --git a/lib/e2p/pf.c b/lib/e2p/pf.c
+index 6dd29f6..2fb5c8c 100644
+--- a/lib/e2p/pf.c
++++ b/lib/e2p/pf.c
+@@ -41,6 +41,8 @@ static struct flags_name flags_array[] = {
+ 	{ EXT2_DIRTY_FL, "Z", "Compressed_Dirty_File" },
+ 	{ EXT2_NOCOMPR_FL, "X", "Compression_Raw_Access" },
+ 	{ EXT2_ECOMPR_FL, "E", "Compression_Error" },
++#else
++	{ EXT4_ENCRYPT_FL, "E", "Encrypted" },
+ #endif
+ 	{ EXT3_JOURNAL_DATA_FL, "j", "Journaled_Data" },
+ 	{ EXT2_INDEX_FL, "I", "Indexed_directory" },
+diff --git a/lib/ext2fs/ext2_fs.h b/lib/ext2fs/ext2_fs.h
+index 930c2a3..6847b46 100644
+--- a/lib/ext2fs/ext2_fs.h
++++ b/lib/ext2fs/ext2_fs.h
+@@ -288,7 +288,8 @@ struct ext2_dx_countlimit {
+ #define EXT2_DIRTY_FL			0x00000100
+ #define EXT2_COMPRBLK_FL		0x00000200 /* One or more compressed clusters */
+ #define EXT2_NOCOMPR_FL			0x00000400 /* Access raw compressed data */
+-#define EXT2_ECOMPR_FL			0x00000800 /* Compression error */
++	/* nb: was previously EXT2_ECOMPR_FL */
++#define EXT4_ENCRYPT_FL			0x00000800 /* encrypted inode */
+ /* End compression flags --- maybe not all used */
+ #define EXT2_BTREE_FL			0x00001000 /* btree format dir */
+ #define EXT2_INDEX_FL			0x00001000 /* hash-indexed directory */
+@@ -535,6 +536,44 @@ struct ext2_inode_large {
+ #define ext4_offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+ #endif
+ 
++/* Encryption algorithms, key size and key reference len */
++#define EXT4_ENCRYPTION_MODE_INVALID		0
++#define EXT4_ENCRYPTION_MODE_AES_256_XTS	1
++#define EXT4_ENCRYPTION_MODE_AES_256_GCM	2
++#define EXT4_ENCRYPTION_MODE_AES_256_CBC	3
++#define EXT4_ENCRYPTION_MODE_AES_256_CTS	4
++
++#define EXT4_AES_256_XTS_KEY_SIZE		64
++#define EXT4_AES_256_GCM_KEY_SIZE		32
++#define EXT4_AES_256_CBC_KEY_SIZE		32
++#define EXT4_AES_256_CTS_KEY_SIZE		32
++#define EXT4_MAX_KEY_SIZE			64
++
++#define EXT4_KEY_DESCRIPTOR_SIZE		8
++
++/* Password derivation constants */
++#define EXT4_MAX_PASSPHRASE_SIZE		1024
++#define EXT4_MAX_SALT_SIZE			256
++#define EXT4_PBKDF2_ITERATIONS			0xFFFF
++
++/*
++ * Policy provided via an ioctl on the topmost directory. This
++ * structure is also in the kernel.
++ */
++struct ext4_encryption_policy {
++  char version;
++  char contents_encryption_mode;
++  char filenames_encryption_mode;
++  char flags;
++  char master_key_descriptor[EXT4_KEY_DESCRIPTOR_SIZE];
++} __attribute__((__packed__));
++
++struct ext4_encryption_key {
++        __u32 mode;
++        char raw[EXT4_MAX_KEY_SIZE];
++        __u32 size;
++} __attribute__((__packed__));
++
+ /*
+  * Structure of the super block
+  */
+@@ -620,8 +659,9 @@ struct ext2_super_block {
+ 	__u64   s_mmp_block;            /* Block for multi-mount protection */
+ 	__u32   s_raid_stripe_width;    /* blocks on all data disks (N*stride)*/
+ 	__u8	s_log_groups_per_flex;	/* FLEX_BG group size */
+-	__u8    s_reserved_char_pad;
+-	__u16	s_reserved_pad;		/* Padding to next 32bits */
++	__u8    s_checksum_type;	/* metadata checksum algorithm */
++	__u8	s_encryption_level;	/* versioning level for encryption */
++	__u8	s_reserved_pad;		/* Padding to next 32bits */
+ 	__u64	s_kbytes_written;	/* nr of lifetime kilobytes written */
+ 	__u32	s_snapshot_inum;	/* Inode number of active snapshot */
+ 	__u32	s_snapshot_id;		/* sequential ID of active snapshot */
+@@ -645,7 +685,11 @@ struct ext2_super_block {
+ 	__u32	s_usr_quota_inum;	/* inode number of user quota file */
+ 	__u32	s_grp_quota_inum;	/* inode number of group quota file */
+ 	__u32	s_overhead_blocks;	/* overhead blocks/clusters in fs */
+-	__u32   s_reserved[108];        /* Padding to the end of the block */
++	__u32	s_backup_bgs[2];	/* If sparse_super2 enabled */
++	__u8	s_encrypt_algos[4];	/* Encryption algorithms in use  */
++	__u8	s_encrypt_pw_salt[16];	/* Salt used for string2key algorithm */
++	__u32	s_lpf_ino;		/* Location of the lost+found inode */
++	__u32   s_reserved[100];        /* Padding to the end of the block */
+ 	__u32	s_checksum;		/* crc32c(superblock) */
+ };
+ 
+@@ -725,6 +769,7 @@ struct ext2_super_block {
+ /* 0x2000 was EXT4_FEATURE_INCOMPAT_BG_USE_META_CSUM but this was never used */
+ #define EXT4_FEATURE_INCOMPAT_LARGEDIR		0x4000 /* >2GB or 3-lvl htree */
+ #define EXT4_FEATURE_INCOMPAT_INLINEDATA	0x8000 /* data in inode */
++#define EXT4_FEATURE_INCOMPAT_ENCRYPT		0x10000
+ 
+ #define EXT2_FEATURE_COMPAT_SUPP	0
+ #define EXT2_FEATURE_INCOMPAT_SUPP    (EXT2_FEATURE_INCOMPAT_FILETYPE| \
+diff --git a/lib/ext2fs/ext2fs.h b/lib/ext2fs/ext2fs.h
+index fb6b0b4..e013fbb 100644
+--- a/lib/ext2fs/ext2fs.h
++++ b/lib/ext2fs/ext2fs.h
+@@ -568,7 +568,8 @@ typedef struct ext2_icount *ext2_icount_t;
+ 					 EXT3_FEATURE_INCOMPAT_EXTENTS|\
+ 					 EXT4_FEATURE_INCOMPAT_FLEX_BG|\
+ 					 EXT4_FEATURE_INCOMPAT_MMP|\
+-					 EXT4_FEATURE_INCOMPAT_64BIT)
++					 EXT4_FEATURE_INCOMPAT_64BIT|\
++					 EXT4_FEATURE_INCOMPAT_ENCRYPT)
+ #else
+ #define EXT2_LIB_FEATURE_INCOMPAT_SUPP	(EXT2_FEATURE_INCOMPAT_FILETYPE|\
+ 					 EXT3_FEATURE_INCOMPAT_JOURNAL_DEV|\
+@@ -577,7 +578,8 @@ typedef struct ext2_icount *ext2_icount_t;
+ 					 EXT3_FEATURE_INCOMPAT_EXTENTS|\
+ 					 EXT4_FEATURE_INCOMPAT_FLEX_BG|\
+ 					 EXT4_FEATURE_INCOMPAT_MMP|\
+-					 EXT4_FEATURE_INCOMPAT_64BIT)
++					 EXT4_FEATURE_INCOMPAT_64BIT|\
++					 EXT4_FEATURE_INCOMPAT_ENCRYPT)
+ #endif
+ #ifdef CONFIG_QUOTA
+ #define EXT2_LIB_FEATURE_RO_COMPAT_SUPP	(EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER|\
+diff --git a/lib/ext2fs/tst_super_size.c b/lib/ext2fs/tst_super_size.c
+index eef5a63..6e0ee54 100644
+--- a/lib/ext2fs/tst_super_size.c
++++ b/lib/ext2fs/tst_super_size.c
+@@ -112,8 +112,9 @@ int main(int argc, char **argv)
+ 	check_field(s_mmp_block, 8);
+ 	check_field(s_raid_stripe_width, 4);
+ 	check_field(s_log_groups_per_flex, 1);
+-	check_field(s_reserved_char_pad, 1);
+-	check_field(s_reserved_pad, 2);
++	check_field(s_checksum_type, 1);
++	check_field(s_encryption_level, 1);
++	check_field(s_reserved_pad, 1);
+ 	check_field(s_kbytes_written, 8);
+ 	check_field(s_snapshot_inum, 4);
+ 	check_field(s_snapshot_id, 4);
+@@ -134,7 +135,11 @@ int main(int argc, char **argv)
+ 	check_field(s_usr_quota_inum, 4);
+ 	check_field(s_grp_quota_inum, 4);
+ 	check_field(s_overhead_blocks, 4);
+-	check_field(s_reserved, 108 * 4);
++ 	check_field(s_backup_bgs, 8);
++	check_field(s_encrypt_algos, 4);
++	check_field(s_encrypt_pw_salt, 16);
++	check_field(s_lpf_ino, 4);
++	check_field(s_reserved, 100 * 4);
+ 	check_field(s_checksum, 4);
+ 	do_field("Superblock end", 0, 0, cur_offset, 1024);
+ #endif
+-- 
+2.7.4
+
