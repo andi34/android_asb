@@ -1,0 +1,43 @@
+From 159a7ab98270e85103bbe820dc5dfbaf74fdf2d7 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Thu, 2 Aug 2018 12:07:44 +0200
+Subject: [PATCH] Bump Security Patch Level to 2018-07-01
+
+Implemented Patches
+===================
+CVE-2018-9412   A-78029004      High      Change 220462
+CVE-2018-9421   A-77237570      High      Change 220464
+CVE-2018-9365   A-74121126      Critical  Change 220470
+CVE-2018-9432   A-73173182      High      Change 220468
+CVE-2018-9420   A-77238656      High      Change 220469
+CVE-2018-9376   A-69981755      Moderate
+CVE-2018-9434   A-29833520 [1]  Moderate  Change 220466
+CVE-2018-9434   A-29833520 [2]  Moderate  Change 220465
+CVE-2018-9430   A-73963551      Moderate  Change 220471
+CVE-2018-9414   A-78787521      Moderate  Change 220467
+
+Skipped Patches
+===============
+CVE-2018-9433   A-38196219*     Critical  Not publicly available
+
+Change-Id: I1963c50ef9679fc575b1186d5f074fa35dbe340a
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 9024411..9794a67 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-06-01
++  PLATFORM_SECURITY_PATCH := 2018-07-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+
