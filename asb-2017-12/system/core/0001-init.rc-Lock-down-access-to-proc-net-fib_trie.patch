@@ -1,0 +1,32 @@
+From 513670ae5fc440440f871988c15ea063bd2c6930 Mon Sep 17 00:00:00 2001
+From: Nick Kralevich <nnk@google.com>
+Date: Fri, 25 Aug 2017 12:55:52 -0700
+Subject: [PATCH] init.rc: Lock down access to /proc/net/fib_trie
+
+Make /proc/net/fib_trie only readable to root.
+
+Bug: 31269937
+Test: Device boots, file has appropriate permissions.
+Change-Id: I0d01ce5c043d576344a6732b0b9ff93d62fcaa34
+CVE-2017-13165
+---
+ rootdir/init.rc | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/rootdir/init.rc b/rootdir/init.rc
+index df60f65..c4b9553 100644
+--- a/rootdir/init.rc
++++ b/rootdir/init.rc
+@@ -136,6 +136,9 @@ on init
+     write /proc/sys/net/ipv4/conf/all/accept_redirects 0
+     write /proc/sys/net/ipv6/conf/all/accept_redirects 0
+ 
++    # /proc/net/fib_trie leaks interface IP addresses
++    chmod 0400 /proc/net/fib_trie
++
+     # Create cgroup mount points for process groups
+     mkdir /dev/cpuctl
+     mount cgroup none /dev/cpuctl cpu
+-- 
+2.7.4
+
