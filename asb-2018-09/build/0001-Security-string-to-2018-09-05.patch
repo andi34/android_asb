@@ -1,0 +1,57 @@
+From 346e4a47f407d9d0dcc8fb93d8dbcab34ebbfc04 Mon Sep 17 00:00:00 2001
+From: syphyr <syphyr@gmail.com>
+Date: Thu, 6 Sep 2018 22:46:42 +0200
+Subject: [PATCH] Security string to 2018-09-05
+
+Implemented:
+============
+
+CVE-2018-9466	A-62151041	RCE	High
+CVE-2018-9467	A-110955991	EoP	High
+CVE-2018-9469	A-109824443	EoP	High
+CVE-2018-9470	A-78290481	EoP	High
+CVE-2018-9471	A-77599679	EoP	High
+CVE-2018-9472	A-79662501	RCE	High
+CVE-2018-9474	A-77600398	EoP	High
+CVE-2018-9440	A-77823362 [2]	DoS	Moderate
+CVE-2018-9475	A-79266386	EoP	Critical
+CVE-2018-9478	A-79217522	EoP	Critical
+CVE-2018-9479	A-79217770	EoP	Critical
+CVE-2018-9456	A-78136869	DoS	High
+CVE-2018-9483	A-110216173	ID	High
+CVE-2018-9484	A-79488381	ID	High
+CVE-2018-9485	A-80261585	ID	High
+CVE-2018-9486	A-80493272	ID	High
+CVE-2018-9468	A-111084083	ID	High
+
+No impact:
+==========
+
+CVE-2018-9477	A-92497653	EoP	High
+CVE-2018-9480	A-109757168	ID	High
+CVE-2018-9481	A-109757435	ID	High
+CVE-2018-9482	A-109757986	ID	High
+CVE-2018-9487	A-69873852	DoS	High
+CVE-2018-9488	A-110107376	EoP	Moderate
+
+Change-Id: Ie135b3534c0ce3e89774eeffba4f3be3827d23bc
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 1829c30..662cd08 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2018-08-05
++    PLATFORM_SECURITY_PATCH := 2018-09-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

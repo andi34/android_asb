@@ -16,3 +16,16 @@ repo forall -c "rm -rf *.patch"
 ```
 
 - Add the next ASB folder and start from beginning
+
+
+### 2018
+
+- https://review.lineageos.org/#/q/topic:n_asb_01-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_02-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_03-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_04-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_05-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_06-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_07-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_08-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_09-2018+(status:open+OR+status:merged)

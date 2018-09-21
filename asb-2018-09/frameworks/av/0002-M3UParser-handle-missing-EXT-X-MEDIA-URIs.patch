@@ -1,0 +1,42 @@
+From 8bc6515c2fb74fda9dcaec64ec852931a333eb7a Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Thu, 12 Jul 2018 16:17:45 -0700
+Subject: [PATCH 2/2] M3UParser: handle missing EXT-X-MEDIA URIs
+
+Bug: 111381540
+Test: http://devimages.apple.com.edgekey.net/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8
+Change-Id: I57f6cea59ce4c25267385289ab805eefe74b04ac
+(cherry picked from commit b8c3a74de55a76e2ee21c731828a8afca7aa4ae0)
+---
+ media/libstagefright/httplive/M3UParser.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/httplive/M3UParser.cpp b/media/libstagefright/httplive/M3UParser.cpp
+index 28d034b..d7bfbb3 100644
+--- a/media/libstagefright/httplive/M3UParser.cpp
++++ b/media/libstagefright/httplive/M3UParser.cpp
+@@ -233,7 +233,11 @@ bool M3UParser::MediaGroup::getActiveURI(AString *uri, const char *baseURL) cons
+         if (mSelectedIndex >= 0 && i == (size_t)mSelectedIndex) {
+             const Media &item = mMediaItems.itemAt(i);
+ 
+-            *uri = item.makeURL(baseURL);
++            if (item.mURI.empty()) {
++                *uri = "";
++            } else {
++                *uri = item.makeURL(baseURL);
++            }
+             return true;
+         }
+     }
+@@ -464,7 +468,7 @@ bool M3UParser::getTypeURI(size_t index, const char *key, AString *uri) const {
+         }
+ 
+         if ((*uri).empty()) {
+-            *uri = mItems.itemAt(index).mURI;
++            *uri = mItems.itemAt(index).makeURL(mBaseURI.c_str());
+         }
+     }
+ 
+-- 
+2.7.4
+

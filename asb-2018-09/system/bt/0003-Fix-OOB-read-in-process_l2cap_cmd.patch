@@ -1,0 +1,32 @@
+From 43d1d58c88ab55b016d93421c4f6ea219d5b24cc Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Thu, 12 Jul 2018 10:44:29 -0700
+Subject: [PATCH 3/7] Fix OOB read in process_l2cap_cmd
+
+Test: manual
+Bug: 79488381
+Change-Id: I723866ed40d3647fed99875f659bb95df96a6969
+(cherry picked from commit 5bb66307b555b17d1764e116316ce50c687c9653)
+---
+ stack/l2cap/l2c_main.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/stack/l2cap/l2c_main.c b/stack/l2cap/l2c_main.c
+index cef488c..5eced53 100644
+--- a/stack/l2cap/l2c_main.c
++++ b/stack/l2cap/l2c_main.c
+@@ -562,6 +562,11 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+                     /* sanity check option length */
+                     if ((cfg_len + L2CAP_CFG_OPTION_OVERHEAD) <= cmd_len)
+                     {
++                        if (p + cfg_len > p_next_cmd)
++                        {
++                            android_errorWriteLog(0x534e4554, "79488381");
++                            return;
++                        }
+                         p += cfg_len;
+                         if ((cfg_code & 0x80) == 0)
+                         {
+-- 
+2.7.4
+

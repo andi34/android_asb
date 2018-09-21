@@ -1,0 +1,93 @@
+From 85f414676322aea56d65e1891536e2efbd96e48d Mon Sep 17 00:00:00 2001
+From: Pete Bentley <prb@google.com>
+Date: Mon, 9 Jul 2018 11:42:50 +0100
+Subject: [PATCH] Fix hostname parsing in java.net.URLStreamHandler.
+
+As per https://url.spec.whatwg.org/#host-state, any of the
+characters '/', '\', '#' or '?' should be treated as
+terminators when parsing the host part of a URL.
+
+Change-Id: I1dc8db7101fdd863b51408b9cfb3ef7a585f1c04
+Tested: Ran CtsLibcoreTestCases
+Bug: 110955991
+(cherry picked from commit 512b127b593c9bdfbd92e2744495d9e17be9b4f3)
+---
+ luni/src/test/java/libcore/java/net/URLTest.java    | 20 ++++++++++++++++++++
+ ojluni/src/main/java/java/net/URLStreamHandler.java | 17 ++++++++++++++++-
+ 2 files changed, 36 insertions(+), 1 deletion(-)
+
+diff --git a/luni/src/test/java/libcore/java/net/URLTest.java b/luni/src/test/java/libcore/java/net/URLTest.java
+index 0eee1f8..0dcfac2 100644
+--- a/luni/src/test/java/libcore/java/net/URLTest.java
++++ b/luni/src/test/java/libcore/java/net/URLTest.java
+@@ -409,6 +409,26 @@ public final class URLTest extends TestCase {
+         assertEquals("http://host/a/c", url.toString()); // RI doesn't canonicalize
+     }
+ 
++    public void testPathContainsBackslash() throws Exception {
++        URL url = new URL("http://host\\path@foo");
++        assertEquals("\\path@foo", url.getPath());
++        assertEquals("host", url.getHost());
++    }
++
++    public void testQueryContainsForwardSlash() throws Exception {
++        URL url = new URL("http://host?query/foo");
++        assertEquals("", url.getPath());
++        assertEquals("host", url.getHost());
++        assertEquals("query/foo", url.getQuery());
++    }
++
++    public void testFragmentContainsForwardSlash() throws Exception {
++        URL url = new URL("http://host#fragment/foo");
++        assertEquals("", url.getPath());
++        assertEquals("host", url.getHost());
++        assertEquals("fragment/foo", url.getRef());
++    }
++
+     public void testRelativePathAndFragment() throws Exception {
+         URL base = new URL("http://host/file");
+         assertEquals("http://host/another#fragment", new URL(base, "another#fragment").toString());
+diff --git a/ojluni/src/main/java/java/net/URLStreamHandler.java b/ojluni/src/main/java/java/net/URLStreamHandler.java
+index 0892d67..49a84a9 100755
+--- a/ojluni/src/main/java/java/net/URLStreamHandler.java
++++ b/ojluni/src/main/java/java/net/URLStreamHandler.java
+@@ -168,12 +168,25 @@ public abstract class URLStreamHandler {
+         if (!isUNCName && (start <= limit - 2) && (spec.charAt(start) == '/') &&
+             (spec.charAt(start + 1) == '/')) {
+             start += 2;
++            // BEGIN Android-changed: Check for all hostname termination chars. http://b/110955991
++            /*
+             i = spec.indexOf('/', start);
+             if (i < 0 || i > limit) {
+                 i = spec.indexOf('?', start);
+                 if (i < 0 || i > limit)
+                     i = limit;
+             }
++            */
++            LOOP: for (i = start; i < limit; i++) {
++                switch (spec.charAt(i)) {
++                    case '/':  // Start of path
++                    case '\\': // Start of path - see https://url.spec.whatwg.org/#host-state
++                    case '?':  // Start of query
++                    case '#':  // Start of fragment
++                        break LOOP;
++                }
++            }
++            // END Android-changed: Check for all hostname termination chars. http://b/110955991
+ 
+             host = authority = spec.substring(start, i);
+ 
+@@ -267,7 +280,9 @@ public abstract class URLStreamHandler {
+ 
+         // Parse the file path if any
+         if (start < limit) {
+-            if (spec.charAt(start) == '/') {
++            // Android-changed: Check for all hostname termination chars. http://b/110955991
++            // if (spec.charAt(start) == '/') {
++            if (spec.charAt(start) == '/' || spec.charAt(start) == '\\') {
+                 path = spec.substring(start, limit);
+             } else if (path != null && path.length() > 0) {
+                 isRelPath = true;
+-- 
+2.7.4
+

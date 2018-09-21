@@ -1,0 +1,37 @@
+From fa109b413bd541f475919bff0344c4ed606d6651 Mon Sep 17 00:00:00 2001
+From: Arthur Ishiguro <arthuri@google.com>
+Date: Mon, 25 Jun 2018 11:31:33 -0700
+Subject: [PATCH 1/3] Resolve inconsistent parcel read in NanoAppFilter
+
+Bug: 77599679
+Test: Compile only
+Change-Id: Ib417a5cb4d51744442d2fb14437cabbe5fd1c266
+(cherry picked from commit abe5a73a4a81e312a1690fbc10a6b99ce98b699a)
+---
+ core/java/android/hardware/location/NanoAppFilter.java | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/core/java/android/hardware/location/NanoAppFilter.java b/core/java/android/hardware/location/NanoAppFilter.java
+index bf35a3d..c440949 100644
+--- a/core/java/android/hardware/location/NanoAppFilter.java
++++ b/core/java/android/hardware/location/NanoAppFilter.java
+@@ -83,7 +83,7 @@ public class NanoAppFilter {
+         mAppId = in.readLong();
+         mAppVersion = in.readInt();
+         mVersionRestrictionMask = in.readInt();
+-        mAppIdVendorMask = in.readInt();
++        mAppIdVendorMask = in.readLong();
+     }
+ 
+     public int describeContents() {
+@@ -91,7 +91,6 @@ public class NanoAppFilter {
+     }
+ 
+     public void writeToParcel(Parcel out, int flags) {
+-
+         out.writeLong(mAppId);
+         out.writeInt(mAppVersion);
+         out.writeInt(mVersionRestrictionMask);
+-- 
+2.7.4
+

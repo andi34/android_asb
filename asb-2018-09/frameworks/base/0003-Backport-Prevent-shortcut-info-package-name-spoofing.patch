@@ -1,0 +1,79 @@
+From 036b319b4e31bb2b3568b2841c0a0d5553025264 Mon Sep 17 00:00:00 2001
+From: Makoto Onuki <omakoto@google.com>
+Date: Tue, 12 Jun 2018 13:01:42 -0700
+Subject: [PATCH 3/3] Backport Prevent shortcut info package name spoofing
+
+Test: cts-tradefed run cts -m CtsShortcutManagerTestCases -t android.content.pm.cts.shortcutmanager.ShortcutManagerFakingPublisherTest
+Bug: 109824443
+
+Change-Id: I90443973aaef157d357b98b739572866125b2bbc
+Merged-In: I78948446a63b428ae750464194558fd44a658493
+(cherry picked from commit 9e21579a11219581a0c08ff5dd6ac4dc22e988a4)
+---
+ .../com/android/server/pm/ShortcutService.java     | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/services/core/java/com/android/server/pm/ShortcutService.java b/services/core/java/com/android/server/pm/ShortcutService.java
+index 6e8799e..b33cbfd 100644
+--- a/services/core/java/com/android/server/pm/ShortcutService.java
++++ b/services/core/java/com/android/server/pm/ShortcutService.java
+@@ -124,6 +124,7 @@ import java.nio.charset.StandardCharsets;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.List;
++import java.util.Objects;
+ import java.util.concurrent.atomic.AtomicBoolean;
+ import java.util.function.Consumer;
+ import java.util.function.Predicate;
+@@ -1523,6 +1524,24 @@ public class ShortcutService extends IShortcutService.Stub {
+         throw new SecurityException("Calling package name mismatch");
+     }
+ 
++    private void verifyShortcutInfoPackage(String callerPackage, ShortcutInfo si) {
++        if (si == null) {
++            return;
++        }
++        if (!Objects.equals(callerPackage, si.getPackage())) {
++            android.util.EventLog.writeEvent(0x534e4554, "109824443", -1, "");
++            throw new SecurityException("Shortcut package name mismatch");
++        }
++    }
++
++    private void verifyShortcutInfoPackages(
++            String callerPackage, List<ShortcutInfo> list) {
++        final int size = list.size();
++        for (int i = 0; i < size; i++) {
++            verifyShortcutInfoPackage(callerPackage, list.get(i));
++        }
++    }
++
+     // Overridden in unit tests to execute r synchronously.
+     void injectPostToHandler(Runnable r) {
+         mHandler.post(r);
+@@ -1651,6 +1670,7 @@ public class ShortcutService extends IShortcutService.Stub {
+         verifyCaller(packageName, userId);
+ 
+         final List<ShortcutInfo> newShortcuts = (List<ShortcutInfo>) shortcutInfoList.getList();
++        verifyShortcutInfoPackages(packageName, newShortcuts);
+         final int size = newShortcuts.size();
+ 
+         synchronized (mLock) {
+@@ -1702,6 +1722,7 @@ public class ShortcutService extends IShortcutService.Stub {
+         verifyCaller(packageName, userId);
+ 
+         final List<ShortcutInfo> newShortcuts = (List<ShortcutInfo>) shortcutInfoList.getList();
++        verifyShortcutInfoPackages(packageName, newShortcuts);
+         final int size = newShortcuts.size();
+ 
+         synchronized (mLock) {
+@@ -1782,6 +1803,7 @@ public class ShortcutService extends IShortcutService.Stub {
+         verifyCaller(packageName, userId);
+ 
+         final List<ShortcutInfo> newShortcuts = (List<ShortcutInfo>) shortcutInfoList.getList();
++        verifyShortcutInfoPackages(packageName, newShortcuts);
+         final int size = newShortcuts.size();
+ 
+         synchronized (mLock) {
+-- 
+2.7.4
+
