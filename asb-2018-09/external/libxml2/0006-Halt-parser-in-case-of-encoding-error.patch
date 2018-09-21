@@ -1,0 +1,28 @@
+From 2624f2fa2198c4c45faf7bc2cf23a51c880cf619 Mon Sep 17 00:00:00 2001
+From: Nick Wellnhofer <wellnhofer@aevum.de>
+Date: Mon, 22 Jan 2018 15:40:05 +0100
+Subject: [PATCH 6/6] Halt parser in case of encoding error
+
+Should fix crbug.com/793715, although I wasn't able to reproduce the
+issue.
+
+Change-Id: I2caa4c9fbba92099036d97891c14701f03aa590c
+---
+ parser.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/parser.c b/parser.c
+index a3cd150..57c0400 100644
+--- a/parser.c
++++ b/parser.c
+@@ -11770,6 +11770,7 @@ xmldecl_done:
+ 		    /* TODO 2.6.0 */
+ 		    xmlGenericError(xmlGenericErrorContext,
+ 				    "xmlParseChunk: encoder error\n");
++                    xmlHaltParser(ctxt);
+ 		    return(XML_ERR_INVALID_ENCODING);
+ 		}
+ 	    }
+-- 
+2.7.4
+

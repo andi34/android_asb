@@ -1,0 +1,59 @@
+From 1fad899c187f037dd7b2048d3a6243fac4377d9b Mon Sep 17 00:00:00 2001
+From: MSe1969 <mse1969@posteo.de>
+Date: Thu, 13 Sep 2018 13:15:54 +0200
+Subject: [PATCH] Bump Security Patch Level to 2018-09-01
+
+Implemented Patches
+===================
+CVE-2018-9466	A-62151041	High	  228442
+CVE-2018-9470	A-78290481	High	  228443
+CVE-2018-9440	A-77823362 [1]	High	  228445
+CVE-2018-9440	A-77823362 [2]	High	  228446
+CVE-2018-9475	A-79266386	Critical  228454
+CVE-2018-9478	A-79217522	Critical  228448
+CVE-2018-9479	A-79217770	Critical  228448
+CVE-2018-9456	A-78136869	High	  228449
+CVE-2018-9483	A-110216173	High	  228453
+CVE-2018-9484	A-79488381	High	  228450
+CVE-2018-9485	A-80261585	High	  228451
+CVE-2018-9486	A-80493272	High	  228452
+CVE-2018-9468	A-111084083	High	  228455
+CVE-2018-11261	A-64340487*	High	  228456
+
+Skipped Patches
+===============
+CVE-2018-9467	A-110955991	High	  Update libxml2 o not possible
+CVE-2018-9469	A-109824443	High	  N/A: 7.1.x and above
+CVE-2018-9471	A-77599679	High	  no NanoApp.java
+CVE-2018-9472	A-79662501	High	  Update libxml2 not possible
+CVE-2018-9474	A-77600398	High	  Code to be fixed not present
+CVE-2018-9477	A-92497653	High	  N/A: 8.x and above
+CVE-2018-9480	A-109757168	High	  N/A: 8.x and above
+CVE-2018-9481	A-109757435	High	  N/A: 8.x and above
+CVE-2018-9482	A-109757986	High	  N/A: 8.x and above
+CVE-2018-9487	A-69873852	High	  N/A: 8.x and above
+CVE-2018-9488	A-110107376	Moderate  N/A: 8.x and above
+CVE-2018-9411	A-79376389	Critical  N/A: 8.x and above
+CVE-2018-9427	A-77486542	Critical  N/A: 8.x and above
+
+Change-Id: Ib01166eb97883aa175261e39a0849dd01d496877
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index d5d9e41..77ebba4 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-08-01
++  PLATFORM_SECURITY_PATCH := 2018-09-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

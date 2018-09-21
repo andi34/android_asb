@@ -1,0 +1,34 @@
+From 5b4477ddf13647a2fc7c403e37a8cb1abf3b93c5 Mon Sep 17 00:00:00 2001
+From: Nick Wellnhofer <wellnhofer@aevum.de>
+Date: Mon, 22 Jan 2018 15:04:58 +0100
+Subject: [PATCH 5/6] BACKPORT: Clear entity content in case of errors
+
+This only affects recovery mode and avoids integer overflow in
+xmlStringGetNodeList and possibly other nasty surprises.
+
+See bug 783052 and
+
+https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=3874
+https://bugs.chromium.org/p/chromium/issues/detail?id=796804
+
+Change-Id: Ib785095bebd6f06b4aa8bada44157d51395d5e14
+---
+ parser.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/parser.c b/parser.c
+index 19c944d..a3cd150 100644
+--- a/parser.c
++++ b/parser.c
+@@ -7024,6 +7024,8 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
+ 		   (ret != XML_WAR_UNDECLARED_ENTITY)) {
+ 	    xmlFatalErrMsgStr(ctxt, XML_ERR_UNDECLARED_ENTITY,
+ 		     "Entity '%s' failed to parse\n", ent->name);
++            if (ent->content != NULL)
++                ent->content[0] = 0;
+ 	} else if (list != NULL) {
+ 	    xmlFreeNodeList(list);
+ 	    list = NULL;
+-- 
+2.7.4
+

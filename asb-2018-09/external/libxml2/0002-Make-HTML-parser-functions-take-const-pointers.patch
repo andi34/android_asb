@@ -1,0 +1,61 @@
+From 907e08e02bdb407cc0c9a511cd677887f3486e3f Mon Sep 17 00:00:00 2001
+From: Nick Wellnhofer <wellnhofer@aevum.de>
+Date: Sat, 17 Jun 2017 15:59:13 +0200
+Subject: [PATCH 2/6] Make HTML parser functions take const pointers
+
+The 'cur' parameter of htmlParseDoc and htmlSAXParseDoc should be
+'const xmlChar *'.
+
+Fixes bug 770650.
+
+Change-Id: I245c7e27af700c0454537816d4af1bf9e92abef2
+---
+ HTMLparser.c                | 5 +++--
+ include/libxml/HTMLparser.h | 4 ++--
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/HTMLparser.c b/HTMLparser.c
+index 1a4d80d..3e6e90d 100644
+--- a/HTMLparser.c
++++ b/HTMLparser.c
+@@ -6081,7 +6081,8 @@ htmlCreatePushParserCtxt(htmlSAXHandlerPtr sax, void *user_data,
+  */
+ 
+ htmlDocPtr
+-htmlSAXParseDoc(xmlChar *cur, const char *encoding, htmlSAXHandlerPtr sax, void *userData) {
++htmlSAXParseDoc(const xmlChar *cur, const char *encoding,
++                htmlSAXHandlerPtr sax, void *userData) {
+     htmlDocPtr ret;
+     htmlParserCtxtPtr ctxt;
+ 
+@@ -6120,7 +6121,7 @@ htmlSAXParseDoc(xmlChar *cur, const char *encoding, htmlSAXHandlerPtr sax, void
+  */
+ 
+ htmlDocPtr
+-htmlParseDoc(xmlChar *cur, const char *encoding) {
++htmlParseDoc(const xmlChar *cur, const char *encoding) {
+     return(htmlSAXParseDoc(cur, encoding, NULL, NULL));
+ }
+ 
+diff --git a/include/libxml/HTMLparser.h b/include/libxml/HTMLparser.h
+index 10a3d65..d4695c1 100644
+--- a/include/libxml/HTMLparser.h
++++ b/include/libxml/HTMLparser.h
+@@ -115,12 +115,12 @@ XMLPUBFUN htmlParserCtxtPtr XMLCALL
+ XMLPUBFUN int XMLCALL			
+ 			htmlParseDocument(htmlParserCtxtPtr ctxt);
+ XMLPUBFUN htmlDocPtr XMLCALL		
+-			htmlSAXParseDoc	(xmlChar *cur,
++			htmlSAXParseDoc	(const xmlChar *cur,
+ 					 const char *encoding,
+ 					 htmlSAXHandlerPtr sax,
+ 					 void *userData);
+ XMLPUBFUN htmlDocPtr XMLCALL		
+-			htmlParseDoc	(xmlChar *cur,
++			htmlParseDoc	(const xmlChar *cur,
+ 					 const char *encoding);
+ XMLPUBFUN htmlDocPtr XMLCALL		
+ 			htmlSAXParseFile(const char *filename,
+-- 
+2.7.4
+

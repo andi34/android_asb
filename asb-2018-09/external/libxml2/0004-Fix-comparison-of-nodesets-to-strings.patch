@@ -1,0 +1,47 @@
+From f066d5a0a504ef840dd4df9941d5d9484f21a5a2 Mon Sep 17 00:00:00 2001
+From: Nick Wellnhofer <wellnhofer@aevum.de>
+Date: Sat, 7 Oct 2017 14:54:45 +0200
+Subject: [PATCH 4/6] Fix comparison of nodesets to strings
+
+Fix two bugs in xmlXPathNodeValHash which could lead to errors when
+comparing nodesets to strings:
+
+- Only use contents of text nodes to compute the hash for element nodes.
+  Comments, PIs, and other node types don't affect the string-value and
+  must be ignored.
+- Reset `string` to NULL for node types other than text.
+
+Reported by Aleksei on the mailing list:
+
+    https://mail.gnome.org/archives/xml/2017-September/msg00016.html
+
+Change-Id: I75c2195223b0ca7420a7e6867383259d8541b23b
+---
+ xpath.c | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/xpath.c b/xpath.c
+index 9440dad..510a233 100644
+--- a/xpath.c
++++ b/xpath.c
+@@ -6296,16 +6296,12 @@ xmlXPathNodeValHash(xmlNodePtr node) {
+     }
+     while (tmp != NULL) {
+ 	switch (tmp->type) {
+-	    case XML_COMMENT_NODE:
+-	    case XML_PI_NODE:
+ 	    case XML_CDATA_SECTION_NODE:
+ 	    case XML_TEXT_NODE:
+ 		string = tmp->content;
+ 		break;
+-	    case XML_NAMESPACE_DECL:
+-		string = ((xmlNsPtr)tmp)->href;
+-		break;
+ 	    default:
++                string = NULL;
+ 		break;
+ 	}
+ 	if ((string != NULL) && (string[0] != 0)) {
+-- 
+2.7.4
+

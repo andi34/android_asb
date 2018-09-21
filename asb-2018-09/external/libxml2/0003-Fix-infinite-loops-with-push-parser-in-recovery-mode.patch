@@ -1,0 +1,40 @@
+From 0b0e0e107efa27366ab9a2636b37f4ebe923f7db Mon Sep 17 00:00:00 2001
+From: Nick Wellnhofer <wellnhofer@aevum.de>
+Date: Sat, 1 Jul 2017 17:49:30 +0200
+Subject: [PATCH 3/6] Fix infinite loops with push parser in recovery mode
+
+Make sure that the input pointer advances in case of errors. Otherwise,
+the push parser can loop infinitely.
+
+Found with libFuzzer.
+
+Change-Id: Ibe06f17646fac78596e4840af2cd64831a313352
+---
+ parser.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/parser.c b/parser.c
+index 1efcd6f..19c944d 100644
+--- a/parser.c
++++ b/parser.c
+@@ -4287,7 +4287,7 @@ get_more:
+ 	    if (*in == ']') {
+ 		if ((in[1] == ']') && (in[2] == '>')) {
+ 		    xmlFatalErr(ctxt, XML_ERR_MISPLACED_CDATA_END, NULL);
+-		    ctxt->input->cur = in;
++		    ctxt->input->cur = in + 1;
+ 		    return;
+ 		}
+ 		in++;
+@@ -4436,7 +4436,7 @@ xmlParseCharDataComplex(xmlParserCtxtPtr ctxt, int cdata) {
+ 	    }
+ 	}
+     }
+-    if ((cur != 0) && (!IS_CHAR(cur))) {
++    if ((ctxt->input->cur < ctxt->input->end) && (!IS_CHAR(cur))) {
+ 	/* Generate the error and skip the offending character */
+         xmlFatalErrMsgInt(ctxt, XML_ERR_INVALID_CHAR,
+                           "PCDATA invalid Char value %d\n",
+-- 
+2.7.4
+

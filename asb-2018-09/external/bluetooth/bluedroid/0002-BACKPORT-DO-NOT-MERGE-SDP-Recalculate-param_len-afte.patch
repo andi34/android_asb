@@ -1,0 +1,30 @@
+From f4f6756678d333bece21352b1d690176bafa9fb8 Mon Sep 17 00:00:00 2001
+From: Myles Watson <mylesgw@google.com>
+Date: Tue, 29 May 2018 16:55:58 -0700
+Subject: [PATCH 2/7] BACKPORT - DO NOT MERGE: SDP: Recalculate param_len after
+ max_list_len
+
+Bug: 78136869
+Test: manual connection to an A2DP device
+Change-Id: I71392cf1a70567fec957feb36768069ac5258aa1
+(cherry picked from commit 9cc9eea21c7868034242b7ab8be750c565e46bfd)
+CVE-2018-9456
+---
+ stack/sdp/sdp_server.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/stack/sdp/sdp_server.c b/stack/sdp/sdp_server.c
+index de3e579..c24002c 100644
+--- a/stack/sdp/sdp_server.c
++++ b/stack/sdp/sdp_server.c
+@@ -626,6 +626,7 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
+     if (max_list_len > (p_ccb->rem_mtu_size - SDP_MAX_SERVATTR_RSPHDR_LEN))
+         max_list_len = p_ccb->rem_mtu_size - SDP_MAX_SERVATTR_RSPHDR_LEN;
+ 
++    param_len = (UINT16) (p_req_end - p_req);
+     p_req = sdpu_extract_attr_seq (p_req, param_len, &attr_seq);
+ 
+     if ((!p_req) || (!attr_seq.num_attr) ||
+-- 
+2.7.4
+
