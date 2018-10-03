@@ -1,0 +1,66 @@
+From 2e276f2f8d31e15e496a5554a35535970e95bbcf Mon Sep 17 00:00:00 2001
+From: Tyler Gunn <tgunn@google.com>
+Date: Tue, 15 May 2018 08:39:08 -0700
+Subject: [PATCH 1/2] DO NOT MERGE Revise security requirements for
+ TelephonyManager#endCall.
+
+Note: This fix will be applied up to and including O, but no further
+since the P release includes an appropriate substitute API.
+There are multiple apps using reflection to call TelephonyManager#endCall.
+Although reliance on reflection to call internal implementation methods is
+a bad practice, our previous fix for this method rendered a number of
+popular apps in the ecosystem broken.
+This patch relaxes the security restrictions surrounding the endCall method
+and re-instates the ability for a caller holding CALL_PHONE permission
+to end non-emergency calls.
+In Android P, the new MODIFY_PHONE_STATE restriction remains in place as
+the new TelecomManager#endCall API provides a supported means for apps to
+reject or end calls.
+
+Test: Use test app to ensure emergency calls cannot be terminated.
+Test: Use test app to ensure calls can't be terminated in ECM mode.
+Test: Use test app to ensure calls can be rejected/ended with CALL_PHONE
+permission.
+Test: Use test app to ensure calls cannot be rejected/ended without
+CALL_PHONE permission.
+Bug: 67862398
+Change-Id: Ibac8f4f91402c91176f58fd951be122b513a4cc0
+(cherry picked from commit 84101e8a0f89a97f79919debe181223384c97ba6)
+---
+ src/com/android/phone/PhoneInterfaceManager.java | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/src/com/android/phone/PhoneInterfaceManager.java b/src/com/android/phone/PhoneInterfaceManager.java
+index 0ca2445..714eef2 100644
+--- a/src/com/android/phone/PhoneInterfaceManager.java
++++ b/src/com/android/phone/PhoneInterfaceManager.java
+@@ -956,12 +956,22 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
+      * @return true is a call was ended
+      */
+     public boolean endCallForSubscriber(int subId) {
+-        if (mApp.checkCallingOrSelfPermission(android.Manifest.permission.MODIFY_PHONE_STATE)
+-                != PackageManager.PERMISSION_GRANTED) {
+-            Log.i(LOG_TAG, "endCall: called without modify phone state.");
++        Phone phone = getPhone(subId);
++        CallManager callManager = PhoneGlobals.getInstance().getCallManager();
++
++        // When device is in emergency callback mode or there is an active emergency call, do not
++        // allow the caller to end the call unless they hold modify phone state permission.
++        if (phone != null && callManager != null
++                && (phone.isInEcm() || PhoneUtils.isInEmergencyCall(callManager))
++                && mApp.checkCallingOrSelfPermission(android.Manifest.permission.MODIFY_PHONE_STATE)
++                        != PackageManager.PERMISSION_GRANTED) {
++
++            Log.i(LOG_TAG, "endCall: called without modify phone state for emergency call.");
+             EventLog.writeEvent(0x534e4554, "67862398", -1, "");
+-            throw new SecurityException("MODIFY_PHONE_STATE permission required.");
++            throw new SecurityException(
++                    "MODIFY_PHONE_STATE permission required to end an emergency call.");
+         }
++        enforceCallPermission();
+         return (Boolean) sendRequest(CMD_END_CALL, null, new Integer(subId));
+     }
+ 
+-- 
+2.7.4
+

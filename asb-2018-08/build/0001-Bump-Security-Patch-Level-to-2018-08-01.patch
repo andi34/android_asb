@@ -1,0 +1,48 @@
+From 393d759adfdf7e3ae01e548cfa5c3dab28444106 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sun, 16 Sep 2018 10:38:36 +0200
+Subject: [PATCH] Bump Security Patch Level to 2018-08-01
+
+CVE-2018-9445	A-80436257[1]	High	 Change 223019
+CVE-2018-9445	A-80436257[2]	High	 Change 223020
+CVE-2018-9451	A-79488511[1]	High	 Change 223021
+CVE-2018-9451	A-79488511[2]	High	 Change 223022
+CVE-2018-9444	A-63521984*	High	 waiting for upstream
+CVE-2018-9437	A-78656554	High	 Change 223023
+CVE-2018-9446	A-80145946	Critical Change 223028
+CVE-2018-9450	A-79541338	Critical N/A
+CVE-2018-9459	A-66230183	High	 Change 223018
+CVE-2018-9455	A-78136677	High	 Change 223029
+CVE-2018-9436	A-79164722	High	 Change 223030
+CVE-2018-9454	A-78286118	High	 Change 223030
+CVE-2018-9453	A-78288378	High	 Change 223032
+CVE-2018-9435	A-79591688	Moderate Change 223034
+CVE-2018-9461	A-37629504	Moderate Change 223036
+CVE-2018-9449	A-79884292	Moderate Change 223035
+CVE-2018-9457	A-72872376	Moderate N/A
+CVE-2018-9441	A-74075873[1]	Moderate Change 223033
+CVE-2018-9441	A-74075873[2]	Moderate Change 223031
+CVE-2017-13322	A-67862398	Moderate Change 223056
+CVE-2018-9447	A-79995313	Moderate Change 223057
+
+Change-Id: Icc68f7061e41111d6740237a95539214dad0e51f
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 9794a67..3c33064 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-07-01
++  PLATFORM_SECURITY_PATCH := 2018-08-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+
