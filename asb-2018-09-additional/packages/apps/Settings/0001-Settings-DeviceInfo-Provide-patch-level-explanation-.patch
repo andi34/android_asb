@@ -1,0 +1,106 @@
+From b82bfcae1ed5422dcc2a2ddcdf8fd048031b0130 Mon Sep 17 00:00:00 2001
+From: mse1969 <mse1969@posteo.de>
+Date: Mon, 24 Sep 2018 21:09:00 +0200
+Subject: [PATCH] Settings/DeviceInfo - Provide "patch level" explanation and
+ disclaimer
+
+Make it clear to the user, that this is an outdated, no longer
+supported Android version. And that we have only backported stuff
+from newer Android versions in the monthly Android security bulletins.
+
+Change-Id: I6d706dcb598dd836c6a6f0b499782be9bd59b4dc
+---
+ res/values/custom_strings.xml                    | 23 +++++++++++++++++++++++
+ res/xml/device_info_settings.xml                 |  2 +-
+ src/com/android/settings/DeviceInfoSettings.java | 11 ++++++++++-
+ 3 files changed, 34 insertions(+), 2 deletions(-)
+ create mode 100644 res/values/custom_strings.xml
+
+diff --git a/res/values/custom_strings.xml b/res/values/custom_strings.xml
+new file mode 100644
+index 0000000..e6dd084
+--- /dev/null
++++ b/res/values/custom_strings.xml
+@@ -0,0 +1,23 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2018 The LineageOS Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++
++    <!-- "Legacy" Security Patch label -->
++    <string name="security_patch_legacy">Unofficial security backport</string>
++    <string name="security_patch_legacy_info">There are no official security patches for this Android version anymore.\nAll patches contained in this build are backports from newer versions.</string>
++
++</resources>
+diff --git a/res/xml/device_info_settings.xml b/res/xml/device_info_settings.xml
+index 1372ce7..d8e0845 100644
+--- a/res/xml/device_info_settings.xml
++++ b/res/xml/device_info_settings.xml
+@@ -80,7 +80,7 @@
+         <!-- Security patch level -->
+         <Preference android:key="security_patch"
+                 style="?android:preferenceInformationStyle"
+-                android:title="@string/security_patch"
++                android:title="@string/security_patch_legacy"
+                 android:summary="@string/device_info_default"/>
+ 
+         <!-- Device FCC equipment id -->
+diff --git a/src/com/android/settings/DeviceInfoSettings.java b/src/com/android/settings/DeviceInfoSettings.java
+index 8fc41ea..a34c540 100644
+--- a/src/com/android/settings/DeviceInfoSettings.java
++++ b/src/com/android/settings/DeviceInfoSettings.java
+@@ -17,6 +17,7 @@
+ package com.android.settings;
+ 
+ import android.app.Activity;
++import android.app.AlertDialog;
+ import android.content.Context;
+ import android.content.Intent;
+ import android.content.pm.ApplicationInfo;
+@@ -112,7 +113,7 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment implements In
+             try {
+                 SimpleDateFormat template = new SimpleDateFormat("yyyy-MM-dd");
+                 Date patchDate = template.parse(patch);
+-                String format = DateFormat.getBestDateTimePattern(Locale.getDefault(), "dMMMMyyyy");
++                String format = DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMMyyyy");
+                 patch = DateFormat.format(format, patchDate).toString();
+             } catch (ParseException e) {
+                 // broken parse; fall through and use the raw string
+@@ -129,6 +130,7 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment implements In
+         setStringSummary(KEY_BUILD_NUMBER, Build.DISPLAY);
+         findPreference(KEY_BUILD_NUMBER).setEnabled(true);
+         findPreference(KEY_KERNEL_VERSION).setSummary(getFormattedKernelVersion());
++        findPreference(KEY_SECURITY_PATCH).setEnabled(true);
+ 
+         if (!SELinux.isSELinuxEnabled()) {
+             String status = getResources().getString(R.string.selinux_status_disabled);
+@@ -281,6 +283,13 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment implements In
+             if (b.getBoolean(CarrierConfigManager.KEY_CI_ACTION_ON_SYS_UPDATE_BOOL)) {
+                 ciActionOnSysUpdate(b);
+             }
++        } else if (preference.getKey().equals(KEY_SECURITY_PATCH)) {
++            new AlertDialog.Builder(getActivity())
++                .setTitle(R.string.security_patch)
++                .setIcon(android.R.drawable.ic_dialog_alert)
++                .setMessage(R.string.security_patch_legacy_info)
++                .setNegativeButton(R.string.cancel, null)
++                .create().show();
+         }
+         return super.onPreferenceTreeClick(preferenceScreen, preference);
+     }
+-- 
+2.7.4
+
