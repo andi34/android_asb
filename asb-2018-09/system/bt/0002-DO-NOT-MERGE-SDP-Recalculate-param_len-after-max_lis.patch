@@ -20,7 +20,7 @@ index 50462e5..b11652f 100644
      if (max_list_len > (p_ccb->rem_mtu_size - SDP_MAX_SERVATTR_RSPHDR_LEN))
          max_list_len = p_ccb->rem_mtu_size - SDP_MAX_SERVATTR_RSPHDR_LEN;
  
-+    param_len = static_cast<uint16_t>(p_req_end - p_req);
++    param_len = (UINT16) (p_req_end - p_req);
      p_req = sdpu_extract_attr_seq (p_req, param_len, &attr_seq);
  
      if ((!p_req) || (!attr_seq.num_attr) ||
