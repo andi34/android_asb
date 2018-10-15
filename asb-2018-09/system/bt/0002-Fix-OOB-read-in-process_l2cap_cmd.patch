@@ -1,7 +1,7 @@
-From b156439efcf9ff7f4a17a8534af99b426b652d7f Mon Sep 17 00:00:00 2001
+From 09b31c5743409f215e8d33e39c30962041ae85f6 Mon Sep 17 00:00:00 2001
 From: Hansong Zhang <hsz@google.com>
 Date: Thu, 12 Jul 2018 10:44:29 -0700
-Subject: [PATCH 3/5] Fix OOB read in process_l2cap_cmd
+Subject: [PATCH 2/5] Fix OOB read in process_l2cap_cmd
 
 Test: manual
 Bug: 79488381

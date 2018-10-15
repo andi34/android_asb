@@ -1,7 +1,7 @@
-From 431e25a7a95883cb06158cce8a1c8c025929809c Mon Sep 17 00:00:00 2001
+From 7479abe495f634d96ca47548028c1063009379a4 Mon Sep 17 00:00:00 2001
 From: Myles Watson <mylesgw@google.com>
 Date: Tue, 29 May 2018 16:55:58 -0700
-Subject: [PATCH 2/5] DO NOT MERGE: SDP: Recalculate param_len after
+Subject: [PATCH 5/5] DO NOT MERGE: SDP: Recalculate param_len after
  max_list_len
 
 Bug: 78136869
@@ -13,7 +13,7 @@ Change-Id: I71392cf1a70567fec957feb36768069ac5258aa1
  1 file changed, 1 insertion(+)
 
 diff --git a/stack/sdp/sdp_server.c b/stack/sdp/sdp_server.c
-index 50462e5..b11652f 100644
+index 50462e5..875c715 100644
 --- a/stack/sdp/sdp_server.c
 +++ b/stack/sdp/sdp_server.c
 @@ -647,6 +647,7 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
