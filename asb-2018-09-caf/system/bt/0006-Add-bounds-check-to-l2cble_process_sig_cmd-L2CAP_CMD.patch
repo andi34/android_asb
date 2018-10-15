@@ -1,4 +1,4 @@
-From aeb77dc704d60a5e85dd334f4a3049191c204105 Mon Sep 17 00:00:00 2001
+From 890e428aad60d453da79c3e6b1ae0e3da0bd00ef Mon Sep 17 00:00:00 2001
 From: Ajay Panicker <apanicke@google.com>
 Date: Thu, 12 Apr 2018 17:03:09 -0700
 Subject: [PATCH 6/6] Add bounds check to l2cble_process_sig_cmd
@@ -8,22 +8,14 @@ Bug: 74121659
 Test: Compiles
 Change-Id: Idf58e7b25b41ae1bd43cdd51de424b18e03cc7e8
 ---
- stack/l2cap/l2c_ble.c | 5 +++++
- 1 file changed, 5 insertions(+)
+ stack/l2cap/l2c_ble.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
 diff --git a/stack/l2cap/l2c_ble.c b/stack/l2cap/l2c_ble.c
-index 728820c..ed8a9a1 100644
+index cb8d46c..ed8a9a1 100644
 --- a/stack/l2cap/l2c_ble.c
 +++ b/stack/l2cap/l2c_ble.c
-@@ -30,6 +30,7 @@
- #include "btu.h"
- #include "btm_int.h"
- #include "hcimsgs.h"
-+#include "log/log.h"
- #include "device/include/controller.h"
- 
- #if (BLE_INCLUDED == TRUE)
-@@ -1233,6 +1234,10 @@ void l2cble_process_sig_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+@@ -1234,6 +1234,10 @@ void l2cble_process_sig_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
              }
              break;
          case L2CAP_CMD_DISC_REQ:

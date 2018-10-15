@@ -1,4 +1,4 @@
-From 43ecc8491a4ff0bdeb469f857521515460df53fd Mon Sep 17 00:00:00 2001
+From 03cc2ffca52b8b8fb89fc7d98802ee1424d3c832 Mon Sep 17 00:00:00 2001
 From: Hansong Zhang <hsz@google.com>
 Date: Thu, 7 Jun 2018 14:25:09 -0700
 Subject: [PATCH 5/6] HID Host: Check L2CAP packet data length
