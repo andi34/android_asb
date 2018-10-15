@@ -1,0 +1,46 @@
+From 46e759df296bd8d2f68ab18a8f46243f23a3ca15 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Thu, 21 Jun 2018 22:56:11 -0700
+Subject: [PATCH 4/5] Add packet length checks in l2cble_process_sig_cmd
+
+Bug: 80261585
+Test: compilation
+Change-Id: Icf55747dc948bcce140a12658237554938e2d717
+(cherry picked from commit 02f47a752c818277b31852e3ff940764d5c7f9c7)
+---
+ stack/l2cap/l2c_ble.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/stack/l2cap/l2c_ble.c b/stack/l2cap/l2c_ble.c
+index a5cfb4d..0ace8ab 100644
+--- a/stack/l2cap/l2c_ble.c
++++ b/stack/l2cap/l2c_ble.c
+@@ -601,6 +601,12 @@ void l2cble_process_sig_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+ 
+     p_pkt_end = p + pkt_len;
+ 
++    if (p + 4 > p_pkt_end) {
++        android_errorWriteLog(0x534e4554, "80261585");
++        L2CAP_TRACE_ERROR("invalid read");
++        return;
++    }
++
+     STREAM_TO_UINT8  (cmd_code, p);
+     STREAM_TO_UINT8  (id, p);
+     STREAM_TO_UINT16 (cmd_len, p);
+@@ -625,6 +631,12 @@ void l2cble_process_sig_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+             break;
+ 
+         case L2CAP_CMD_BLE_UPDATE_REQ:
++            if (p + 8 > p_pkt_end) {
++                android_errorWriteLog(0x534e4554, "80261585");
++                L2CAP_TRACE_ERROR("invalid read");
++                return;
++            }
++
+             STREAM_TO_UINT16 (min_interval, p); /* 0x0006 - 0x0C80 */
+             STREAM_TO_UINT16 (max_interval, p); /* 0x0006 - 0x0C80 */
+             STREAM_TO_UINT16 (latency, p);  /* 0x0000 - 0x03E8 */
+-- 
+2.7.4
+

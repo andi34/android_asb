@@ -1,0 +1,48 @@
+From ed6ce969cf2c4cb0ac0358c3a4109ade3bff1643 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Fri, 22 Jun 2018 04:46:39 -0700
+Subject: [PATCH 1/5] SDP: return error on offset bigger than atribute length
+
+Test: none
+Bug: 79217770
+Change-Id: I8b594882dd07644b1a747c53d6166db466b7e998
+(cherry picked from commit 0a74ffa44cbe48f674387cc951e6011c28ca003c)
+---
+ stack/sdp/sdp_server.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/stack/sdp/sdp_server.c b/stack/sdp/sdp_server.c
+index 5d12b9c..50462e5 100644
+--- a/stack/sdp/sdp_server.c
++++ b/stack/sdp/sdp_server.c
+@@ -476,6 +476,13 @@ static void process_service_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
+             /* if there is a partial attribute pending to be sent */
+             if (p_ccb->cont_info.attr_offset)
+             {
++                if (attr_len < p_ccb->cont_info.attr_offset) {
++                    android_errorWriteLog(0x534e4554, "79217770");
++                    SDP_TRACE_ERROR("offset is bigger than attribute length");
++                    sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_CONT_STATE,
++                                            SDP_TEXT_BAD_CONT_LEN);
++                    return;
++                }
+                 p_rsp = sdpu_build_partial_attrib_entry (p_rsp, p_attr, rem_len,
+                                                          &p_ccb->cont_info.attr_offset);
+ 
+@@ -770,6 +777,13 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
+                 /* if there is a partial attribute pending to be sent */
+                 if (p_ccb->cont_info.attr_offset)
+                 {
++                    if (attr_len < p_ccb->cont_info.attr_offset) {
++                        android_errorWriteLog(0x534e4554, "79217770");
++                        SDP_TRACE_ERROR("offset is bigger than attribute length");
++                        sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_CONT_STATE,
++                                                SDP_TEXT_BAD_CONT_LEN);
++                        return;
++                    }
+                     p_rsp = sdpu_build_partial_attrib_entry (p_rsp, p_attr, rem_len,
+                                                              &p_ccb->cont_info.attr_offset);
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,28 @@
+From f09ea54e6d1519bae581466fc2f24558a857da8f Mon Sep 17 00:00:00 2001
+From: Pawin Vongmasa <pawin@google.com>
+Date: Tue, 8 May 2018 06:40:24 -0700
+Subject: [PATCH] Make bound check proper in bbf_Scanner_addOutPos
+
+Bug: 78290481
+Change-Id: Ifab456f40b5e8f14f2728ad67d1b3e2eeae0b947
+(cherry picked from commit fb710d3c6af6fd139e30d39eb852ba6bcfcec911)
+---
+ Embedded/common/src/b_BitFeatureEm/Scanner.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Embedded/common/src/b_BitFeatureEm/Scanner.c b/Embedded/common/src/b_BitFeatureEm/Scanner.c
+index 327e714..1a0ae2a 100644
+--- a/Embedded/common/src/b_BitFeatureEm/Scanner.c
++++ b/Embedded/common/src/b_BitFeatureEm/Scanner.c
+@@ -1064,7 +1064,7 @@ void bbf_Scanner_addOutPos( struct bbs_Context* cpA,
+ 							uint32 scaleA, 
+ 							int32 actA )
+ {
+-	if( ( ptrA->outCountE * 4 ) < ptrA->outArrE.sizeE )
++	if( ( ptrA->outCountE * 4 + 3 ) < ptrA->outArrE.sizeE )
+ 	{
+         ptrA->outArrE.arrPtrE[ ptrA->outCountE * 4 + 0 ] = xA;
+         ptrA->outArrE.arrPtrE[ ptrA->outCountE * 4 + 1 ] = yA;
+-- 
+2.7.4
+

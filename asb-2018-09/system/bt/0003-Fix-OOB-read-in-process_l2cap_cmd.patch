@@ -1,0 +1,28 @@
+From b156439efcf9ff7f4a17a8534af99b426b652d7f Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Thu, 12 Jul 2018 10:44:29 -0700
+Subject: [PATCH 3/5] Fix OOB read in process_l2cap_cmd
+
+Test: manual
+Bug: 79488381
+Change-Id: I723866ed40d3647fed99875f659bb95df96a6969
+(cherry picked from commit 5bb66307b555b17d1764e116316ce50c687c9653)
+---
+ stack/l2cap/l2c_main.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/stack/l2cap/l2c_main.c b/stack/l2cap/l2c_main.c
+index 9e90432..cc035b5 100644
+--- a/stack/l2cap/l2c_main.c
++++ b/stack/l2cap/l2c_main.c
+@@ -612,6 +612,7 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+                     /* sanity check option length */
+                     if ((cfg_len + L2CAP_CFG_OPTION_OVERHEAD) <= cmd_len)
+                     {
++                        if (p + cfg_len > p_next_cmd) return;
+                         p += cfg_len;
+                         if ((cfg_code & 0x80) == 0)
+                         {
+-- 
+2.7.4
+

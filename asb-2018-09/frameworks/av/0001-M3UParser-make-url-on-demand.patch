@@ -1,0 +1,131 @@
+From 375890e3ef15c9ff3fe3c7f0e45233ab1a6237e9 Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Fri, 1 Jun 2018 15:09:21 -0700
+Subject: [PATCH 1/2] M3UParser: make url on demand
+
+Bug: 77823362
+Test: adb shell am start -a android.intent.action.VIEW -d http://10.42.0.1:8080
+Change-Id: Ieaf8a13985277eee5b085ed243205a597627cf5e
+(cherry picked from commit 26e236bd426770869644a9962778dedea7bf59be)
+---
+ media/libstagefright/httplive/M3UParser.cpp | 31 +++++++++++++++++++----------
+ media/libstagefright/httplive/M3UParser.h   |  1 +
+ 2 files changed, 22 insertions(+), 10 deletions(-)
+
+diff --git a/media/libstagefright/httplive/M3UParser.cpp b/media/libstagefright/httplive/M3UParser.cpp
+index 7b5e7d5..e8e2390 100644
+--- a/media/libstagefright/httplive/M3UParser.cpp
++++ b/media/libstagefright/httplive/M3UParser.cpp
+@@ -56,7 +56,7 @@ struct M3UParser::MediaGroup : public RefBase {
+             const char *language,
+             uint32_t flags);
+ 
+-    bool getActiveURI(AString *uri) const;
++    bool getActiveURI(AString *uri, const char *baseURL) const;
+ 
+     void pickRandomMediaItems();
+     status_t selectTrack(size_t index, bool select);
+@@ -75,6 +75,7 @@ private:
+         AString mURI;
+         AString mLanguage;
+         uint32_t mFlags;
++        AString makeURL(const char *baseURL) const;
+     };
+ 
+     Type mType;
+@@ -227,12 +228,12 @@ sp<AMessage> M3UParser::MediaGroup::getTrackInfo(size_t index) const {
+     return format;
+ }
+ 
+-bool M3UParser::MediaGroup::getActiveURI(AString *uri) const {
++bool M3UParser::MediaGroup::getActiveURI(AString *uri, const char *baseURL) const {
+     for (size_t i = 0; i < mMediaItems.size(); ++i) {
+         if (mSelectedIndex >= 0 && i == (size_t)mSelectedIndex) {
+             const Media &item = mMediaItems.itemAt(i);
+ 
+-            *uri = item.mURI;
++            *uri = item.makeURL(baseURL);
+             return true;
+         }
+     }
+@@ -321,7 +322,7 @@ bool M3UParser::itemAt(size_t index, AString *uri, sp<AMessage> *meta) {
+     }
+ 
+     if (uri) {
+-        *uri = mItems.itemAt(index).mURI;
++        *uri = mItems.itemAt(index).makeURL(mBaseURI.c_str());
+     }
+ 
+     if (meta) {
+@@ -427,7 +428,7 @@ bool M3UParser::getTypeURI(size_t index, const char *key, AString *uri) const {
+     AString groupID;
+     if (!meta->findString(key, &groupID)) {
+         if (uri != NULL) {
+-            *uri = mItems.itemAt(index).mURI;
++            *uri = mItems.itemAt(index).makeURL(mBaseURI.c_str());
+         }
+ 
+         AString codecs;
+@@ -458,7 +459,7 @@ bool M3UParser::getTypeURI(size_t index, const char *key, AString *uri) const {
+     // don't care about the active URI (or if there is an active one)
+     if (uri != NULL) {
+         sp<MediaGroup> group = mMediaGroups.valueFor(groupID);
+-        if (!group->getActiveURI(uri)) {
++        if (!group->getActiveURI(uri, mBaseURI.c_str())) {
+             return false;
+         }
+ 
+@@ -544,6 +545,18 @@ static bool MakeURL(const char *baseURL, const char *url, AString *out) {
+     return true;
+ }
+ 
++AString M3UParser::Item::makeURL(const char *baseURL) const {
++    AString out;
++    CHECK(MakeURL(baseURL, mURI.c_str(), &out));
++    return out;
++}
++
++AString M3UParser::MediaGroup::Media::makeURL(const char *baseURL) const {
++    AString out;
++    CHECK(MakeURL(baseURL, mURI.c_str(), &out));
++    return out;
++}
++
+ status_t M3UParser::parse(const void *_data, size_t size) {
+     int32_t lineNo = 0;
+ 
+@@ -671,7 +684,7 @@ status_t M3UParser::parse(const void *_data, size_t size) {
+             mItems.push();
+             Item *item = &mItems.editItemAt(mItems.size() - 1);
+ 
+-            CHECK(MakeURL(mBaseURI.c_str(), line.c_str(), &item->mURI));
++            item->mURI = line;
+ 
+             item->mMeta = itemMeta;
+ 
+@@ -1176,9 +1189,7 @@ status_t M3UParser::parseMedia(const AString &line) {
+ 
+             AString tmp(val, 1, val.size() - 2);
+ 
+-            if (!MakeURL(mBaseURI.c_str(), tmp.c_str(), &groupURI)) {
+-                ALOGI("Failed to make absolute URI from '%s'.", tmp.c_str());
+-            }
++            groupURI = tmp;
+ 
+             haveGroupURI = true;
+         }
+diff --git a/media/libstagefright/httplive/M3UParser.h b/media/libstagefright/httplive/M3UParser.h
+index fa648ed..c85335a 100644
+--- a/media/libstagefright/httplive/M3UParser.h
++++ b/media/libstagefright/httplive/M3UParser.h
+@@ -64,6 +64,7 @@ private:
+     struct Item {
+         AString mURI;
+         sp<AMessage> mMeta;
++        AString makeURL(const char *baseURL) const;
+     };
+ 
+     status_t mInitCheck;
+-- 
+2.7.4
+

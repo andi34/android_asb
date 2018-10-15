@@ -1,0 +1,31 @@
+From 4e8355fa7949185d688eab00529d9e9ce317ca4d Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Mon, 9 Jul 2018 13:38:31 -0700
+Subject: [PATCH] Fix TrackInfo parcel write
+
+Bug: 77600398
+Change-Id: Ia316f1c5dc4879f6851fdb78fe8b9039579be7bc
+(cherry picked from commit 0d2dc943dcaa3d7c8479e22ae62be9753ea2643c)
+---
+ media/java/android/media/MediaPlayer.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/java/android/media/MediaPlayer.java b/media/java/android/media/MediaPlayer.java
+index 587d494..3d71f95 100644
+--- a/media/java/android/media/MediaPlayer.java
++++ b/media/java/android/media/MediaPlayer.java
+@@ -1992,10 +1992,10 @@ public class MediaPlayer implements SubtitleController.Listener
+         @Override
+         public void writeToParcel(Parcel dest, int flags) {
+             dest.writeInt(mTrackType);
++            dest.writeString(mFormat.getString(MediaFormat.KEY_MIME));
+             dest.writeString(getLanguage());
+ 
+             if (mTrackType == MEDIA_TRACK_TYPE_SUBTITLE) {
+-                dest.writeString(mFormat.getString(MediaFormat.KEY_MIME));
+                 dest.writeInt(mFormat.getInteger(MediaFormat.KEY_IS_AUTOSELECT));
+                 dest.writeInt(mFormat.getInteger(MediaFormat.KEY_IS_DEFAULT));
+                 dest.writeInt(mFormat.getInteger(MediaFormat.KEY_IS_FORCED_SUBTITLE));
+-- 
+2.7.4
+

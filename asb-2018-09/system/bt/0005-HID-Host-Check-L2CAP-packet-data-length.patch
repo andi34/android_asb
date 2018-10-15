@@ -1,0 +1,43 @@
+From e32b1a5debb9cbec3492fe77e702b8e8ef1576ab Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Thu, 7 Jun 2018 14:25:09 -0700
+Subject: [PATCH 5/5] HID Host: Check L2CAP packet data length
+
+Bug: 80493272
+Test: manual
+Change-Id: I8b1acd11616684729752195fabb4fa34c46a508d
+(cherry picked from commit ca47a05acb66218ff2123f8d4642961f7f2eb5e2)
+---
+ stack/hid/hidh_conn.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/stack/hid/hidh_conn.c b/stack/hid/hidh_conn.c
+index 0cc6976..b616c63 100644
+--- a/stack/hid/hidh_conn.c
++++ b/stack/hid/hidh_conn.c
+@@ -43,6 +43,8 @@
+ #include "hidh_int.h"
+ #include "bt_utils.h"
+ 
++#include "log/log.h"
++
+ static UINT8 find_conn_by_cid (UINT16 cid);
+ static void hidh_conn_retry (UINT8 dhandle);
+ 
+@@ -801,6 +803,13 @@ static void hidh_l2cif_data_ind (UINT16 l2cap_cid, BT_HDR *p_msg)
+         return;
+     }
+ 
++    if (p_msg->len < 1) {
++        HIDH_TRACE_WARNING("Rcvd L2CAP data, invalid length %d, should be >= 1",
++                           p_msg->len);
++        GKI_freebuf(p_msg);
++        android_errorWriteLog(0x534e4554, "80493272");
++        return;
++    }
+ 
+     ttype    = HID_GET_TRANS_FROM_HDR(*p_data);
+     param    = HID_GET_PARAM_FROM_HDR(*p_data);
+-- 
+2.7.4
+
