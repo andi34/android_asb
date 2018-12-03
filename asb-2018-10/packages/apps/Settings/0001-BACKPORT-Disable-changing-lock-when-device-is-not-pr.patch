@@ -1,0 +1,157 @@
+From a176b640d1c4f294e3dbb8e2f6a3befcecf42cd8 Mon Sep 17 00:00:00 2001
+From: Doris Ling <dling@google.com>
+Date: Tue, 31 Jul 2018 14:04:44 -0700
+Subject: [PATCH] BACKPORT: Disable changing lock when device is not
+ provisioned.
+
+When the device is not yet provisioned and settings is launched:
+- disable the entry point for changing device lock
+- remove the search panel from settings home page
+- remove the search menu
+
+Bug: 110034419
+Test: make RunSettingsRoboTests
+Change-Id: Ieb7eb0e8699229ec0824ccc19d7b958ac44965a2
+Merged-In: Ieb7eb0e8699229ec0824ccc19d7b958ac44965a2
+(cherry picked from commit 770f4abf9de2bb7d74497cc4b5f6795023229ef2)
+CVE-2018-9501
+---
+ src/com/android/settings/ChooseLockGeneric.java    |  9 +++
+ src/com/android/settings/SettingsActivity.java     |  4 +-
+ .../android/settings/SetupChooseLockGeneric.java   |  5 ++
+ .../settings/password/ChooseLockGenericTest.java   | 65 ++++++++++++++++++++++
+ 4 files changed, 81 insertions(+), 2 deletions(-)
+ create mode 100644 tests/robotests/src/com/android/settings/password/ChooseLockGenericTest.java
+
+diff --git a/src/com/android/settings/ChooseLockGeneric.java b/src/com/android/settings/ChooseLockGeneric.java
+index 1a70f54..88c65d7 100644
+--- a/src/com/android/settings/ChooseLockGeneric.java
++++ b/src/com/android/settings/ChooseLockGeneric.java
+@@ -140,6 +140,11 @@ public class ChooseLockGeneric extends SettingsActivity {
+         @Override
+         public void onCreate(Bundle savedInstanceState) {
+             super.onCreate(savedInstanceState);
++            final Activity activity = getActivity();
++            if (!Utils.isDeviceProvisioned(activity) && !canRunBeforeDeviceProvisioned()) {
++                activity.finish();
++                return;
++            }
+ 
+             String chooseLockAction = getActivity().getIntent().getAction();
+             mFingerprintManager =
+@@ -217,6 +222,10 @@ public class ChooseLockGeneric extends SettingsActivity {
+             addHeaderView();
+         }
+ 
++        protected boolean canRunBeforeDeviceProvisioned() {
++            return false;
++        }
++
+         protected void addHeaderView() {
+             if (mForFingerprint) {
+                 setHeaderView(R.layout.choose_lock_generic_fingerprint_header);
+diff --git a/src/com/android/settings/SettingsActivity.java b/src/com/android/settings/SettingsActivity.java
+index db9c090..76041f2 100644
+--- a/src/com/android/settings/SettingsActivity.java
++++ b/src/com/android/settings/SettingsActivity.java
+@@ -625,8 +625,8 @@ public class SettingsActivity extends SettingsDrawerActivity
+             } else {
+                 // No UP affordance if we are displaying the main Dashboard
+                 mDisplayHomeAsUpEnabled = false;
+-                // Show Search affordance
+-                mDisplaySearch = true;
++                // Show Search affordance (if device is provisioned)
++                mDisplaySearch = Utils.isDeviceProvisioned(this);
+                 mInitialTitleResId = R.string.dashboard_title;
+ 
+                 // add argument to indicate which settings tab should be initially selected
+diff --git a/src/com/android/settings/SetupChooseLockGeneric.java b/src/com/android/settings/SetupChooseLockGeneric.java
+index 71679f3..21fad53 100644
+--- a/src/com/android/settings/SetupChooseLockGeneric.java
++++ b/src/com/android/settings/SetupChooseLockGeneric.java
+@@ -138,6 +138,11 @@ public class SetupChooseLockGeneric extends ChooseLockGeneric {
+             return layout.onCreateRecyclerView(inflater, parent, savedInstanceState);
+         }
+ 
++        @Override
++        protected boolean canRunBeforeDeviceProvisioned() {
++            return true;
++        }
++
+         /***
+          * Disables preferences that are less secure than required quality and shows only secure
+          * screen lock options here.
+diff --git a/tests/robotests/src/com/android/settings/password/ChooseLockGenericTest.java b/tests/robotests/src/com/android/settings/password/ChooseLockGenericTest.java
+new file mode 100644
+index 0000000..7a14896
+--- /dev/null
++++ b/tests/robotests/src/com/android/settings/password/ChooseLockGenericTest.java
+@@ -0,0 +1,65 @@
++/*
++ * Copyright (C) 2018 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.settings.password;
++
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.spy;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
++
++import android.app.Activity;
++import android.content.Context;
++import android.os.Bundle;
++import android.provider.Settings.Global;
++
++import com.android.settings.password.ChooseLockGeneric.ChooseLockGenericFragment;
++import com.android.settings.testutils.SettingsRobolectricTestRunner;
++import com.android.settings.testutils.shadow.SettingsShadowResources;
++
++import org.junit.After;
++import org.junit.Test;
++import org.junit.runner.RunWith;
++import org.robolectric.RuntimeEnvironment;
++import org.robolectric.annotation.Config;
++
++@RunWith(SettingsRobolectricTestRunner.class)
++public class ChooseLockGenericTest {
++
++    @After
++    public void tearDown() {
++        Global.putInt(RuntimeEnvironment.application.getContentResolver(),
++            Global.DEVICE_PROVISIONED, 1);
++    }
++
++    @Test
++    @Config(shadows = SettingsShadowResources.SettingsShadowTheme.class)
++    public void onCreate_deviceNotProvisioned_shouldFinishActivity() {
++        final Context context = RuntimeEnvironment.application;
++        Global.putInt(context.getContentResolver(), Global.DEVICE_PROVISIONED, 0);
++        final Activity activity = mock(Activity.class);
++        when(activity.getContentResolver()).thenReturn(context.getContentResolver());
++        when(activity.getTheme()).thenReturn(context.getTheme());
++
++        final ChooseLockGenericFragment fragment = spy(new ChooseLockGenericFragment());
++        when(fragment.getActivity()).thenReturn(activity);
++        when(fragment.getArguments()).thenReturn(Bundle.EMPTY);
++
++        fragment.onCreate(Bundle.EMPTY);
++        verify(activity).finish();
++    }
++
++}
+-- 
+2.7.4
+

@@ -1,0 +1,38 @@
+From 03f28127c4a8cc368b2ff733b561121697f2e8a5 Mon Sep 17 00:00:00 2001
+From: Ugo Yu <ugoyu@google.com>
+Date: Wed, 8 Aug 2018 16:09:58 +0800
+Subject: [PATCH 09/10] Add packet length check in smp_proc_master_id
+
+Bug: 111937027
+Test: manual
+
+Change-Id: I1144c9879e84fa79d68ad9d5fece4f58e2a3b075
+(cherry picked from commit c8294662d07a98e9b8b1cab1ab681ec0805ce4e8)
+---
+ stack/smp/smp_act.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/stack/smp/smp_act.c b/stack/smp/smp_act.c
+index 21d89ba..acd6ec5 100644
+--- a/stack/smp/smp_act.c
++++ b/stack/smp/smp_act.c
+@@ -1033,6 +1033,16 @@ void smp_proc_master_id(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+     tBTM_LE_PENC_KEYS   le_key;
+ 
+     SMP_TRACE_DEBUG("%s", __func__);
++
++    if (p_cb->rcvd_cmd_len < 11)
++    {
++        // 1(Code) + 2(EDIV) + 8(Rand)
++        android_errorWriteLog(0x534e4554, "111937027");
++        SMP_TRACE_ERROR("%s: Invalid command length: %d, should be at least 11",
++                        __func__, p_cb->rcvd_cmd_len);
++        return;
++    }
++
+     smp_update_key_mask (p_cb, SMP_SEC_KEY_TYPE_ENC, TRUE);
+ 
+     STREAM_TO_UINT16(le_key.ediv, p);
+-- 
+2.7.4
+

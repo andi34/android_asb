@@ -1,0 +1,70 @@
+From fe72afb765b8681f73637dd37b781452718f8ca3 Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Tue, 7 Aug 2018 15:02:17 -0600
+Subject: [PATCH 6/7] DO NOT MERGE. Persistable Uri grants still require
+ permissions.
+
+When FLAG_GRANT_PERSISTABLE_URI_PERMISSION is requested, we still
+need to check permissions between the source and target packages,
+instead of shortcutting past them.
+
+The spirit of the original change is remains intact: if the caller
+requested FLAG_GRANT_PERSISTABLE_URI_PERMISSION, then we avoid
+returning "-1", which would prevent the grant data structure from
+being allocated.
+
+Bug: 111934948
+Test: atest android.appsecurity.cts.AppSecurityTests
+Change-Id: Ief0fc922aa09fc3d9bb6a126c2ff5855347cd030
+Merged-In: Ief0fc922aa09fc3d9bb6a126c2ff5855347cd030
+(cherry picked from commit d6a6e7127cc341ca875d9d13cf7a864d9f20b479)
+---
+ .../com/android/server/am/ActivityManagerService.java   | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
+index ac15a35..7be177a 100644
+--- a/services/core/java/com/android/server/am/ActivityManagerService.java
++++ b/services/core/java/com/android/server/am/ActivityManagerService.java
+@@ -8112,10 +8112,17 @@ public final class ActivityManagerService extends ActivityManagerNative
+             }
+         }
+ 
+-        // If we're extending a persistable grant, then we always need to create
+-        // the grant data structure so that take/release APIs work
++        // Figure out the value returned when access is allowed
++        final int allowedResult;
+         if ((modeFlags & Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) != 0) {
+-            return targetUid;
++            // If we're extending a persistable grant, then we need to return
++            // "targetUid" so that we always create a grant data structure to
++            // support take/release APIs
++            allowedResult = targetUid;
++        } else {
++            // Otherwise, we can return "-1" to indicate that no grant data
++            // structures need to be created
++            allowedResult = -1;
+         }
+ 
+         if (targetUid >= 0) {
+@@ -8124,7 +8131,7 @@ public final class ActivityManagerService extends ActivityManagerNative
+                 // No need to grant the target this permission.
+                 if (DEBUG_URI_PERMISSION) Slog.v(TAG_URI_PERMISSION,
+                         "Target " + targetPkg + " already has full permission to " + grantUri);
+-                return -1;
++                return allowedResult;
+             }
+         } else {
+             // First...  there is no target package, so can anyone access it?
+@@ -8140,7 +8147,7 @@ public final class ActivityManagerService extends ActivityManagerNative
+                 }
+             }
+             if (allowed) {
+-                return -1;
++                return allowedResult;
+             }
+         }
+ 
+-- 
+2.7.4
+

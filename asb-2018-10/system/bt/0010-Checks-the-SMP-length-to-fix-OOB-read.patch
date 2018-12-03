@@ -1,0 +1,64 @@
+From e2512dff03a6c79cf10fa96e4295945f9f7d010c Mon Sep 17 00:00:00 2001
+From: Cheney Ni <cheneyni@google.com>
+Date: Wed, 8 Aug 2018 22:20:08 +0800
+Subject: [PATCH 10/10] Checks the SMP length to fix OOB read
+
+Bug: 111937065
+Test: manual
+Change-Id: I330880a6e1671d0117845430db4076dfe1aba688
+Merged-In: I330880a6e1671d0117845430db4076dfe1aba688
+(cherry picked from commit fceb753bda651c4135f3f93a510e5fcb4c7542b8)
+---
+ stack/smp/smp_act.c | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/stack/smp/smp_act.c b/stack/smp/smp_act.c
+index acd6ec5..16d5e1a 100644
+--- a/stack/smp/smp_act.c
++++ b/stack/smp/smp_act.c
+@@ -1017,8 +1017,17 @@ void smp_br_select_next_key(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+ void smp_proc_enc_info(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+ {
+     UINT8   *p = (UINT8 *)p_data;
++    UINT8   reason = SMP_INVALID_PARAMETERS;
+ 
+     SMP_TRACE_DEBUG("%s", __func__);
++
++    if (smp_command_has_invalid_parameters(p_cb))
++    {
++        android_errorWriteLog(0x534e4554, "111937065");
++        smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
++        return;
++    }
++
+     STREAM_TO_ARRAY(p_cb->ltk, p, BT_OCTET16_LEN);
+ 
+     smp_key_distribution(p_cb, NULL);
+@@ -1062,14 +1071,23 @@ void smp_proc_master_id(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+ }
+ 
+ /*******************************************************************************
+-** Function     smp_proc_enc_info
++** Function     smp_proc_id_info
+ ** Description  process identity information from peer device
+ *******************************************************************************/
+ void smp_proc_id_info(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+ {
+     UINT8   *p = (UINT8 *)p_data;
++    UINT8   reason = SMP_INVALID_PARAMETERS;
+ 
+     SMP_TRACE_DEBUG("%s", __func__);
++
++    if (smp_command_has_invalid_parameters(p_cb))
++    {
++        android_errorWriteLog(0x534e4554, "111937065");
++        smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
++        return;
++    }
++
+     STREAM_TO_ARRAY (p_cb->tk, p, BT_OCTET16_LEN);   /* reuse TK for IRK */
+     smp_key_distribution_by_transport(p_cb, NULL);
+ }
+-- 
+2.7.4
+

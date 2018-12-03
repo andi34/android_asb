@@ -1,0 +1,633 @@
+From d99f7e804c1520a32df3e72f77cf35e60e958548 Mon Sep 17 00:00:00 2001
+From: Mike Reed <reed@google.com>
+Date: Fri, 5 Jan 2018 11:20:10 -0500
+Subject: [PATCH] BACKPORT: Cherry-pick "begin cleanup of malloc porting layer"
+
+Bug: 78354855
+Test: Not feasible
+
+Original description:
+========================================================================
+1. Merge some of the allocators into sk_malloc_flags by redefining a flag to mean zero-init
+2. Add more private helpers to simplify our call-sites (and handle some overflow mul checks)
+3. The 2-param helpers rely on the saturating SkSafeMath::Mul to pass max_size_t as the request,
+which should always fail.
+
+chromium: 508641
+Reviewed-on: https://skia-review.googlesource.com/90940
+Commit-Queue: Mike Reed <reed@google.com>
+Reviewed-by: Robert Phillips <robertphillips@google.com>
+Reviewed-by: Stephan Altmueller <stephana@google.com>
+========================================================================
+
+Conflicts:
+- include/private/SkMalloc.h
+Simply removed the old definitions of SK_MALLOC_TEMP and SK_MALLOC_THROW.
+- public.bzl
+Copied SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER into the old defines.
+- src/codec/SkIcoCodec.cpp
+Drop a change where we were not using malloc yet.
+- src/codec/SkBmpBaseCodec.cpp
+- src/core/SkBitmapCache.cpp
+These files weren't yet using malloc (and SkBmpBaseCodec hadn't been
+factored out).
+- src/core/SkMallocPixelRef.cpp
+These were still using New rather than Make (return raw pointer). Leave
+them unchanged, as sk_malloc_flags is still valid.
+- src/lazy/SkDiscardableMemoryPool.cpp
+Leave this unchanged; sk_malloc_flags is still valid
+
+In addition, pull in SkSafeMath.h, which was originally introduced in
+https://skia-review.googlesource.com/c/skia/+/33721. This is required
+for the new sk_malloc calls.
+
+Also pull in SkSafeMath::Add and SkSafeMath::Mul, introduced in
+https://skia-review.googlesource.com/88581
+
+Also add SK_MaxSizeT, which the above depends on, introduced in
+https://skia-review.googlesource.com/57084
+
+Also, modify NewFromStream to use sk_malloc_canfail, matching pi and
+avoiding a build break
+
+Change-Id: Ib320484673a865460fc1efb900f611209e088edb
+(cherry picked from commit a12cc3e14ea6734c7efe76aa6a19239909830b28)
+CVE-2018-9498
+---
+ include/core/SkTypes.h          |  85 ++++++++++++++++++++++++++------
+ include/private/SkTArray.h      |   4 +-
+ include/private/SkTemplates.h   |  21 +++-----
+ public.bzl                      |   1 +
+ src/codec/SkIcoCodec.cpp        |   2 +-
+ src/core/SkMallocPixelRef.cpp   |  21 +++++++-
+ src/core/SkMath.cpp             |  17 ++++++-
+ src/core/SkRegion_path.cpp      |   7 +--
+ src/core/SkSafeMath.h           | 106 ++++++++++++++++++++++++++++++++++++++++
+ src/gpu/GrBufferAllocPool.cpp   |   2 +-
+ src/ports/SkMemory_malloc.cpp   |  22 ++++++---
+ src/ports/SkMemory_mozalloc.cpp |  20 +++++---
+ 12 files changed, 255 insertions(+), 53 deletions(-)
+ create mode 100644 src/core/SkSafeMath.h
+
+diff --git a/include/core/SkTypes.h b/include/core/SkTypes.h
+index 756eae8..5c721fc 100644
+--- a/include/core/SkTypes.h
++++ b/include/core/SkTypes.h
+@@ -69,26 +69,45 @@ SK_API extern void sk_out_of_memory(void);
+ */
+ SK_API extern void sk_abort_no_print(void);
+ 
++/** Free memory returned by sk_malloc(). It is safe to pass null. */
++SK_API extern void sk_free(void*);
++
+ enum {
+-    SK_MALLOC_TEMP  = 0x01, //!< hint to sk_malloc that the requested memory will be freed in the scope of the stack frame
+-    SK_MALLOC_THROW = 0x02  //!< instructs sk_malloc to call sk_throw if the memory cannot be allocated.
++#ifdef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
++    SK_MALLOC_TEMP = 1,
++#else
++    /**
++     *  If this bit is set, the returned buffer must be zero-initialized. If this bit is not set
++     *  the buffer can be uninitialized.
++     */
++    SK_MALLOC_ZERO_INITIALIZE   = 1 << 0,
++#endif
++
++    /**
++     *  If this bit is set, the implementation must throw/crash/quit if the request cannot
++     *  be fulfilled. If this bit is not set, then it should return nullptr on failure.
++     */
++    SK_MALLOC_THROW             = 1 << 1,
+ };
+-/** Return a block of memory (at least 4-byte aligned) of at least the
+-    specified size. If the requested memory cannot be returned, either
+-    return null (if SK_MALLOC_TEMP bit is clear) or throw an exception
+-    (if SK_MALLOC_TEMP bit is set). To free the memory, call sk_free().
+-*/
++/**
++ *  Return a block of memory (at least 4-byte aligned) of at least the specified size.
++ *  If the requested memory cannot be returned, either return nullptr or throw/exit, depending
++ *  on the SK_MALLOC_THROW bit. If the allocation succeeds, the memory will be zero-initialized
++ *  if the SK_MALLOC_ZERO_INITIALIZE bit was set.
++ *
++ *  To free the memory, call sk_free()
++ */
+ SK_API extern void* sk_malloc_flags(size_t size, unsigned flags);
+-/** Same as sk_malloc(), but hard coded to pass SK_MALLOC_THROW as the flag
+-*/
+-SK_API extern void* sk_malloc_throw(size_t size);
++
+ /** Same as standard realloc(), but this one never returns null on failure. It will throw
+-    an exception if it fails.
+-*/
++ *  an exception if it fails.
++ */
+ SK_API extern void* sk_realloc_throw(void* buffer, size_t size);
+-/** Free memory returned by sk_malloc(). It is safe to pass null.
+-*/
+-SK_API extern void sk_free(void*);
++
++#ifdef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
++
++/** Same as sk_malloc_flags(), but hard coded to pass SK_MALLOC_THROW as the flag */
++SK_API extern void* sk_malloc_throw(size_t size);
+ 
+ /** Much like calloc: returns a pointer to at least size zero bytes, or NULL on failure.
+  */
+@@ -98,6 +117,37 @@ SK_API extern void* sk_calloc(size_t size);
+  */
+ SK_API extern void* sk_calloc_throw(size_t size);
+ 
++#else
++static inline void* sk_malloc_throw(size_t size) {
++    return sk_malloc_flags(size, SK_MALLOC_THROW);
++}
++
++static inline void* sk_calloc_throw(size_t size) {
++    return sk_malloc_flags(size, SK_MALLOC_THROW | SK_MALLOC_ZERO_INITIALIZE);
++}
++#endif
++
++static inline void* sk_calloc_canfail(size_t size) {
++#ifdef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
++    return sk_calloc(size);
++#else
++    return sk_malloc_flags(size, SK_MALLOC_ZERO_INITIALIZE);
++#endif
++}
++
++// Performs a safe multiply count * elemSize, checking for overflow
++SK_API extern void* sk_calloc_throw(size_t count, size_t elemSize);
++SK_API extern void* sk_malloc_throw(size_t count, size_t elemSize);
++SK_API extern void* sk_realloc_throw(void* buffer, size_t count, size_t elemSize);
++
++/**
++ *  These variants return nullptr on failure
++ */
++static inline void* sk_malloc_canfail(size_t size) {
++    return sk_malloc_flags(size, 0);
++}
++SK_API extern void* sk_malloc_canfail(size_t count, size_t elemSize);
++
+ // bzero is safer than memset, but we can't rely on it, so... sk_bzero()
+ static inline void sk_bzero(void* buffer, size_t size) {
+     // Please c.f. sk_careful_memcpy.  It's undefined behavior to call memset(null, 0, 0).
+@@ -291,6 +341,7 @@ typedef uint8_t SkBool8;
+ #define SK_MaxU32   0xFFFFFFFF
+ #define SK_MinU32   0
+ #define SK_NaN32    (1 << 31)
++#define SK_MaxSizeT SIZE_MAX
+ 
+ /** Returns true if the value can be represented with signed 16bits
+  */
+@@ -682,7 +733,11 @@ public:
+                 SkASSERT(fPtr != fStorage); // otherwise we lied when setting didChangeAlloc.
+                 fPtr = fStorage;
+             } else {
++              #ifdef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
+                 fPtr = sk_malloc_flags(size, SK_MALLOC_THROW | SK_MALLOC_TEMP);
++              #else
++                fPtr = sk_malloc_flags(size, SK_MALLOC_THROW | SK_MALLOC_ZERO_INITIALIZE);
++              #endif
+             }
+ 
+             fSize = size;
+diff --git a/include/private/SkTArray.h b/include/private/SkTArray.h
+index 5330e49..77bba3f 100644
+--- a/include/private/SkTArray.h
++++ b/include/private/SkTArray.h
+@@ -380,7 +380,7 @@ protected:
+             fMemArray = preAllocStorage;
+         } else {
+             fAllocCount = SkMax32(fCount, fReserveCount);
+-            fMemArray = sk_malloc_throw(fAllocCount * sizeof(T));
++            fMemArray = sk_malloc_throw(fAllocCount, sizeof(T));
+         }
+ 
+         this->copy(array);
+@@ -449,7 +449,7 @@ private:
+             if (fAllocCount == fReserveCount && fPreAllocMemArray) {
+                 newMemArray = (char*) fPreAllocMemArray;
+             } else {
+-                newMemArray = (char*) sk_malloc_throw(fAllocCount*sizeof(T));
++                newMemArray = (char*) sk_malloc_throw(fAllocCount, sizeof(T));
+             }
+ 
+             this->move(newMemArray);
+diff --git a/include/private/SkTemplates.h b/include/private/SkTemplates.h
+index e36910e..495ae75 100644
+--- a/include/private/SkTemplates.h
++++ b/include/private/SkTemplates.h
+@@ -202,12 +202,7 @@ public:
+             }
+ 
+             if (count > kCount) {
+-                const uint64_t size64 = sk_64_mul(count, sizeof(T));
+-                const size_t size = static_cast<size_t>(size64);
+-                if (size != size64) {
+-                    sk_out_of_memory();
+-                }
+-                fArray = (T*) sk_malloc_throw(size);
++                fArray = (T*) sk_malloc_throw(count, sizeof(T));
+             } else if (count > 0) {
+                 fArray = (T*) fStorage;
+             } else {
+@@ -269,7 +264,7 @@ public:
+ 
+     /** Allocates space for 'count' Ts. */
+     explicit SkAutoTMalloc(size_t count) {
+-        fPtr = (T*)sk_malloc_flags(count * sizeof(T), SK_MALLOC_THROW);
++        fPtr = (T*)sk_malloc_throw(count, sizeof(T));
+     }
+ 
+     ~SkAutoTMalloc() {
+@@ -284,7 +279,7 @@ public:
+     /** Resize the memory area pointed to by the current ptr without preserving contents. */
+     T* reset(size_t count) {
+         sk_free(fPtr);
+-        fPtr = (T*)sk_malloc_flags(count * sizeof(T), SK_MALLOC_THROW);
++        fPtr = (T*)sk_malloc_throw(count, sizeof(T));
+         return fPtr;
+     }
+ 
+@@ -334,7 +329,7 @@ public:
+ 
+     SkAutoSTMalloc(size_t count) {
+         if (count > kCount) {
+-            fPtr = (T*)sk_malloc_flags(count * sizeof(T), SK_MALLOC_THROW | SK_MALLOC_TEMP);
++            fPtr = (T*)sk_malloc_throw(count, sizeof(T));
+         } else {
+             fPtr = fTStorage;
+         }
+@@ -352,7 +347,7 @@ public:
+             sk_free(fPtr);
+         }
+         if (count > kCount) {
+-            fPtr = (T*)sk_malloc_throw(count * sizeof(T));
++            fPtr = (T*)sk_malloc_throw(count, sizeof(T));
+         } else {
+             fPtr = fTStorage;
+         }
+@@ -381,13 +376,13 @@ public:
+     void realloc(size_t count) {
+         if (count > kCount) {
+             if (fPtr == fTStorage) {
+-                fPtr = (T*)sk_malloc_throw(count * sizeof(T));
++                fPtr = (T*)sk_malloc_throw(count, sizeof(T));
+                 memcpy(fPtr, fTStorage, kCount * sizeof(T));
+             } else {
+-                fPtr = (T*)sk_realloc_throw(fPtr, count * sizeof(T));
++                fPtr = (T*)sk_realloc_throw(fPtr, count, sizeof(T));
+             }
+         } else if (fPtr != fTStorage) {
+-            fPtr = (T*)sk_realloc_throw(fPtr, count * sizeof(T));
++            fPtr = (T*)sk_realloc_throw(fPtr, count, sizeof(T));
+         }
+     }
+ 
+diff --git a/public.bzl b/public.bzl
+index 986bfd9..9caa489 100644
+--- a/public.bzl
++++ b/public.bzl
+@@ -521,6 +521,7 @@ DEFINES_ALL = [
+     "SK_USE_FREETYPE_EMBOLDEN",
+     # Turn on a few Google3-specific build fixes.
+     "GOOGLE3",
++    "SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER",
+ ]
+ 
+ ################################################################################
+diff --git a/src/codec/SkIcoCodec.cpp b/src/codec/SkIcoCodec.cpp
+index 8b3d26d..6c36258 100644
+--- a/src/codec/SkIcoCodec.cpp
++++ b/src/codec/SkIcoCodec.cpp
+@@ -129,7 +129,7 @@ SkCodec* SkIcoCodec::NewFromStream(SkStream* stream) {
+         bytesRead = offset;
+ 
+         // Create a new stream for the embedded codec
+-        SkAutoFree buffer(sk_malloc_flags(size, 0));
++        SkAutoFree buffer(sk_malloc_canfail(size));
+         if (!buffer.get()) {
+             SkCodecPrintf("Warning: OOM trying to create embedded stream.\n");
+             break;
+diff --git a/src/core/SkMallocPixelRef.cpp b/src/core/SkMallocPixelRef.cpp
+index fffc044..384f8a6 100644
+--- a/src/core/SkMallocPixelRef.cpp
++++ b/src/core/SkMallocPixelRef.cpp
+@@ -8,8 +8,27 @@
+ #include "SkMallocPixelRef.h"
+ #include "SkBitmap.h"
+ #include "SkReadBuffer.h"
++#include "SkSafeMath.h"
+ #include "SkWriteBuffer.h"
+ 
++void* sk_calloc_throw(size_t count, size_t elemSize) {
++    return sk_calloc_throw(SkSafeMath::Mul(count, elemSize));
++}
++
++void* sk_malloc_throw(size_t count, size_t elemSize) {
++    return sk_malloc_throw(SkSafeMath::Mul(count, elemSize));
++}
++
++void* sk_realloc_throw(void* buffer, size_t count, size_t elemSize) {
++    return sk_realloc_throw(buffer, SkSafeMath::Mul(count, elemSize));
++}
++
++void* sk_malloc_canfail(size_t count, size_t elemSize) {
++    return sk_malloc_canfail(SkSafeMath::Mul(count, elemSize));
++}
++
++///////////////////////////////////////////////////////////////////////////////////////////////////
++
+ // assumes ptr was allocated via sk_malloc
+ static void sk_free_releaseproc(void* ptr, void*) {
+     sk_free(ptr);
+@@ -97,7 +116,7 @@ SkMallocPixelRef* SkMallocPixelRef::NewAllocate(const SkImageInfo& info,
+ SkMallocPixelRef* SkMallocPixelRef::NewZeroed(const SkImageInfo& info,
+                                               size_t rowBytes,
+                                               SkColorTable* ctable) {
+-    return NewUsing(sk_calloc, info, rowBytes, ctable);
++    return NewUsing(sk_calloc_canfail, info, rowBytes, ctable);
+ }
+ 
+ SkMallocPixelRef* SkMallocPixelRef::NewWithProc(const SkImageInfo& info,
+diff --git a/src/core/SkMath.cpp b/src/core/SkMath.cpp
+index af93d7e..a10cfc3 100644
+--- a/src/core/SkMath.cpp
++++ b/src/core/SkMath.cpp
+@@ -8,6 +8,7 @@
+ #include "SkMathPriv.h"
+ #include "SkFloatBits.h"
+ #include "SkFloatingPoint.h"
++#include "SkSafeMath.h"
+ #include "SkScalar.h"
+ 
+ const uint32_t gIEEENotANumber = 0x7FFFFFFF;
+@@ -136,8 +137,6 @@ int32_t SkSqrtBits(int32_t x, int count) {
+     return root;
+ }
+ 
+-///////////////////////////////////////////////////////////////////////////////
+-
+ float SkScalarSinCos(float radians, float* cosValue) {
+     float sinValue = sk_float_sin(radians);
+ 
+@@ -153,3 +152,17 @@ float SkScalarSinCos(float radians, float* cosValue) {
+     }
+     return sinValue;
+ }
++
++///////////////////////////////////////////////////////////////////////////////////////////////////
++
++size_t SkSafeMath::Add(size_t x, size_t y) {
++    SkSafeMath tmp;
++    size_t sum = tmp.add(x, y);
++    return tmp.ok() ? sum : SK_MaxSizeT;
++}
++
++size_t SkSafeMath::Mul(size_t x, size_t y) {
++    SkSafeMath tmp;
++    size_t prod = tmp.mul(x, y);
++    return tmp.ok() ? prod : SK_MaxSizeT;
++}
+diff --git a/src/core/SkRegion_path.cpp b/src/core/SkRegion_path.cpp
+index 9289641..bfbfb4c 100644
+--- a/src/core/SkRegion_path.cpp
++++ b/src/core/SkRegion_path.cpp
+@@ -141,12 +141,7 @@ bool SkRgnBuilder::init(int maxHeight, int maxTransitions, bool pathIsInverse) {
+     }
+     fStorageCount = sk_64_asS32(count);
+ 
+-    int64_t size = sk_64_mul(fStorageCount, sizeof(SkRegion::RunType));
+-    if (size < 0 || !sk_64_isS32(size)) {
+-        return false;
+-    }
+-
+-    fStorage = (SkRegion::RunType*)sk_malloc_flags(sk_64_asS32(size), 0);
++    fStorage = (SkRegion::RunType*)sk_malloc_canfail(fStorageCount, sizeof(SkRegion::RunType));
+     if (nullptr == fStorage) {
+         return false;
+     }
+diff --git a/src/core/SkSafeMath.h b/src/core/SkSafeMath.h
+new file mode 100644
+index 0000000..bdea2ba
+--- /dev/null
++++ b/src/core/SkSafeMath.h
+@@ -0,0 +1,106 @@
++/*
++ * Copyright 2017 Google Inc.
++ *
++ * Use of this source code is governed by a BSD-style license that can be
++ * found in the LICENSE file.
++ */
++
++#ifndef SkSafeMath_DEFINED
++#define SkSafeMath_DEFINED
++
++#include "SkTFitsIn.h"
++
++// SkSafeMath always check that a series of operations do not overflow.
++// This must be correct for all platforms, because this is a check for safety at runtime.
++
++class SkSafeMath {
++public:
++    SkSafeMath() = default;
++
++    bool ok() const { return fOK; }
++    explicit operator bool() const { return fOK; }
++
++    size_t mul(size_t x, size_t y) {
++        return sizeof(size_t) == sizeof(uint64_t) ? mul64(x, y) : mul32(x, y);
++    }
++
++    size_t add(size_t x, size_t y) {
++        size_t result = x + y;
++        fOK &= result >= x;
++        return result;
++    }
++
++    /**
++     *  Return a + b, unless this result is an overflow/underflow. In those cases, fOK will
++     *  be set to false, and it is undefined what this returns.
++     */
++    int addInt(int a, int b) {
++        if (b < 0 && a < std::numeric_limits<int>::min() - b) {
++            fOK = false;
++            return a;
++        } else if (b > 0 && a > std::numeric_limits<int>::max() - b) {
++            fOK = false;
++            return a;
++        }
++        return a + b;
++    }
++
++    size_t alignUp(size_t x, size_t alignment) {
++        SkASSERT(alignment && !(alignment & (alignment - 1)));
++        return add(x, alignment - 1) & ~(alignment - 1);
++    }
++
++    template <typename T> T castTo(size_t value) {
++        if (!SkTFitsIn<T>(value)) {
++            fOK = false;
++        }
++        return static_cast<T>(value);
++    }
++
++    // These saturate to their results
++    static size_t Add(size_t x, size_t y);
++    static size_t Mul(size_t x, size_t y);
++    static size_t Align4(size_t x) {
++        SkSafeMath safe;
++        return safe.alignUp(x, 4);
++    }
++
++private:
++    uint32_t mul32(uint32_t x, uint32_t y) {
++        uint64_t bx = x;
++        uint64_t by = y;
++        uint64_t result = bx * by;
++        fOK &= result >> 32 == 0;
++        return result;
++    }
++
++    uint64_t mul64(uint64_t x, uint64_t y) {
++        if (x <= std::numeric_limits<uint64_t>::max() >> 32
++            && y <= std::numeric_limits<uint64_t>::max() >> 32) {
++            return x * y;
++        } else {
++            auto hi = [](uint64_t x) { return x >> 32; };
++            auto lo = [](uint64_t x) { return x & 0xFFFFFFFF; };
++
++            uint64_t lx_ly = lo(x) * lo(y);
++            uint64_t hx_ly = hi(x) * lo(y);
++            uint64_t lx_hy = lo(x) * hi(y);
++            uint64_t hx_hy = hi(x) * hi(y);
++            uint64_t result = 0;
++            result = this->add(lx_ly, (hx_ly << 32));
++            result = this->add(result, (lx_hy << 32));
++            fOK &= (hx_hy + (hx_ly >> 32) + (lx_hy >> 32)) == 0;
++
++            #if defined(SK_DEBUG) && defined(__clang__) && defined(__x86_64__)
++                auto double_check = (unsigned __int128)x * y;
++                SkASSERT(result == (double_check & 0xFFFFFFFFFFFFFFFF));
++                SkASSERT(!fOK || (double_check >> 64 == 0));
++            #endif
++
++            return result;
++        }
++    }
++    bool fOK = true;
++};
++
++#endif//SkSafeMath_DEFINED
+diff --git a/src/gpu/GrBufferAllocPool.cpp b/src/gpu/GrBufferAllocPool.cpp
+index 73b70bf..c6e8544 100644
+--- a/src/gpu/GrBufferAllocPool.cpp
++++ b/src/gpu/GrBufferAllocPool.cpp
+@@ -283,7 +283,7 @@ void* GrBufferAllocPool::resetCpuData(size_t newSize) {
+     sk_free(fCpuData);
+     if (newSize) {
+         if (fGpu->caps()->mustClearUploadedBufferData()) {
+-            fCpuData = sk_calloc(newSize);
++            fCpuData = sk_calloc_canfail(newSize);
+         } else {
+             fCpuData = sk_malloc_throw(newSize);
+         }
+diff --git a/src/ports/SkMemory_malloc.cpp b/src/ports/SkMemory_malloc.cpp
+index 9fc17b7..ccc39e6 100644
+--- a/src/ports/SkMemory_malloc.cpp
++++ b/src/ports/SkMemory_malloc.cpp
+@@ -39,10 +39,6 @@ void sk_out_of_memory(void) {
+     abort();
+ }
+ 
+-void* sk_malloc_throw(size_t size) {
+-    return sk_malloc_flags(size, SK_MALLOC_THROW);
+-}
+-
+ void* sk_realloc_throw(void* addr, size_t size) {
+     return throw_on_failure(size, realloc(addr, size));
+ }
+@@ -54,7 +50,16 @@ void sk_free(void* p) {
+ }
+ 
+ void* sk_malloc_flags(size_t size, unsigned flags) {
+-    void* p = malloc(size);
++    void* p;
++#ifdef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
++    p = malloc(size);
++#else
++    if (flags & SK_MALLOC_ZERO_INITIALIZE) {
++        p = calloc(size, 1);
++    } else {
++        p = malloc(size);
++    }
++#endif
+     if (flags & SK_MALLOC_THROW) {
+         return throw_on_failure(size, p);
+     } else {
+@@ -62,10 +67,15 @@ void* sk_malloc_flags(size_t size, unsigned flags) {
+     }
+ }
+ 
++#ifdef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
++void* sk_malloc_throw(size_t size) {
++    return sk_malloc_flags(size, SK_MALLOC_THROW);
++}
+ void* sk_calloc(size_t size) {
+     return calloc(size, 1);
+ }
+-
+ void* sk_calloc_throw(size_t size) {
+     return throw_on_failure(size, sk_calloc(size));
+ }
++#endif
++
+diff --git a/src/ports/SkMemory_mozalloc.cpp b/src/ports/SkMemory_mozalloc.cpp
+index f8a9963..7ddf694 100644
+--- a/src/ports/SkMemory_mozalloc.cpp
++++ b/src/ports/SkMemory_mozalloc.cpp
+@@ -21,22 +21,28 @@ void sk_out_of_memory(void) {
+     mozalloc_handle_oom(0);
+ }
+ 
+-void* sk_malloc_throw(size_t size) {
+-    return sk_malloc_flags(size, SK_MALLOC_THROW);
++void sk_free(void* p) {
++    free(p);
+ }
+ 
+ void* sk_realloc_throw(void* addr, size_t size) {
+     return moz_xrealloc(addr, size);
+ }
+ 
+-void sk_free(void* p) {
+-    free(p);
+-}
+-
+ void* sk_malloc_flags(size_t size, unsigned flags) {
++#ifndef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
++    if (flags & SK_MALLOC_ZERO_INITIALIZE) {
++        return (flags & SK_MALLOC_THROW) ? moz_xcalloc(size, 1) : calloc(size, 1);
++    }
++#endif
+     return (flags & SK_MALLOC_THROW) ? moz_xmalloc(size) : malloc(size);
+ }
+ 
++#ifdef SK_SUPPORT_LEGACY_MALLOC_PORTING_LAYER
++void* sk_malloc_throw(size_t size) {
++    return sk_malloc_flags(size, SK_MALLOC_THROW);
++}
++
+ void* sk_calloc(size_t size) {
+     return calloc(size, 1);
+ }
+@@ -44,3 +50,5 @@ void* sk_calloc(size_t size) {
+ void* sk_calloc_throw(size_t size) {
+     return moz_xcalloc(size, 1);
+ }
++#endif
++
+-- 
+2.7.4
+

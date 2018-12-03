@@ -1,0 +1,181 @@
+From 7168f566b3c3f3449bcc1d8edec7736ffe69912c Mon Sep 17 00:00:00 2001
+From: Ben Lin <linben@google.com>
+Date: Mon, 2 May 2016 16:45:45 -0700
+Subject: [PATCH 3/7] Add support for search in DownloadManager.
+
+Bug: 26524617
+Change-Id: I41c0f92381bec8ad06db73b25ec67466f368b55c
+---
+ core/java/android/app/DownloadManager.java         | 43 +++++++++++++++++++---
+ .../com/android/documentsui/SearchViewUiTest.java  | 40 ++++++++++++++++++++
+ .../android/documentsui/bots/DirectoryListBot.java | 12 ++++++
+ 3 files changed, 90 insertions(+), 5 deletions(-)
+
+diff --git a/core/java/android/app/DownloadManager.java b/core/java/android/app/DownloadManager.java
+index 6e38347..462f66f 100644
+--- a/core/java/android/app/DownloadManager.java
++++ b/core/java/android/app/DownloadManager.java
+@@ -832,6 +832,7 @@ public class DownloadManager {
+ 
+         private long[] mIds = null;
+         private Integer mStatusFlags = null;
++        private String mFilterString = null;
+         private String mOrderByColumn = Downloads.Impl.COLUMN_LAST_MODIFICATION;
+         private int mOrderDirection = ORDER_DESCENDING;
+         private boolean mOnlyIncludeVisibleInDownloadsUi = false;
+@@ -846,6 +847,17 @@ public class DownloadManager {
+         }
+ 
+         /**
++         *
++         * Include only the downloads that contains the given string in its name.
++         * @return this object
++         * @hide
++         */
++        public Query setFilterByString(@Nullable String filter) {
++            mFilterString = filter;
++            return this;
++        }
++
++        /**
+          * Include only downloads with status matching any the given status flags.
+          * @param flags any combination of the STATUS_* bit flags
+          * @return this object
+@@ -904,9 +916,20 @@ public class DownloadManager {
+             List<String> selectionParts = new ArrayList<String>();
+             String[] selectionArgs = null;
+ 
+-            if (mIds != null) {
+-                selectionParts.add(getWhereClauseForIds(mIds));
+-                selectionArgs = getWhereArgsForIds(mIds);
++            int whereArgsCount = (mIds == null) ? 0 : mIds.length;
++            whereArgsCount = (mFilterString == null) ? whereArgsCount : whereArgsCount + 1;
++            selectionArgs = new String[whereArgsCount];
++
++            if (whereArgsCount > 0) {
++                if (mIds != null) {
++                    selectionParts.add(getWhereClauseForIds(mIds));
++                    getWhereArgsForIds(mIds, selectionArgs);
++                }
++
++                if (mFilterString != null) {
++                    selectionParts.add(Downloads.Impl.COLUMN_TITLE + " LIKE ?");
++                    selectionArgs[selectionArgs.length - 1] = "%" + mFilterString + "%";
++                }
+             }
+ 
+             if (mStatusFlags != null) {
+@@ -1450,12 +1473,22 @@ public class DownloadManager {
+      */
+     static String[] getWhereArgsForIds(long[] ids) {
+         String[] whereArgs = new String[ids.length];
++        return getWhereArgsForIds(ids, whereArgs);
++    }
++
++    /**
++     * Get selection args for a clause returned by {@link #getWhereClauseForIds(long[])}
++     * and write it to the supplied args array.
++     */
++    static String[] getWhereArgsForIds(long[] ids, String[] args) {
++        assert(args.length >= ids.length);
+         for (int i = 0; i < ids.length; i++) {
+-            whereArgs[i] = Long.toString(ids[i]);
++            args[i] = Long.toString(ids[i]);
+         }
+-        return whereArgs;
++        return args;
+     }
+ 
++
+     /**
+      * This class wraps a cursor returned by DownloadProvider -- the "underlying cursor" -- and
+      * presents a different set of columns, those defined in the DownloadManager.COLUMN_* constants.
+diff --git a/packages/DocumentsUI/tests/src/com/android/documentsui/SearchViewUiTest.java b/packages/DocumentsUI/tests/src/com/android/documentsui/SearchViewUiTest.java
+index a9451a6..b619082 100644
+--- a/packages/DocumentsUI/tests/src/com/android/documentsui/SearchViewUiTest.java
++++ b/packages/DocumentsUI/tests/src/com/android/documentsui/SearchViewUiTest.java
+@@ -72,6 +72,32 @@ public class SearchViewUiTest extends ActivityTest<FilesActivity> {
+         bots.main.assertSearchTextField(false, query);
+     }
+ 
++    public void testSearchDownloads() throws Exception {
++        initTestFiles();
++        bots.roots.openRoot(ROOT_0_ID);
++
++        bots.directory.copyFilesToClipboard(fileName1, fileName2);
++        device.waitForIdle();
++
++        bots.roots.openRoot("Downloads");
++        bots.directory.pasteFilesFromClipboard();
++
++        //TODO: linben Why do we need to click on Downloads again so this will work?
++        bots.roots.openRoot("Downloads");
++        device.waitForIdle();
++
++        String query = "file12";
++        bots.main.openSearchView();
++        bots.main.setSearchQuery(query);
++
++        device.pressEnter();
++
++        bots.directory.assertDocumentsCountOnList(true, 1);
++        bots.directory.assertDocumentsPresent(fileName2);
++
++        device.pressBack();
++    }
++
+     @Suppress
+     public void testSearchResultsFound_ClearsOnBack() throws Exception {
+         initTestFiles();
+@@ -151,4 +177,18 @@ public class SearchViewUiTest extends ActivityTest<FilesActivity> {
+         bots.main.assertSearchTextFiledAndIcon(false, false);
+     }
+ 
++    @Override
++    public void tearDown() throws Exception {
++        try {
++            // Proper clean up of #testSearchDownloads
++            bots.directory.clickDocument(fileName1 + ".txt");
++            bots.directory.clickDocument(fileName2);
++            device.waitForIdle();
++            bots.main.menuDelete().click();
++            bots.main.findDialogOkButton().click();
++        } catch (Exception e) {
++        } finally {
++            super.tearDown();
++        }
++    }
+ }
+diff --git a/packages/DocumentsUI/tests/src/com/android/documentsui/bots/DirectoryListBot.java b/packages/DocumentsUI/tests/src/com/android/documentsui/bots/DirectoryListBot.java
+index 7c1e219..e2aabc7 100644
+--- a/packages/DocumentsUI/tests/src/com/android/documentsui/bots/DirectoryListBot.java
++++ b/packages/DocumentsUI/tests/src/com/android/documentsui/bots/DirectoryListBot.java
+@@ -30,6 +30,7 @@ import android.support.test.uiautomator.UiObject2;
+ import android.support.test.uiautomator.UiObjectNotFoundException;
+ import android.support.test.uiautomator.UiSelector;
+ import android.support.test.uiautomator.Until;
++import android.view.KeyEvent;
+ import android.view.MotionEvent;
+ 
+ import junit.framework.Assert;
+@@ -129,6 +130,17 @@ public class DirectoryListBot extends BaseBot {
+         return doc;
+     }
+ 
++    public void copyFilesToClipboard(String...labels) throws UiObjectNotFoundException {
++        for (String label: labels) {
++            clickDocument(label);
++        }
++        mDevice.pressKeyCode(KeyEvent.KEYCODE_C, KeyEvent.META_CTRL_ON);
++    }
++
++    public void pasteFilesFromClipboard() {
++        mDevice.pressKeyCode(KeyEvent.KEYCODE_V, KeyEvent.META_CTRL_ON);
++    }
++
+     public UiObject2 getSnackbar(String message) {
+         return mDevice.wait(Until.findObject(By.text(message)), mTimeout);
+     }
+-- 
+2.7.4
+

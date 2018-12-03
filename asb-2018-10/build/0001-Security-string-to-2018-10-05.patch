@@ -1,0 +1,57 @@
+From b1555dd9c06d22608c9d5674cf943fbb8e7a0d64 Mon Sep 17 00:00:00 2001
+From: syphyr <syphyr@gmail.com>
+Date: Sat, 6 Oct 2018 21:44:37 +0200
+Subject: [PATCH] Security string to 2018-10-05
+
+Implemented:
+============
+
+CVE-2018-9490	A-111274046 [2]	EoP	Critical	7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9491	A-111603051	RCE	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9493	A-111085900 [2]	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9452	A-78464361 [2]	DoS	Moderate	7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9497	A-74078669	RCE	Critical	7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9498	A-78354855	RCE	Critical	7.0, 7.1.1, 7.1.2, 8.0, 8.1
+CVE-2018-9499	A-79218474	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2017-13283	A-78526423	RCE	Critical	7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9504	A-110216176	RCE	Critical	7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9501	A-110034419	EoP	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9502	A-111936792 [2]	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9503	A-80432928 [2]	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9505	A-110791536	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9506	A-111803925	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9507	A-111893951	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9508	A-111936834	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1
+CVE-2018-9509	A-111937027	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9510	A-111937065	ID	High		7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2018-9492   A-111934948     EoP     High            8.0, 8.1, 9
+
+No impact:
+==========
+
+CVE-2018-9473	A-65484460	RCE	Critical	8.0
+CVE-2018-9496	A-110769924	RCE	Critical	9
+CVE-2018-9476	A-109699112	EoP	Critical	8.0, 8.1
+CVE-2018-9511	A-111650288	DoS	High		9
+
+Change-Id: I26cd12996ccfdac4123da673b981a001455d3d2e
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 662cd08..a6f4f1a 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2018-09-05
++    PLATFORM_SECURITY_PATCH := 2018-10-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

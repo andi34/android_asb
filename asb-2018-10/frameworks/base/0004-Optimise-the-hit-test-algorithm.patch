@@ -1,0 +1,383 @@
+From c4895b4f4e22f249ee6e562be0a04d4f3e4ea549 Mon Sep 17 00:00:00 2001
+From: Mihai Popa <popam@google.com>
+Date: Wed, 9 May 2018 17:31:48 +0100
+Subject: [PATCH 4/7] Optimise the hit test algorithm
+
+Layout#getOffsetForHorizontal was running in O(n^2) time, where n is the
+length of the current line. The method is used when a touch event
+happens on a text line, to compute the cursor offset (and the character)
+where it happened. Although this is not an issue in common usecases,
+where the number of characters on a line is relatively small, this can
+be very inefficient as a consequence of Unicode containing 0-width
+(invisible) characters. Specifically, there are characters defining the
+text direction (LTR or RTL), which cause our algorithm to touch the
+worst case quadratic runtime. For example, a person is able to send a
+message containing a few visible characters, and also a lot of these
+direction changing invisible ones. When the receiver touches the message
+(causing the Layout#getOffsetForHorizontal method to be called), the
+receiver's application would become not responsive.
+
+This CL optimizes the method to run in O(n) worst case. This is achieved
+by computing the measurements of all line prefixes at first, which can
+be done in a single pass. Then, all the prefix measurement queries will
+be answered in O(1), rather than O(n) as it was happening before.
+
+Bug: 79215201
+Test: manual testing
+Change-Id: Ib66ef392c19c937718e7101f6d48fac3abe51ad0
+Merged-In: Ib66ef392c19c937718e7101f6d48fac3abe51ad0
+---
+ core/java/android/text/Layout.java   | 169 +++++++++++++++++++++++++++++++++--
+ core/java/android/text/TextLine.java |  92 +++++++++++++++++++
+ 2 files changed, 255 insertions(+), 6 deletions(-)
+
+diff --git a/core/java/android/text/Layout.java b/core/java/android/text/Layout.java
+index 0bd5071..c94e489 100644
+--- a/core/java/android/text/Layout.java
++++ b/core/java/android/text/Layout.java
+@@ -824,6 +824,32 @@ public abstract class Layout {
+         return TextUtils.packRangeInLong(0, getLineEnd(line));
+     }
+ 
++    /**
++     * Checks if the trailing BiDi level should be used for an offset
++     *
++     * This method is useful when the offset is at the BiDi level transition point and determine
++     * which run need to be used. For example, let's think about following input: (L* denotes
++     * Left-to-Right characters, R* denotes Right-to-Left characters.)
++     * Input (Logical Order): L1 L2 L3 R1 R2 R3 L4 L5 L6
++     * Input (Display Order): L1 L2 L3 R3 R2 R1 L4 L5 L6
++     *
++     * Then, think about selecting the range (3, 6). The offset=3 and offset=6 are ambiguous here
++     * since they are at the BiDi transition point.  In Android, the offset is considered to be
++     * associated with the trailing run if the BiDi level of the trailing run is higher than of the
++     * previous run.  In this case, the BiDi level of the input text is as follows:
++     *
++     * Input (Logical Order): L1 L2 L3 R1 R2 R3 L4 L5 L6
++     *              BiDi Run: [ Run 0 ][ Run 1 ][ Run 2 ]
++     *            BiDi Level:  0  0  0  1  1  1  0  0  0
++     *
++     * Thus, offset = 3 is part of Run 1 and this method returns true for offset = 3, since the BiDi
++     * level of Run 1 is higher than the level of Run 0.  Similarly, the offset = 6 is a part of Run
++     * 1 and this method returns false for the offset = 6 since the BiDi level of Run 1 is higher
++     * than the level of Run 2.
++     *
++     * @returns true if offset is at the BiDi level transition point and trailing BiDi level is
++     *          higher than previous BiDi level. See above for the detail.
++     */
+     private boolean primaryIsTrailingPrevious(int offset) {
+         int line = getLineForOffset(offset);
+         int lineStart = getLineStart(line);
+@@ -874,6 +900,41 @@ public abstract class Layout {
+     }
+ 
+     /**
++     * Computes in linear time the results of calling
++     * #primaryIsTrailingPrevious for all offsets on a line.
++     * @param line The line giving the offsets we compute the information for
++     * @return The array of results, indexed from 0, where 0 corresponds to the line start offset
++     */
++    private boolean[] primaryIsTrailingPreviousAllLineOffsets(int line) {
++        int lineStart = getLineStart(line);
++        int lineEnd = getLineEnd(line);
++        int[] runs = getLineDirections(line).mDirections;
++
++        boolean[] trailing = new boolean[lineEnd - lineStart + 1];
++
++        byte[] level = new byte[lineEnd - lineStart + 1];
++        for (int i = 0; i < runs.length; i += 2) {
++            int start = lineStart + runs[i];
++            int limit = start + (runs[i + 1] & RUN_LENGTH_MASK);
++            if (limit > lineEnd) {
++                limit = lineEnd;
++            }
++            level[limit - lineStart - 1] =
++                    (byte) ((runs[i + 1] >>> RUN_LEVEL_SHIFT) & RUN_LEVEL_MASK);
++        }
++
++        for (int i = 0; i < runs.length; i += 2) {
++            int start = lineStart + runs[i];
++            byte currentLevel = (byte) ((runs[i + 1] >>> RUN_LEVEL_SHIFT) & RUN_LEVEL_MASK);
++            trailing[start - lineStart] = currentLevel > (start == lineStart
++                    ? (getParagraphDirection(line) == 1 ? 0 : 1)
++                    : level[start - lineStart - 1]);
++        }
++
++        return trailing;
++    }
++
++    /**
+      * Get the primary horizontal position for the specified text offset.
+      * This is the location where a new character would be inserted in
+      * the paragraph's primary direction.
+@@ -953,6 +1014,60 @@ public abstract class Layout {
+     }
+ 
+     /**
++     * Computes in linear time the results of calling
++     * #getHorizontal for all offsets on a line.
++     * @param line The line giving the offsets we compute information for
++     * @param clamped Whether to clamp the results to the width of the layout
++     * @param primary Whether the results should be the primary or the secondary horizontal
++     * @return The array of results, indexed from 0, where 0 corresponds to the line start offset
++     */
++    private float[] getLineHorizontals(int line, boolean clamped, boolean primary) {
++        int start = getLineStart(line);
++        int end = getLineEnd(line);
++        int dir = getParagraphDirection(line);
++        boolean hasTab = getLineContainsTab(line);
++        Directions directions = getLineDirections(line);
++
++        TabStops tabStops = null;
++        if (hasTab && mText instanceof Spanned) {
++            // Just checking this line should be good enough, tabs should be
++            // consistent across all lines in a paragraph.
++            TabStopSpan[] tabs = getParagraphSpans((Spanned) mText, start, end, TabStopSpan.class);
++            if (tabs.length > 0) {
++                tabStops = new TabStops(TAB_INCREMENT, tabs); // XXX should reuse
++            }
++        }
++
++        TextLine tl = TextLine.obtain();
++        tl.set(mPaint, mText, start, end, dir, directions, hasTab, tabStops);
++        boolean[] trailings = primaryIsTrailingPreviousAllLineOffsets(line);
++        if (!primary) {
++            for (int offset = 0; offset < trailings.length; ++offset) {
++                trailings[offset] = !trailings[offset];
++            }
++        }
++        float[] wid = tl.measureAllOffsets(trailings, null);
++        TextLine.recycle(tl);
++
++        if (clamped) {
++            for (int offset = 0; offset <= wid.length; ++offset) {
++                if (wid[offset] > mWidth) {
++                    wid[offset] = mWidth;
++                }
++            }
++        }
++        int left = getParagraphLeft(line);
++        int right = getParagraphRight(line);
++
++        int lineStartPos = getLineStartPos(line, left, right);
++        float[] horizontal = new float[end - start + 1];
++        for (int offset = 0; offset < horizontal.length; ++offset) {
++            horizontal[offset] = lineStartPos + wid[offset];
++        }
++        return horizontal;
++    }
++
++    /**
+      * Get the leftmost position that should be exposed for horizontal
+      * scrolling on the specified line.
+      */
+@@ -1167,6 +1282,8 @@ public abstract class Layout {
+         // XXX: we don't care about tabs as we just use TextLine#getOffsetToLeftRightOf here.
+         tl.set(mPaint, mText, lineStartOffset, lineEndOffset, getParagraphDirection(line), dirs,
+                 false, null);
++        final HorizontalMeasurementProvider horizontal =
++                new HorizontalMeasurementProvider(line, primary);
+ 
+         final int max;
+         if (line == getLineCount() - 1) {
+@@ -1176,7 +1293,7 @@ public abstract class Layout {
+                     !isRtlCharAt(lineEndOffset - 1)) + lineStartOffset;
+         }
+         int best = lineStartOffset;
+-        float bestdist = Math.abs(getHorizontal(best, primary) - horiz);
++        float bestdist = Math.abs(horizontal.get(lineStartOffset) - horiz);
+ 
+         for (int i = 0; i < dirs.mDirections.length; i += 2) {
+             int here = lineStartOffset + dirs.mDirections[i];
+@@ -1192,7 +1309,7 @@ public abstract class Layout {
+                 guess = (high + low) / 2;
+                 int adguess = getOffsetAtStartOf(guess);
+ 
+-                if (getHorizontal(adguess, primary) * swap >= horiz * swap)
++                if (horizontal.get(adguess) * swap >= horiz * swap)
+                     high = guess;
+                 else
+                     low = guess;
+@@ -1205,9 +1322,9 @@ public abstract class Layout {
+                 int aft = tl.getOffsetToLeftRightOf(low - lineStartOffset, isRtl) + lineStartOffset;
+                 low = tl.getOffsetToLeftRightOf(aft - lineStartOffset, !isRtl) + lineStartOffset;
+                 if (low >= here && low < there) {
+-                    float dist = Math.abs(getHorizontal(low, primary) - horiz);
++                    float dist = Math.abs(horizontal.get(low) - horiz);
+                     if (aft < there) {
+-                        float other = Math.abs(getHorizontal(aft, primary) - horiz);
++                        float other = Math.abs(horizontal.get(aft) - horiz);
+ 
+                         if (other < dist) {
+                             dist = other;
+@@ -1222,7 +1339,7 @@ public abstract class Layout {
+                 }
+             }
+ 
+-            float dist = Math.abs(getHorizontal(here, primary) - horiz);
++            float dist = Math.abs(horizontal.get(here) - horiz);
+ 
+             if (dist < bestdist) {
+                 bestdist = dist;
+@@ -1230,7 +1347,7 @@ public abstract class Layout {
+             }
+         }
+ 
+-        float dist = Math.abs(getHorizontal(max, primary) - horiz);
++        float dist = Math.abs(horizontal.get(max) - horiz);
+ 
+         if (dist <= bestdist) {
+             bestdist = dist;
+@@ -1242,6 +1359,46 @@ public abstract class Layout {
+     }
+ 
+     /**
++     * Responds to #getHorizontal queries, by selecting the better strategy between:
++     * - calling #getHorizontal explicitly for each query
++     * - precomputing all #getHorizontal measurements, and responding to any query in constant time
++     * The first strategy is used for LTR-only text, while the second is used for all other cases.
++     * The class is currently only used in #getOffsetForHorizontal, so reuse with care in other
++     * contexts.
++     */
++    private class HorizontalMeasurementProvider {
++        private final int mLine;
++        private final boolean mPrimary;
++
++        private float[] mHorizontals;
++        private int mLineStartOffset;
++
++        HorizontalMeasurementProvider(final int line, final boolean primary) {
++            mLine = line;
++            mPrimary = primary;
++            init();
++        }
++
++        private void init() {
++            final Directions dirs = getLineDirections(mLine);
++            if (dirs == DIRS_ALL_LEFT_TO_RIGHT) {
++                return;
++            }
++
++            mHorizontals = getLineHorizontals(mLine, false, mPrimary);
++            mLineStartOffset = getLineStart(mLine);
++        }
++
++        float get(final int offset) {
++            if (mHorizontals == null) {
++                return getHorizontal(offset, mPrimary);
++            } else {
++                return mHorizontals[offset - mLineStartOffset];
++            }
++        }
++    }
++
++    /**
+      * Return the text offset after the last character on the specified line.
+      */
+     public final int getLineEnd(int line) {
+diff --git a/core/java/android/text/TextLine.java b/core/java/android/text/TextLine.java
+index 2a52961..7933356 100644
+--- a/core/java/android/text/TextLine.java
++++ b/core/java/android/text/TextLine.java
+@@ -339,6 +339,98 @@ class TextLine {
+     }
+ 
+     /**
++     * @see #measure(int, boolean, FontMetricsInt)
++     * @return The measure results for all possible offsets
++     */
++    float[] measureAllOffsets(boolean[] trailing, FontMetricsInt fmi) {
++        float[] measurement = new float[mLen + 1];
++
++        int[] target = new int[mLen + 1];
++        for (int offset = 0; offset < target.length; ++offset) {
++            target[offset] = trailing[offset] ? offset - 1 : offset;
++        }
++        if (target[0] < 0) {
++            measurement[0] = 0;
++        }
++
++        float h = 0;
++
++        if (!mHasTabs) {
++            if (mDirections == Layout.DIRS_ALL_LEFT_TO_RIGHT) {
++                for (int offset = 0; offset <= mLen; ++offset) {
++                    measurement[offset] = measureRun(0, offset, mLen, false, fmi);
++                }
++                return measurement;
++            }
++            if (mDirections == Layout.DIRS_ALL_RIGHT_TO_LEFT) {
++                for (int offset = 0; offset <= mLen; ++offset) {
++                    measurement[offset] = measureRun(0, offset, mLen, true, fmi);
++                }
++                return measurement;
++            }
++        }
++
++        char[] chars = mChars;
++        int[] runs = mDirections.mDirections;
++        for (int i = 0; i < runs.length; i += 2) {
++            int runStart = runs[i];
++            int runLimit = runStart + (runs[i + 1] & Layout.RUN_LENGTH_MASK);
++            if (runLimit > mLen) {
++                runLimit = mLen;
++            }
++            boolean runIsRtl = (runs[i + 1] & Layout.RUN_RTL_FLAG) != 0;
++
++            int segstart = runStart;
++            for (int j = mHasTabs ? runStart : runLimit; j <= runLimit; ++j) {
++                int codept = 0;
++                if (mHasTabs && j < runLimit) {
++                    codept = chars[j];
++                    if (codept >= 0xD800 && codept < 0xDC00 && j + 1 < runLimit) {
++                        codept = Character.codePointAt(chars, j);
++                        if (codept > 0xFFFF) {
++                            ++j;
++                            continue;
++                        }
++                    }
++                }
++
++                if (j == runLimit || codept == '\t') {
++                    float oldh = h;
++                    boolean advance = (mDir == Layout.DIR_RIGHT_TO_LEFT) == runIsRtl;
++                    float w = measureRun(segstart, j, j, runIsRtl, fmi);
++                    h += advance ? w : -w;
++
++                    float baseh = advance ? oldh : h;
++                    FontMetricsInt crtfmi = advance ? fmi : null;
++                    for (int offset = segstart; offset <= j && offset <= mLen; ++offset) {
++                        if (target[offset] >= segstart && target[offset] < j) {
++                            measurement[offset] =
++                                    baseh + measureRun(segstart, offset, j, runIsRtl, crtfmi);
++                        }
++                    }
++
++                    if (codept == '\t') {
++                        if (target[j] == j) {
++                            measurement[j] = h;
++                        }
++                        h = mDir * nextTab(h * mDir);
++                        if (target[j + 1] == j) {
++                            measurement[j + 1] =  h;
++                        }
++                    }
++
++                    segstart = j + 1;
++                }
++            }
++        }
++        if (target[mLen] == mLen) {
++            measurement[mLen] = h;
++        }
++
++        return measurement;
++    }
++
++    /**
+      * Draws a unidirectional (but possibly multi-styled) run of text.
+      *
+      *
+-- 
+2.7.4
+

@@ -1,0 +1,37 @@
+From 875e327a84018e68bfc344f57d4a52d6e9387a7e Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Wed, 21 Dec 2016 13:27:04 -0700
+Subject: [PATCH 5/7] Always create grant structures when persistable.
+
+Certain apps may already hold permissions to an underlying provider,
+but they expect APIs like takePersistableUriPermission() and
+getPersistedUriPermissions() to work when a permission grant was
+extended with FLAG_GRANT_PERSISTABLE_URI_PERMISSION.
+
+Test: builds, boots
+Bug: 31239684
+Change-Id: I4b21c57956b70133ecadb50d0d3ee339f41e2260
+---
+ .../core/java/com/android/server/am/ActivityManagerService.java     | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
+index 91c4571..ac15a35 100644
+--- a/services/core/java/com/android/server/am/ActivityManagerService.java
++++ b/services/core/java/com/android/server/am/ActivityManagerService.java
+@@ -8112,6 +8112,12 @@ public final class ActivityManagerService extends ActivityManagerNative
+             }
+         }
+ 
++        // If we're extending a persistable grant, then we always need to create
++        // the grant data structure so that take/release APIs work
++        if ((modeFlags & Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) != 0) {
++            return targetUid;
++        }
++
+         if (targetUid >= 0) {
+             // First...  does the target actually need this permission?
+             if (checkHoldingPermissionsLocked(pm, pi, grantUri, targetUid, modeFlags)) {
+-- 
+2.7.4
+

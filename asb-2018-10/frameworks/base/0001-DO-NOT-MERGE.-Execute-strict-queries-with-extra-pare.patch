@@ -1,0 +1,77 @@
+From 5a78be03e8122da6f01c679e0a37502f38e4039d Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Wed, 25 Jul 2018 14:01:59 -0600
+Subject: [PATCH 1/7] DO NOT MERGE. Execute "strict" queries with extra
+ parentheses.
+
+SQLiteQueryBuilder has a setStrict() mode which can be used to
+detect SQL attacks from untrusted sources, which it does by running
+each query twice: once with an extra set of parentheses, and if that
+succeeds, it runs the original query verbatim.
+
+This sadly doesn't catch inputs of the type "1=1) OR (1=1", which
+creates valid statements for both tests above, but the final executed
+query ends up leaking data due to SQLite operator precedence.
+
+Instead, we need to continue compiling both variants, but we need
+to execute the query with the additional parentheses to ensure
+data won't be leaked.
+
+Test: atest cts/tests/tests/database/src/android/database/sqlite/cts/SQLiteQueryBuilderTest.java
+Bug: 111085900
+Change-Id: I6e8746fa48f9de13adae37d2990de11c9c585381
+Merged-In: I6e8746fa48f9de13adae37d2990de11c9c585381
+(cherry picked from commit 57b04a86802ff879af78e782a8582462323e34e7)
+---
+ .../database/sqlite/SQLiteQueryBuilder.java        | 25 ++++++++++++++++------
+ 1 file changed, 19 insertions(+), 6 deletions(-)
+
+diff --git a/core/java/android/database/sqlite/SQLiteQueryBuilder.java b/core/java/android/database/sqlite/SQLiteQueryBuilder.java
+index 56cba79..e720e21 100644
+--- a/core/java/android/database/sqlite/SQLiteQueryBuilder.java
++++ b/core/java/android/database/sqlite/SQLiteQueryBuilder.java
+@@ -376,6 +376,11 @@ public class SQLiteQueryBuilder
+             return null;
+         }
+ 
++        final String sql;
++        final String unwrappedSql = buildQuery(
++                projectionIn, selection, groupBy, having,
++                sortOrder, limit);
++
+         if (mStrict && selection != null && selection.length() > 0) {
+             // Validate the user-supplied selection to detect syntactic anomalies
+             // in the selection string that could indicate a SQL injection attempt.
+@@ -384,15 +389,23 @@ public class SQLiteQueryBuilder
+             // originally specified. An attacker cannot create an expression that
+             // would escape the SQL expression while maintaining balanced parentheses
+             // in both the wrapped and original forms.
+-            String sqlForValidation = buildQuery(projectionIn, "(" + selection + ")", groupBy,
++
++            // NOTE: The ordering of the below operations is important; we must
++            // execute the wrapped query to ensure the untrusted clause has been
++            // fully isolated.
++
++            // Validate the unwrapped query
++            db.validateSql(unwrappedSql, cancellationSignal); // will throw if query is invalid
++
++            // Execute wrapped query for extra protection
++            final String wrappedSql = buildQuery(projectionIn, "(" + selection + ")", groupBy,
+                     having, sortOrder, limit);
+-            db.validateSql(sqlForValidation, cancellationSignal); // will throw if query is invalid
++            sql = wrappedSql;
++        } else {
++            // Execute unwrapped query
++            sql = unwrappedSql;
+         }
+ 
+-        String sql = buildQuery(
+-                projectionIn, selection, groupBy, having,
+-                sortOrder, limit);
+-
+         if (Log.isLoggable(TAG, Log.DEBUG)) {
+             Log.d(TAG, "Performing query: " + sql);
+         }
+-- 
+2.7.4
+

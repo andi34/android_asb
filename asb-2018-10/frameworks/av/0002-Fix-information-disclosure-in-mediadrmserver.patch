@@ -1,0 +1,38 @@
+From b0fd223a94ae2569de68af4fbb22b6b67c27dd76 Mon Sep 17 00:00:00 2001
+From: Jeff Tinker <jtinker@google.com>
+Date: Mon, 8 Oct 2018 15:26:28 +0300
+Subject: [PATCH 2/2] Fix information disclosure in mediadrmserver
+
+Test:POC provided in bug
+Bug:79218474
+(cherry picked from commit c1bf68a8d1321d7cdf7da6933f0b89b171d251c6)
+
+Backported-By: Vasyl Gello <vasek.gello@gmail.com>
+Change-Id: Iba12c07a5e615f8ed234b01ac53e3559ba9ac12e
+---
+ media/libmedia/ICrypto.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/media/libmedia/ICrypto.cpp b/media/libmedia/ICrypto.cpp
+index 302e6ee..0045cff 100644
+--- a/media/libmedia/ICrypto.cpp
++++ b/media/libmedia/ICrypto.cpp
+@@ -199,8 +199,13 @@ IMPLEMENT_META_INTERFACE(Crypto, "android.hardware.ICrypto");
+ 
+ void BnCrypto::readVector(const Parcel &data, Vector<uint8_t> &vector) const {
+     uint32_t size = data.readInt32();
+-    vector.insertAt((size_t)0, size);
+-    data.read(vector.editArray(), size);
++    if (vector.insertAt((size_t)0, size) < 0) {
++        vector.clear();
++    }
++    if (data.read(vector.editArray(), size) != NO_ERROR) {
++        vector.clear();
++        ALOGE("62872384");
++    }
+ }
+ 
+ void BnCrypto::writeVector(Parcel *reply, Vector<uint8_t> const &vector) const {
+-- 
+2.7.4
+

@@ -1,0 +1,37 @@
+From 844e3a3e794838ab714276a017191015c043f7a0 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Mon, 16 Jul 2018 06:40:35 -0700
+Subject: [PATCH 02/10] Fix copy length calculation in sdp_copy_raw_data
+
+Test: compilation
+Bug: 110216176
+Change-Id: Ic4a19c9f0fe8cd592bc6c25dcec7b1da49ff7459
+(cherry picked from commit 23aa15743397b345f3d948289fe90efa2a2e2b3e)
+---
+ stack/sdp/sdp_discovery.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/stack/sdp/sdp_discovery.c b/stack/sdp/sdp_discovery.c
+index 87904fb..fcf709f 100644
+--- a/stack/sdp/sdp_discovery.c
++++ b/stack/sdp/sdp_discovery.c
+@@ -378,8 +378,16 @@ static void sdp_copy_raw_data (tCONN_CB *p_ccb, BOOLEAN offset)
+ 
+         if(offset)
+         {
++            cpy_len -= 1;
+             type = *p++;
++            uint8_t* old_p = p;
+             p = sdpu_get_len_from_type (p, type, &list_len);
++            if ((int)cpy_len < (p - old_p))
++            {
++                SDP_TRACE_WARNING("%s: no bytes left for data", __func__);
++                return;
++            }
++            cpy_len -= (p - old_p);
+         }
+         if (list_len < cpy_len)
+         {
+-- 
+2.7.4
+

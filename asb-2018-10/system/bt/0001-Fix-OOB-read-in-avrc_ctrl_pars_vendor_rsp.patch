@@ -1,0 +1,33 @@
+From 96b16c776028b6c84778f3e970c56ddc668bf5b6 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Mon, 6 Aug 2018 14:40:37 -0700
+Subject: [PATCH 01/10] Fix OOB read in avrc_ctrl_pars_vendor_rsp
+
+Bug: 78526423
+Test: manual
+Change-Id: I0eeacc6a25b12f4b999098375d0d032cfa462a91
+(cherry picked from commit d945ada503ed9c9ea24e092df51faba57f5d589a)
+---
+ stack/avrc/avrc_pars_ct.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/stack/avrc/avrc_pars_ct.c b/stack/avrc/avrc_pars_ct.c
+index 1818c52..eb1ff99 100644
+--- a/stack/avrc/avrc_pars_ct.c
++++ b/stack/avrc/avrc_pars_ct.c
+@@ -251,6 +251,12 @@ static tAVRC_STS avrc_ctrl_pars_vendor_rsp(
+             break;
+         }
+         BE_STREAM_TO_UINT8(p_result->list_app_values.num_val, p);
++        if (p_result->list_app_values.num_val > AVRC_MAX_APP_ATTR_SIZE)
++        {
++            android_errorWriteLog(0x534e4554, "78526423");
++            p_result->list_app_values.num_val = AVRC_MAX_APP_ATTR_SIZE;
++        }
++
+         AVRC_TRACE_DEBUG("%s value count = %d ", __func__, p_result->list_app_values.num_val);
+         for(int xx = 0; xx < p_result->list_app_values.num_val; xx++)
+         {
+-- 
+2.7.4
+
