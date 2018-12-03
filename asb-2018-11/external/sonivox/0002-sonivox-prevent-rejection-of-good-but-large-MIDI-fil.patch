@@ -1,0 +1,68 @@
+From 88f30162242a58696c5dde554f361167cf26a65e Mon Sep 17 00:00:00 2001
+From: Phil Burk <philburk@google.com>
+Date: Sat, 18 Aug 2018 11:52:03 -0700
+Subject: [PATCH 2/2] sonivox: prevent rejection of good but large MIDI files
+
+A security patch that was trying to detect infinite loops
+was accidentally rejecting very large MIDI files.
+This is because there is a scanning pass that looks at the entire
+file. That was generating a very high eventCount.
+With this change, we do not check event counts during the scanning pass.
+
+Bug: 112735915
+Bug: 112575219
+Bug: 68664359
+Test: Generate a MIDI files with more than 50000 events.
+Test: There are some in b/112735915 and b/112575219
+Test: mmma frameworks/av/cmds/stagefright
+Test: adb push out/target/product/marlin/system/bin/stagefright /system/bin/.
+Test: adb shell stagefright -a /sdcard/Download/verybigfile.mid
+Test: It should play correctly and not abort.
+Change-Id: Iddf2f5b178e9ca3867b14fcd78d538023d79240d
+Merged-In: Iddf2f5b178e9ca3867b14fcd78d538023d79240d
+(cherry picked from commit 123051dd0271ac0f245cb88c38878c6b21880632)
+---
+ arm-wt-22k/lib_src/eas_public.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/arm-wt-22k/lib_src/eas_public.c b/arm-wt-22k/lib_src/eas_public.c
+index d5316c5..1f2fe8a 100644
+--- a/arm-wt-22k/lib_src/eas_public.c
++++ b/arm-wt-22k/lib_src/eas_public.c
+@@ -1248,12 +1248,13 @@ static EAS_RESULT EAS_ParseEvents (S_EAS_DATA *pEASData, EAS_HANDLE pStream, EAS
+     EAS_BOOL done;
+     EAS_INT yieldCount = YIELD_EVENT_COUNT;
+     EAS_U32 time = 0;
++
+     // This constant is the maximum number of events that can be processed in a single time slice.
+     // A typical ringtone will contain a few events per time slice.
+     // Extremely dense ringtones might go up to 50 events.
+     // If we see this many events then the file is probably stuck in an infinite loop
+-    // and should be aborted.  In our testing, it took less than 100 msec to hit this limit.
+-    static const EAS_INT MAX_EVENT_COUNT = 50000;
++    // and should be aborted.
++    static const EAS_INT MAX_EVENT_COUNT = 100000;
+     EAS_INT eventCount = 0;
+ 
+     /* does this parser have a time function? */
+@@ -1309,10 +1310,14 @@ static EAS_RESULT EAS_ParseEvents (S_EAS_DATA *pEASData, EAS_HANDLE pStream, EAS
+                         return result;
+                     }
+                 }
+-                // An infinite loop within a single frame of a ringtone file can cause this function
++
++                // An infinite loop within a ringtone file can cause this function
+                 // to loop forever.  Try to detect that and return an error.
+-                if (++eventCount >= MAX_EVENT_COUNT) {
+-                    ALOGE("%s() aborting, %d events without advancing to next frame",
++                // Only check when playing. Otherwise a very large file could be rejected
++                // when scanning the entire file in a single call to this function.
++                // OTA files will only do infinite loops when in eParserModePlay.
++                if (++eventCount >= MAX_EVENT_COUNT && parseMode == eParserModePlay) {
++                    ALOGE("%s() aborting, %d events. Infinite loop in song file?!",
+                             __func__, eventCount);
+                     android_errorWriteLog(0x534e4554, "68664359");
+                     return EAS_ERROR_FILE_POS;
+-- 
+2.7.4
+

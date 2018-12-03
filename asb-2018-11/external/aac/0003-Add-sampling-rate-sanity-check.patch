@@ -1,0 +1,31 @@
+From 398b31d8b1f3359e1ffef53454c906f42df30fe9 Mon Sep 17 00:00:00 2001
+From: Fraunhofer IIS FDK <audio-fdk@iis.fraunhofer.de>
+Date: Fri, 29 Jun 2018 16:35:24 +0200
+Subject: [PATCH 3/3] Add sampling rate sanity check
+
+Bug: 112661641
+Test: atest DecoderTestXheAac ; atest DecoderTestAacDrc
+Change-Id: I8e416fb1501dabda20babd4a28a99ab06950b221
+(cherry picked from commit ba003785774efe355bcac950158fc78a0cff0c2b)
+---
+ libMpegTPDec/src/tpdec_asc.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/libMpegTPDec/src/tpdec_asc.cpp b/libMpegTPDec/src/tpdec_asc.cpp
+index e80d0e5..8b27cc5 100644
+--- a/libMpegTPDec/src/tpdec_asc.cpp
++++ b/libMpegTPDec/src/tpdec_asc.cpp
+@@ -1266,7 +1266,9 @@ TRANSPORTDEC_ERROR AudioSpecificConfig_Parse(
+ 
+   self->m_aot = getAOT(bs);
+   self->m_samplingFrequency = getSampleRate(bs, &self->m_samplingFrequencyIndex, 4);
+-  if (self->m_samplingFrequency <= 0) {
++  if (self->m_samplingFrequency <= 0 ||
++      (self->m_samplingFrequency > 96000 && self->m_aot != 39) ||
++      self->m_samplingFrequency > 4 * 96000) {
+     return TRANSPORTDEC_PARSE_ERROR;
+   }
+ 
+-- 
+2.7.4
+

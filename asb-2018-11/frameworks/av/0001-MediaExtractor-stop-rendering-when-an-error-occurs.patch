@@ -1,0 +1,36 @@
+From cf1de693ebd867a72fb7dda339d4624f18c004a1 Mon Sep 17 00:00:00 2001
+From: akirilov <akirilov@google.com>
+Date: Mon, 9 Jul 2018 15:28:01 -0700
+Subject: [PATCH] MediaExtractor: stop rendering when an error occurs
+
+Bug: 68664359
+Bug: 110435401
+
+Test: cts-tradefed run cts -m CtsSecurityTestCases -t android.security.cts.StagefrightTest#testStagefright_bug_68664359
+Test: cts-tradefed run cts -m CtsSecurityTestCases -t android.security.cts.StagefrightTest#testStagefright_bug_110435401
+
+Change-Id: Icff96fcaa76a5871e7f175b0384d47d5dca7313f
+Merged-In: If1322524fcfebc6c5f139288f044b0189da66c1b
+---
+ media/libstagefright/MidiExtractor.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/media/libstagefright/MidiExtractor.cpp b/media/libstagefright/MidiExtractor.cpp
+index 7930bbb..2145134 100644
+--- a/media/libstagefright/MidiExtractor.cpp
++++ b/media/libstagefright/MidiExtractor.cpp
+@@ -246,8 +246,9 @@ MediaBuffer* MidiEngine::readBuffer() {
+         EAS_I32 numRendered;
+         EAS_RESULT result = EAS_Render(mEasData, p, mEasConfig->mixBufferSize, &numRendered);
+         if (result != EAS_SUCCESS) {
+-            ALOGE("EAS_Render returned %ld", result);
+-            break;
++            ALOGE("EAS_Render() returned %ld, numBytesOutput = %d", result, numBytesOutput);
++            buffer->release();
++            return NULL; // Stop processing to prevent infinite loops.
+         }
+         p += numRendered * mEasConfig->numChannels;
+         numBytesOutput += numRendered * mEasConfig->numChannels * sizeof(EAS_PCM);
+-- 
+2.7.4
+

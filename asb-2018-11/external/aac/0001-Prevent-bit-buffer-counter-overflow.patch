@@ -1,0 +1,663 @@
+From d6c0aa989f47ef335560bb38fe7eb3c19dac4515 Mon Sep 17 00:00:00 2001
+From: Fraunhofer IIS FDK <audio-fdk@iis.fraunhofer.de>
+Date: Fri, 8 Jun 2018 18:03:16 +0200
+Subject: [PATCH 1/3] Prevent bit buffer counter overflow.
+
+While long-term test we discovered a bit counter overflow in the bit buffer.
+The bit buffer state was only used by HCR and RVLC tool and can easily be substituted with FDKgetValidBits() call.
+The following patch completely removes the bit counter and all its obsolete functions.
+
+Bug: 112662184
+Test: atest DecoderTestXheAac ; atest DecoderTestAacDrc
+
+Change-Id: Icee0519d26a2aa62367d2dece59cd3d60ffcade7
+(cherry picked from commit 15292f7e9620caf9e8df26a62efc2a2891ea822e)
+---
+ libAACdec/src/aacdec_hcr.cpp     | 30 +++++++++++++++++------
+ libAACdec/src/aacdec_hcr_bit.cpp |  5 ++--
+ libAACdec/src/aacdec_hcr_bit.h   |  1 +
+ libAACdec/src/aacdec_hcr_types.h |  2 +-
+ libAACdec/src/aacdec_hcrs.cpp    |  7 ++++++
+ libAACdec/src/rvlc.cpp           | 13 ++++++----
+ libAACdec/src/rvlc_info.h        |  1 +
+ libAACdec/src/rvlcbit.cpp        |  3 ++-
+ libAACdec/src/rvlcbit.h          |  1 +
+ libFDK/include/FDK_bitbuffer.h   |  6 -----
+ libFDK/include/FDK_bitstream.h   | 51 ----------------------------------------
+ libFDK/src/FDK_bitbuffer.cpp     | 35 ---------------------------
+ 12 files changed, 47 insertions(+), 108 deletions(-)
+
+diff --git a/libAACdec/src/aacdec_hcr.cpp b/libAACdec/src/aacdec_hcr.cpp
+index e314e27..9582cab 100644
+--- a/libAACdec/src/aacdec_hcr.cpp
++++ b/libAACdec/src/aacdec_hcr.cpp
+@@ -126,6 +126,7 @@ static void DeriveNumberOfExtendedSortedSectionsInSets(UINT   numSegment,
+                                                        int      numExtendedSortedSectionsInSetsIdx);
+ 
+ static INT  DecodeEscapeSequence(HANDLE_FDK_BITSTREAM  bs,
++                                 const INT             bsAnchor,
+                                  INT                   quantSpecCoef,
+                                  USHORT               *pLeftStartOfSegment,
+                                  SCHAR                *pRemainingBitsInSegment,
+@@ -133,6 +134,7 @@ static INT  DecodeEscapeSequence(HANDLE_FDK_BITSTREAM  bs,
+                                 );
+ 
+ static int DecodePCW_Sign(HANDLE_FDK_BITSTREAM  bs,
++                          const INT             bsAnchor,
+                           UINT                  codebookDim,
+                           const SCHAR          *pQuantVal,
+                           FIXP_DBL             *pQuantSpecCoef,
+@@ -143,6 +145,7 @@ static int DecodePCW_Sign(HANDLE_FDK_BITSTREAM  bs,
+                          );
+ 
+ static const SCHAR *DecodePCW_Body(HANDLE_FDK_BITSTREAM  bs,
++                                   const INT             bsAnchor,
+                                    const UINT           *pCurrentTree,
+                                    const SCHAR          *pQuantValBase,
+                                          USHORT         *pLeftStartOfSegment,
+@@ -301,7 +304,7 @@ UINT HcrInit(H_HCR_INFO              pHcr,
+   pHcr->nonPcwSideinfo.pResultBase                  = SPEC_LONG(pAacDecoderChannelInfo->pSpectralCoefficient);
+ 
+   FDKsyncCache(bs);
+-  pHcr->decInOut.bitstreamIndex                     = FDKgetBitCnt(bs);
++  pHcr->decInOut.bitstreamAnchor = (INT)FDKgetValidBits(bs);
+ 
+   if (!IsLongBlock(&pAacDecoderChannelInfo->icsInfo))   /* short block */
+   {
+@@ -480,7 +483,7 @@ UINT HcrDecoder(H_HCR_INFO              pHcr,
+ #endif
+ 
+   INT        bitCntOffst;
+-  UINT       saveBitCnt = FDKgetBitCnt(bs);   /* save bitstream position */
++  INT        saveBitCnt = (INT)FDKgetValidBits(bs); /* save bitstream position */
+ 
+   HcrCalcNumCodeword(pHcr);
+ 
+@@ -534,7 +537,7 @@ UINT HcrDecoder(H_HCR_INFO              pHcr,
+   HcrReorderQuantizedSpectralCoefficients(pHcr, pAacDecoderChannelInfo, pSamplingRateInfo);
+ 
+   /* restore bitstream position */
+-  bitCntOffst = saveBitCnt - FDKgetBitCnt(bs);
++  bitCntOffst = (INT)FDKgetValidBits(bs) - saveBitCnt;
+   if( bitCntOffst ) {
+     FDKpushBiDirectional(bs, bitCntOffst);
+   }
+@@ -854,7 +857,6 @@ static void HcrPrepareSegmentationGrid(H_HCR_INFO pHcr)
+   USHORT  *pLeftStartOfSegment           =   pHcr->segmentInfo.pLeftStartOfSegment;
+   USHORT  *pRightStartOfSegment          =   pHcr->segmentInfo.pRightStartOfSegment;
+   SCHAR   *pRemainingBitsInSegment       =   pHcr->segmentInfo.pRemainingBitsInSegment;
+-  USHORT   bitstreamIndex                =   pHcr->decInOut.bitstreamIndex;
+   const UCHAR *pMaxCwLength              =   pHcr->tableInfo.pMaxCwLength;
+ 
+   for ( i=numSortedSection; i != 0; i-- ) {
+@@ -863,7 +865,7 @@ static void HcrPrepareSegmentationGrid(H_HCR_INFO pHcr)
+ 
+     for ( j = *pNumSortedCodewordInSection; j != 0 ; j-- ) {
+       /* width allows a new segment */
+-      intermediateResult = bitstreamIndex + segmentStart;
++      intermediateResult = segmentStart;
+       if ( (segmentStart + segmentWidth) <= lengthOfReorderedSpectralData ) {
+         /* store segment start, segment length and increment the number of segments */
+         *pLeftStartOfSegment++ = intermediateResult;
+@@ -878,11 +880,11 @@ static void HcrPrepareSegmentationGrid(H_HCR_INFO pHcr)
+         pLeftStartOfSegment--;
+         pRightStartOfSegment--;
+         pRemainingBitsInSegment--;
+-        segmentStart = *pLeftStartOfSegment - bitstreamIndex;
++        segmentStart = *pLeftStartOfSegment;
+ 
+         lastSegmentWidth = lengthOfReorderedSpectralData - segmentStart;
+         *pRemainingBitsInSegment = lastSegmentWidth;
+-        *pRightStartOfSegment = bitstreamIndex + segmentStart + lastSegmentWidth - 1;
++        *pRightStartOfSegment = segmentStart + lastSegmentWidth - 1;
+         endFlag = 1;
+         break;
+       }
+@@ -1106,6 +1108,7 @@ static void DecodePCWs(HANDLE_FDK_BITSTREAM bs, H_HCR_INFO pHcr)
+ 
+         /* decode PCW_BODY */
+         pQuantVal = DecodePCW_Body(bs,
++                                   pHcr->decInOut.bitstreamAnchor,
+                                    pCurrentTree,
+                                    pQuantValBase,
+                                    pLeftStartOfSegment,
+@@ -1149,6 +1152,7 @@ static void DecodePCWs(HANDLE_FDK_BITSTREAM bs, H_HCR_INFO pHcr)
+         numDecodedBits  = 0;
+ 
+         pQuantVal = DecodePCW_Body(bs,
++                                   pHcr->decInOut.bitstreamAnchor,
+                                    pCurrentTree,
+                                    pQuantValBase,
+                                    pLeftStartOfSegment,
+@@ -1157,6 +1161,7 @@ static void DecodePCWs(HANDLE_FDK_BITSTREAM bs, H_HCR_INFO pHcr)
+                                   );
+ 
+         err = DecodePCW_Sign( bs,
++                              pHcr->decInOut.bitstreamAnchor,
+                               dimension,
+                               pQuantVal,
+                               pQuantizedSpectralCoefficients,
+@@ -1196,6 +1201,7 @@ static void DecodePCWs(HANDLE_FDK_BITSTREAM bs, H_HCR_INFO pHcr)
+ 
+         /* decode PCW_BODY */
+         pQuantVal = DecodePCW_Body(bs,
++                                   pHcr->decInOut.bitstreamAnchor,
+                                    pCurrentTree,
+                                    pQuantValBase,
+                                    pLeftStartOfSegment,
+@@ -1204,6 +1210,7 @@ static void DecodePCWs(HANDLE_FDK_BITSTREAM bs, H_HCR_INFO pHcr)
+                                   );
+ 
+         err = DecodePCW_Sign( bs,
++                              pHcr->decInOut.bitstreamAnchor,
+                               dimension,
+                               pQuantVal,
+                               pQuantizedSpectralCoefficients,
+@@ -1221,6 +1228,7 @@ static void DecodePCWs(HANDLE_FDK_BITSTREAM bs, H_HCR_INFO pHcr)
+ 
+         if ( fixp_abs(pQuantizedSpectralCoefficients[quantizedSpectralCoefficientsIdx]) == (FIXP_DBL)ESCAPE_VALUE ) {
+           pQuantizedSpectralCoefficients[quantizedSpectralCoefficientsIdx] = (FIXP_DBL) DecodeEscapeSequence( bs,
++                                                   pHcr->decInOut.bitstreamAnchor,
+                                                    pQuantizedSpectralCoefficients[quantizedSpectralCoefficientsIdx],
+                                                    pLeftStartOfSegment,
+                                                    pRemainingBitsInSegment,
+@@ -1234,6 +1242,7 @@ static void DecodePCWs(HANDLE_FDK_BITSTREAM bs, H_HCR_INFO pHcr)
+ 
+         if ( fixp_abs(pQuantizedSpectralCoefficients[quantizedSpectralCoefficientsIdx]) == (FIXP_DBL)ESCAPE_VALUE ) {
+           pQuantizedSpectralCoefficients[quantizedSpectralCoefficientsIdx] = (FIXP_DBL) DecodeEscapeSequence( bs,
++                                                   pHcr->decInOut.bitstreamAnchor,
+                                                    pQuantizedSpectralCoefficients[quantizedSpectralCoefficientsIdx],
+                                                    pLeftStartOfSegment,
+                                                    pRemainingBitsInSegment,
+@@ -1374,6 +1383,7 @@ void  CarryBitToBranchValue(UCHAR  carryBit,
+                     coefficients
+ -------------------------------------------------------------------------------------------- */
+ static const SCHAR *DecodePCW_Body(HANDLE_FDK_BITSTREAM  bs,
++                                   const INT             bsAnchor,
+                                    const UINT           *pCurrentTree,
+                                    const SCHAR          *pQuantValBase,
+                                          USHORT         *pLeftStartOfSegment,
+@@ -1394,6 +1404,7 @@ static const SCHAR *DecodePCW_Body(HANDLE_FDK_BITSTREAM  bs,
+   while (1) {
+ 
+     carryBit = HcrGetABitFromBitstream(bs,
++                                       bsAnchor,
+                                        pLeftStartOfSegment,
+                                        pLeftStartOfSegment,                 /* dummy */
+                                        FROM_LEFT_TO_RIGHT);
+@@ -1429,6 +1440,7 @@ static const SCHAR *DecodePCW_Body(HANDLE_FDK_BITSTREAM  bs,
+ -------------------------------------------------------------------------------------------- */
+ 
+ static INT  DecodeEscapeSequence(HANDLE_FDK_BITSTREAM  bs,
++                                 const                 INT bsAnchor,
+                                  INT                   quantSpecCoef,
+                                  USHORT               *pLeftStartOfSegment,
+                                  SCHAR                *pRemainingBitsInSegment,
+@@ -1444,6 +1456,7 @@ static INT  DecodeEscapeSequence(HANDLE_FDK_BITSTREAM  bs,
+   /* decode escape prefix */
+   while (1) {
+     carryBit = HcrGetABitFromBitstream(bs,
++                                       bsAnchor,
+                                        pLeftStartOfSegment,
+                                        pLeftStartOfSegment,                /* dummy */
+                                        FROM_LEFT_TO_RIGHT);
+@@ -1462,6 +1475,7 @@ static INT  DecodeEscapeSequence(HANDLE_FDK_BITSTREAM  bs,
+   /* decode escape word */
+   for( i=escapeOnesCounter; i != 0 ; i-- ) {
+     carryBit = HcrGetABitFromBitstream(bs,
++                                       bsAnchor,
+                                        pLeftStartOfSegment,
+                                        pLeftStartOfSegment,                /* dummy */
+                                        FROM_LEFT_TO_RIGHT);
+@@ -1491,6 +1505,7 @@ static INT  DecodeEscapeSequence(HANDLE_FDK_BITSTREAM  bs,
+         return:   - updated pQuantSpecCoef pointer (to next empty storage for a line)
+ -------------------------------------------------------------------------------------------- */
+ static int DecodePCW_Sign(HANDLE_FDK_BITSTREAM  bs,
++                          const INT             bsAnchor,
+                           UINT                  codebookDim,
+                           const SCHAR          *pQuantVal,
+                           FIXP_DBL             *pQuantSpecCoef,
+@@ -1508,6 +1523,7 @@ static int DecodePCW_Sign(HANDLE_FDK_BITSTREAM  bs,
+     quantSpecCoef = *pQuantVal++;
+     if (quantSpecCoef != 0) {
+       carryBit = HcrGetABitFromBitstream(bs,
++                                         bsAnchor,
+                                          pLeftStartOfSegment,
+                                          pLeftStartOfSegment,    /* dummy */
+                                          FROM_LEFT_TO_RIGHT);
+diff --git a/libAACdec/src/aacdec_hcr_bit.cpp b/libAACdec/src/aacdec_hcr_bit.cpp
+index df2685b..17a2ae8 100644
+--- a/libAACdec/src/aacdec_hcr_bit.cpp
++++ b/libAACdec/src/aacdec_hcr_bit.cpp
+@@ -122,6 +122,7 @@ UCHAR ToggleReadDirection(UCHAR readDirection)
+         return:   - bit from bitstream
+ -------------------------------------------------------------------------------------------- */
+ UINT HcrGetABitFromBitstream(HANDLE_FDK_BITSTREAM  bs,
++                             const INT             bsAnchor,
+                              USHORT               *pLeftStartOfSegment,
+                              USHORT               *pRightStartOfSegment,
+                              UCHAR                 readDirection)
+@@ -130,7 +131,7 @@ UINT HcrGetABitFromBitstream(HANDLE_FDK_BITSTREAM  bs,
+   INT    readBitOffset;
+ 
+   if (readDirection == FROM_LEFT_TO_RIGHT) {
+-    readBitOffset = *pLeftStartOfSegment-FDKgetBitCnt(bs);
++    readBitOffset = (INT)FDKgetValidBits(bs) - bsAnchor + *pLeftStartOfSegment;
+     if( readBitOffset ) {
+       FDKpushBiDirectional(bs, readBitOffset);
+     }
+@@ -140,7 +141,7 @@ UINT HcrGetABitFromBitstream(HANDLE_FDK_BITSTREAM  bs,
+     *pLeftStartOfSegment += 1;
+   }
+   else {
+-    readBitOffset = *pRightStartOfSegment-FDKgetBitCnt(bs);
++    readBitOffset = (INT)FDKgetValidBits(bs) - bsAnchor + *pRightStartOfSegment;
+     if( readBitOffset ) {
+       FDKpushBiDirectional(bs, readBitOffset);
+     }
+diff --git a/libAACdec/src/aacdec_hcr_bit.h b/libAACdec/src/aacdec_hcr_bit.h
+index 8994ff1..e6d28da 100644
+--- a/libAACdec/src/aacdec_hcr_bit.h
++++ b/libAACdec/src/aacdec_hcr_bit.h
+@@ -98,6 +98,7 @@ amm-info@iis.fraunhofer.de
+ UCHAR ToggleReadDirection(UCHAR readDirection);
+ 
+ UINT  HcrGetABitFromBitstream(HANDLE_FDK_BITSTREAM  bs,
++                              const INT             bsAnchor,
+                               USHORT               *pLeftStartOfSegment,
+                               USHORT               *pRightStartOfSegment,
+                               UCHAR                 readDirection);
+diff --git a/libAACdec/src/aacdec_hcr_types.h b/libAACdec/src/aacdec_hcr_types.h
+index 323ec4e..db02ad4 100644
+--- a/libAACdec/src/aacdec_hcr_types.h
++++ b/libAACdec/src/aacdec_hcr_types.h
+@@ -277,7 +277,7 @@ typedef struct {
+   SHORT         lengthOfReorderedSpectralData;
+   SHORT         numSection;
+   SHORT        *pNumLineInSect;
+-  USHORT        bitstreamIndex;
++  USHORT        bitstreamAnchor;
+   SCHAR         lengthOfLongestCodeword;
+   UCHAR        *pCodebook;
+ } HCR_INPUT_OUTPUT;
+diff --git a/libAACdec/src/aacdec_hcrs.cpp b/libAACdec/src/aacdec_hcrs.cpp
+index c0b2173..19da714 100644
+--- a/libAACdec/src/aacdec_hcrs.cpp
++++ b/libAACdec/src/aacdec_hcrs.cpp
+@@ -557,6 +557,7 @@ UINT Hcr_State_BODY_ONLY(HANDLE_FDK_BITSTREAM bs, void *ptr)
+   for ( ; pRemainingBitsInSegment[segmentOffset] > 0 ; pRemainingBitsInSegment[segmentOffset] -= 1 ) {
+ 
+     carryBit = HcrGetABitFromBitstream( bs,
++                                        pHcr->decInOut.bitstreamAnchor,
+                                        &pLeftStartOfSegment[segmentOffset],
+                                        &pRightStartOfSegment[segmentOffset],
+                                         readDirection);
+@@ -678,6 +679,7 @@ UINT Hcr_State_BODY_SIGN__BODY(HANDLE_FDK_BITSTREAM bs, void *ptr)
+   for ( ; pRemainingBitsInSegment[segmentOffset] > 0 ; pRemainingBitsInSegment[segmentOffset] -= 1 ) {
+ 
+     carryBit = HcrGetABitFromBitstream( bs,
++                                        pHcr->decInOut.bitstreamAnchor,
+                                        &pLeftStartOfSegment[segmentOffset],
+                                        &pRightStartOfSegment[segmentOffset],
+                                         readDirection);
+@@ -790,6 +792,7 @@ UINT Hcr_State_BODY_SIGN__SIGN(HANDLE_FDK_BITSTREAM bs, void *ptr)
+   for ( ; pRemainingBitsInSegment[segmentOffset] > 0 ; pRemainingBitsInSegment[segmentOffset] -= 1 ) {
+ 
+     carryBit = HcrGetABitFromBitstream( bs,
++                                        pHcr->decInOut.bitstreamAnchor,
+                                        &pLeftStartOfSegment[segmentOffset],
+                                        &pRightStartOfSegment[segmentOffset],
+                                         readDirection);
+@@ -903,6 +906,7 @@ UINT Hcr_State_BODY_SIGN_ESC__BODY(HANDLE_FDK_BITSTREAM bs, void *ptr)
+   for ( ; pRemainingBitsInSegment[segmentOffset] > 0 ; pRemainingBitsInSegment[segmentOffset] -= 1 ) {
+ 
+     carryBit = HcrGetABitFromBitstream( bs,
++                                        pHcr->decInOut.bitstreamAnchor,
+                                        &pLeftStartOfSegment[segmentOffset],
+                                        &pRightStartOfSegment[segmentOffset],
+                                         readDirection);
+@@ -1053,6 +1057,7 @@ UINT Hcr_State_BODY_SIGN_ESC__SIGN(HANDLE_FDK_BITSTREAM bs, void *ptr)
+   for ( ; pRemainingBitsInSegment[segmentOffset] > 0 ; pRemainingBitsInSegment[segmentOffset] -= 1 ) {
+ 
+     carryBit = HcrGetABitFromBitstream( bs,
++                                        pHcr->decInOut.bitstreamAnchor,
+                                        &pLeftStartOfSegment[segmentOffset],
+                                        &pRightStartOfSegment[segmentOffset],
+                                         readDirection);
+@@ -1197,6 +1202,7 @@ UINT Hcr_State_BODY_SIGN_ESC__ESC_PREFIX(HANDLE_FDK_BITSTREAM bs, void *ptr)
+   for ( ; pRemainingBitsInSegment[segmentOffset] > 0 ; pRemainingBitsInSegment[segmentOffset] -= 1 ) {
+ 
+     carryBit = HcrGetABitFromBitstream( bs,
++                                        pHcr->decInOut.bitstreamAnchor,
+                                        &pLeftStartOfSegment[segmentOffset],
+                                        &pRightStartOfSegment[segmentOffset],
+                                         readDirection);
+@@ -1311,6 +1317,7 @@ UINT Hcr_State_BODY_SIGN_ESC__ESC_WORD(HANDLE_FDK_BITSTREAM bs, void *ptr)
+   for ( ; pRemainingBitsInSegment[segmentOffset] > 0 ; pRemainingBitsInSegment[segmentOffset] -= 1 ) {
+ 
+     carryBit = HcrGetABitFromBitstream( bs,
++                                        pHcr->decInOut.bitstreamAnchor,
+                                        &pLeftStartOfSegment[segmentOffset],
+                                        &pRightStartOfSegment[segmentOffset],
+                                         readDirection);
+diff --git a/libAACdec/src/rvlc.cpp b/libAACdec/src/rvlc.cpp
+index 16f0bf5..a142d8f 100644
+--- a/libAACdec/src/rvlc.cpp
++++ b/libAACdec/src/rvlc.cpp
+@@ -150,9 +150,10 @@ void rvlcInit (CErRvlcInfo            *pRvlc,
+ 
+   /* set base bitstream ptr to the RVL-coded part (start of RVLC data (ESC 2)) */
+   FDKsyncCache (bs);
++  pRvlc->bsAnchor = (INT)FDKgetValidBits(bs);
+ 
+-  pRvlc->bitstreamIndexRvlFwd = FDKgetBitCnt(bs); /* first bit within RVL coded block as start address for  forward decoding */
+-  pRvlc->bitstreamIndexRvlBwd = FDKgetBitCnt(bs) + pRvlc->length_of_rvlc_sf - 1; /* last bit within RVL coded block as start address for backward decoding */
++  pRvlc->bitstreamIndexRvlFwd = 0; /* first bit within RVL coded block as start address for  forward decoding */
++  pRvlc->bitstreamIndexRvlBwd = pRvlc->length_of_rvlc_sf - 1; /* last bit within RVL coded block as start address for backward decoding */
+ 
+   /* skip RVLC-bitstream-part -- pointing now to escapes (if present) or to TNS data (if present) */
+   FDKpushFor (bs, pRvlc->length_of_rvlc_sf);
+@@ -161,7 +162,7 @@ void rvlcInit (CErRvlcInfo            *pRvlc,
+ 
+     /* locate internal bitstream ptr at escapes (which is the second part) */
+     FDKsyncCache (bs);
+-    pRvlc->bitstreamIndexEsc = FDKgetBitCnt(bs);
++    pRvlc->bitstreamIndexEsc = pRvlc->bsAnchor - (INT)FDKgetValidBits(bs);
+ 
+     /* skip escapeRVLC-bitstream-part -- pointing to TNS data (if present)   to make decoder continue */
+     /* decoding of RVLC should work despite this second pushFor during initialization because        */
+@@ -241,6 +242,7 @@ SCHAR rvlcDecodeEscapeWord (CErRvlcInfo          *pRvlc,
+ 
+   for (i=MAX_LEN_RVLC_ESCAPE_WORD-1; i >= 0; i--) {
+     carryBit = rvlcReadBitFromBitstream(bs,                         /* get next bit */
++                                        pRvlc->bsAnchor,
+                                         pBitstreamIndexEsc,
+                                         FWD);
+ 
+@@ -356,6 +358,7 @@ SCHAR decodeRVLCodeword (HANDLE_FDK_BITSTREAM  bs, CErRvlcInfo *pRvlc)
+ 
+   for (i=MAX_LEN_RVLC_CODE_WORD-1; i >= 0; i--) { 
+     carryBit = rvlcReadBitFromBitstream(bs,             /* get next bit */
++                                        pRvlc->bsAnchor,
+                                         pBitstrIndxRvl,
+                                         direction);
+ 
+@@ -1136,7 +1139,7 @@ void CRvlc_Decode (
+   rvlcInit(pRvlc,pAacDecoderChannelInfo,bs);  
+ 
+   /* save bitstream position */
+-  saveBitCnt = FDKgetBitCnt(bs);
++  saveBitCnt = (INT)FDKgetValidBits(bs);
+ 
+ #if RVLC_ADVANCED_BITSTREAM_ERROR_GENERATOR_SF
+   GenerateSingleBitError(pRvlc,
+@@ -1164,7 +1167,7 @@ void CRvlc_Decode (
+   pAacDecoderChannelInfo->data.aac.PnsData.PnsActive = pRvlc->noise_used;
+ 
+   /* restore bitstream position */
+-  bitCntOffst = saveBitCnt - FDKgetBitCnt(bs);
++  bitCntOffst = (INT)FDKgetValidBits(bs) - saveBitCnt;
+   if( bitCntOffst ) {
+     FDKpushBiDirectional(bs, bitCntOffst);
+   }
+diff --git a/libAACdec/src/rvlc_info.h b/libAACdec/src/rvlc_info.h
+index 63934af..1e2b160 100644
+--- a/libAACdec/src/rvlc_info.h
++++ b/libAACdec/src/rvlc_info.h
+@@ -137,6 +137,7 @@ typedef struct
+   UCHAR      direction;
+ 
+   /* bitstream indices */
++  INT        bsAnchor;                    /* hcr bit buffer reference index */
+   USHORT     bitstreamIndexRvlFwd;        /* base address of RVL-coded-scalefactor data (ESC 2) for forward  decoding */
+   USHORT     bitstreamIndexRvlBwd;        /* base address of RVL-coded-scalefactor data (ESC 2) for backward decoding */
+   USHORT     bitstreamIndexEsc;           /* base address where RVLC-escapes start (ESC 2) */
+diff --git a/libAACdec/src/rvlcbit.cpp b/libAACdec/src/rvlcbit.cpp
+index 6efbb93..995dd99 100644
+--- a/libAACdec/src/rvlcbit.cpp
++++ b/libAACdec/src/rvlcbit.cpp
+@@ -104,11 +104,12 @@ amm-info@iis.fraunhofer.de
+ -------------------------------------------------------------------------------------------- */
+ 
+ UCHAR rvlcReadBitFromBitstream (HANDLE_FDK_BITSTREAM  bs,
++                                const INT             bsAnchor,
+                                 USHORT               *pPosition,
+                                 UCHAR                 readDirection)
+ {
+   UINT   bit;
+-  INT    readBitOffset = *pPosition-FDKgetBitCnt(bs);
++  INT    readBitOffset = (INT)FDKgetValidBits(bs) - bsAnchor + *pPosition;
+ 
+   if( readBitOffset ) {
+     FDKpushBiDirectional(bs, readBitOffset);
+diff --git a/libAACdec/src/rvlcbit.h b/libAACdec/src/rvlcbit.h
+index 02fba88..73e769c 100644
+--- a/libAACdec/src/rvlcbit.h
++++ b/libAACdec/src/rvlcbit.h
+@@ -96,6 +96,7 @@ amm-info@iis.fraunhofer.de
+ #include "rvlc.h"
+ 
+ UCHAR rvlcReadBitFromBitstream (HANDLE_FDK_BITSTREAM  bs,
++                                const INT             bsAnchor,
+                                 USHORT               *pPosition,
+                                 UCHAR                 readDirection);
+ 
+diff --git a/libFDK/include/FDK_bitbuffer.h b/libFDK/include/FDK_bitbuffer.h
+index 65fa04b..c2c3a30 100644
+--- a/libFDK/include/FDK_bitbuffer.h
++++ b/libFDK/include/FDK_bitbuffer.h
+@@ -100,7 +100,6 @@ typedef struct
+   UINT ValidBits;
+   UINT ReadOffset;
+   UINT WriteOffset;
+-  UINT BitCnt;
+   UINT BitNdx;
+ 
+   UCHAR *Buffer;
+@@ -142,14 +141,9 @@ void FDK_putBwd          (HANDLE_FDK_BITBUF hBitBuffer, UINT value, const UINT n
+ void FDK_pushBack        (HANDLE_FDK_BITBUF hBitBuffer, const UINT numberOfBits, UCHAR config) ;
+ void FDK_pushForward     (HANDLE_FDK_BITBUF hBitBuffer, const UINT numberOfBits, UCHAR config) ;
+ 
+-void FDK_byteAlign       (HANDLE_FDK_BITBUF hBitBuffer, UCHAR config) ;
+-
+ UINT FDK_getValidBits    (HANDLE_FDK_BITBUF hBitBuffer) ;
+ INT  FDK_getFreeBits     (HANDLE_FDK_BITBUF hBitBuffer) ;
+ 
+-void FDK_setBitCnt       (HANDLE_FDK_BITBUF hBitBuffer, const UINT value) ;
+-INT  FDK_getBitCnt       (HANDLE_FDK_BITBUF hBitBuffer) ;
+-
+ void FDK_Feed            (HANDLE_FDK_BITBUF hBitBuffer, UCHAR inputBuffer [],
+                           const UINT bufferSize, UINT *bytesValid) ;
+ 
+diff --git a/libFDK/include/FDK_bitstream.h b/libFDK/include/FDK_bitstream.h
+index fc8d7de..fc564fd 100644
+--- a/libFDK/include/FDK_bitstream.h
++++ b/libFDK/include/FDK_bitstream.h
+@@ -415,22 +415,6 @@ FDK_INLINE void FDKsyncCacheBwd (HANDLE_FDK_BITSTREAM hBitStream)
+ 
+ 
+ /**
+- * \brief Byte Alignment Function.
+- *        This function performs the byte_alignment() syntactic function on the input stream,
+- *        i.e. some bits will be discarded/padded so that the next bits to be read/written will
+- *        be aligned on a byte boundary with respect to the bit position 0.
+- *
+- * \param  hBitStream HANDLE_FDK_BITSTREAM handle
+- * \return void
+- */
+-FDK_INLINE void FDKbyteAlign (HANDLE_FDK_BITSTREAM hBitStream)
+-{
+-  FDKsyncCache (hBitStream) ;
+-  FDK_byteAlign (&hBitStream->hBitBuf, (UCHAR)hBitStream->ConfigCache) ;
+-}
+-
+-
+-/**
+  * \brief Byte Alignment Function with anchor
+  *        This function performs the byte_alignment() syntactic function on the input stream,
+  *        i.e. some bits will be discarded so that the next bits to be read/written would be aligned
+@@ -532,41 +516,6 @@ FDK_INLINE INT FDKgetFreeBits (HANDLE_FDK_BITSTREAM hBitStream)
+ }
+ 
+ /**
+- * \brief reset bitcounter in bitBuffer to zero.
+- * \param hBitStream HANDLE_FDK_BITSTREAM handle
+- * \return void
+- */
+-FDK_INLINE void FDKresetBitCnt (HANDLE_FDK_BITSTREAM hBitStream)
+-{
+-    FDKsyncCache (hBitStream) ;
+-    FDK_setBitCnt (&hBitStream->hBitBuf, 0) ;
+-}
+-
+-/**
+- * \brief set bitcoutner in bitBuffer to given value.
+- * \param hBitStream HANDLE_FDK_BITSTREAM handle
+- * \param value new value to be assigned to the bit counter
+- * \return void
+- */
+-FDK_INLINE void FDKsetBitCnt (HANDLE_FDK_BITSTREAM hBitStream, UINT value)
+-{
+-    FDKsyncCache (hBitStream) ;
+-    FDK_setBitCnt (&hBitStream->hBitBuf, value) ;
+-}
+-
+-/**
+- * \brief get bitcounter state from bitBuffer.
+- * \param hBitStream HANDLE_FDK_BITSTREAM handle
+- * \return current bit counter value
+- */
+-FDK_INLINE INT  FDKgetBitCnt (HANDLE_FDK_BITSTREAM hBitStream)
+-{
+-    FDKsyncCache(hBitStream) ;
+-    return FDK_getBitCnt(&hBitStream->hBitBuf) ;
+-}
+-
+-
+-/**
+  * \brief Fill the BitBuffer with a number of input bytes from  external source.
+  *        The bytesValid variable returns the number of ramaining valid bytes in extern inputBuffer.
+  *
+diff --git a/libFDK/src/FDK_bitbuffer.cpp b/libFDK/src/FDK_bitbuffer.cpp
+index 680ceae..f0f0ac6 100644
+--- a/libFDK/src/FDK_bitbuffer.cpp
++++ b/libFDK/src/FDK_bitbuffer.cpp
+@@ -128,7 +128,6 @@ void FDK_InitBitBuffer (HANDLE_FDK_BITBUF hBitBuf, UCHAR *pBuffer,
+    hBitBuf->ValidBits   = validBits ;
+    hBitBuf->ReadOffset  = 0 ;
+    hBitBuf->WriteOffset = 0 ;
+-   hBitBuf->BitCnt      = 0 ;
+    hBitBuf->BitNdx      = 0 ;
+ 
+    hBitBuf->Buffer      = pBuffer ;
+@@ -151,7 +150,6 @@ void FDK_ResetBitBuffer ( HANDLE_FDK_BITBUF hBitBuf )
+    hBitBuf->ValidBits   = 0 ;
+    hBitBuf->ReadOffset  = 0 ;
+    hBitBuf->WriteOffset = 0 ;
+-   hBitBuf->BitCnt      = 0 ;
+    hBitBuf->BitNdx      = 0 ;
+ }
+ 
+@@ -161,7 +159,6 @@ INT  FDK_get (HANDLE_FDK_BITBUF hBitBuf, const UINT numberOfBits)
+   UINT bitOffset  = hBitBuf->BitNdx & 0x07 ;
+ 
+   hBitBuf->BitNdx     = (hBitBuf->BitNdx + numberOfBits) & (hBitBuf->bufBits - 1) ;
+-  hBitBuf->BitCnt    +=  numberOfBits ;
+   hBitBuf->ValidBits -=  numberOfBits ;
+ 
+   UINT byteMask = hBitBuf->bufSize - 1 ;
+@@ -186,7 +183,6 @@ INT FDK_get32 (HANDLE_FDK_BITBUF hBitBuf)
+   if (BitNdx <= hBitBuf->bufBits)
+   {
+     hBitBuf->BitNdx = BitNdx;
+-    hBitBuf->BitCnt +=  32;
+     hBitBuf->ValidBits -= 32;
+ 
+     UINT byteOffset = (BitNdx-1) >> 3;
+@@ -219,7 +215,6 @@ INT FDK_getBwd (HANDLE_FDK_BITBUF hBitBuf, const UINT numberOfBits)
+   int i;
+ 
+   hBitBuf->BitNdx     = (hBitBuf->BitNdx - numberOfBits) & (hBitBuf->bufBits - 1) ;
+-  hBitBuf->BitCnt    -=  numberOfBits ;
+   hBitBuf->ValidBits +=  numberOfBits ;
+ 
+   UINT tx = hBitBuf->Buffer [(byteOffset-3) & byteMask] << 24 |
+@@ -253,7 +248,6 @@ void FDK_put (HANDLE_FDK_BITBUF hBitBuf, UINT value, const UINT numberOfBits)
+   UINT bitOffset  = hBitBuf->BitNdx & 0x07 ;
+ 
+   hBitBuf->BitNdx     = (hBitBuf->BitNdx + numberOfBits) & (hBitBuf->bufBits - 1) ;
+-  hBitBuf->BitCnt    +=  numberOfBits ;
+   hBitBuf->ValidBits +=  numberOfBits ;
+ 
+   UINT byteMask = hBitBuf->bufSize - 1 ;
+@@ -284,7 +278,6 @@ void FDK_putBwd (HANDLE_FDK_BITBUF hBitBuf, UINT value, const UINT numberOfBits)
+   int  i;
+ 
+   hBitBuf->BitNdx     = (hBitBuf->BitNdx - numberOfBits) & (hBitBuf->bufBits - 1) ;
+-  hBitBuf->BitCnt    -=  numberOfBits ;
+   hBitBuf->ValidBits -=  numberOfBits ;
+ 
+   /* in place turn around */
+@@ -313,34 +306,17 @@ void FDK_putBwd (HANDLE_FDK_BITBUF hBitBuf, UINT value, const UINT numberOfBits)
+ 
+ void FDK_pushBack (HANDLE_FDK_BITBUF hBitBuf, const UINT numberOfBits, UCHAR config)
+ {
+-  hBitBuf->BitCnt    -= numberOfBits ;
+   hBitBuf->ValidBits += (config==0) ? numberOfBits : (-(INT)numberOfBits) ;
+   hBitBuf->BitNdx     = (hBitBuf->BitNdx - numberOfBits) & (hBitBuf->bufBits - 1) ;
+ }
+ 
+ void FDK_pushForward (HANDLE_FDK_BITBUF hBitBuf, const UINT numberOfBits, UCHAR config)
+ {
+-  hBitBuf->BitCnt    += numberOfBits ;
+   hBitBuf->ValidBits -= (config==0) ? numberOfBits : (-(INT)numberOfBits) ;
+   hBitBuf->BitNdx     = (hBitBuf->BitNdx + numberOfBits) & (hBitBuf->bufBits - 1) ;
+ }
+ 
+ 
+-void FDK_byteAlign (HANDLE_FDK_BITBUF hBitBuf, UCHAR config)
+-{
+-  INT alignment = hBitBuf->BitCnt & 0x07 ;
+-
+-  if (alignment)
+-  {
+-    if (config==0)
+-      FDK_pushForward (hBitBuf, 8 - alignment, config) ; /* BS_READER */
+-    else
+-      FDK_put (hBitBuf,0 , 8 - alignment) ;              /* BS_WRITER */
+-  }
+-
+-  hBitBuf->BitCnt = 0 ;
+-}
+-
+ UINT FDK_getValidBits (HANDLE_FDK_BITBUF hBitBuf)
+ {
+     return hBitBuf->ValidBits;
+@@ -351,16 +327,6 @@ INT FDK_getFreeBits (HANDLE_FDK_BITBUF hBitBuf)
+     return (hBitBuf->bufBits - hBitBuf->ValidBits) ;
+ }
+ 
+-void FDK_setBitCnt (HANDLE_FDK_BITBUF hBitBuf, const UINT value)
+-{
+-  hBitBuf->BitCnt = value ;
+-}
+-
+-INT FDK_getBitCnt (HANDLE_FDK_BITBUF hBitBuf)
+-{
+-  return hBitBuf->BitCnt ;
+-}
+-
+ void FDK_Feed(HANDLE_FDK_BITBUF hBitBuf,
+               UCHAR            *RESTRICT inputBuffer,
+               const UINT        bufferSize,
+@@ -408,7 +374,6 @@ void CopyAlignedBlock (HANDLE_FDK_BITBUF h_BitBufSrc, UCHAR *RESTRICT dstBuffer,
+   bToRead <<= 3 ;
+ 
+   h_BitBufSrc->BitNdx = (h_BitBufSrc->BitNdx + bToRead) & (h_BitBufSrc->bufBits - 1) ;
+-  h_BitBufSrc->BitCnt += bToRead ;
+   h_BitBufSrc->ValidBits -= bToRead ;
+ }
+ 
+-- 
+2.7.4
+
