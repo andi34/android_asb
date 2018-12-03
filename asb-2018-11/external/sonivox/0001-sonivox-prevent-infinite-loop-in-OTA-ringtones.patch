@@ -1,0 +1,146 @@
+From 14e9a29a14f03c7488b09202c9c6dda7a8344155 Mon Sep 17 00:00:00 2001
+From: Phil Burk <philburk@google.com>
+Date: Tue, 19 Jun 2018 08:19:05 -0700
+Subject: [PATCH 1/2] sonivox: prevent infinite loop in OTA ringtones
+
+This detects and blocks infinite loops in corrupt files.
+
+Bug: 68664359
+Bug: 110435401
+
+Test: cts-tradefed run cts -m CtsSecurityTestCases -t android.security.cts.StagefrightTest#testStagefright_bug_68664359
+Test: cts-tradefed run cts -m CtsSecurityTestCases -t android.security.cts.StagefrightTest#testStagefright_bug_110435401
+
+Change-Id: I67652fbcc8b0812a838ae6551d0be2770a655c95
+Merged-In: I67652fbcc8b0812a838ae6551d0be2770a655c95
+---
+ arm-wt-22k/lib_src/eas_ota.c    |  5 +++++
+ arm-wt-22k/lib_src/eas_public.c | 26 ++++++++++++++++++++++++--
+ arm-wt-22k/lib_src/eas_smf.c    | 10 +++++++---
+ 3 files changed, 36 insertions(+), 5 deletions(-)
+
+diff --git a/arm-wt-22k/lib_src/eas_ota.c b/arm-wt-22k/lib_src/eas_ota.c
+index 5bc9062..413d1d3 100644
+--- a/arm-wt-22k/lib_src/eas_ota.c
++++ b/arm-wt-22k/lib_src/eas_ota.c
+@@ -27,6 +27,9 @@
+  *----------------------------------------------------------------------------
+ */
+ 
++#define LOG_TAG "Sonivox"
++#include <log/log.h>
++
+ #include "eas_data.h"
+ #include "eas_miditypes.h"
+ #include "eas_parser.h"
+@@ -211,6 +214,7 @@ static EAS_RESULT OTA_CheckFileType (S_EAS_DATA *pEASData, EAS_FILE_HANDLE fileH
+                 pData->fileOffset = offset;
+                 pData->state = EAS_STATE_OPEN;
+                 *ppHandle = pData;
++                ALOGD("%s() OTA file recognized", __func__);
+                 break;
+             }
+ 
+@@ -360,6 +364,7 @@ static EAS_RESULT OTA_Event (S_EAS_DATA *pEASData, EAS_VOID_PTR pInstData, EAS_I
+         /* check for loop - don't do infinite loops when locating */
+         if (pData->loopCount && ((parserMode == eParserModePlay) || (pData->loopCount != OTA_INFINITE_LOOP)))
+         {
++            ALOGV("%s() loop backwards, loopCount = %d", __func__, pData->loopCount);
+             /* if not infinite loop, decrement loop count */
+             if (pData->loopCount != OTA_INFINITE_LOOP)
+                 pData->loopCount--;
+diff --git a/arm-wt-22k/lib_src/eas_public.c b/arm-wt-22k/lib_src/eas_public.c
+index 51ac423..d5316c5 100644
+--- a/arm-wt-22k/lib_src/eas_public.c
++++ b/arm-wt-22k/lib_src/eas_public.c
+@@ -27,6 +27,9 @@
+  *----------------------------------------------------------------------------
+ */
+ 
++#define LOG_TAG "Sonivox"
++#include "log/log.h"
++
+ #include "eas_synthcfg.h"
+ #include "eas.h"
+ #include "eas_config.h"
+@@ -1245,6 +1248,13 @@ static EAS_RESULT EAS_ParseEvents (S_EAS_DATA *pEASData, EAS_HANDLE pStream, EAS
+     EAS_BOOL done;
+     EAS_INT yieldCount = YIELD_EVENT_COUNT;
+     EAS_U32 time = 0;
++    // This constant is the maximum number of events that can be processed in a single time slice.
++    // A typical ringtone will contain a few events per time slice.
++    // Extremely dense ringtones might go up to 50 events.
++    // If we see this many events then the file is probably stuck in an infinite loop
++    // and should be aborted.  In our testing, it took less than 100 msec to hit this limit.
++    static const EAS_INT MAX_EVENT_COUNT = 50000;
++    EAS_INT eventCount = 0;
+ 
+     /* does this parser have a time function? */
+     pParserModule = pStream->pParserModule;
+@@ -1292,9 +1302,21 @@ static EAS_RESULT EAS_ParseEvents (S_EAS_DATA *pEASData, EAS_HANDLE pStream, EAS
+             {
+ 
+                 /* parse the next event */
+-                if (pParserModule->pfEvent)
+-                    if ((result = (*pParserModule->pfEvent)(pEASData, pStream->handle, parseMode)) != EAS_SUCCESS)
++                if (pParserModule->pfEvent) {
++                    if ((result = (*pParserModule->pfEvent)(pEASData, pStream->handle, parseMode))
++                            != EAS_SUCCESS) {
++                        ALOGE("%s() pfEvent returned %ld", __func__, result);
+                         return result;
++                    }
++                }
++                // An infinite loop within a single frame of a ringtone file can cause this function
++                // to loop forever.  Try to detect that and return an error.
++                if (++eventCount >= MAX_EVENT_COUNT) {
++                    ALOGE("%s() aborting, %d events without advancing to next frame",
++                            __func__, eventCount);
++                    android_errorWriteLog(0x534e4554, "68664359");
++                    return EAS_ERROR_FILE_POS;
++                }
+             }
+ 
+             /* no more events in this frame, advance time */
+diff --git a/arm-wt-22k/lib_src/eas_smf.c b/arm-wt-22k/lib_src/eas_smf.c
+index 2ede435..e8d474f 100644
+--- a/arm-wt-22k/lib_src/eas_smf.c
++++ b/arm-wt-22k/lib_src/eas_smf.c
+@@ -29,6 +29,7 @@
+  *----------------------------------------------------------------------------
+ */
+ 
++#define LOG_TAG "Sonivox"
+ #include "log/log.h"
+ 
+ #include "eas_data.h"
+@@ -128,7 +129,8 @@ EAS_RESULT SMF_CheckFileType (S_EAS_DATA *pEASData, EAS_FILE_HANDLE fileHandle,
+         if ((result = EAS_HWReadFile(pEASData->hwInstData, fileHandle, header, sizeof(header), &count)) != EAS_SUCCESS)
+             return result;
+ 
+-        /* check for 'MTrk' - return if no match */
++        /* check for 'MThd' - If no match then return SUCCESS with NULL handle
++         * to indicate not an SMF file. */
+         if ((header[0] != 'M') || (header[1] != 'T') || (header[2] != 'h') || (header[3] != 'd'))
+             return EAS_SUCCESS;
+     }
+@@ -839,13 +841,15 @@ static EAS_RESULT SMF_ParseMetaEvent (S_EAS_DATA *pEASData, S_SMF_DATA *pSMFData
+     /* prevent a large unsigned length from being treated as a negative length */
+     if ((EAS_I32) len < 0) {
+         /* note that EAS_I32 is a long, which can be 64-bits on some computers */
+-        ALOGE("b/68953854 SMF_ParseMetaEvent, negative len = %ld\n", (EAS_I32) len);
++        ALOGE("%s() negative len = %ld", __func__, (long) len);
++        android_errorWriteLog(0x534e4554, "68953854");
+         return EAS_ERROR_FILE_FORMAT;
+     }
+     /* prevent numeric overflow caused by a very large len, assume pos > 0 */
+     const EAS_I32 EAS_I32_MAX = 0x7FFFFFFF;
+     if ((EAS_I32) len > (EAS_I32_MAX - pos)) {
+-        ALOGE("b/68953854 SMF_ParseMetaEvent, too large len = %ld\n", (EAS_I32) len);
++        ALOGE("%s() too large len = %ld", __func__, (long) len);
++        android_errorWriteLog(0x534e4554, "68953854");
+         return EAS_ERROR_FILE_FORMAT;
+     }
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,68 @@
+From 18fba165f3b9cf9a481557afb3937b479beb4337 Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Tue, 7 Aug 2018 15:02:17 -0600
+Subject: [PATCH 1/2] DO NOT MERGE. Persistable Uri grants still require
+ permissions.
+
+When FLAG_GRANT_PERSISTABLE_URI_PERMISSION is requested, we still
+need to check permissions between the source and target packages,
+instead of shortcutting past them.
+
+The spirit of the original change is remains intact: if the caller
+requested FLAG_GRANT_PERSISTABLE_URI_PERMISSION, then we avoid
+returning "-1", which would prevent the grant data structure from
+being allocated.
+
+Bug: 111934948
+Test: atest android.appsecurity.cts.AppSecurityTests
+Change-Id: Ief0fc922aa09fc3d9bb6a126c2ff5855347cd030
+Merged-In: Ief0fc922aa09fc3d9bb6a126c2ff5855347cd030
+(cherry picked from commit d6a6e7127cc341ca875d9d13cf7a864d9f20b479)
+---
+ .../com/android/server/am/ActivityManagerService.java   | 17 +++++++++++++++--
+ 1 file changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/services/java/com/android/server/am/ActivityManagerService.java b/services/java/com/android/server/am/ActivityManagerService.java
+index 9f902c5..b8f54e0 100644
+--- a/services/java/com/android/server/am/ActivityManagerService.java
++++ b/services/java/com/android/server/am/ActivityManagerService.java
+@@ -6018,13 +6018,26 @@ public final class ActivityManagerService extends ActivityManagerNative
+             }
+         }
+ 
++        // Figure out the value returned when access is allowed
++        final int allowedResult;
++        if ((modeFlags & Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) != 0) {
++            // If we're extending a persistable grant, then we need to return
++            // "targetUid" so that we always create a grant data structure to
++            // support take/release APIs
++            allowedResult = targetUid;
++        } else {
++            // Otherwise, we can return "-1" to indicate that no grant data
++            // structures need to be created
++            allowedResult = -1;
++        }
++
+         if (targetUid >= 0) {
+             // First...  does the target actually need this permission?
+             if (checkHoldingPermissionsLocked(pm, pi, uri, targetUid, modeFlags)) {
+                 // No need to grant the target this permission.
+                 if (DEBUG_URI_PERMISSION) Slog.v(TAG,
+                         "Target " + targetPkg + " already has full permission to " + uri);
+-                return -1;
++                return allowedResult;
+             }
+         } else {
+             // First...  there is no target package, so can anyone access it?
+@@ -6040,7 +6053,7 @@ public final class ActivityManagerService extends ActivityManagerNative
+                 }
+             }
+             if (allowed) {
+-                return -1;
++                return allowedResult;
+             }
+         }
+ 
+-- 
+2.7.4
+

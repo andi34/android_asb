@@ -1,0 +1,30 @@
+From 4cae3cc0a95d6fba9497a2fe1fb5c51adc24f97b Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Fri, 13 Jul 2018 13:45:46 -0700
+Subject: [PATCH 6/8] Fix a wrong check in rfc_parse_data
+
+Bug: 78288018
+Bug: 111436796
+Test: manual
+Change-Id: I16e6026acbaac230fe1453bbac040d1b75bcea2a
+(cherry picked from commit d1ced302cd1066087588c891027b1756be31db46)
+---
+ stack/rfcomm/rfc_ts_frames.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/stack/rfcomm/rfc_ts_frames.c b/stack/rfcomm/rfc_ts_frames.c
+index 2f14b42..17c2580 100644
+--- a/stack/rfcomm/rfc_ts_frames.c
++++ b/stack/rfcomm/rfc_ts_frames.c
+@@ -591,7 +591,7 @@ UINT8 rfc_parse_data (tRFC_MCB *p_mcb, MX_FRAME *p_frame, BT_HDR *p_buf)
+ 
+     eal = *(p_data)&RFCOMM_EA;
+     len = *(p_data)++ >> RFCOMM_SHIFT_LENGTH1;
+-    if (eal == 0 && p_buf->len < RFCOMM_CTRL_FRAME_LEN)
++    if (eal == 0 && p_buf->len > RFCOMM_CTRL_FRAME_LEN)
+     {
+         len += (*(p_data)++ << RFCOMM_SHIFT_LENGTH2);
+     }
+-- 
+2.7.4
+

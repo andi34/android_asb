@@ -1,0 +1,48 @@
+From 28bf16d76244a4e62afed62769772b4b35057653 Mon Sep 17 00:00:00 2001
+From: Cheney Ni <cheneyni@google.com>
+Date: Tue, 7 Aug 2018 21:32:07 +0800
+Subject: [PATCH 3/8] Add packet length checks in mca_ccb_hdl_req
+
+Bug: 110791536
+Test: manual
+Change-Id: Ica5d8037246682fdb190b2747a86ed8d44c2869a
+(cherry picked from commit 4de7ccdd914b7a178df9180d15f675b257ea6e02)
+---
+ stack/mcap/mca_cact.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/stack/mcap/mca_cact.c b/stack/mcap/mca_cact.c
+index e3fba0b..c2d2244 100644
+--- a/stack/mcap/mca_cact.c
++++ b/stack/mcap/mca_cact.c
+@@ -22,6 +22,7 @@
+  *  Functions.
+  *
+  ******************************************************************************/
++#include <log/log.h>
+ #include <string.h>
+ #include "bt_target.h"
+ #include "gki.h"
+@@ -267,9 +268,18 @@ void mca_ccb_hdl_req(tMCA_CCB *p_ccb, tMCA_CCB_EVT *p_data)
+     p_rx_msg = (tMCA_CCB_MSG *)p_pkt;
+     p = (UINT8 *)(p_pkt + 1) + p_pkt->offset;
+     evt_data.hdr.op_code = *p++;
+-    BE_STREAM_TO_UINT16 (evt_data.hdr.mdl_id, p);
+     reject_opcode = evt_data.hdr.op_code+1;
+ 
++    if (p_pkt->len >= 3)
++    {
++        BE_STREAM_TO_UINT16(evt_data.hdr.mdl_id, p);
++    }
++    else
++    {
++        android_errorWriteLog(0x534e4554, "110791536");
++        evt_data.hdr.mdl_id = 0;
++    }
++
+     MCA_TRACE_DEBUG1 ("received mdl id: %d ", evt_data.hdr.mdl_id);
+     if (p_ccb->status == MCA_CCB_STAT_PENDING)
+     {
+-- 
+2.7.4
+

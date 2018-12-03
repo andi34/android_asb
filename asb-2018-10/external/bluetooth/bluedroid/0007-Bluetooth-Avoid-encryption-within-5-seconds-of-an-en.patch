@@ -1,0 +1,60 @@
+From 7ef78ee2d75ef9f9a161f82028287942359a67d6 Mon Sep 17 00:00:00 2001
+From: Nitin Arora <niarora_qca@codeaurora.org>
+Date: Wed, 19 Mar 2014 17:58:37 -0700
+Subject: [PATCH 7/8] Bluetooth: Avoid encryption within 5 seconds of an
+ encryption complete
+
+This patch starts a delay timer immidiately after a successful encryption
+initiated by the host and prevents any security requests from the
+remote during that period.
+
+Change-Id: I21189a9fe7cdc3872133f3554c19f238d0d2bc28
+CRs-Fixed: 633572
+---
+ stack/smp/smp_act.c | 8 +++++++-
+ stack/smp/smp_l2c.c | 3 ++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/stack/smp/smp_act.c b/stack/smp/smp_act.c
+index babd300..0f8e459 100644
+--- a/stack/smp/smp_act.c
++++ b/stack/smp/smp_act.c
+@@ -942,7 +942,7 @@ void smp_link_encrypted(BD_ADDR bda, UINT8 encr_enable)
+ {
+     tSMP_CB *p_cb = &smp_cb;
+ 
+-    SMP_TRACE_DEBUG1 ("smp_link_encrypted encr_enable=%d",encr_enable);
++    SMP_TRACE_DEBUG2 ("smp_link_encrypted encr_enable=%d, p_cb-state=%d",encr_enable, p_cb->state);
+ 
+     if (memcmp(&smp_cb.pairing_bda[0], bda, BD_ADDR_LEN) == 0)
+     {
+@@ -956,6 +956,12 @@ void smp_link_encrypted(BD_ADDR bda, UINT8 encr_enable)
+ 
+         smp_sm_event(&smp_cb, SMP_ENCRYPTED_EVT, &encr_enable);
+     }
++    else if(encr_enable && p_cb->state == SMP_ST_IDLE)/*encryption without pairing case*/
++    {
++        memcpy(&p_cb->pairing_bda[0], bda, BD_ADDR_LEN);
++        p_cb->state = SMP_ST_RELEASE_DELAY;
++        smp_sm_event(&smp_cb, SMP_RELEASE_DELAY_EVT, &encr_enable);
++    }
+ }
+ /*******************************************************************************
+ **
+diff --git a/stack/smp/smp_l2c.c b/stack/smp/smp_l2c.c
+index 54b78b4..20f911a 100644
+--- a/stack/smp/smp_l2c.c
++++ b/stack/smp/smp_l2c.c
+@@ -150,7 +150,8 @@ static void smp_data_ind (BD_ADDR bd_addr, BT_HDR *p_buf)
+ 
+     if (memcmp(&bd_addr[0], p_cb->pairing_bda, BD_ADDR_LEN) == 0)
+     {
+-        btu_stop_timer (&p_cb->rsp_timer_ent);
++        if(p_cb->state != SMP_ST_RELEASE_DELAY)
++            btu_stop_timer (&p_cb->rsp_timer_ent);
+         smp_sm_event(p_cb, cmd, p);
+     }
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,92 @@
+From dcf89c83013feb7c5c8374a53274efe8b62e0f5f Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Thu, 9 Aug 2018 13:07:48 -0700
+Subject: [PATCH] Add missing AVRCP message length checks inside avrc_msg_cback
+
+Explicitly check the length of the received message before
+accessing the data.
+
+Bug: 111803925
+Bug: 79883824
+Test: POC scripts
+Change-Id: I00b1c6bd6dd7e18ac2c469ef2032c7ff10dcaecb
+Merged-In: I00b1c6bd6dd7e18ac2c469ef2032c7ff10dcaecb
+(cherry picked from commit 282deb3e27407aaa88b8ddbdbd7bb7d56ddc635f)
+(cherry picked from commit 007868d05f4b761842c7345161aeda6fd40dd245)
+---
+ stack/avrc/avrc_api.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/stack/avrc/avrc_api.c b/stack/avrc/avrc_api.c
+index 7e8874a..d09da76 100755
+--- a/stack/avrc/avrc_api.c
++++ b/stack/avrc/avrc_api.c
+@@ -23,6 +23,8 @@
+  ******************************************************************************/
+ #include <string.h>
+ 
++#include <log/log.h>
++
+ #include "gki.h"
+ #include "avrc_api.h"
+ #include "avrc_int.h"
+@@ -58,6 +60,9 @@ static const UINT8 avrc_ctrl_event_map[] =
+ #define AVRC_OP_DROP        0xFE    /* use this unused opcode to indication no need to call the callback function */
+ #define AVRC_OP_DROP_N_FREE 0xFD    /* use this unused opcode to indication no need to call the callback function & free buffer */
+ 
++#define AVRC_OP_UNIT_INFO_RSP_LEN       8
++#define AVRC_OP_SUB_UNIT_INFO_RSP_LEN   8
++
+ /******************************************************************************
+ **
+ ** Function         avrc_ctrl_cback
+@@ -569,6 +574,14 @@ static void avrc_msg_cback(UINT8 handle, UINT8 label, UINT8 cr,
+     p_data  = (UINT8 *)(p_pkt+1) + p_pkt->offset;
+     memset(&msg, 0, sizeof(tAVRC_MSG) );
+     {
++        if (p_pkt->len < AVRC_AVC_HDR_SIZE)
++        {
++            android_errorWriteLog(0x534e4554, "111803925");
++            AVRC_TRACE_WARNING3("%s: message length %d too short: must be at least %d",
++                                __func__, p_pkt->len, AVRC_AVC_HDR_SIZE);
++            GKI_freebuf(p_pkt);
++            return;
++        }
+         msg.hdr.ctype           = p_data[0] & AVRC_CTYPE_MASK;
+         AVRC_TRACE_DEBUG4("avrc_msg_cback handle:%d, ctype:%d, offset:%d, len: %d",
+                 handle, msg.hdr.ctype, p_pkt->offset, p_pkt->len);
+@@ -605,6 +618,15 @@ static void avrc_msg_cback(UINT8 handle, UINT8 label, UINT8 cr,
+             else
+             {
+                 /* parse response */
++                if (p_pkt->len < AVRC_OP_UNIT_INFO_RSP_LEN) {
++                  AVRC_TRACE_WARNING3(
++                      "%s: message length %d too short: must be at least %d",
++                      __func__, p_pkt->len, AVRC_OP_UNIT_INFO_RSP_LEN);
++                  android_errorWriteLog(0x534e4554, "79883824");
++                  drop = TRUE;
++                  p_drop_msg = "UNIT_INFO_RSP too short";
++                  break;
++                }
+                 p_data += 4; /* 3 bytes: ctype, subunit*, opcode + octet 3 (is 7)*/
+                 msg.unit.unit_type  = (*p_data & AVRC_SUBTYPE_MASK) >> AVRC_SUBTYPE_SHIFT;
+                 msg.unit.unit       = *p_data & AVRC_SUBID_MASK;
+@@ -634,6 +656,15 @@ static void avrc_msg_cback(UINT8 handle, UINT8 label, UINT8 cr,
+             else
+             {
+                 /* parse response */
++                if (p_pkt->len < AVRC_OP_SUB_UNIT_INFO_RSP_LEN) {
++                  AVRC_TRACE_WARNING3(
++                      "%s: message length %d too short: must be at least %d",
++                      __func__, p_pkt->len, AVRC_OP_SUB_UNIT_INFO_RSP_LEN);
++                  android_errorWriteLog(0x534e4554, "79883824");
++                  drop = TRUE;
++                  p_drop_msg = "SUB_UNIT_INFO_RSP too short";
++                  break;
++                }
+                 p_data += AVRC_AVC_HDR_SIZE; /* 3 bytes: ctype, subunit*, opcode */
+                 msg.sub.page    = (*p_data++ >> AVRC_SUB_PAGE_SHIFT) & AVRC_SUB_PAGE_MASK;
+                 xx      = 0;
+-- 
+2.7.4
+

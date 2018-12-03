@@ -1,0 +1,71 @@
+From f62ad0ef26718061f3935415a44b5800785d8850 Mon Sep 17 00:00:00 2001
+From: Ugo Yu <ugoyu@google.com>
+Date: Wed, 8 Aug 2018 16:09:58 +0800
+Subject: [PATCH 8/8] Add packet length check in smp_proc_master_id
+
+Bug: 111937027
+Test: manual
+
+Change-Id: I1144c9879e84fa79d68ad9d5fece4f58e2a3b075
+(cherry picked from commit c8294662d07a98e9b8b1cab1ab681ec0805ce4e8)
+---
+ stack/smp/smp_act.c | 10 ++++++++++
+ stack/smp/smp_int.h |  1 +
+ stack/smp/smp_l2c.c |  1 +
+ 3 files changed, 12 insertions(+)
+
+diff --git a/stack/smp/smp_act.c b/stack/smp/smp_act.c
+index 0f8e459..af9cb4d 100644
+--- a/stack/smp/smp_act.c
++++ b/stack/smp/smp_act.c
+@@ -17,6 +17,7 @@
+  ******************************************************************************/
+ 
+ #include "bt_target.h"
++#include <cutils/log.h>
+ 
+ #if SMP_INCLUDED == TRUE
+ 
+@@ -462,6 +463,15 @@ void smp_proc_master_id(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+     tBTM_LE_PENC_KEYS   le_key;
+ 
+     SMP_TRACE_DEBUG0 (" smp_proc_master_id");
++
++    if (p_cb->rcvd_cmd_len < 11)  // 1(Code) + 2(EDIV) + 8(Rand)
++    {
++       android_errorWriteLog(0x534e4554, "111937027");
++       SMP_TRACE_ERROR2("%s: Invalid command length: %d, should be at least 11",
++                       __func__, p_cb->rcvd_cmd_len);
++       return;
++    }
++
+     smp_update_key_mask (p_cb, SMP_SEC_KEY_TYPE_ENC, TRUE);
+ 
+     STREAM_TO_UINT16(le_key.ediv, p);
+diff --git a/stack/smp/smp_int.h b/stack/smp/smp_int.h
+index 51cdbb3..bef4ca0 100644
+--- a/stack/smp/smp_int.h
++++ b/stack/smp/smp_int.h
+@@ -202,6 +202,7 @@ typedef struct
+     BD_ADDR         local_bda;
+     BOOLEAN         is_pair_cancel;
+     BOOLEAN         discard_sec_req;
++    UINT8           rcvd_cmd_len;
+ #if SMP_CONFORMANCE_TESTING == TRUE
+     BOOLEAN         enable_test_confirm_val;
+     BT_OCTET16      test_confirm;
+diff --git a/stack/smp/smp_l2c.c b/stack/smp/smp_l2c.c
+index 20f911a..05196bb 100644
+--- a/stack/smp/smp_l2c.c
++++ b/stack/smp/smp_l2c.c
+@@ -152,6 +152,7 @@ static void smp_data_ind (BD_ADDR bd_addr, BT_HDR *p_buf)
+     {
+         if(p_cb->state != SMP_ST_RELEASE_DELAY)
+             btu_stop_timer (&p_cb->rsp_timer_ent);
++        p_cb->rcvd_cmd_len = (UINT8)p_buf->len;
+         smp_sm_event(p_cb, cmd, p);
+     }
+ 
+-- 
+2.7.4
+

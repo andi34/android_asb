@@ -1,0 +1,60 @@
+From 4babbbe96541a2dcea081b88e5af0abd3bf9a545 Mon Sep 17 00:00:00 2001
+From: WolfEnders <grzwolf1@gmail.com>
+Date: Tue, 20 Nov 2018 22:32:47 +0100
+Subject: [PATCH] Bump Security Patch Level to 2018-11-01
+
+Implemented Patches
+===================
+CVE-2018-9527   A-112159345     Critical  234279
+CVE-2018-9531   A-112661641     Critical  234621
+CVE-2018-9536   A-112662184     Critical  234624
+CVE-2018-9537   A-112891564     Critical  234625
+CVE-2018-9542   A-111896861     High      234631
+CVE-2018-9544   A-113037220     High      234632
+CVE-2018-9545   A-113111784     High      234632
+CVE-2018-9541   A-111450531     Moderate  234631
+CVE-2018-9347   A-68664359      Moderate  234278
+CVE-2018-9347   A-68664359[2]   Moderate  234277
+CVE-2018-9523   A-112859604     High      234280
+CVE-2017-15835  QC-CR#2125781   Moderate  234637
+
+Skipped
+=======
+CVE-2018-9522   A-112550251     High      Pie only
+CVE-2018-9524   A-34170870      High      no MediaProjectionPermissionActivity in KK
+CVE-2018-9525   A-111330641     High      Pie only
+CVE-2018-9521   A-111874331     High      Pie only
+CVE-2018-9539   A-113027383     High      > Oreo only
+CVE-2018-9540   A-111450417     High      avrc_pars_ct.c too far off compared to avrc_pars_ct.cc
+CVE-2018-9543   A-112868088     High      Pie only
+CVE-2018-9347   A-68664359[3]   Moderate  no *MidiExtractor* in KK
+CVE-2018-9457   A-72872376      Moderate  no *BluetoothPairingController* in KK
+CVE-2018-9526   A-112159033     High      no SUPL_ES in KK (i9100, i9505)
+CVE-2018-9526   A-112159033[2]  High      no SUPL_ES in KK (i9100, i9505)
+CVE-2018-9526   A-112159033[3]  High      no SUPL_ES in KK (i9100, i9505)
+CVE-2017-15818  QC-CR#2078580   High      no FastbootCmds.c
+CVE-2018-11995  QC-CR#2129639   High      no FastbootCmds.c
+CVE-2018-11905  QC-CR#2090797   High      Kernel driver adsprpc.c too far off from i9505
+CVE-2017-14888  QC-CR#2119729   Moderate  no lim_process_sme_req_messages.c driver (i9100, i9505)
+
+Change-Id: I30349f460e0fc8479d552f04378369ef43d60b0b
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 41b4a03..1701a75 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-10-01
++  PLATFORM_SECURITY_PATCH := 2018-11-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+
