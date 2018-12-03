@@ -1,0 +1,81 @@
+From 920f36f52367bca4447298839d0b7911c9c22893 Mon Sep 17 00:00:00 2001
+From: Jack He <siyuanh@google.com>
+Date: Tue, 26 Jun 2018 17:53:24 -0700
+Subject: [PATCH 1/2] DO NOT MERGE HFP: Fix out of bound access in phone number
+ processing
+
+* Write at most sizeof(dialnum) chars into dialnum array in ClccResponse
+  method
+* Write at most sizeof(ag_res.str) - 5 chars into ag_res.str array in
+  PhoneStateChange method
+
+Bug: 79431031
+Bug: 79266386
+Test: make call with super long phone numbers
+Change-Id: I98e7687ac4055800aa46626c6b1c866e52e474df
+Merged-In: I98e7687ac4055800aa46626c6b1c866e52e474df
+(cherry picked from commit 82371c1204cc0b48941ec1d41c516c4b40093879)
+---
+ btif/src/btif_hf.c | 25 +++++++++++++++++++++----
+ 1 file changed, 21 insertions(+), 4 deletions(-)
+
+diff --git a/btif/src/btif_hf.c b/btif/src/btif_hf.c
+index d5470d7..5b34651 100644
+--- a/btif/src/btif_hf.c
++++ b/btif/src/btif_hf.c
+@@ -31,6 +31,9 @@
+ #include <string.h>
+ 
+ #define LOG_TAG "bt_btif_hf"
++
++#include <log/log.h>
++
+ #include "btif_common.h"
+ #include "btif_util.h"
+ #include "btif_profile_queue.h"
+@@ -1222,13 +1225,20 @@ static bt_status_t clcc_response(int index, bthf_call_direction_t dir,
+                           index, dir, state, mode, number, type);
+             xx = sprintf (ag_res.str, "%d,%d,%d,%d,%d",
+                          index, dir, state, mode, mpty);
++            char number_copy[sizeof(ag_res.str)];
++            // 9 = [,]["][+]["][,][3_digit_type][null_terminator]
++            int max_number_len = sizeof(ag_res.str) - xx - 9;
++            int number_len = snprintf(number_copy, max_number_len, "%s", number);
++            if (number_len >= max_number_len) {
++              android_errorWriteLog(0x534e4554, "79266386");
++            }
+ 
+             if (number)
+             {
+                 if ((type == BTHF_CALL_ADDRTYPE_INTERNATIONAL) && (*number != '+'))
+-                    sprintf (&ag_res.str[xx], ",\"+%s\",%d", number, type);
++                    sprintf (&ag_res.str[xx], ",\"+%s\",%d", number_copy, type);
+                 else
+-                    sprintf (&ag_res.str[xx], ",\"%s\",%d", number, type);
++                    sprintf (&ag_res.str[xx], ",\"%s\",%d", number_copy, type);
+             }
+         }
+         BTA_AgResult (btif_hf_cb[idx].handle, BTA_AG_CLCC_RES, &ag_res);
+@@ -1381,10 +1391,17 @@ static bt_status_t phone_state_change(int num_active, int num_held, bthf_call_st
+                 if (number)
+                 {
+                     int xx = 0;
++                    char number_copy[sizeof(ag_res.str)];
++                    // 8 = ["][+]["][,][3_digit_type][null_terminator]
++                    int max_number_len = sizeof(ag_res.str) - xx - 8;
++                    int number_len = snprintf(number_copy, max_number_len, "%s", number);
++                    if (number_len >= max_number_len) {
++                      android_errorWriteLog(0x534e4554, "79431031");
++                    }
+                     if ((type == BTHF_CALL_ADDRTYPE_INTERNATIONAL) && (*number != '+'))
+-                        xx = sprintf (ag_res.str, "\"+%s\"", number);
++                        xx = sprintf (ag_res.str, "\"+%s\"", number_copy);
+                     else
+-                        xx = sprintf (ag_res.str, "\"%s\"", number);
++                        xx = sprintf (ag_res.str, "\"%s\"", number_copy);
+                     ag_res.num = type;
+ 
+                     if (res == BTA_AG_CALL_WAIT_RES)
+-- 
+2.7.4
+

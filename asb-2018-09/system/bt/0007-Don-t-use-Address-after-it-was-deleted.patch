@@ -1,0 +1,118 @@
+From fcf2294fb9bf7c97d2993cf8a1854dbd5ab0087d Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Wed, 11 Jul 2018 02:57:07 -0700
+Subject: [PATCH 2/2] Don't use Address after it was deleted
+
+Bug: 110216173
+(cherry picked from commit 9930f6f4e14e64966869b119994126283d645fd0)
+
+Change-Id: Id3364cf53153eafed478546d7347ed1673217e91
+Backported-By: Vasyl Gello <vasek.gello@gmail.com>
+---
+ bta/dm/bta_dm_act.c     | 10 +++++++---
+ stack/btm/btm_dev.c     | 25 +++++++++++++------------
+ stack/include/btm_api.h | 19 ++++++++++---------
+ 3 files changed, 30 insertions(+), 24 deletions(-)
+
+diff --git a/bta/dm/bta_dm_act.c b/bta/dm/bta_dm_act.c
+index 1ddb532..a2409ee 100644
+--- a/bta/dm/bta_dm_act.c
++++ b/bta/dm/bta_dm_act.c
+@@ -3455,12 +3455,16 @@ void bta_dm_acl_change(tBTA_DM_MSG *p_data)
+         }
+         if (conn.link_down.is_removed)
+         {
+-            BTM_SecDeleteDevice(p_bda);
++            // p_bda points to security record, which is removed in
++            // BTM_SecDeleteDevice.
++            BD_ADDR addr_copy;
++            memcpy(addr_copy, p_bda, BD_ADDR_LEN);
++            BTM_SecDeleteDevice(addr_copy);
+ #if (BLE_INCLUDED == TRUE && BTA_GATT_INCLUDED == TRUE)
+             /* need to remove all pending background connection */
+-            BTA_GATTC_CancelOpen(0, p_bda, FALSE);
++            BTA_GATTC_CancelOpen(0, addr_copy, FALSE);
+             /* remove all cached GATT information */
+-            BTA_GATTC_Refresh(p_bda);
++            BTA_GATTC_Refresh(addr_copy);
+ #endif
+          }
+ 
+diff --git a/stack/btm/btm_dev.c b/stack/btm/btm_dev.c
+index 0189bda..e761786 100644
+--- a/stack/btm/btm_dev.c
++++ b/stack/btm/btm_dev.c
+@@ -172,17 +172,16 @@ BOOLEAN BTM_SecAddDevice (BD_ADDR bd_addr, DEV_CLASS dev_class, BD_NAME bd_name,
+ }
+ 
+ 
+-/*******************************************************************************
+-**
+-** Function         BTM_SecDeleteDevice
+-**
+-** Description      Free resources associated with the device.
+-**
+-** Parameters:      bd_addr          - BD address of the peer
+-**
+-** Returns          TRUE if removed OK, FALSE if not found or ACL link is active
+-**
+-*******************************************************************************/
++/** Free resources associated with the device associated with |bd_addr| address.
++ *
++ * *** WARNING ***
++ * tBTM_SEC_DEV_REC associated with bd_addr becomes invalid after this function
++ * is called, also any of it's fields. i.e. if you use p_dev_rec->bd_addr, it is
++ * no longer valid!
++ * *** WARNING ***
++ *
++ * Returns true if removed OK, false if not found or ACL link is active.
++ */
+ BOOLEAN BTM_SecDeleteDevice (BD_ADDR bd_addr)
+ {
+     tBTM_SEC_DEV_REC *p_dev_rec;
+@@ -196,9 +195,11 @@ BOOLEAN BTM_SecDeleteDevice (BD_ADDR bd_addr)
+ 
+     if ((p_dev_rec = btm_find_dev(bd_addr)) != NULL)
+     {
++        BD_ADDR bda;
++        memcpy(bda, bd_addr, BD_ADDR_LEN);
+         btm_sec_free_dev(p_dev_rec);
+         /* Tell controller to get rid of the link key, if it has one stored */
+-        BTM_DeleteStoredLinkKey (p_dev_rec->bd_addr, NULL);
++        BTM_DeleteStoredLinkKey(bda, NULL);
+     }
+ 
+     return TRUE;
+diff --git a/stack/include/btm_api.h b/stack/include/btm_api.h
+index d48bfa9..f849e74 100644
+--- a/stack/include/btm_api.h
++++ b/stack/include/btm_api.h
+@@ -3319,15 +3319,16 @@ extern BOOLEAN BTM_SecAddDevice (BD_ADDR bd_addr, DEV_CLASS dev_class,
+                                  UINT8 key_type, tBTM_IO_CAP io_cap, UINT8 pin_length);
+ 
+ 
+-/*******************************************************************************
+-**
+-** Function         BTM_SecDeleteDevice
+-**
+-** Description      Free resources associated with the device.
+-**
+-** Returns          TRUE if rmoved OK, FALSE if not found
+-**
+-*******************************************************************************/
++/** Free resources associated with the device associated with |bd_addr| address.
++ *
++ * *** WARNING ***
++ * tBTM_SEC_DEV_REC associated with bd_addr becomes invalid after this function
++ * is called, also any of it's fields. i.e. if you use p_dev_rec->bd_addr, it is
++ * no longer valid!
++ * *** WARNING ***
++ *
++ * Returns true if removed OK, false if not found or ACL link is active.
++ */
+ extern BOOLEAN BTM_SecDeleteDevice (BD_ADDR bd_addr);
+ 
+ 
+-- 
+2.7.4
+

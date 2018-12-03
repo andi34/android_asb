@@ -1,0 +1,179 @@
+From 29b5bd3b793b1069b3110255a2535d1efada1559 Mon Sep 17 00:00:00 2001
+From: Pavel Grafov <pgrafov@google.com>
+Date: Thu, 2 Aug 2018 20:18:07 +0100
+Subject: [PATCH] Backport: Fix Object.entries/values with changing elements
+
+Bug: 111274046
+Test: m -j proxy_resolver_v8_unittest && adb sync && adb shell \
+/data/nativetest64/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+Change-Id: I705fc512cc5837e9364ed187559cc75d079aa5cb
+(cherry picked from commit d8be9a10287afed07705ac8af027d6a46d4def99)
+---
+ src/elements.cc | 60 ++++++++++++++++++++++++++++++++++++++++++++++++++-------
+ src/elements.h  | 18 ++++++++---------
+ 2 files changed, 62 insertions(+), 16 deletions(-)
+
+diff --git a/src/elements.cc b/src/elements.cc
+index d7e49cd..59b8e07 100644
+--- a/src/elements.cc
++++ b/src/elements.cc
+@@ -468,6 +468,21 @@ static void SortIndices(
+   }
+ }
+ 
++// The InternalElementsAccessor is a helper class to expose otherwise protected
++// methods to its subclasses. Namely, we don't want to publicly expose methods
++// that take an entry (instead of an index) as an argument.
++class InternalElementsAccessor : public ElementsAccessor {
++ public:
++  explicit InternalElementsAccessor(const char* name)
++      : ElementsAccessor(name) {}
++
++  virtual uint32_t GetEntryForIndex(JSObject* holder,
++                                    FixedArrayBase* backing_store,
++                                    uint32_t index) = 0;
++
++  virtual PropertyDetails GetDetails(JSObject* holder, uint32_t entry) = 0;
++};
++
+ // Base class for element handler implementations. Contains the
+ // the common logic for objects with different ElementsKinds.
+ // Subclasses must specialize method for which the element
+@@ -486,10 +501,10 @@ static void SortIndices(
+ // CRTP to guarantee aggressive compile time optimizations (i.e.  inlining and
+ // specialization of SomeElementsAccessor methods).
+ template <typename Subclass, typename ElementsTraitsParam>
+-class ElementsAccessorBase : public ElementsAccessor {
++class ElementsAccessorBase : public InternalElementsAccessor {
+  public:
+   explicit ElementsAccessorBase(const char* name)
+-      : ElementsAccessor(name) { }
++      : InternalElementsAccessor(name) {}
+ 
+   typedef ElementsTraitsParam ElementsTraits;
+   typedef typename ElementsTraitsParam::BackingStore BackingStore;
+@@ -887,35 +902,66 @@ class ElementsAccessorBase : public ElementsAccessor {
+       Isolate* isolate, Handle<JSObject> object,
+       Handle<FixedArray> values_or_entries, bool get_entries, int* nof_items,
+       PropertyFilter filter) {
+-    int count = 0;
++    DCHECK_EQ(*nof_items, 0);
+     KeyAccumulator accumulator(isolate, KeyCollectionMode::kOwnOnly,
+                                ALL_PROPERTIES);
+     Subclass::CollectElementIndicesImpl(
+         object, handle(object->elements(), isolate), &accumulator);
+     Handle<FixedArray> keys = accumulator.GetKeys();
+ 
+-    for (int i = 0; i < keys->length(); ++i) {
++    int count = 0;
++    int i = 0;
++    Handle<Map> original_map(object->map(), isolate);
++
++    for (; i < keys->length(); ++i) {
+       Handle<Object> key(keys->get(i), isolate);
+-      Handle<Object> value;
+       uint32_t index;
+       if (!key->ToUint32(&index)) continue;
+ 
++      DCHECK_EQ(object->map(), *original_map);
+       uint32_t entry = Subclass::GetEntryForIndexImpl(
+           *object, object->elements(), index, filter);
+       if (entry == kMaxUInt32) continue;
+ 
+       PropertyDetails details = Subclass::GetDetailsImpl(*object, entry);
+ 
++      Handle<Object> value;
+       if (details.kind() == kData) {
+         value = Subclass::GetImpl(object, entry);
+       } else {
++        // This might modify the elements and/or change the elements kind.
+         LookupIterator it(isolate, object, index, LookupIterator::OWN);
+         ASSIGN_RETURN_ON_EXCEPTION_VALUE(
+             isolate, value, Object::GetProperty(&it), Nothing<bool>());
+       }
+-      if (get_entries) {
+-        value = MakeEntryPair(isolate, index, value);
++      if (get_entries) value = MakeEntryPair(isolate, index, value);
++      values_or_entries->set(count++, *value);
++      if (object->map() != *original_map) break;
++    }
++
++    // Slow path caused by changes in elements kind during iteration.
++    for (; i < keys->length(); i++) {
++      Handle<Object> key(keys->get(i), isolate);
++      uint32_t index;
++      if (!key->ToUint32(&index)) continue;
++
++      if (filter & ONLY_ENUMERABLE) {
++        InternalElementsAccessor* accessor =
++            reinterpret_cast<InternalElementsAccessor*>(
++                object->GetElementsAccessor());
++        uint32_t entry = accessor->GetEntryForIndex(*object,
++                                                    object->elements(), index);
++        if (entry == kMaxUInt32) continue;
++        PropertyDetails details = accessor->GetDetails(*object, entry);
++        if (!details.IsEnumerable()) continue;
+       }
++
++      Handle<Object> value;
++      LookupIterator it(isolate, object, index, LookupIterator::OWN);
++      ASSIGN_RETURN_ON_EXCEPTION_VALUE(isolate, value, Object::GetProperty(&it),
++                                       Nothing<bool>());
++
++      if (get_entries) value = MakeEntryPair(isolate, index, value);
+       values_or_entries->set(count++, *value);
+     }
+ 
+diff --git a/src/elements.h b/src/elements.h
+index 9f70f2a..dc6493c 100644
+--- a/src/elements.h
++++ b/src/elements.h
+@@ -54,7 +54,6 @@ class ElementsAccessor {
+ 
+   virtual Handle<Object> Get(Handle<JSObject> holder, uint32_t entry) = 0;
+ 
+-  virtual PropertyDetails GetDetails(JSObject* holder, uint32_t entry) = 0;
+   virtual bool HasAccessors(JSObject* holder) = 0;
+ 
+   // Modifies the length data property as specified for JSArrays and resizes the
+@@ -64,9 +63,6 @@ class ElementsAccessor {
+   // element that is non-deletable.
+   virtual void SetLength(Handle<JSArray> holder, uint32_t new_length) = 0;
+ 
+-  // Deletes an element in an object.
+-  virtual void Delete(Handle<JSObject> holder, uint32_t entry) = 0;
+-
+   // If kCopyToEnd is specified as the copy_size to CopyElements, it copies all
+   // of elements from source after source_start to the destination array.
+   static const int kCopyToEnd = -1;
+@@ -118,11 +114,6 @@ class ElementsAccessor {
+ 
+   virtual void Set(Handle<JSObject> holder, uint32_t entry, Object* value) = 0;
+ 
+-  virtual void Reconfigure(Handle<JSObject> object,
+-                           Handle<FixedArrayBase> backing_store, uint32_t entry,
+-                           Handle<Object> value,
+-                           PropertyAttributes attributes) = 0;
+-
+   virtual void Add(Handle<JSObject> object, uint32_t index,
+                    Handle<Object> value, PropertyAttributes attributes,
+                    uint32_t new_capacity) = 0;
+@@ -167,6 +158,15 @@ class ElementsAccessor {
+                                     FixedArrayBase* backing_store,
+                                     uint32_t index) = 0;
+ 
++  virtual PropertyDetails GetDetails(JSObject* holder, uint32_t entry) = 0;
++  virtual void Reconfigure(Handle<JSObject> object,
++                           Handle<FixedArrayBase> backing_store, uint32_t entry,
++                           Handle<Object> value,
++                           PropertyAttributes attributes) = 0;
++
++  // Deletes an element in an object.
++  virtual void Delete(Handle<JSObject> holder, uint32_t entry) = 0;
++
+   // NOTE: this method violates the handlified function signature convention:
+   // raw pointer parameter |source_holder| in the function that allocates.
+   // This is done intentionally to avoid ArrayConcat() builtin performance
+-- 
+2.7.4
+

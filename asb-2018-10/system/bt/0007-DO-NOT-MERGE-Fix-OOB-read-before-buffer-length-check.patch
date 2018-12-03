@@ -1,0 +1,50 @@
+From 6266b19dc4e3924ffc015094943accc43a0609e7 Mon Sep 17 00:00:00 2001
+From: Ugo Yu <ugoyu@google.com>
+Date: Wed, 8 Aug 2018 14:46:42 +0800
+Subject: [PATCH 7/9] DO NOT MERGE Fix OOB read before buffer length check
+
+Bug: 111936834
+Test: manual
+Change-Id: Ib98528fb62db0d724ebd9112d071e367f78e369d
+(cherry picked from commit 4548f34c90803c6544f6bed03399f2eabeab2a8e)
+---
+ stack/smp/smp_act.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/stack/smp/smp_act.c b/stack/smp/smp_act.c
+index 2423cad..fc653f9 100644
+--- a/stack/smp/smp_act.c
++++ b/stack/smp/smp_act.c
+@@ -17,6 +17,7 @@
+  ******************************************************************************/
+ 
+ #include <string.h>
++#include <log/log.h>
+ #include "device/include/interop.h"
+ #include "include/bt_target.h"
+ #include "stack/btm/btm_int.h"
+@@ -770,14 +771,20 @@ void smp_process_keypress_notification(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
+     UINT8 reason = SMP_INVALID_PARAMETERS;
+ 
+     SMP_TRACE_DEBUG("%s", __func__);
+-    p_cb->status = *(UINT8 *)p_data;
+ 
+     if (smp_command_has_invalid_parameters(p_cb))
+     {
++        if (p_cb->rcvd_cmd_len < 2)
++        {
++            // 1 (opcode) + 1 (Notif Type) bytes
++            android_errorWriteLog(0x534e4554, "111936834");
++        }
+         smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
+         return;
+     }
+ 
++    p_cb->status = *(UINT8 *)p_data;
++
+     if (p != NULL)
+     {
+         STREAM_TO_UINT8(p_cb->peer_keypress_notification, p);
+-- 
+2.7.4
+

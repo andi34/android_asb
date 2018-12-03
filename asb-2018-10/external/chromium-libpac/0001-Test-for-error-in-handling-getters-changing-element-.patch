@@ -1,0 +1,118 @@
+From 3ddb1dc75fe1e5a56fc64d335e64be46ad87af2b Mon Sep 17 00:00:00 2001
+From: Pavel Grafov <pgrafov@google.com>
+Date: Thu, 2 Aug 2018 20:10:12 +0100
+Subject: [PATCH] Test for error in handling getters changing element kind.
+
+Bug: 111274046
+Test: m -j proxy_resolver_v8_unittest && adb sync && adb shell \
+/data/nativetest64/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+Merged-In: I99def991ebcb7c26ba7ca4b4b31ef1cdeaea7721
+Change-Id: I99def991ebcb7c26ba7ca4b4b31ef1cdeaea7721
+(cherry picked from commit 59b9b11a462fe3aad313b8538fb98468f22d9095)
+---
+ Android.mk                              |  2 ++
+ test/Android.mk                         |  2 +-
+ test/js-unittest/change_element_kind.js | 15 +++++++++++++++
+ test/proxy_resolver_v8_unittest.cc      | 14 ++++++++++++++
+ test/proxy_test_script.h                | 17 +++++++++++++++++
+ 5 files changed, 49 insertions(+), 1 deletion(-)
+ create mode 100644 test/js-unittest/change_element_kind.js
+
+diff --git a/Android.mk b/Android.mk
+index e8a2b26..5b794c7 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -28,3 +28,5 @@ LOCAL_SHARED_LIBRARIES := libutils liblog libicuuc libicui18n
+ LOCAL_CXX_STL := libc++
+ 
+ include $(BUILD_SHARED_LIBRARY)
++
++include $(LOCAL_PATH)/test/Android.mk
+diff --git a/test/Android.mk b/test/Android.mk
+index 9c9722e..edf9107 100644
+--- a/test/Android.mk
++++ b/test/Android.mk
+@@ -18,6 +18,6 @@ LOCAL_CFLAGS += \
+ 
+ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src $(LOCAL_PATH)/ external/v8
+ 
+-LOCAL_SHARED_LIBRARIES := libpac libutils liblog
++LOCAL_SHARED_LIBRARIES := libpac libutils liblog libandroid_runtime
+ 
+ include $(BUILD_NATIVE_TEST)
+diff --git a/test/js-unittest/change_element_kind.js b/test/js-unittest/change_element_kind.js
+new file mode 100644
+index 0000000..335d59e
+--- /dev/null
++++ b/test/js-unittest/change_element_kind.js
+@@ -0,0 +1,15 @@
++// PAC script with getter that changes element kind.
++
++function FindProxyForURL(url, host) {
++  let arr = [];
++  arr[1000] = 0x1234;
++
++  arr.__defineGetter__(256, function () {
++    delete arr[256];
++    arr.unshift(1.1);
++  });
++
++  let results = Object.entries(arr);
++  let str = results.toString();
++  return "DIRECT";
++}
+diff --git a/test/proxy_resolver_v8_unittest.cc b/test/proxy_resolver_v8_unittest.cc
+index ad9c826..be7ecee 100644
+--- a/test/proxy_resolver_v8_unittest.cc
++++ b/test/proxy_resolver_v8_unittest.cc
+@@ -544,5 +544,19 @@ TEST(ProxyResolverV8Test, DNSResolutionOfInternationDomainName) {
+   EXPECT_EQ("xn--bcher-kva.ch", bindings->dns_resolves_ex[0]);
+ }
+ 
++TEST(ProxyResolverV8Test, GetterChangesElementKind) {
++  ProxyResolverV8WithMockBindings resolver(new MockJSBindings());
++  int result = resolver.SetPacScript(String16(CHANGE_ELEMENT_KIND_JS));
++  EXPECT_EQ(OK, result);
++
++  // Execute FindProxyForURL().
++  result = resolver.GetProxyForURL(kQueryUrl, kQueryHost, &kResults);
++
++  EXPECT_EQ(OK, result);
++  std::vector<std::string> proxies = string16ToProxyList(kResults);
++  EXPECT_EQ(1U, proxies.size());
++  EXPECT_EQ("DIRECT", proxies[0]);
++}
++
+ }  // namespace
+ }  // namespace net
+diff --git a/test/proxy_test_script.h b/test/proxy_test_script.h
+index 1042366..80c96c7 100644
+--- a/test/proxy_test_script.h
++++ b/test/proxy_test_script.h
+@@ -78,6 +78,23 @@
+   "function fn() {}\n" \
+   "\n" \
+ 
++#define CHANGE_ELEMENT_KIND_JS \
++  "// PAC script with getter that changes element kind.\n" \
++  "	\n" \
++  "function FindProxyForURL(url, host) {\n" \
++  "  let arr = [];\n" \
++  "  arr[1000] = 0x1234;\n" \
++  "\n" \
++  "  arr.__defineGetter__(256, function () {\n" \
++  "    delete arr[256];\n" \
++  "    arr.unshift(1.1);\n" \
++  "  });\n" \
++  "\n" \
++  "  let results = Object.entries(arr);\n" \
++  "  let str = results.toString(); \n" \
++  "  return \"DIRECT\";\n" \
++  "}\n" \
++
+ #define DIRECT_JS \
+   "function FindProxyForURL(url, host) {\n" \
+   "  return \"DIRECT\";\n" \
+-- 
+2.7.4
+

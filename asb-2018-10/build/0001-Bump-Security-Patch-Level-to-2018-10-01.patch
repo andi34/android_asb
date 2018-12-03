@@ -1,0 +1,53 @@
+From b7302a83a7a691bd2ac36d4a9948d81f512bddf6 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sat, 17 Nov 2018 22:05:29 +0100
+Subject: [PATCH] Bump Security Patch Level to 2018-10-01
+
+CVE-2018-9490	A-111274046[1]	Critical Change 234634/234636
+CVE-2018-9490	A-111274046[2]	Critical Change 234634/234635
+CVE-2018-9491	A-111603051	High	 Change 234595
+CVE-2018-9493	A-111085900[1]	High
+CVE-2018-9493	A-111085900[2]	High
+CVE-2018-9493	A-111085900[3]	High
+CVE-2018-9452	A-78464361[1]	Moderate
+CVE-2018-9452	A-78464361[2]	Moderate
+CVE-2018-9497	A-74078669	Critical Change 234596
+CVE-2018-9498	A-78354855	Critical
+CVE-2018-9499	A-79218474	High	 Change 234597
+CVE-2017-13283	A-78526423	Critical Change 234598
+CVE-2018-9504	A-110216176	Critical Change 234599
+CVE-2018-9501	A-110034419	High
+CVE-2018-9502	A-111936792[1]	High	 Change 234601
+CVE-2018-9502	A-111936792[2]	High	 Change 234603
+CVE-2018-9502	A-111936792[3]	High	 Change 234602
+CVE-2018-9503	A-80432928[1]	High	 Change 234601
+CVE-2018-9503	A-80432928[2]	High	 Change 234603
+CVE-2018-9503	A-80432928[3]	High	 Change 234602
+CVE-2018-9505	A-110791536	High	 Change 234604
+CVE-2018-9506	A-111803925	High	 Change 234605
+CVE-2018-9507	A-111893951	High	 Change 234606
+CVE-2018-9508	A-111936834	High	 Change 234607
+CVE-2018-9509	A-111937027	High	 Change 234608
+CVE-2018-9510	A-111937065	High	 Change 234609
+
+Change-Id: Ibdf13709f48457970aed0fccbea1bb6f550c335e
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 31d1e5a..6b5a86e 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-09-01
++  PLATFORM_SECURITY_PATCH := 2018-10-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+
