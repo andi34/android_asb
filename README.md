@@ -31,3 +31,4 @@ repo forall -c "rm -rf *.patch"
 - https://review.lineageos.org/#/q/topic:n_asb_09-2018+(status:open+OR+status:merged)
 - https://review.lineageos.org/#/q/topic:n_asb_10-2018+(status:open+OR+status:merged)
 - https://review.lineageos.org/#/q/topic:n_asb_11-2018+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n_asb_12-2018+(status:open+OR+status:merged)

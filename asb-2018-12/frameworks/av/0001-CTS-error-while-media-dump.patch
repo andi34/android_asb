@@ -1,0 +1,59 @@
+From 4180c2f0901bc1202519a486b03e4b84d6fe82b0 Mon Sep 17 00:00:00 2001
+From: "ray-cy.lee" <ray-cy.lee@mstarsemi.com>
+Date: Tue, 7 Mar 2017 18:25:15 +0800
+Subject: [PATCH] CTS error while media dump()
+
+MediaExtractor should not dump information. CTS is
+checking and failing due to the dump.
+
+Bug: 114770654
+Change-Id: Ie5bae5de39545dede6da4198240b4f38c50050b7
+(cherry picked from commit c20825bd3b751cffcd8d7e66e97c3b1a91ef21e0)
+---
+ media/libmedia/IMediaExtractor.cpp | 23 ++++++++++++++++-------
+ 1 file changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/media/libmedia/IMediaExtractor.cpp b/media/libmedia/IMediaExtractor.cpp
+index 4be1118..744af1b 100644
+--- a/media/libmedia/IMediaExtractor.cpp
++++ b/media/libmedia/IMediaExtractor.cpp
+@@ -23,6 +23,7 @@
+ 
+ #include <binder/IPCThreadState.h>
+ #include <binder/Parcel.h>
++#include <binder/PermissionCache.h>
+ #include <media/IMediaExtractor.h>
+ #include <media/stagefright/MetaData.h>
+ 
+@@ -272,13 +273,21 @@ void registerMediaExtractor(
+ 
+ status_t dumpExtractors(int fd, const Vector<String16>&) {
+     String8 out;
+-    out.append("Recent extractors, most recent first:\n");
+-    {
+-        Mutex::Autolock lock(sExtractorsLock);
+-        for (size_t i = 0; i < sExtractors.size(); i++) {
+-            const ExtractorInstance &instance = sExtractors.itemAt(i);
+-            out.append("  ");
+-            out.append(instance.toString());
++    const IPCThreadState* ipc = IPCThreadState::self();
++    const int pid = ipc->getCallingPid();
++    const int uid = ipc->getCallingUid();
++    if (!PermissionCache::checkPermission(String16("android.permission.DUMP"), pid, uid)) {
++        out.appendFormat("Permission Denial: "
++                "can't dump MediaExtractor from pid=%d, uid=%d\n", pid, uid);
++    } else {
++        out.append("Recent extractors, most recent first:\n");
++        {
++            Mutex::Autolock lock(sExtractorsLock);
++            for (size_t i = 0; i < sExtractors.size(); i++) {
++                const ExtractorInstance &instance = sExtractors.itemAt(i);
++                out.append("  ");
++                out.append(instance.toString());
++            }
+         }
+     }
+     write(fd, out.string(), out.size());
+-- 
+2.7.4
+

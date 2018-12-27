@@ -1,0 +1,176 @@
+From c13584cb4764a282cd8be5912ebf51f3887a05be Mon Sep 17 00:00:00 2001
+From: Robin Lee <rgl@google.com>
+Date: Thu, 28 Jul 2016 18:41:23 +0100
+Subject: [PATCH 2/3] Pass userId through to singleton ContentProviders
+
+System content providers like SettingsProvider run as singleUser but
+on receipt of a call make decisions based on the calling user ID.
+
+This is right up until the caller is a system service or a cross-user-
+-aware app like Settings, where putStringForUser etc. provide a
+workaround for most settings but not for the few files SettingsProvider
+exposes.
+
+Change-Id: I90060c9c13e274edd71f8a16ab3a026a58b98e3e
+---
+ core/java/android/content/ContentProvider.java     | 38 ++++++++++++++--------
+ .../providers/settings/SettingsProvider.java       | 10 ++++--
+ 2 files changed, 32 insertions(+), 16 deletions(-)
+
+diff --git a/core/java/android/content/ContentProvider.java b/core/java/android/content/ContentProvider.java
+index bc2d788..1e6424e 100644
+--- a/core/java/android/content/ContentProvider.java
++++ b/core/java/android/content/ContentProvider.java
+@@ -208,7 +208,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+                 String selection, String[] selectionArgs, String sortOrder,
+                 ICancellationSignal cancellationSignal) {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             if (enforceReadPermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 // The caller has no access to the data, so return an empty cursor with
+                 // the columns in the requested order. The caller may ask for an invalid
+@@ -247,7 +247,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         @Override
+         public String getType(Uri uri) {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             return ContentProvider.this.getType(uri);
+         }
+ 
+@@ -255,7 +255,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         public Uri insert(String callingPkg, Uri uri, ContentValues initialValues) {
+             validateIncomingUri(uri);
+             int userId = getUserIdFromUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 return rejectInsert(uri, initialValues);
+             }
+@@ -270,7 +270,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         @Override
+         public int bulkInsert(String callingPkg, Uri uri, ContentValues[] initialValues) {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 return 0;
+             }
+@@ -331,7 +331,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         @Override
+         public int delete(String callingPkg, Uri uri, String selection, String[] selectionArgs) {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 return 0;
+             }
+@@ -347,7 +347,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         public int update(String callingPkg, Uri uri, ContentValues values, String selection,
+                 String[] selectionArgs) {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 return 0;
+             }
+@@ -364,7 +364,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+                 String callingPkg, Uri uri, String mode, ICancellationSignal cancellationSignal,
+                 IBinder callerToken) throws FileNotFoundException {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             enforceFilePermission(callingPkg, uri, mode, callerToken);
+             final String original = setCallingPackage(callingPkg);
+             try {
+@@ -380,7 +380,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+                 String callingPkg, Uri uri, String mode, ICancellationSignal cancellationSignal)
+                 throws FileNotFoundException {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             enforceFilePermission(callingPkg, uri, mode, null);
+             final String original = setCallingPackage(callingPkg);
+             try {
+@@ -406,7 +406,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         @Override
+         public String[] getStreamTypes(Uri uri, String mimeTypeFilter) {
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             return ContentProvider.this.getStreamTypes(uri, mimeTypeFilter);
+         }
+ 
+@@ -415,7 +415,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+                 Bundle opts, ICancellationSignal cancellationSignal) throws FileNotFoundException {
+             Bundle.setDefusable(opts, true);
+             validateIncomingUri(uri);
+-            uri = getUriWithoutUserId(uri);
++            uri = maybeGetUriWithoutUserId(uri);
+             enforceFilePermission(callingPkg, uri, "r", null);
+             final String original = setCallingPackage(callingPkg);
+             try {
+@@ -1846,10 +1846,12 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+     /** @hide */
+     private void validateIncomingUri(Uri uri) throws SecurityException {
+         String auth = uri.getAuthority();
+-        int userId = getUserIdFromAuthority(auth, UserHandle.USER_CURRENT);
+-        if (userId != UserHandle.USER_CURRENT && userId != mContext.getUserId()) {
+-            throw new SecurityException("trying to query a ContentProvider in user "
+-                    + mContext.getUserId() + " with a uri belonging to user " + userId);
++        if (!mSingleUser) {
++            int userId = getUserIdFromAuthority(auth, UserHandle.USER_CURRENT);
++            if (userId != UserHandle.USER_CURRENT && userId != mContext.getUserId()) {
++                throw new SecurityException("trying to query a ContentProvider in user "
++                        + mContext.getUserId() + " with a uri belonging to user " + userId);
++            }
+         }
+         if (!matchesOurAuthorities(getAuthorityWithoutUserId(auth))) {
+             String message = "The authority of the uri " + uri + " does not match the one of the "
+@@ -1864,6 +1866,14 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+     }
+ 
+     /** @hide */
++    private Uri maybeGetUriWithoutUserId(Uri uri) {
++        if (mSingleUser) {
++            return uri;
++        }
++        return getUriWithoutUserId(uri);
++    }
++
++    /** @hide */
+     public static int getUserIdFromAuthority(String auth, int defaultUserId) {
+         if (auth == null) return defaultUserId;
+         int end = auth.lastIndexOf('@');
+diff --git a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
+index fec33a2..d89219f 100644
+--- a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
++++ b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
+@@ -511,6 +511,13 @@ public class SettingsProvider extends ContentProvider {
+ 
+     @Override
+     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
++        final int userId = getUserIdFromUri(uri, UserHandle.getCallingUserId());
++        if (userId != UserHandle.getCallingUserId()) {
++            getContext().enforceCallingPermission(Manifest.permission.INTERACT_ACROSS_USERS,
++                    "Access files from the settings of another user");
++        }
++        uri = ContentProvider.getUriWithoutUserId(uri);
++
+         final String cacheName;
+         if (Settings.System.RINGTONE_CACHE_URI.equals(uri)) {
+             cacheName = Settings.System.RINGTONE_CACHE;
+@@ -523,8 +530,7 @@ public class SettingsProvider extends ContentProvider {
+                     + "ringtone playback is available through android.media.Ringtone");
+         }
+ 
+-        final File cacheFile = new File(
+-                getRingtoneCacheDir(UserHandle.getCallingUserId()), cacheName);
++        final File cacheFile = new File(getRingtoneCacheDir(userId), cacheName);
+         return ParcelFileDescriptor.open(cacheFile, ParcelFileDescriptor.parseMode(mode));
+     }
+ 
+-- 
+2.7.4
+

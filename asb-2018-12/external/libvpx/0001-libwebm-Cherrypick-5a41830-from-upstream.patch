@@ -1,0 +1,68 @@
+From 6dfe890e1c657d2a55f47456790ad66b42559ac5 Mon Sep 17 00:00:00 2001
+From: Vignesh Venkatasubramanian <vigneshv@google.com>
+Date: Tue, 2 Oct 2018 14:52:31 -0700
+Subject: [PATCH] libwebm: Cherrypick 5a41830 from upstream
+
+mkvparser: Avoid double free when Chromaticity parse fails.
+
+PrimaryChromaticity::Parse never owns the PrimaryChromaticity
+it allocates-- avoid freeing it because doing so results in a
+double free when the MasteringMetadata dtor runs.
+
+Test: CTS tests using webm files still pass.
+Bug: 116615297
+
+Change-Id: I3acd76204a37e057cea4a5d2c352c68ecb49c990
+(cherry picked from commit d90a7f1d7451773122b88033013e6551ea8bb997)
+(cherry picked from commit 0f998713686da56f36a5b603a4897fe5952c0370)
+---
+ libwebm/mkvparser/mkvparser.cc | 22 ++++++++++------------
+ 1 file changed, 10 insertions(+), 12 deletions(-)
+
+diff --git a/libwebm/mkvparser/mkvparser.cc b/libwebm/mkvparser/mkvparser.cc
+index ff13327..70c1f04 100644
+--- a/libwebm/mkvparser/mkvparser.cc
++++ b/libwebm/mkvparser/mkvparser.cc
+@@ -4983,29 +4983,27 @@ bool PrimaryChromaticity::Parse(IMkvReader* reader, long long read_pos,
+   if (!reader)
+     return false;
+ 
+-  std::auto_ptr<PrimaryChromaticity> chromaticity_ptr;
++  if (!*chromaticity)
++    *chromaticity = new PrimaryChromaticity();
+ 
+-  if (!*chromaticity) {
+-    chromaticity_ptr.reset(new PrimaryChromaticity());
+-  } else {
+-    chromaticity_ptr.reset(*chromaticity);
+-  }
+-
+-  if (!chromaticity_ptr.get())
++  if (!*chromaticity)
+     return false;
+ 
+-  float* value = is_x ? &chromaticity_ptr->x : &chromaticity_ptr->y;
++  PrimaryChromaticity* pc = *chromaticity;
++  float* value = is_x ? &pc->x : &pc->y;
+ 
+   double parser_value = 0;
+-  const long long value_parse_status =
++  const long long parse_status =
+       UnserializeFloat(reader, read_pos, value_size, parser_value);
+ 
++  if (parse_status < 0 || parser_value < FLT_MIN || parser_value > FLT_MAX)
++    return false;
++
+   *value = static_cast<float>(parser_value);
+ 
+-  if (value_parse_status < 0 || *value < 0.0 || *value > 1.0)
++  if (*value < 0.0 || *value > 1.0)
+     return false;
+ 
+-  *chromaticity = chromaticity_ptr.release();
+   return true;
+ }
+ 
+-- 
+2.7.4
+

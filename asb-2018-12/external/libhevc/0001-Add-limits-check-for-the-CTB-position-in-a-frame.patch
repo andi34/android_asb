@@ -1,0 +1,66 @@
+From 7ee94ead438efa154e6bc446d201f5736d0ae69a Mon Sep 17 00:00:00 2001
+From: Shubham Tandle <shubham.tandle@ittiam.com>
+Date: Tue, 11 Sep 2018 13:17:15 +0530
+Subject: [PATCH] Add limits check for the CTB position in a frame
+
+Bug: 113260892
+Bug: 113261108
+Bug: 113261310
+
+The decoder does not support tile position > 255.
+Added error checks to ensure the same.
+
+Test: re-run POC
+Change-Id: Id359c172c8630ded2fb3f47c447f373cd2d1bc34
+(cherry picked from commit 5a3dafc3248edcd2df5e2fdafaca61b6acbc44b1)
+---
+ decoder/ihevcd_parse_headers.c | 30 +++++++++++++++++++++++-------
+ 1 file changed, 23 insertions(+), 7 deletions(-)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index fe5851d..b234005 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1824,16 +1824,32 @@ IHEVCD_ERROR_T ihevcd_parse_pps(codec_t *ps_codec)
+     ps_pps->i1_tiles_enabled_flag = value;
+ 
+     /* When tiles are enabled and width or height is >= 4096,
+-     * CTB Size should at least be 32. 16x16 CTBs can result
+-     * in tile position greater than 255 for 4096,
++     * CTB Size should at least be 32 while if width or height is >= 8192,
++     * CTB Size should at least be 64 and so on. 16x16 CTBs can result
++     * in tile position greater than 255 for 4096 while 32x32 CTBs can result
++     * in tile position greater than 255 for 8192,
+      * which decoder does not support.
+      */
+-    if((ps_pps->i1_tiles_enabled_flag) &&
+-                    (ps_sps->i1_log2_ctb_size == 4) &&
+-                    ((ps_sps->i2_pic_width_in_luma_samples >= 4096) ||
+-                    (ps_sps->i2_pic_height_in_luma_samples >= 4096)))
++    if (ps_pps->i1_tiles_enabled_flag)
+     {
+-        return IHEVCD_INVALID_HEADER;
++        if((ps_sps->i1_log2_ctb_size == 4) &&
++            ((ps_sps->i2_pic_width_in_luma_samples >= 4096) ||
++            (ps_sps->i2_pic_height_in_luma_samples >= 4096)))
++        {
++            return IHEVCD_INVALID_HEADER;
++        }
++        if((ps_sps->i1_log2_ctb_size == 5) &&
++            ((ps_sps->i2_pic_width_in_luma_samples >= 8192) ||
++            (ps_sps->i2_pic_height_in_luma_samples >= 8192)))
++        {
++            return IHEVCD_INVALID_HEADER;
++        }
++        if((ps_sps->i1_log2_ctb_size == 6) &&
++            ((ps_sps->i2_pic_width_in_luma_samples >= 16384) ||
++            (ps_sps->i2_pic_height_in_luma_samples >= 16384)))
++        {
++            return IHEVCD_INVALID_HEADER;
++        }
+     }
+ 
+     BITS_PARSE("entropy_coding_sync_enabled_flag", value, ps_bitstrm, 1);
+-- 
+2.7.4
+

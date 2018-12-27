@@ -1,0 +1,247 @@
+From 5a87dcef1f273300476d4ea33180bd7492b1826a Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Mon, 24 Sep 2018 13:23:57 -0600
+Subject: [PATCH 3/3] RESTRICT AUTOMERGE: Recover shady content:// paths.
+
+The path-permission element offers prefix or regex style matching of
+paths, but most providers internally use UriMatcher to decide what
+to do with an incoming Uri.
+
+This causes trouble because UriMatcher uses Uri.getPathSegments(),
+which quietly ignores "empty" paths.  Consider this example:
+
+    <path-permission android:pathPrefix="/private" ... />
+
+    uriMatcher.addURI("com.example", "/private", CODE_PRIVATE);
+
+    content://com.example//private
+
+The Uri above will pass the security check, since it's not
+technically a prefix match.  But the UriMatcher will then match it
+as CODE_PRIVATE, since it ignores the "//" zero-length path.
+
+Since we can't safely change the behavior of either path-permission
+or UriMatcher, we're left with recovering these shady paths by
+trimming away zero-length paths.
+
+Bug: 112555574
+Test: cts-tradefed run cts -m CtsAppSecurityHostTestCases -t android.appsecurity.cts.AppSecurityTests
+Change-Id: Ibadbfa4fc904ec54780c8102958735b03293fb9a
+(cherry picked from commit a1ec7b115cc378f0547f10cf1074a5248d42d94f)
+---
+ core/java/android/content/ContentProvider.java     | 51 ++++++++++++++--------
+ .../android/content/ContentProviderOperation.java  | 16 +------
+ 2 files changed, 35 insertions(+), 32 deletions(-)
+
+diff --git a/core/java/android/content/ContentProvider.java b/core/java/android/content/ContentProvider.java
+index 1e6424e..e61ac70 100644
+--- a/core/java/android/content/ContentProvider.java
++++ b/core/java/android/content/ContentProvider.java
+@@ -53,6 +53,7 @@ import java.io.IOException;
+ import java.io.PrintWriter;
+ import java.util.ArrayList;
+ import java.util.Arrays;
++import java.util.Objects;
+ 
+ /**
+  * Content providers are one of the primary building blocks of Android applications, providing
+@@ -207,7 +208,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         public Cursor query(String callingPkg, Uri uri, String[] projection,
+                 String selection, String[] selectionArgs, String sortOrder,
+                 ICancellationSignal cancellationSignal) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             if (enforceReadPermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 // The caller has no access to the data, so return an empty cursor with
+@@ -246,14 +247,14 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+ 
+         @Override
+         public String getType(Uri uri) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             return ContentProvider.this.getType(uri);
+         }
+ 
+         @Override
+         public Uri insert(String callingPkg, Uri uri, ContentValues initialValues) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             int userId = getUserIdFromUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+@@ -269,7 +270,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+ 
+         @Override
+         public int bulkInsert(String callingPkg, Uri uri, ContentValues[] initialValues) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 return 0;
+@@ -291,11 +292,12 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+             for (int i = 0; i < numOperations; i++) {
+                 ContentProviderOperation operation = operations.get(i);
+                 Uri uri = operation.getUri();
+-                validateIncomingUri(uri);
+                 userIds[i] = getUserIdFromUri(uri);
+-                if (userIds[i] != UserHandle.USER_CURRENT) {
+-                    // Removing the user id from the uri.
+-                    operation = new ContentProviderOperation(operation, true);
++                uri = validateIncomingUri(uri);
++                uri = maybeGetUriWithoutUserId(uri);
++                // Rebuild operation if we changed the Uri above
++                if (!Objects.equals(operation.getUri(), uri)) {
++                    operation = new ContentProviderOperation(operation, uri);
+                     operations.set(i, operation);
+                 }
+                 if (operation.isReadOperation()) {
+@@ -330,7 +332,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+ 
+         @Override
+         public int delete(String callingPkg, Uri uri, String selection, String[] selectionArgs) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 return 0;
+@@ -346,7 +348,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         @Override
+         public int update(String callingPkg, Uri uri, ContentValues values, String selection,
+                 String[] selectionArgs) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             if (enforceWritePermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+                 return 0;
+@@ -363,7 +365,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         public ParcelFileDescriptor openFile(
+                 String callingPkg, Uri uri, String mode, ICancellationSignal cancellationSignal,
+                 IBinder callerToken) throws FileNotFoundException {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             enforceFilePermission(callingPkg, uri, mode, callerToken);
+             final String original = setCallingPackage(callingPkg);
+@@ -379,7 +381,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         public AssetFileDescriptor openAssetFile(
+                 String callingPkg, Uri uri, String mode, ICancellationSignal cancellationSignal)
+                 throws FileNotFoundException {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             enforceFilePermission(callingPkg, uri, mode, null);
+             final String original = setCallingPackage(callingPkg);
+@@ -405,7 +407,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+ 
+         @Override
+         public String[] getStreamTypes(Uri uri, String mimeTypeFilter) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             return ContentProvider.this.getStreamTypes(uri, mimeTypeFilter);
+         }
+@@ -414,7 +416,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+         public AssetFileDescriptor openTypedAssetFile(String callingPkg, Uri uri, String mimeType,
+                 Bundle opts, ICancellationSignal cancellationSignal) throws FileNotFoundException {
+             Bundle.setDefusable(opts, true);
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             uri = maybeGetUriWithoutUserId(uri);
+             enforceFilePermission(callingPkg, uri, "r", null);
+             final String original = setCallingPackage(callingPkg);
+@@ -433,7 +435,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+ 
+         @Override
+         public Uri canonicalize(String callingPkg, Uri uri) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             int userId = getUserIdFromUri(uri);
+             uri = getUriWithoutUserId(uri);
+             if (enforceReadPermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+@@ -449,7 +451,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+ 
+         @Override
+         public Uri uncanonicalize(String callingPkg, Uri uri) {
+-            validateIncomingUri(uri);
++            uri = validateIncomingUri(uri);
+             int userId = getUserIdFromUri(uri);
+             uri = getUriWithoutUserId(uri);
+             if (enforceReadPermission(callingPkg, uri, null) != AppOpsManager.MODE_ALLOWED) {
+@@ -1735,7 +1737,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+          */
+         if (mContext == null) {
+             mContext = context;
+-            if (context != null) {
++            if (context != null && mTransport != null) {
+                 mTransport.mAppOpsManager = (AppOpsManager) context.getSystemService(
+                         Context.APP_OPS_SERVICE);
+             }
+@@ -1844,7 +1846,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+     }
+ 
+     /** @hide */
+-    private void validateIncomingUri(Uri uri) throws SecurityException {
++    public Uri validateIncomingUri(Uri uri) throws SecurityException {
+         String auth = uri.getAuthority();
+         if (!mSingleUser) {
+             int userId = getUserIdFromAuthority(auth, UserHandle.USER_CURRENT);
+@@ -1863,6 +1865,19 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
+             }
+             throw new SecurityException(message);
+         }
++
++        // Normalize the path by removing any empty path segments, which can be
++        // a source of security issues.
++        final String encodedPath = uri.getEncodedPath();
++        if (encodedPath != null && encodedPath.indexOf("//") != -1) {
++            final Uri normalized = uri.buildUpon()
++                    .encodedPath(encodedPath.replaceAll("//+", "/")).build();
++            Log.w(TAG, "Normalized " + uri + " to " + normalized
++                    + " to avoid possible security issues");
++            return normalized;
++        } else {
++            return uri;
++        }
+     }
+ 
+     /** @hide */
+diff --git a/core/java/android/content/ContentProviderOperation.java b/core/java/android/content/ContentProviderOperation.java
+index fd1e24a..1a03bd6 100644
+--- a/core/java/android/content/ContentProviderOperation.java
++++ b/core/java/android/content/ContentProviderOperation.java
+@@ -94,13 +94,9 @@ public class ContentProviderOperation implements Parcelable {
+     }
+ 
+     /** @hide */
+-    public ContentProviderOperation(ContentProviderOperation cpo, boolean removeUserIdFromUri) {
++    public ContentProviderOperation(ContentProviderOperation cpo, Uri withUri) {
+         mType = cpo.mType;
+-        if (removeUserIdFromUri) {
+-            mUri = ContentProvider.getUriWithoutUserId(cpo.mUri);
+-        } else {
+-            mUri = cpo.mUri;
+-        }
++        mUri = withUri;
+         mValues = cpo.mValues;
+         mSelection = cpo.mSelection;
+         mSelectionArgs = cpo.mSelectionArgs;
+@@ -110,14 +106,6 @@ public class ContentProviderOperation implements Parcelable {
+         mYieldAllowed = cpo.mYieldAllowed;
+     }
+ 
+-    /** @hide */
+-    public ContentProviderOperation getWithoutUserIdInUri() {
+-        if (ContentProvider.uriHasUserId(mUri)) {
+-            return new ContentProviderOperation(this, true);
+-        }
+-        return this;
+-    }
+-
+     public void writeToParcel(Parcel dest, int flags) {
+         dest.writeInt(mType);
+         Uri.writeToParcel(dest, mUri);
+-- 
+2.7.4
+

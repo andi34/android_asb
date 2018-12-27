@@ -1,0 +1,63 @@
+From c415335370a44dafb2d5105cbd86c3e2852e3490 Mon Sep 17 00:00:00 2001
+From: Sen Jiang <senj@google.com>
+Date: Wed, 19 Sep 2018 14:29:44 -0700
+Subject: [PATCH] Check metadata size in payload.
+
+Detect overflow for unsigned integer addition.
+
+[basilgello: Backport to cm-14.1
+ - the update_attempter_android.cc part can not be applied
+   so skipping it
+]
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+
+Bug: 113118184
+Test: manual test with a hand crafted payload
+Change-Id: I0155de49c241c392fb74f3d830ceebdb4174f872
+(cherry picked from commit 08769f9c05199f96b257eded926975fd83c6edbf)
+(cherry picked from commit 3e9410898d2687d7df3bdb03c6830d3ec428c2c6)
+---
+ payload_consumer/delta_performer.cc | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/payload_consumer/delta_performer.cc b/payload_consumer/delta_performer.cc
+index a156132..fc570ec 100644
+--- a/payload_consumer/delta_performer.cc
++++ b/payload_consumer/delta_performer.cc
+@@ -491,6 +491,13 @@ DeltaPerformer::MetadataParseResult DeltaPerformer::ParsePayloadMetadata(
+            kDeltaManifestSizeSize);
+     manifest_size_ = be64toh(manifest_size_);  // switch big endian to host
+ 
++    metadata_size_ = manifest_offset + manifest_size_;
++    if (metadata_size_ < manifest_size_) {
++      // Overflow detected.
++      *error = ErrorCode::kDownloadInvalidMetadataSize;
++      return kMetadataParseError;
++    }
++
+     if (GetMajorVersion() == kBrilloMajorPayloadVersion) {
+       // Parse the metadata signature size.
+       static_assert(sizeof(metadata_signature_size_) ==
+@@ -505,13 +512,18 @@ DeltaPerformer::MetadataParseResult DeltaPerformer::ParsePayloadMetadata(
+              &payload[metadata_signature_size_offset],
+              kDeltaMetadataSignatureSizeSize);
+       metadata_signature_size_ = be32toh(metadata_signature_size_);
++
++      if (metadata_size_ + metadata_signature_size_ < metadata_size_) {
++        // Overflow detected.
++        *error = ErrorCode::kDownloadInvalidMetadataSize;
++        return kMetadataParseError;
++      }
+     }
+ 
+     // If the metadata size is present in install plan, check for it immediately
+     // even before waiting for that many number of bytes to be downloaded in the
+     // payload. This will prevent any attack which relies on us downloading data
+     // beyond the expected metadata size.
+-    metadata_size_ = manifest_offset + manifest_size_;
+     if (install_plan_->hash_checks_mandatory) {
+       if (install_plan_->metadata_size != metadata_size_) {
+         LOG(ERROR) << "Mandatory metadata size in Omaha response ("
+-- 
+2.7.4
+

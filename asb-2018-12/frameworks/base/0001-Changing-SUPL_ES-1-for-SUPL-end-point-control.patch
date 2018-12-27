@@ -1,0 +1,117 @@
+From e7516f5925544ce9ca3b6d6b10328de440edf89e Mon Sep 17 00:00:00 2001
+From: Wayne Lin <waynewhlin@google.com>
+Date: Thu, 13 Sep 2018 15:34:10 +0800
+Subject: [PATCH 1/3] Changing SUPL_ES=1 for SUPL end point control
+
+SUPL_ES=1 ensures the GnssLocationProvider and related framework code
+accepts incoming SMS SUPL_INIT messages with ES-bit=1
+(which allow redirection of the ESLP
+end-point e.g. to the current local emergency services provider when
+you are travelling) only during an emergency call
+
+Bug: 115331218
+Bug: 112159033
+Test: Build pass
+Change-Id: I5075f7887a184ce18bb1815b35a2ce7acd8bca10
+(cherry picked from commit 02f38c7284f183d5e1fc39fe56903a567ff3fc20)
+---
+ core/res/res/values-mcc302-mnc220/config.xml | 2 +-
+ core/res/res/values-mcc302-mnc221/config.xml | 2 +-
+ core/res/res/values-mcc302-mnc370/config.xml | 2 +-
+ core/res/res/values-mcc302-mnc610/config.xml | 2 +-
+ core/res/res/values-mcc302-mnc640/config.xml | 2 +-
+ core/res/res/values-mcc302-mnc720/config.xml | 2 +-
+ core/res/res/values/config.xml               | 1 +
+ 7 files changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/core/res/res/values-mcc302-mnc220/config.xml b/core/res/res/values-mcc302-mnc220/config.xml
+index 422f7c9..e6ddadc 100644
+--- a/core/res/res/values-mcc302-mnc220/config.xml
++++ b/core/res/res/values-mcc302-mnc220/config.xml
+@@ -50,7 +50,7 @@
+         <item>ERR_ESTIMATE=0</item>
+         <item>INTERMEDIATE_POS=0</item>
+         <item>GPS_LOCK=0</item>
+-        <item>SUPL_ES=0</item>
++        <item>SUPL_ES=1</item>
+     </string-array>
+ 
+ </resources>
+diff --git a/core/res/res/values-mcc302-mnc221/config.xml b/core/res/res/values-mcc302-mnc221/config.xml
+index 1444250..0f01f53 100644
+--- a/core/res/res/values-mcc302-mnc221/config.xml
++++ b/core/res/res/values-mcc302-mnc221/config.xml
+@@ -48,7 +48,7 @@
+         <item>ERR_ESTIMATE=0</item>
+         <item>INTERMEDIATE_POS=0</item>
+         <item>GPS_LOCK=0</item>
+-        <item>SUPL_ES=0</item>
++        <item>SUPL_ES=1</item>
+     </string-array>
+ 
+ </resources>
+diff --git a/core/res/res/values-mcc302-mnc370/config.xml b/core/res/res/values-mcc302-mnc370/config.xml
+index 05265c7..9231691 100644
+--- a/core/res/res/values-mcc302-mnc370/config.xml
++++ b/core/res/res/values-mcc302-mnc370/config.xml
+@@ -59,7 +59,7 @@
+         <item>ERR_ESTIMATE=0</item>
+         <item>INTERMEDIATE_POS=0</item>
+         <item>GPS_LOCK=0</item>
+-        <item>SUPL_ES=0</item>
++        <item>SUPL_ES=1</item>
+     </string-array>
+ 
+ </resources>
+diff --git a/core/res/res/values-mcc302-mnc610/config.xml b/core/res/res/values-mcc302-mnc610/config.xml
+index 0af2c39..b85da2b 100644
+--- a/core/res/res/values-mcc302-mnc610/config.xml
++++ b/core/res/res/values-mcc302-mnc610/config.xml
+@@ -43,6 +43,6 @@
+         <item>ERR_ESTIMATE=0</item>
+         <item>INTERMEDIATE_POS=0</item>
+         <item>GPS_LOCK=0</item>
+-        <item>SUPL_ES=0</item>
++        <item>SUPL_ES=1</item>
+     </string-array>
+ </resources>
+diff --git a/core/res/res/values-mcc302-mnc640/config.xml b/core/res/res/values-mcc302-mnc640/config.xml
+index e005bc0..0454c58 100644
+--- a/core/res/res/values-mcc302-mnc640/config.xml
++++ b/core/res/res/values-mcc302-mnc640/config.xml
+@@ -39,6 +39,6 @@
+         <item>ERR_ESTIMATE=0</item>
+         <item>INTERMEDIATE_POS=0</item>
+         <item>GPS_LOCK=0</item>
+-        <item>SUPL_ES=0</item>
++        <item>SUPL_ES=1</item>
+     </string-array>
+ </resources>
+diff --git a/core/res/res/values-mcc302-mnc720/config.xml b/core/res/res/values-mcc302-mnc720/config.xml
+index 7a3540a..eef85e18 100644
+--- a/core/res/res/values-mcc302-mnc720/config.xml
++++ b/core/res/res/values-mcc302-mnc720/config.xml
+@@ -61,7 +61,7 @@
+         <item>ERR_ESTIMATE=0</item>
+         <item>INTERMEDIATE_POS=0</item>
+         <item>GPS_LOCK=0</item>
+-        <item>SUPL_ES=0</item>
++        <item>SUPL_ES=1</item>
+     </string-array>
+ 
+ </resources>
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index 7baed78..fa35c48 100644
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -2325,6 +2325,7 @@
+         <item>NTP_SERVER=north-america.pool.ntp.org</item>
+         <item>SUPL_VER=0x20000</item>
+         <item>SUPL_MODE=1</item>
++        <item>SUPL_ES=1</item>
+     </string-array>
+ 
+     <!-- If there is no preload VM number in the sim card, carriers such as
+-- 
+2.7.4
+

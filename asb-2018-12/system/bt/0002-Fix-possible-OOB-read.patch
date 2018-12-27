@@ -1,0 +1,45 @@
+From ec2b112f4b78c3bf184988ff36b63da19e944340 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Wed, 10 Oct 2018 19:35:37 +0200
+Subject: [PATCH 2/2] Fix possible OOB read
+
+Bug: 74249842
+Change-Id: I0dbe43f0da1f5a8f14bcb69659752de4bd70ca98
+(cherry picked from commit 6e6c347e798bf8195a9a02457edf871a97b1cfad)
+---
+ stack/sdp/sdp_discovery.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/stack/sdp/sdp_discovery.c b/stack/sdp/sdp_discovery.c
+index fcf709f..effbb2e 100644
+--- a/stack/sdp/sdp_discovery.c
++++ b/stack/sdp/sdp_discovery.c
+@@ -292,6 +292,12 @@ static void process_service_search_rsp (tCONN_CB* p_ccb, uint8_t* p_reply,
+     UINT16      total, cur_handles, orig;
+     UINT8       cont_len;
+ 
++    if (p_reply + 8 > p_reply_end) {
++        android_errorWriteLog(0x534e4554, "74249842");
++         sdp_disconnect(p_ccb, SDP_GENERIC_ERROR);
++         return;
++    }
++
+     /* Skip transaction, and param len */
+     p_reply += 4;
+     BE_STREAM_TO_UINT16 (total, p_reply);
+@@ -312,6 +318,12 @@ static void process_service_search_rsp (tCONN_CB* p_ccb, uint8_t* p_reply,
+     if (p_ccb->num_handles > sdp_cb.max_recs_per_search)
+         p_ccb->num_handles = sdp_cb.max_recs_per_search;
+ 
++    if (p_reply + ((p_ccb->num_handles - orig) * 4) + 1 > p_reply_end) {
++        android_errorWriteLog(0x534e4554, "74249842");
++        sdp_disconnect(p_ccb, SDP_GENERIC_ERROR);
++        return;
++    }
++
+     for (xx = orig; xx < p_ccb->num_handles; xx++)
+         BE_STREAM_TO_UINT32 (p_ccb->handles[xx], p_reply);
+ 
+-- 
+2.7.4
+
