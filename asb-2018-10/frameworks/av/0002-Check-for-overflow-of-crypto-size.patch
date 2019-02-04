@@ -1,0 +1,40 @@
+From 2f83119dc322d6808373ebae8d14421b4eac8809 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Tue, 31 Jul 2018 15:12:51 -0700
+Subject: [PATCH] Check for overflow of crypto size
+
+Bug: 111603051
+Test: CTS
+Change-Id: Ib5b1802b9b35769a25c16e2b977308cf7a810606
+(cherry picked from commit d1fd02761236b35a336434367131f71bef7405c9)
+---
+ media/ndk/NdkMediaCodec.cpp | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/media/ndk/NdkMediaCodec.cpp b/media/ndk/NdkMediaCodec.cpp
+index cd0c462..b6cec49 100644
+--- a/media/ndk/NdkMediaCodec.cpp
++++ b/media/ndk/NdkMediaCodec.cpp
+@@ -421,7 +421,18 @@ AMediaCodecCryptoInfo *AMediaCodecCryptoInfo_new(
+         size_t *encryptedbytes) {
+ 
+     // size needed to store all the crypto data
+-    size_t cryptosize = sizeof(AMediaCodecCryptoInfo) + sizeof(size_t) * numsubsamples * 2;
++    size_t cryptosize;
++    // = sizeof(AMediaCodecCryptoInfo) + sizeof(size_t) * numsubsamples * 2;
++    if (numsubsamples > SIZE_MAX / (sizeof(size_t) * 2)) {
++        ALOGE("crypto size overflow");
++        return NULL;
++    }
++    cryptosize = sizeof(size_t) * numsubsamples * 2;
++    if (sizeof(AMediaCodecCryptoInfo) > SIZE_MAX - cryptosize) {
++        ALOGE("crypto size overflow");
++        return NULL;
++    }
++    cryptosize += sizeof(AMediaCodecCryptoInfo);
+     AMediaCodecCryptoInfo *ret = (AMediaCodecCryptoInfo*) malloc(cryptosize);
+     if (!ret) {
+         ALOGE("couldn't allocate %zu bytes", cryptosize);
+-- 
+2.7.4
+

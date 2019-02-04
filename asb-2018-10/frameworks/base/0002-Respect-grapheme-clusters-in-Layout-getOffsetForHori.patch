@@ -1,0 +1,112 @@
+From 98a05bab99fea18dd274c84de6661132ecc28a61 Mon Sep 17 00:00:00 2001
+From: Keisuke Kuroyanagi <ksk@google.com>
+Date: Fri, 8 Jan 2016 19:55:17 +0900
+Subject: [PATCH 2/4] Respect grapheme clusters in
+ Layout#getOffsetForHorizontal.
+
+TextUtils#getOffsetAfter was used for getting the next
+offset in Layout#getOffsetForHorizontal. However, this
+method doesn't treat grapheme clusters properly.
+Changed to use TextLine#getOffsetToLeftRightOf instead of
+TextUtils#getOffsetAfter.
+
+Bug: 25375561
+Change-Id: I96c9e6e5da65adfb5266446ecab852c52628dbb5
+---
+ core/java/android/text/Layout.java | 55 +++++++++++++++++++++-----------------
+ 1 file changed, 31 insertions(+), 24 deletions(-)
+
+diff --git a/core/java/android/text/Layout.java b/core/java/android/text/Layout.java
+index 706d989..22ad634 100644
+--- a/core/java/android/text/Layout.java
++++ b/core/java/android/text/Layout.java
+@@ -1131,24 +1131,30 @@ public abstract class Layout {
+     public int getOffsetForHorizontal(int line, float horiz) {
+         // TODO: use Paint.getOffsetForAdvance to avoid binary search
+         final int lineEndOffset = getLineEnd(line);
++        final int lineStartOffset = getLineStart(line);
++
++        Directions dirs = getLineDirections(line);
++
++        TextLine tl = TextLine.obtain();
++        // XXX: we don't care about tabs as we just use TextLine#getOffsetToLeftRightOf here.
++        tl.set(mPaint, mText, lineStartOffset, lineEndOffset, getParagraphDirection(line), dirs,
++                false, null);
++
+         final int max;
+         if (line == getLineCount() - 1) {
+             max = lineEndOffset;
+         } else {
+-            max = mPaint.getTextRunCursor(mText, 0, mText.length(),
+-                    isRtlCharAt(lineEndOffset) ? Paint.DIRECTION_RTL : Paint.DIRECTION_LTR,
+-                    lineEndOffset, Paint.CURSOR_BEFORE);
++            max = tl.getOffsetToLeftRightOf(lineEndOffset - lineStartOffset,
++                    !isRtlCharAt(lineEndOffset - 1)) + lineStartOffset;
+         }
+-        final int min = getLineStart(line);
+-        Directions dirs = getLineDirections(line);
+-
+-        int best = min;
++        int best = lineStartOffset;
+         float bestdist = Math.abs(getPrimaryHorizontal(best) - horiz);
+ 
+         for (int i = 0; i < dirs.mDirections.length; i += 2) {
+-            int here = min + dirs.mDirections[i];
++            int here = lineStartOffset + dirs.mDirections[i];
+             int there = here + (dirs.mDirections[i+1] & RUN_LENGTH_MASK);
+-            int swap = (dirs.mDirections[i+1] & RUN_RTL_FLAG) != 0 ? -1 : 1;
++            boolean isRtl = (dirs.mDirections[i+1] & RUN_RTL_FLAG) != 0;
++            int swap = isRtl ? -1 : 1;
+ 
+             if (there > max)
+                 there = max;
+@@ -1168,23 +1174,23 @@ public abstract class Layout {
+                 low = here + 1;
+ 
+             if (low < there) {
+-                low = getOffsetAtStartOf(low);
+-
+-                float dist = Math.abs(getPrimaryHorizontal(low) - horiz);
+-
+-                int aft = TextUtils.getOffsetAfter(mText, low);
+-                if (aft < there) {
+-                    float other = Math.abs(getPrimaryHorizontal(aft) - horiz);
+-
+-                    if (other < dist) {
+-                        dist = other;
+-                        low = aft;
++                int aft = tl.getOffsetToLeftRightOf(low - lineStartOffset, isRtl) + lineStartOffset;
++                low = tl.getOffsetToLeftRightOf(aft - lineStartOffset, !isRtl) + lineStartOffset;
++                if (low >= here && low < there) {
++                    float dist = Math.abs(getPrimaryHorizontal(low) - horiz);
++                    if (aft < there) {
++                        float other = Math.abs(getPrimaryHorizontal(aft) - horiz);
++
++                        if (other < dist) {
++                            dist = other;
++                            low = aft;
++                        }
+                     }
+-                }
+ 
+-                if (dist < bestdist) {
+-                    bestdist = dist;
+-                    best = low;
++                    if (dist < bestdist) {
++                        bestdist = dist;
++                        best = low;
++                    }
+                 }
+             }
+ 
+@@ -1203,6 +1209,7 @@ public abstract class Layout {
+             best = max;
+         }
+ 
++        TextLine.recycle(tl);
+         return best;
+     }
+ 
+-- 
+2.7.4
+

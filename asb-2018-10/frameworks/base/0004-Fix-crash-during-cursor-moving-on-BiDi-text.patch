@@ -1,0 +1,41 @@
+From 0aef43a1970eda2fe8e76b468a5d46bd4e6a137b Mon Sep 17 00:00:00 2001
+From: Seigo Nonaka <nona@google.com>
+Date: Thu, 19 Jul 2018 16:22:02 -0700
+Subject: [PATCH 4/4] Fix crash during cursor moving on BiDi text
+
+The crash was introduced by Ib66ef392c19c937718e7101f6d48fac3abe51ad0
+The root cause of the crashing is requesting out-of-line access for the
+horizontal width. This invalid access is silently ignored by
+TextLine#measure() method but new implementation end up with out of
+bounds access.
+
+To makes behavior as old implementation, calling getHorizontal instead
+of accessing measured result array.
+
+Bug: 78464361, 111580019
+Test: Manually done
+Change-Id: I5c5778718f6b397adbb1e4f2cf95e9f635f6e5c8
+(cherry picked from commit 960647d582911ae7ab8b9491097898e6c313aaf1)
+Merged-In: I5c5778718f6b397adbb1e4f2cf95e9f635f6e5c8
+(cherry picked from commit a1076fdaa54ebf56bb32bea43fb278f7470ff307)
+---
+ core/java/android/text/Layout.java | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/android/text/Layout.java b/core/java/android/text/Layout.java
+index e1ad64f..dd82884 100644
+--- a/core/java/android/text/Layout.java
++++ b/core/java/android/text/Layout.java
+@@ -1362,7 +1362,8 @@ public abstract class Layout {
+         }
+ 
+         float get(final int offset) {
+-            if (mHorizontals == null) {
++            if (mHorizontals == null || offset < mLineStartOffset
++                    || offset >= mLineStartOffset + mHorizontals.length) {
+                 return getPrimaryHorizontal(offset);
+             } else {
+                 return mHorizontals[offset - mLineStartOffset];
+-- 
+2.7.4
+
