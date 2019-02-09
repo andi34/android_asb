@@ -1,0 +1,87 @@
+From b429a03decd3f784d6888ecad12982c78ca79af6 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Tue, 2 Oct 2018 16:26:38 +0200
+Subject: [PATCH 4/4] HIDD: Check descriptor length and increase buffer
+
+Since maximum descriptor length is 2048, we need to assign 2054 bytes of
+buffer for another 6 bytes of data. Also added a const for maximum
+descriptor length.
+
+Bug: 113572366
+Test: manual
+Change-Id: Ie2b25c9e1a9f2019cbc7e6fbecbb08b643c87946
+Merged-In: Ie2b25c9e1a9f2019cbc7e6fbecbb08b643c87946
+(cherry picked from commit c0530b211e8a5b43e556c6d47d424b231afb8e99)
+---
+ bta/hd/bta_hd_int.h     |  2 +-
+ stack/hid/hidd_api.c    | 13 ++++++++++++-
+ stack/include/hiddefs.h |  2 ++
+ 3 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/bta/hd/bta_hd_int.h b/bta/hd/bta_hd_int.h
+index e783e53..7e59c1e 100644
+--- a/bta/hd/bta_hd_int.h
++++ b/bta/hd/bta_hd_int.h
+@@ -69,7 +69,7 @@ typedef struct
+ #define BTA_HD_APP_NAME_LEN 50
+ #define BTA_HD_APP_DESCRIPTION_LEN 50
+ #define BTA_HD_APP_PROVIDER_LEN 50
+-#define BTA_HD_APP_DESCRIPTOR_LEN 2048
++#define BTA_HD_APP_DESCRIPTOR_LEN HIDD_APP_DESCRIPTOR_LEN
+ 
+ #define BTA_HD_STATE_DISABLED    0x00
+ #define BTA_HD_STATE_ENABLED     0x01
+diff --git a/stack/hid/hidd_api.c b/stack/hid/hidd_api.c
+index 97e9229..d78525d 100644
+--- a/stack/hid/hidd_api.c
++++ b/stack/hid/hidd_api.c
+@@ -36,6 +36,7 @@
+ #include "btm_api.h"
+ #include "btu.h"
+ #include "wcassert.h"
++#include "log/log.h"
+ 
+ #if HID_DYNAMIC_MEMORY == FALSE
+ tHID_DEV_CTB   hd_cb;
+@@ -295,7 +296,13 @@ tHID_STATUS HID_DevAddRecord(UINT32 handle, char *p_name, char *p_description, c
+             UINT8 *p_buf;
+             UINT8 seq_len = 4 + desc_len;
+ 
+-            p_buf = (UINT8 *) GKI_getbuf(2048);
++            if (desc_len > HIDD_APP_DESCRIPTOR_LEN) {
++                HIDD_TRACE_ERROR3("%s: descriptor length = %d, larger than max %d",
++                                 __func__, desc_len, HIDD_APP_DESCRIPTOR_LEN);
++                return HID_ERR_NOT_REGISTERED;
++            };
++
++            p_buf = (UINT8 *) GKI_getbuf(HIDD_APP_DESCRIPTOR_LEN + 6);
+ 
+             p = p_buf;
+ 
+@@ -310,6 +317,10 @@ tHID_STATUS HID_DevAddRecord(UINT32 handle, char *p_name, char *p_description, c
+             UINT8_TO_BE_STREAM(p, desc_len);
+             ARRAY_TO_BE_STREAM(p, p_desc_data, (int) desc_len);
+ 
++            if (desc_len > HIDD_APP_DESCRIPTOR_LEN - 6) {
++                android_errorWriteLog(0x534e4554, "113572366");
++            }
++
+             result &= SDP_AddAttribute(handle, ATTR_ID_HID_DESCRIPTOR_LIST, DATA_ELE_SEQ_DESC_TYPE,
+                 p - p_buf, p_buf);
+ 
+diff --git a/stack/include/hiddefs.h b/stack/include/hiddefs.h
+index bf5d021..d4a3bac 100644
+--- a/stack/include/hiddefs.h
++++ b/stack/include/hiddefs.h
+@@ -137,6 +137,8 @@ typedef struct desc_info
+ 
+ #define HID_SSR_PARAM_INVALID    0xffff
+ 
++#define HIDD_APP_DESCRIPTOR_LEN 2048
++
+ typedef struct sdp_info
+ {
+     char svc_name[HID_MAX_SVC_NAME_LEN];   /*Service Name */
+-- 
+2.7.4
+

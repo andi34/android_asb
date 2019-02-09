@@ -1,0 +1,42 @@
+From ad11e3731110aeffc4996f614229c6d97923bee1 Mon Sep 17 00:00:00 2001
+From: Myles Watson <mylesgw@google.com>
+Date: Thu, 25 Oct 2018 14:33:33 -0700
+Subject: [PATCH 3/5] HH: Check parameter length in bta_hh_ctrl_dat_act
+
+Bug: 116108738
+Test: send a malformed GET_IDLE command with no parameters
+Change-Id: Ic57e748a06ea6d4fc16868310d3423ee71a7ac8c
+(cherry picked from commit b8fbe73f0d32686e8393bfe07a84b6f0e8829caf)
+---
+ bta/hh/bta_hh_act.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/bta/hh/bta_hh_act.c b/bta/hh/bta_hh_act.c
+index 1c83d07..02f6dc1 100644
+--- a/bta/hh/bta_hh_act.c
++++ b/bta/hh/bta_hh_act.c
+@@ -26,6 +26,7 @@
+ 
+ #if defined(BTA_HH_INCLUDED) && (BTA_HH_INCLUDED == TRUE)
+ 
++#include <log/log.h>
+ #include <string.h>
+ 
+ #include "bta_sys.h"
+@@ -760,6 +761,13 @@ void bta_hh_ctrl_dat_act(tBTA_HH_DEV_CB *p_cb, tBTA_HH_DATA * p_data)
+     APPL_TRACE_DEBUG1("Ctrl DATA received w4: event[%s]",
+                         bta_hh_get_w4_event(p_cb->w4_evt));
+ #endif
++    if (pdata->len == 0)
++    {
++        android_errorWriteLog(0x534e4554, "116108738");
++        p_cb->w4_evt = 0;
++        GKI_freebuf (pdata);
++        return;
++    }
+     hs_data.status  = BTA_HH_OK;
+     hs_data.handle  = p_cb->hid_handle;
+ 
+-- 
+2.7.4
+

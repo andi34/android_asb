@@ -1,0 +1,46 @@
+From 7275378a720fa36c3aa4da2c020b0ffe07bfca75 Mon Sep 17 00:00:00 2001
+From: Jay Shrauner <shrauner@google.com>
+Date: Mon, 2 Mar 2015 12:47:54 -0800
+Subject: [PATCH 2/3] Fix NPE when cursor is null
+
+Bug:19566774
+Change-Id: I9269c81555ba46616628b7bd7997790502d760a3
+---
+ .../android/contacts/interactions/ContactDeletionInteraction.java  | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/com/android/contacts/interactions/ContactDeletionInteraction.java b/src/com/android/contacts/interactions/ContactDeletionInteraction.java
+index 2880f77..f830d16 100644
+--- a/src/com/android/contacts/interactions/ContactDeletionInteraction.java
++++ b/src/com/android/contacts/interactions/ContactDeletionInteraction.java
+@@ -32,6 +32,7 @@ import android.net.Uri;
+ import android.os.Bundle;
+ import android.provider.ContactsContract.Contacts;
+ import android.provider.ContactsContract.Contacts.Entity;
++import android.util.Log;
+ 
+ import com.android.contacts.ContactSaveService;
+ import com.android.contacts.R;
+@@ -48,6 +49,7 @@ import java.util.HashSet;
+ public class ContactDeletionInteraction extends Fragment
+         implements LoaderCallbacks<Cursor>, OnDismissListener {
+ 
++    private static final String TAG = "ContactDeletionInteraction";
+     private static final String FRAGMENT_TAG = "deleteContact";
+ 
+     private static final String KEY_ACTIVE = "active";
+@@ -223,6 +225,11 @@ public class ContactDeletionInteraction extends Fragment
+             return;
+         }
+ 
++        if (cursor == null || cursor.isClosed()) {
++            Log.e(TAG, "Failed to load contacts");
++            return;
++        }
++
+         long contactId = 0;
+         String lookupKey = null;
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,28 @@
+From 4f7dfff5699d73e90dc648eef01ac28dac2cc846 Mon Sep 17 00:00:00 2001
+From: Myles Watson <mylesgw@google.com>
+Date: Thu, 6 Sep 2018 10:57:47 -0700
+Subject: [PATCH 1/2] bta: Pass the correct UUID array size in bta_ag_do_disc
+
+Bug: 113164621
+Test: Connect HSP from a device to the phone
+Change-Id: Iec875cd165ad1cea64c307602bb00b623967c7c7
+(cherry picked from commit 9645b5dd62c8166f10798335768aa2a6c3e05e4c)
+---
+ bta/ag/bta_ag_sdp.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/bta/ag/bta_ag_sdp.c b/bta/ag/bta_ag_sdp.c
+index d708cf2..eececea 100644
+--- a/bta/ag/bta_ag_sdp.c
++++ b/bta/ag/bta_ag_sdp.c
+@@ -442,7 +442,6 @@ void bta_ag_do_disc(tBTA_AG_SCB *p_scb, tBTA_SERVICE_MASK service)
+         if (p_scb->hsp_version >= HSP_VERSION_1_2)
+         {
+             uuid_list[1].uu.uuid16 = UUID_SERVCLASS_HEADSET_HS;
+-            num_uuid = 2;
+         }
+     }
+     /* HSP acceptor; no discovery */
+-- 
+2.7.4
+

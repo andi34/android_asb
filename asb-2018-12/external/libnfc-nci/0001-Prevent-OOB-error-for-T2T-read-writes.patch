@@ -1,0 +1,41 @@
+From e473cd93dc84ef188d3ccb170c968645bc1bf46b Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Fri, 21 Sep 2018 14:04:22 -0700
+Subject: [PATCH] Prevent OOB error for T2T read/writes
+
+Bug: 112161557
+Test: Tag reading, HCE
+Merged-In: If170e107b172a590b53f916b12865a1839a25667
+Change-Id: If170e107b172a590b53f916b12865a1839a25667
+(cherry picked from commit 783bc0052f02c8672fe0b57d1cf94735e2a816c0)
+---
+ src/nfc/tags/rw_t2t_ndef.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/nfc/tags/rw_t2t_ndef.c b/src/nfc/tags/rw_t2t_ndef.c
+index 70ff67e..1da69b3 100644
+--- a/src/nfc/tags/rw_t2t_ndef.c
++++ b/src/nfc/tags/rw_t2t_ndef.c
+@@ -23,6 +23,7 @@
+  *  Reader/Writer mode.
+  *
+  ******************************************************************************/
++#include <log/log.h>
+ #include <string.h>
+ #include "nfc_target.h"
+ 
+@@ -664,6 +665,11 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+ 
+                         /* Extract lockbytes info addressed by this Lock TLV */
+                         xx = 0;
++                        if (count > RW_T2T_MAX_LOCK_BYTES) 
++                        {
++                           count = RW_T2T_MAX_LOCK_BYTES;
++                           android_errorWriteLog(0x534e4554, "112161557");
++                        }
+                         while (xx < count)
+                         {
+                             p_t2t->lockbyte[p_t2t->num_lockbytes].tlv_index     = p_t2t->num_lock_tlvs;
+-- 
+2.7.4
+

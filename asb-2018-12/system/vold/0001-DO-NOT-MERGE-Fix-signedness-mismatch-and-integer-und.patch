@@ -1,0 +1,35 @@
+From 2e397eedff99f4134e389d2f417c2a26f1dfa038 Mon Sep 17 00:00:00 2001
+From: Rubin Xu <rubinxu@google.com>
+Date: Tue, 9 Oct 2018 16:13:38 +0100
+Subject: [PATCH] [DO NOT MERGE] Fix signedness mismatch and integer underflow
+
+persist_get_max_entries() is supposed to return an unsigned integer as the
+maximum number of entries but it also wrongly returns "-1" as an error
+condition. Also fix an issue where an unsigned subtraction in this routine
+could lead to integer underflow.
+
+Bug: 112731440
+Test: manual
+Change-Id: I9672e39bef2c12156dda7806a08c52044962c178
+(cherry picked from commit 19ef1ae99a0138197e43658e84d860d17912a4a0)
+---
+ cryptfs.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/cryptfs.c b/cryptfs.c
+index 6247014..30c7728 100644
+--- a/cryptfs.c
++++ b/cryptfs.c
+@@ -1976,7 +1976,8 @@ static int persist_set_key(char *fieldname, char *value, int encrypted)
+      */
+     if (encrypted) {
+         if(get_crypt_ftr_and_key(&crypt_ftr)) {
+-            return -1;
++           /* Something is wrong, assume no space for entries */
++           return 0;
+         }
+         dsize = crypt_ftr.persist_data_size;
+     } else {
+-- 
+2.7.4
+

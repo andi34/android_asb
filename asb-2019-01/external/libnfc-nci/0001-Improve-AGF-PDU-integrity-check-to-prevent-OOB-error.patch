@@ -1,0 +1,85 @@
+From 25d1003f452a656a7295d4867a83d0d47d64d411 Mon Sep 17 00:00:00 2001
+From: Jack Yu <jackcwyu@google.com>
+Date: Thu, 18 Oct 2018 11:04:43 +0800
+Subject: [PATCH 1/4] Improve AGF PDU integrity check to prevent OOB error
+
+Test: Nfc Enable/Disable; Android Beam; Tag reading
+Bug: 116791157
+Change-Id: I981e867301007b7398d59727f60892824b722735
+(cherry picked from commit eae50694637df88e9d834e9a9c5539c1dd367f63)
+(cherry picked from commit 064f65733004170f13f400d1283e49ed70253f49)
+---
+ src/nfc/llcp/llcp_link.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/src/nfc/llcp/llcp_link.c b/src/nfc/llcp/llcp_link.c
+index 981eaa9..377f22b 100644
+--- a/src/nfc/llcp/llcp_link.c
++++ b/src/nfc/llcp/llcp_link.c
+@@ -23,6 +23,7 @@
+  *
+  ******************************************************************************/
+ 
++#include <log/log.h>
+ #include <string.h>
+ #include "gki.h"
+ #include "nfc_target.h"
+@@ -1126,7 +1127,7 @@ static void llcp_link_proc_agf_pdu (BT_HDR *p_agf)
+ {
+     UINT16 agf_length;
+     UINT8 *p, *p_info, *p_pdu_length;
+-    UINT16 pdu_hdr, pdu_length;
++    UINT16 pdu_hdr, pdu_length, pdu_num;
+     UINT8  dsap, ptype, ssap;
+ 
+     p_agf->len    -= LLCP_PDU_HEADER_SIZE;
+@@ -1137,12 +1138,17 @@ static void llcp_link_proc_agf_pdu (BT_HDR *p_agf)
+     */
+     agf_length = p_agf->len;
+     p = (UINT8 *) (p_agf + 1) + p_agf->offset;
++    pdu_num = 0;
+ 
+     while (agf_length > 0)
+     {
+         if (agf_length > LLCP_PDU_AGF_LEN_SIZE)
+         {
+             BE_STREAM_TO_UINT16 (pdu_length, p);
++            if (pdu_length < LLCP_PDU_HEADER_SIZE) {
++                LLCP_TRACE_ERROR0 ("Received invalid encapsulated PDU");
++                break;
++            }
+             agf_length -= LLCP_PDU_AGF_LEN_SIZE;
+         }
+         else
+@@ -1154,6 +1160,7 @@ static void llcp_link_proc_agf_pdu (BT_HDR *p_agf)
+         {
+             p += pdu_length;
+             agf_length -= pdu_length;
++            pdu_num++;
+         }
+         else
+         {
+@@ -1161,8 +1168,9 @@ static void llcp_link_proc_agf_pdu (BT_HDR *p_agf)
+         }
+     }
+ 
+-    if (agf_length != 0)
++    if (agf_length != 0 || pdu_num < 2)
+     {
++        android_errorWriteLog(0x534e4554, "116791157");
+         LLCP_TRACE_ERROR0 ("llcp_link_proc_agf_pdu (): Received invalid AGF PDU");
+         GKI_freebuf (p_agf);
+         return;
+@@ -1202,6 +1210,9 @@ static void llcp_link_proc_agf_pdu (BT_HDR *p_agf)
+             llcp_link_deactivate (LLCP_LINK_REMOTE_INITIATED);
+             return;
+         }
++        else if (ptype == LLCP_PDU_AGF_TYPE) {
++            LLCP_TRACE_ERROR0 ("AGF PDU shall not be in AGF");
++        }
+         else if (ptype == LLCP_PDU_SYMM_TYPE)
+         {
+             LLCP_TRACE_ERROR0 ("llcp_link_proc_agf_pdu (): SYMM PDU exchange shall not be in AGF");
+-- 
+2.7.4
+

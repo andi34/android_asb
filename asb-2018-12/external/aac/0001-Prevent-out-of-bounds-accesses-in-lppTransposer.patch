@@ -1,0 +1,84 @@
+From ed6db52587a07ae7d1ae735b788be117d0f7cd3e Mon Sep 17 00:00:00 2001
+From: Jean-Michel Trivi <jmtrivi@google.com>
+Date: Mon, 10 Sep 2018 15:50:19 -0700
+Subject: [PATCH] Prevent out of bounds accesses in lppTransposer()
+
+Check validity of pSettings->noOfPatches to prevent out of bounds
+  access in lppTransposer(), which can also cause memSize to be
+  negative.
+
+Bug: 112160868
+Test: see poc in bug
+Change-Id: I789030b116da7f8ea261001b43ef6c677dd58a3d
+Merged-In: I6a2161865d9cb9b51dc37c09d6e3a4a8e5d11f86
+(cherry picked from commit 56ef80d7fec1fd9e201262348a96b8660558105a)
+---
+ libSBRdec/src/lpp_tran.cpp | 35 ++++++++++++++++++++---------------
+ 1 file changed, 20 insertions(+), 15 deletions(-)
+
+diff --git a/libSBRdec/src/lpp_tran.cpp b/libSBRdec/src/lpp_tran.cpp
+index 343aec3..0f63739 100644
+--- a/libSBRdec/src/lpp_tran.cpp
++++ b/libSBRdec/src/lpp_tran.cpp
+@@ -96,6 +96,8 @@ amm-info@iis.fraunhofer.de
+   \sa lppTransposer(), main_audio.cpp, sbr_scale.h, \ref documentationOverview
+ */
+ 
++#include "log/log.h"
++
+ #include "lpp_tran.h"
+ 
+ #include "sbr_ram.h"
+@@ -256,7 +258,6 @@ void lppTransposer (HANDLE_SBR_LPP_TRANS hLppTrans,    /*!< Handle of lpp transp
+   int ovLowBandShift;
+   int lowBandShift;
+ /*  int ovHighBandShift;*/
+-  int targetStopBand;
+ 
+ 
+   alphai[0] = FL2FXCONST_SGL(0.0f);
+@@ -273,23 +274,27 @@ void lppTransposer (HANDLE_SBR_LPP_TRANS hLppTrans,    /*!< Handle of lpp transp
+ 
+   autoCorrLength = pSettings->nCols + pSettings->overlap;
+ 
+-  /* Set upper subbands to zero:
+-     This is required in case that the patches do not cover the complete highband
+-     (because the last patch would be too short).
+-     Possible optimization: Clearing bands up to usb would be sufficient here. */
+-  targetStopBand = patchParam[pSettings->noOfPatches-1].targetStartBand
+-                 + patchParam[pSettings->noOfPatches-1].numBandsInPatch;
+-
+-  int memSize = ((64) - targetStopBand) * sizeof(FIXP_DBL);
+-
+-  if (!useLP) {
++  if (pSettings->noOfPatches > 0) {
++    /* Set upper subbands to zero:
++       This is required in case that the patches do not cover the complete highband
++       (because the last patch would be too short).
++       Possible optimization: Clearing bands up to usb would be sufficient here. */
++    int targetStopBand = patchParam[pSettings->noOfPatches-1].targetStartBand
++                   + patchParam[pSettings->noOfPatches-1].numBandsInPatch;
++    int memSize = ((64) - targetStopBand) * sizeof(FIXP_DBL);
++    if (!useLP) {
++      for (i = startSample; i < stopSampleClear; i++) {
++        FDKmemclear(&qmfBufferReal[i][targetStopBand], memSize);
++        FDKmemclear(&qmfBufferImag[i][targetStopBand], memSize);
++      }
++    } else
+     for (i = startSample; i < stopSampleClear; i++) {
+       FDKmemclear(&qmfBufferReal[i][targetStopBand], memSize);
+-      FDKmemclear(&qmfBufferImag[i][targetStopBand], memSize);
+     }
+-  } else
+-  for (i = startSample; i < stopSampleClear; i++) {
+-    FDKmemclear(&qmfBufferReal[i][targetStopBand], memSize);
++  }
++  else {
++    // Safetynet logging
++    android_errorWriteLog(0x534e4554, "112160868");
+   }
+ 
+   /* init bwIndex for each patch */
+-- 
+2.7.4
+

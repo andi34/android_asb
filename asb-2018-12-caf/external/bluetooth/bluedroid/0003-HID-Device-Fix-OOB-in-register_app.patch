@@ -1,0 +1,78 @@
+From 63d90592587d7e0f9bbf85ee246254ed730814f6 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Wed, 5 Sep 2018 16:39:16 -0700
+Subject: [PATCH 3/4] HID Device: Fix OOB in register_app
+
+Bug: 113037220
+Bug: 113111784
+Test: manual
+Change-Id: I91bcd5032959458b926c479160c7e391b8de313b
+(cherry picked from commit 6aa2d0a5fab28c8829aab4099da0ad450e451c1e)
+---
+ bta/hd/bta_hd_api.c |  6 ++++++
+ btif/src/btif_hd.c  | 11 +++++++++--
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/bta/hd/bta_hd_api.c b/bta/hd/bta_hd_api.c
+index 4fe1898..9fcd963 100644
+--- a/bta/hd/bta_hd_api.c
++++ b/bta/hd/bta_hd_api.c
+@@ -28,6 +28,7 @@
+ 
+ #if defined(BTA_HD_INCLUDED) && (BTA_HD_INCLUDED == TRUE)
+ 
++#include <log/log.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <stdio.h>
+@@ -156,6 +157,11 @@ BTA_API extern void BTA_HdRegisterApp(tBTA_HD_APP_INFO *p_app_info, tBTA_HD_QOS_
+ 
+         p_buf->subclass = p_app_info->subclass;
+ 
++        if (p_app_info->descriptor.dl_len > BTA_HD_APP_DESCRIPTOR_LEN)
++        {
++            p_app_info->descriptor.dl_len = BTA_HD_APP_DESCRIPTOR_LEN;
++            android_errorWriteLog(0x534e4554, "113111784");
++        }        
+         p_buf->d_len = p_app_info->descriptor.dl_len;
+         memcpy(p_buf->d_data, p_app_info->descriptor.dsc_list, p_app_info->descriptor.dl_len);
+ 
+diff --git a/btif/src/btif_hd.c b/btif/src/btif_hd.c
+index a35ab13..54df96b 100644
+--- a/btif/src/btif_hd.c
++++ b/btif/src/btif_hd.c
+@@ -26,15 +26,16 @@
+  *
+  *
+  ***********************************************************************************/
++#define LOG_TAG "BTIF_HD"
++
+ #include <hardware/bluetooth.h>
+ #include <hardware/bt_hd.h>
++#include <log/log.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <errno.h>
+ #include <string.h>
+ 
+-#define LOG_TAG "BTIF_HD"
+-
+ #include "bta_api.h"
+ #include "bta_hd_api.h"
+ 
+@@ -360,6 +361,12 @@ static bt_status_t register_app(bthd_app_param_t *p_app_param, bthd_qos_param_t
+         return BT_STATUS_NOT_READY;
+     }
+ 
++    if (strlen(p_app_param->name) >= 50 ||
++        strlen(p_app_param->description) >= 50 ||
++        strlen(p_app_param->provider) >= 50)
++    {
++        android_errorWriteLog(0x534e4554, "113037220");
++    }
+     app_info.p_name = p_app_param->name;
+     app_info.p_description = p_app_param->description;
+     app_info.p_provider = p_app_param->provider;
+-- 
+2.7.4
+
