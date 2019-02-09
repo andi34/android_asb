@@ -1,0 +1,50 @@
+From d08f7f08c28f1b7c7172441b8985b8dfa71867a3 Mon Sep 17 00:00:00 2001
+From: Fraunhofer IIS FDK <audio-fdk@iis.fraunhofer.de>
+Date: Wed, 15 Aug 2018 14:35:00 +0200
+Subject: [PATCH 1/2] Break audio element loop in case element_count becomes
+ too large.
+
+Bug: 112891564
+Test: atest DecoderTestXheAac ; atest DecoderTestAacDrc
+Change-Id: I35f02d23c0cfd620088291a52d9996a0d5a17199
+(cherry picked from commit 3347cfb91a7ecabf5800d72e936f04ce44752bf3)
+---
+ libAACdec/src/aacdecoder.cpp | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/libAACdec/src/aacdecoder.cpp b/libAACdec/src/aacdecoder.cpp
+index e19c501..d4e0b12 100644
+--- a/libAACdec/src/aacdecoder.cpp
++++ b/libAACdec/src/aacdecoder.cpp
+@@ -1214,8 +1214,14 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
+ 
+     if (! (self->flags & (AC_USAC|AC_RSVD50|AC_ELD|AC_SCALABLE|AC_ER)))
+       type = (MP4_ELEMENT_ID) FDKreadBits(bs,3);
+-    else 
++    else {
++      if (element_count >= (3 * ((8) * 2) + (((8) * 2)) / 2 + 4 * (1) + 1)) {
++        self->frameOK = 0;
++        ErrorStatus = AAC_DEC_PARSE_ERROR;
++        break;
++      }
+       type = self->elements[element_count];
++    }
+ 
+     setHcrType(&self->aacCommonData.overlay.aac.erHcrInfo, type);
+ 
+@@ -1485,6 +1491,12 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
+ 
+       case ID_EXT:
+         {
++          if (element_count >= (3 * ((8) * 2) + (((8) * 2)) / 2 + 4 * (1) + 1))
++          {
++            self->frameOK = 0;
++            ErrorStatus = AAC_DEC_PARSE_ERROR;
++            break;
++          }
+           INT bitCnt = 0;
+ 
+           /* get the remaining bits of this frame */
+-- 
+2.7.4
+

@@ -1,0 +1,35 @@
+From 02df237c74bf67398dd1595cc5dad4119e34cd90 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sun, 13 Jan 2019 11:40:16 +0100
+Subject: [PATCH] Bump Security Patch Level to 2018-11-01
+
+CVE-2018-9524	A-34170870	High     Change 239014
+CVE-2018-9527	A-112159345	Critical Change 239022/239023
+CVE-2018-9540	A-111450417	High     Change 239019
+CVE-2018-9542	A-111896861	High     Change 239020
+CVE-2018-9541	A-111450531	High     Change 239020
+CVE-2018-9523	A-112859604	High     Change 239017
+
+Reference Version: 7.0
+
+Change-Id: I037aae401038123386b2a12531b5a04c773eb26b
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 6b5a86e..8a33b30 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-10-01
++  PLATFORM_SECURITY_PATCH := 2018-11-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

@@ -1,0 +1,39 @@
+From b020d8f88beaa53777ad619a5a21c3843a00340e Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sun, 13 Jan 2019 15:11:03 +0100
+Subject: [PATCH] Bump Security Patch Level to 2018-12-01
+
+CVE-2018-9548	A-112555574	High     Change 239033
+CVE-2018-9549	A-112160868	Critical Change 239038
+CVE-2018-9552	A-113260892	Critical Change 239039
+CVE-2018-9553	A-116615297	High     No external/libvpx in M
+CVE-2018-9554	A-114770654	High     No IMediaExtractor.cpp
+CVE-2018-9555	A-112321180	Critical No fn. l2c_lcc_proc_pdu
+CVE-2018-9557	A-35385357	High     Not publicly available
+CVE-2018-9558	A-112161557	High     Change 240414
+CVE-2018-9559	A-112731440	High     Change 239042
+CVE-2018-9566	A-74249842	High     Change 239041
+
+Reference Version: 7.0
+
+Change-Id: Ia9f18c3af1ab3e49d49da698bb64e0ea04c43607
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 8a33b30..491b2ac 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-11-01
++  PLATFORM_SECURITY_PATCH := 2018-12-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

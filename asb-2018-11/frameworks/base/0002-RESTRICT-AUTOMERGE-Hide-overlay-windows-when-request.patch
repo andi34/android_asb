@@ -1,0 +1,107 @@
+From 2d4af16e110c501012ce6b02b8ff8ea16ded417a Mon Sep 17 00:00:00 2001
+From: Wale Ogunwale <ogunwale@google.com>
+Date: Wed, 16 May 2018 16:42:29 -0700
+Subject: [PATCH 2/2] RESTRICT AUTOMERGE: Hide overlay windows when requesting
+ media projection permission.
+
+1: Cherry-pick ag/4067454 - Setting PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS
+updateNonSystemOverlayWindowsVisibilityIfNeeded on relayoutWindow
+
+2: Cherry-pick ag/3650369 - If PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS changed on
+relayoutWindow() then updateNonSystemOverlayWindowsVisibilityIfNeeded
+
+3: Add permissions to SystemUI to allow it to hide non-system overlays
+
+Bug: 34170870
+Test: manual (see bug for poc)
+Change-Id: I57cb0f390d9a78e721c5ddce49a377d385002753
+(cherry picked from commit 40f7b5832291ec81b921d9d7598447653d926604)
+---
+ packages/SystemUI/AndroidManifest.xml                            | 3 +++
+ .../systemui/media/MediaProjectionPermissionActivity.java        | 7 ++++++-
+ .../core/java/com/android/server/wm/WindowManagerService.java    | 9 ++++++++-
+ 3 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/packages/SystemUI/AndroidManifest.xml b/packages/SystemUI/AndroidManifest.xml
+index 80f4d4c..3187179 100644
+--- a/packages/SystemUI/AndroidManifest.xml
++++ b/packages/SystemUI/AndroidManifest.xml
+@@ -135,6 +135,9 @@
+             android:protectionLevel="signature" />
+     <uses-permission android:name="com.android.systemui.permission.SELF" />
+ 
++    <!-- permission necessary to hide non-system overlay windows from covering up the SystemUI -->
++    <uses-permission android:name="android.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS" />
++
+     <application
+         android:name=".SystemUIApplication"
+         android:persistent="true"
+diff --git a/packages/SystemUI/src/com/android/systemui/media/MediaProjectionPermissionActivity.java b/packages/SystemUI/src/com/android/systemui/media/MediaProjectionPermissionActivity.java
+index adc9b36..acb7012 100644
+--- a/packages/SystemUI/src/com/android/systemui/media/MediaProjectionPermissionActivity.java
++++ b/packages/SystemUI/src/com/android/systemui/media/MediaProjectionPermissionActivity.java
+@@ -16,6 +16,8 @@
+ 
+ package com.android.systemui.media;
+ 
++import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++
+ import android.app.Activity;
+ import android.app.AlertDialog;
+ import android.content.DialogInterface;
+@@ -38,6 +40,7 @@ import android.text.TextUtils;
+ import android.text.style.StyleSpan;
+ import android.util.Log;
+ import android.util.TypedValue;
++import android.view.Window;
+ import android.view.WindowManager;
+ import android.widget.CheckBox;
+ import android.widget.CompoundButton;
+@@ -147,7 +150,9 @@ public class MediaProjectionPermissionActivity extends Activity
+         mDialog.getButton(DialogInterface.BUTTON_POSITIVE).setFilterTouchesWhenObscured(true);
+ 
+         ((CheckBox) mDialog.findViewById(R.id.remember)).setOnCheckedChangeListener(this);
+-        mDialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
++        final Window w = mDialog.getWindow();
++        w.setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
++        w.addPrivateFlags(PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS);
+ 
+         mDialog.show();
+     }
+diff --git a/services/core/java/com/android/server/wm/WindowManagerService.java b/services/core/java/com/android/server/wm/WindowManagerService.java
+index dc72273..281b8c0 100644
+--- a/services/core/java/com/android/server/wm/WindowManagerService.java
++++ b/services/core/java/com/android/server/wm/WindowManagerService.java
+@@ -163,6 +163,7 @@ import static android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER;
+ import static android.view.WindowManager.LayoutParams.LAST_APPLICATION_WINDOW;
+ import static android.view.WindowManager.LayoutParams.LAST_SUB_WINDOW;
+ import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_COMPATIBLE_WINDOW;
++import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
+ import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_KEYGUARD;
+ import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_NO_MOVE_ANIMATION;
+ import static android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
+@@ -3157,6 +3158,11 @@ public class WindowManagerService extends IWindowManager.Stub
+                         | WindowManager.LayoutParams.SYSTEM_UI_VISIBILITY_CHANGED)) != 0) {
+                     win.mLayoutNeeded = true;
+                 }
++
++                if ((flagChanges & PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS) != 0) {
++                    updateNonSystemOverlayWindowsVisibilityIfNeeded(
++                            win, win.mWinAnimator.mSurfaceShown);
++                }
+             }
+ 
+             if (DEBUG_LAYOUT) Slog.v(TAG, "Relayout " + win + ": viewVisibility=" + viewVisibility
+@@ -11867,7 +11873,8 @@ public class WindowManagerService extends IWindowManager.Stub
+     }
+ 
+     void updateNonSystemOverlayWindowsVisibilityIfNeeded(WindowState win, boolean surfaceShown) {
+-        if (!win.hideNonSystemOverlayWindowsWhenVisible()) {
++        if (!win.hideNonSystemOverlayWindowsWhenVisible()
++                && !mHidingNonSystemOverlayWindows.contains(win)) {
+             return;
+         }
+         final boolean systemAlertWindowsHidden = !mHidingNonSystemOverlayWindows.isEmpty();
+-- 
+2.7.4
+
