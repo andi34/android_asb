@@ -1,0 +1,47 @@
+From b2b147276a484ad65cb1e847a6666017e16baf4c Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Tue, 16 Oct 2018 17:10:42 +0800
+Subject: [PATCH 1/4] Prevent Out of bounds read in llcp_dlc
+
+Test: Nfc Enable/Disable; Android Beam; Tag reading
+Bug: 116722267
+Merged-In: I9b5d1ad46ed18862dbb23b2ab2393edc3d0995e6
+Change-Id: I9b5d1ad46ed18862dbb23b2ab2393edc3d0995e6
+(cherry picked from commit e9a57b8c410469de05c14e0ebc53fa021a84a06e)
+(cherry picked from commit b0cd165a602d71ae8748021cd5ee0ef9ebc1ed5b)
+CVE-2018-9593
+---
+ src/nfc/llcp/llcp_dlc.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/nfc/llcp/llcp_dlc.c b/src/nfc/llcp/llcp_dlc.c
+index 95bcac5..d2a1619 100644
+--- a/src/nfc/llcp/llcp_dlc.c
++++ b/src/nfc/llcp/llcp_dlc.c
+@@ -23,6 +23,7 @@
+  *
+  ******************************************************************************/
+ 
++#include <log/log.h>
+ #include <string.h>
+ #include "gki.h"
+ #include "nfc_target.h"
+@@ -883,6 +884,15 @@ void llcp_dlc_proc_i_pdu (UINT8 dsap, UINT8 ssap, UINT16 i_pdu_length, UINT8 *p_
+             p_i_pdu = (UINT8 *) (p_msg + 1) + p_msg->offset;
+         }
+ 
++        if (i_pdu_length < LLCP_PDU_HEADER_SIZE + LLCP_SEQUENCE_SIZE) {
++            android_errorWriteLog(0x534e4554, "116722267");
++            LLCP_TRACE_ERROR1 ("Insufficient I PDU length %d", i_pdu_length);
++            if (p_msg) {
++                GKI_freebuf(p_msg);
++            }
++            return;
++        }
++
+         info_len = i_pdu_length - LLCP_PDU_HEADER_SIZE - LLCP_SEQUENCE_SIZE;
+ 
+         if (info_len > p_dlcb->local_miu)
+-- 
+2.7.4
+

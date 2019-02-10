@@ -1,0 +1,65 @@
+From f0be588a47a3484741aca6c7b7080c419722013e Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Wed, 24 Oct 2018 20:50:02 +0800
+Subject: [PATCH 3/4] Prevent Out of bounds read/write in
+ nfc_ncif_set_config_status
+
+Test: Nfc Enable/Disable; Android Beam; Tag reading
+Bug: 114047681
+Merged-In: Iaba48380879373a4807a9d50634f4f40be97ef81
+Change-Id: Iaba48380879373a4807a9d50634f4f40be97ef81
+(cherry picked from commit 74cf5266c1bb9ee064cbc7e2544909d5d001e429)
+(cherry picked from commit f3b6b4e1502771d94418cd2bc02591eb4379db34)
+CVE-2018-9584
+---
+ src/nfc/nfc/nfc_ncif.c | 32 ++++++++++++++++++++++++++------
+ 1 file changed, 26 insertions(+), 6 deletions(-)
+
+diff --git a/src/nfc/nfc/nfc_ncif.c b/src/nfc/nfc/nfc_ncif.c
+index bae6970..d043f50 100644
+--- a/src/nfc/nfc/nfc_ncif.c
++++ b/src/nfc/nfc/nfc_ncif.c
+@@ -490,14 +490,34 @@ void nfc_ncif_set_config_status (UINT8 *p, UINT8 len)
+     tNFC_RESPONSE   evt_data;
+     if (nfc_cb.p_resp_cback)
+     {
+-        evt_data.set_config.status          = (tNFC_STATUS) *p++;
+-        evt_data.set_config.num_param_id    = NFC_STATUS_OK;
+-        if (evt_data.set_config.status != NFC_STATUS_OK)
++        evt_data.set_config.num_param_id = 0;
++        if (len == 0) {
++           NFC_TRACE_ERROR0 ("Insufficient RSP length");
++           evt_data.set_config.status = NFC_STATUS_SYNTAX_ERROR;
++           (*nfc_cb.p_resp_cback)(NFC_SET_CONFIG_REVT, &evt_data);
++           return;
++        }
++        evt_data.set_config.status = (tNFC_STATUS)*p++;
++        if (evt_data.set_config.status != NFC_STATUS_OK && len > 1)
+         {
+-            evt_data.set_config.num_param_id    = *p++;
+-            STREAM_TO_ARRAY (evt_data.set_config.param_ids, p, evt_data.set_config.num_param_id);
++            evt_data.set_config.num_param_id = *p++;
++            if (evt_data.set_config.num_param_id > NFC_MAX_NUM_IDS)
++            {
++                android_errorWriteLog(0x534e4554, "114047681");
++                NFC_TRACE_ERROR1 ("OOB write num_param_id %d",
++                                   evt_data.set_config.num_param_id);
++                evt_data.set_config.num_param_id = 0;
++            }
++            else if (evt_data.set_config.num_param_id <= len - 2)
++            {
++                STREAM_TO_ARRAY(evt_data.set_config.param_ids, p,
++                                evt_data.set_config.num_param_id);
++            } else {
++                NFC_TRACE_ERROR2 ("Insufficient RSP length %d,num_param_id %d",
++                                   len, evt_data.set_config.num_param_id);
++                evt_data.set_config.num_param_id = 0;
++            }
+         }
+-
+         (*nfc_cb.p_resp_cback) (NFC_SET_CONFIG_REVT, &evt_data);
+     }
+ }
+-- 
+2.7.4
+

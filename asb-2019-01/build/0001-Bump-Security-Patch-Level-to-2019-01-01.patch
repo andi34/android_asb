@@ -1,0 +1,40 @@
+From cbb4f78d3c7f1af3f25bb55bfb968baf2a165621 Mon Sep 17 00:00:00 2001
+From: mse1969 <mse1969@posteo.de>
+Date: Sat, 2 Feb 2019 22:31:09 +0100
+Subject: [PATCH] Bump Security Patch Level to 2019-01-01
+
+CVE-2018-9583	A-112860487	Critical Change	240477
+CVE-2018-9584	A-114047681	High	 Change 240469
+CVE-2018-9585	A-117554809	High	 Change 240470
+CVE-2018-9586	A-116754444	High	 Change 240472
+CVE-2018-9587	A-113597344	High	 Change 240466
+CVE-2018-9588	A-111450156	High	 Change 241258
+CVE-2018-9589	A-111893132	High	 Change 240471
+CVE-2018-9590	A-115900043	High	 Change 240476
+CVE-2018-9591	A-116108738	High	 Change 240473
+CVE-2018-9592	A-116319076	High	 Change 240474
+CVE-2018-9593	A-116722267	High	 Change 240467
+CVE-2018-9594	A-116791157	High	 Change 240468
+
+Reference Version: 7.0
+Change-Id: I36bce7d9c888275f57fe1b3145cf0acca050a5bd
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 491b2ac..3443956 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2018-12-01
++  PLATFORM_SECURITY_PATCH := 2019-01-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

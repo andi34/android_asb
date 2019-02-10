@@ -1,0 +1,52 @@
+From 85bf02a370651eb7471b8336e77016bcf9613f2a Mon Sep 17 00:00:00 2001
+From: Myles Watson <mylesgw@google.com>
+Date: Thu, 25 Oct 2018 15:27:03 -0700
+Subject: [PATCH 2/5] MCAP: Check response length in mca_ccb_hdl_rsp
+
+Bug: 116319076
+Test: Send a short MCAP response
+Change-Id: I0452f7d2c0f4ecccc7a6501773e26b403b116179
+(cherry picked from commit 0ab53ca2af26f70126d6d9d6600d090a720758fa)
+CVE-2018-9592
+---
+ stack/mcap/mca_cact.c | 20 +++++++++++++++++---
+ 1 file changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/stack/mcap/mca_cact.c b/stack/mcap/mca_cact.c
+index 4255a9b..0b63f07 100644
+--- a/stack/mcap/mca_cact.c
++++ b/stack/mcap/mca_cact.c
+@@ -477,13 +477,27 @@ void mca_ccb_hdl_rsp(tMCA_CCB *p_ccb, tMCA_CCB_EVT *p_data)
+     tMCA_RESULT result = MCA_BAD_HANDLE;
+     tMCA_TC_TBL *p_tbl;
+ 
+-    if (p_ccb->p_tx_req)
++    if (p_pkt->len < sizeof(evt_data.hdr.op_code) +
++                     sizeof(evt_data.rsp.rsp_code) +
++                     sizeof(evt_data.hdr.mdl_id))
++    {
++        android_errorWriteLog(0x534e4554, "116319076");
++        MCA_TRACE_ERROR("%s: Response packet is too short", __func__);
++    }
++    else if (p_ccb->p_tx_req)
+     {
+         /* verify that the received response matches the sent request */
+         p = (UINT8 *)(p_pkt + 1) + p_pkt->offset;
+         evt_data.hdr.op_code = *p++;
+-        if ((evt_data.hdr.op_code == 0) ||
+-            ((p_ccb->p_tx_req->op_code + 1) == evt_data.hdr.op_code))
++        if ((evt_data.hdr.op_code == MCA_OP_MDL_CREATE_RSP) &&
++            (p_pkt->len <
++            sizeof(evt_data.hdr.op_code) + sizeof(evt_data.rsp.rsp_code) +
++            sizeof(evt_data.hdr.mdl_id) + sizeof(evt_data.create_cfm.cfg)))
++        {
++            android_errorWriteLog(0x534e4554, "116319076");
++            MCA_TRACE_ERROR("%s: MDL Create Response packet is too short", __func__);
++        } else if ((evt_data.hdr.op_code == 0) ||
++                   ((p_ccb->p_tx_req->op_code + 1) == evt_data.hdr.op_code))
+         {
+             evt_data.rsp.rsp_code = *p++;
+             mca_stop_timer(p_ccb);
+-- 
+2.7.4
+
