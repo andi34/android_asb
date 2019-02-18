@@ -6,13 +6,13 @@
 - Apply all changes
 
 ```
-repo forall -c "git am *.patch"
+repo forall -c "git am *asb.patch"
 ```
 
 - Now delete all local patchfiles again
 
 ```
-repo forall -c "rm -rf *.patch"
+repo forall -c "rm -rf *asb.patch"
 ```
 
 - Add the next ASB folder and start from beginning
