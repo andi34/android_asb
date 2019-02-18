@@ -1,0 +1,59 @@
+From 3bf016d99ef0aeebef1fd708aa143de56718de8d Mon Sep 17 00:00:00 2001
+From: Leon Scroggins III <scroggo@google.com>
+Date: Mon, 22 Oct 2018 13:16:37 -0400
+Subject: [PATCH 2/2] RESTRICT AUTOMERGE: Fix heap buffer overflow
+
+Bug: b/118143775
+Bug: oss-fuzz:11040
+Test: I5fe66d06078f3bc674ceab4fbc8aae2ab67bfe1a
+
+Because we're sampling, the offset ends up the same as the width. Back
+up to the left enough to fit the bytes we will write.
+
+Include SafetyNet logging from
+https://skia-review.googlesource.com/c/skia/+/171227
+
+Change-Id: Ie476a0191b66c2322446b9c0922f630d6e971645
+Reviewed-on: https://skia-review.googlesource.com/c/164262
+(cherry picked from commit 1a1cec98427fdc9e94614580ec42dbe936c47c55)
+---
+ src/codec/SkSwizzler.cpp | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/src/codec/SkSwizzler.cpp b/src/codec/SkSwizzler.cpp
+index 1337368..f4be612 100644
+--- a/src/codec/SkSwizzler.cpp
++++ b/src/codec/SkSwizzler.cpp
+@@ -11,6 +11,10 @@
+ #include "SkSwizzler.h"
+ #include "SkTemplates.h"
+ 
++#ifdef SK_BUILD_FOR_ANDROID_FRAMEWORK
++    #include "SkAndroidFrameworkUtils.h"
++#endif
++
+ static void copy(void* dst, const uint8_t* src, int width, int bpp, int deltaSrc, int offset,
+         const SkPMColor ctable[]) {
+     // This function must not be called if we are sampling.  If we are not
+@@ -937,6 +941,18 @@ int SkSwizzler::onSetSampleX(int sampleX) {
+     fSwizzleWidth = get_scaled_dimension(fSrcWidth, sampleX);
+     fAllocatedWidth = get_scaled_dimension(fDstWidth, sampleX);
+ 
++    if (fDstOffsetBytes > 0) {
++        const size_t dstSwizzleBytes   = fSwizzleWidth   * fDstBPP;
++        const size_t dstAllocatedBytes = fAllocatedWidth * fDstBPP;
++        if (fDstOffsetBytes + dstSwizzleBytes > dstAllocatedBytes) {
++#ifdef SK_BUILD_FOR_ANDROID_FRAMEWORK
++            SkAndroidFrameworkUtils::SafetyNetLog("118143775");
++#endif
++            SkASSERT(dstSwizzleBytes < dstAllocatedBytes);
++            fDstOffsetBytes = dstAllocatedBytes - dstSwizzleBytes;
++        }
++    }
++
+     // The optimized swizzler functions do not support sampling.  Sampled swizzles
+     // are already fast because they skip pixels.  We haven't seen a situation
+     // where speeding up sampling has a significant impact on total decode time.
+-- 
+2.7.4
+

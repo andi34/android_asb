@@ -1,0 +1,268 @@
+From 76ebc3f79a7c1b749276740fcd68b7035aeb7b35 Mon Sep 17 00:00:00 2001
+From: Chienyuan <chienyuanhuang@google.com>
+Date: Tue, 18 Sep 2018 17:13:16 +0800
+Subject: [PATCH] HFP: Check AT command buffer boundary during parsing
+
+* add p_end parameter to tBTA_AG_AT_CMD_CBACK, bta_ag_at_hsp_cback
+  and bta_ag_at_hfp_cback to indicate effective data range of p_arg
+* add checks for buffer copy overflow in bta_ag_at_hsp_cback and
+  bta_ag_at_hfp_cback
+* add packet legnth checks with p_end in bta_ag_parse_cmer
+* add packet length checks with p_end in bta_ag_parse_bac
+
+Bug: 112860487
+Test: testplans/details/218593/3975
+Change-Id: I6bbbc2ba29ad025c7d3ba023d8191af6a11c4aa9
+(cherry picked from commit 28ddbe904bd15c9636063f5431a9360d8e9df8b9)
+---
+ bta/ag/bta_ag_act.c |  2 +-
+ bta/ag/bta_ag_at.c  | 19 +++++++++++++++----
+ bta/ag/bta_ag_at.h  |  2 +-
+ bta/ag/bta_ag_cmd.c | 49 +++++++++++++++++++++++++++++++++++--------------
+ bta/ag/bta_ag_int.h |  4 ++--
+ 5 files changed, 54 insertions(+), 22 deletions(-)
+
+diff --git a/bta/ag/bta_ag_act.c b/bta/ag/bta_ag_act.c
+index fb0de76..2cf1ce1 100644
+--- a/bta/ag/bta_ag_act.c
++++ b/bta/ag/bta_ag_act.c
+@@ -70,7 +70,7 @@ const tBTA_SERVICE_MASK bta_ag_svc_mask[BTA_AG_NUM_IDX] =
+ };
+ 
+ typedef void (*tBTA_AG_ATCMD_CBACK)(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+-                                    char *p_arg, INT16 int_arg);
++                                    char *p_arg, char *p_end, INT16 int_arg);
+ 
+ const tBTA_AG_ATCMD_CBACK bta_ag_at_cback_tbl[BTA_AG_NUM_IDX] =
+ {
+diff --git a/bta/ag/bta_ag_at.c b/bta/ag/bta_ag_at.c
+index 8201e86..22c26a5 100644
+--- a/bta/ag/bta_ag_at.c
++++ b/bta/ag/bta_ag_at.c
+@@ -25,6 +25,8 @@
+ #include <string.h>
+ #include "bt_common.h"
+ #include "bta_ag_at.h"
++#include "bta_ag_int.h"
++#include "log/log.h"
+ #include "utl.h"
+ 
+ /*****************************************************************************
+@@ -77,7 +79,7 @@ void bta_ag_at_reinit(tBTA_AG_AT_CB *p_cb)
+ ** Returns          void
+ **
+ ******************************************************************************/
+-void bta_ag_process_at(tBTA_AG_AT_CB *p_cb)
++void bta_ag_process_at(tBTA_AG_AT_CB *p_cb, char *p_end)
+ {
+     UINT16      idx;
+     UINT8       arg_type;
+@@ -97,6 +99,12 @@ void bta_ag_process_at(tBTA_AG_AT_CB *p_cb)
+     {
+         /* start of argument is p + strlen matching command */
+         p_arg = p_cb->p_cmd_buf + strlen(p_cb->p_at_tbl[idx].p_cmd);
++        if (p_arg > p_end)
++        {
++            (*p_cb->p_err_cback)((tBTA_AG_SCB*)p_cb->p_user, false, NULL);
++            android_errorWriteLog(0x534e4554, "112860487");
++            return;
++        }
+ 
+         /* if no argument */
+         if (p_arg[0] == 0)
+@@ -149,12 +157,14 @@ void bta_ag_process_at(tBTA_AG_AT_CB *p_cb)
+                 else
+                 {
+ 
+-                    (*p_cb->p_cmd_cback)(p_cb->p_user, idx, arg_type, p_arg, int_arg);
++                    (*p_cb->p_cmd_cback)(p_cb->p_user, idx, arg_type, p_arg,
++                                         p_end, int_arg);
+                 }
+             }
+             else
+             {
+-                (*p_cb->p_cmd_cback)(p_cb->p_user, idx, arg_type, p_arg, int_arg);
++                (*p_cb->p_cmd_cback)(p_cb->p_user, idx, arg_type, p_arg,
++                                     p_end, int_arg);
+             }
+         }
+         /* else error */
+@@ -212,8 +222,9 @@ void bta_ag_at_parse(tBTA_AG_AT_CB *p_cb, char *p_buf, UINT16 len)
+                     (p_cb->p_cmd_buf[1] == 'T' || p_cb->p_cmd_buf[1] == 't'))
+                 {
+                     p_save = p_cb->p_cmd_buf;
++                    char* p_end = p_cb->p_cmd_buf + p_cb->cmd_pos;
+                     p_cb->p_cmd_buf += 2;
+-                    bta_ag_process_at(p_cb);
++                    bta_ag_process_at(p_cb, p_end);
+                     p_cb->p_cmd_buf = p_save;
+                 }
+ 
+diff --git a/bta/ag/bta_ag_at.h b/bta/ag/bta_ag_at.h
+index 90d7b0f..c0ba7fb 100644
+--- a/bta/ag/bta_ag_at.h
++++ b/bta/ag/bta_ag_at.h
+@@ -55,7 +55,7 @@ typedef struct
+ 
+ /* callback function executed when command is parsed */
+ typedef void (tBTA_AG_AT_CMD_CBACK)(void *p_user, UINT16 cmd, UINT8 arg_type,
+-                                    char *p_arg, INT16 int_arg);
++                                    char *p_arg, char *p_end, INT16 int_arg);
+ 
+ /* callback function executed to send "ERROR" result code */
+ typedef void (tBTA_AG_AT_ERR_CBACK)(void *p_user, BOOLEAN unknown, char *p_arg);
+diff --git a/bta/ag/bta_ag_cmd.c b/bta/ag/bta_ag_cmd.c
+index 54a8083..0e689de 100644
+--- a/bta/ag/bta_ag_cmd.c
++++ b/bta/ag/bta_ag_cmd.c
+@@ -34,6 +34,7 @@
+ #include "bta_api.h"
+ #include "bta_sys.h"
+ #include "bt_common.h"
++#include "log/log.h"
+ #include "port_api.h"
+ #include "utl.h"
+ #include <cutils/properties.h>
+@@ -603,25 +604,25 @@ static void bta_ag_send_ind(tBTA_AG_SCB *p_scb, UINT16 id, UINT16 value, BOOLEAN
+ ** Returns          TRUE if parsed ok, FALSE otherwise.
+ **
+ *******************************************************************************/
+-static BOOLEAN bta_ag_parse_cmer(char *p_s, BOOLEAN *p_enabled)
++static BOOLEAN bta_ag_parse_cmer(char *p_s, char *p_end, BOOLEAN *p_enabled)
+ {
+     INT16   n[4] = {-1, -1, -1, -1};
+     int     i;
+     char    *p;
+ 
+-    for (i = 0; i < 4; i++)
++    for (i = 0; i < 4; i++, p_s = p + 1)
+     {
+         /* skip to comma delimiter */
+-        for (p = p_s; *p != ',' && *p != 0; p++);
++        for (p = p_s; p < p_end && *p != ',' && *p != 0; p++)
+ 
+         /* get integer value */
+-        *p = 0;
+-        n[i] = utl_str2int(p_s);
+-        p_s = p + 1;
+-        if (p_s == 0)
++        if (p > p_end)
+         {
+-            break;
++            android_errorWriteLog(0x534e4554, "112860487");
++            return false;
+         }
++        *p = 0;
++        n[i] = utl_str2int(p_s);
+     }
+ 
+     /* process values */
+@@ -749,7 +750,8 @@ static BOOLEAN bta_ag_parse_biev(tBTA_AG_SCB *p_scb, char *p_s)
+ ** Returns          Returns bitmap of supported codecs.
+ **
+ *******************************************************************************/
+-static tBTA_AG_PEER_CODEC bta_ag_parse_bac(tBTA_AG_SCB *p_scb, char *p_s)
++static tBTA_AG_PEER_CODEC bta_ag_parse_bac(tBTA_AG_SCB *p_scb, char *p_s,
++                                           char *p_end)
+ {
+     tBTA_AG_PEER_CODEC  retval = BTA_AG_CODEC_NONE;
+     UINT16  uuid_codec;
+@@ -759,9 +761,14 @@ static tBTA_AG_PEER_CODEC bta_ag_parse_bac(tBTA_AG_SCB *p_scb, char *p_s)
+     while(p_s)
+     {
+         /* skip to comma delimiter */
+-        for(p = p_s; *p != ',' && *p != 0; p++);
++        for (p = p_s; p < p_end && *p != ',' && *p != 0; p++)
+ 
+         /* get integre value */
++        if (p > p_end)
++        {
++            android_errorWriteLog(0x534e4554, "112860487");
++            break;
++        }
+         if (*p != 0)
+         {
+             *p = 0;
+@@ -969,7 +976,7 @@ void bta_ag_send_call_inds(tBTA_AG_SCB *p_scb, tBTA_AG_RES result)
+ **
+ *******************************************************************************/
+ void bta_ag_at_hsp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+-                                char *p_arg, INT16 int_arg)
++                                char *p_arg, char *p_end, INT16 int_arg)
+ {
+     tBTA_AG_VAL val;
+ 
+@@ -982,6 +989,13 @@ void bta_ag_at_hsp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+     val.hdr.handle = bta_ag_scb_to_idx(p_scb);
+     val.hdr.app_id = p_scb->app_id;
+     val.num = (UINT16) int_arg;
++
++    if ((p_end - p_arg + 1) >= (long)sizeof(val.str)) {
++        APPL_TRACE_ERROR("%s: p_arg is too long, send error and return", __func__);
++        bta_ag_send_error(p_scb, BTA_AG_ERR_TEXT_TOO_LONG);
++        android_errorWriteLog(0x534e4554, "112860487");
++        return;
++    }
+     strlcpy(val.str, p_arg, BTA_AG_AT_MAX_LEN);
+ 
+     /* call callback with event */
+@@ -999,7 +1013,7 @@ void bta_ag_at_hsp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+ **
+ *******************************************************************************/
+ void bta_ag_at_hfp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+-                                char *p_arg, INT16 int_arg)
++                                char *p_arg, char *p_end, INT16 int_arg)
+ {
+     tBTA_AG_VAL     val;
+     tBTA_AG_EVT   event;
+@@ -1026,6 +1040,13 @@ void bta_ag_at_hfp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+     val.num = int_arg;
+     bdcpy(val.bd_addr, p_scb->peer_addr);
+     memset(val.str, 0, sizeof(val.str));
++
++    if ((p_end - p_arg + 1) >= (long)sizeof(val.str)) {
++        APPL_TRACE_ERROR("%s: p_arg is too long, send error and return", __func__);
++        bta_ag_send_error(p_scb, BTA_AG_ERR_TEXT_TOO_LONG);
++        android_errorWriteLog(0x534e4554, "112860487");
++        return;
++    }
+     strlcpy(val.str, p_arg, BTA_AG_AT_MAX_LEN);
+ 
+     event = bta_ag_hfp_cb_evt[cmd];
+@@ -1179,7 +1200,7 @@ void bta_ag_at_hfp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+ 
+         case BTA_AG_HF_CMD_CMER:
+             /* if parsed ok store setting, send OK */
+-            if (bta_ag_parse_cmer(p_arg, &p_scb->cmer_enabled))
++            if (bta_ag_parse_cmer(p_arg, p_end, &p_scb->cmer_enabled))
+             {
+                 bta_ag_send_ok(p_scb);
+ 
+@@ -1383,7 +1404,7 @@ void bta_ag_at_hfp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+             /* store available codecs from the peer */
+             if((p_scb->peer_features & BTA_AG_PEER_FEAT_CODEC) && (p_scb->features & BTA_AG_FEAT_CODEC))
+             {
+-                p_scb->peer_codecs = bta_ag_parse_bac(p_scb, p_arg);
++                p_scb->peer_codecs = bta_ag_parse_bac(p_scb, p_arg, p_end);
+                 p_scb->codec_updated = TRUE;
+ 
+                 if (p_scb->peer_codecs & BTA_AG_CODEC_MSBC)
+diff --git a/bta/ag/bta_ag_int.h b/bta/ag/bta_ag_int.h
+index c6441fd..e7d6539 100644
+--- a/bta/ag/bta_ag_int.h
++++ b/bta/ag/bta_ag_int.h
+@@ -389,9 +389,9 @@ extern void bta_ag_sco_conn_rsp(tBTA_AG_SCB *p_scb, tBTM_ESCO_CONN_REQ_EVT_DATA
+ 
+ /* AT command functions */
+ extern void bta_ag_at_hsp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+-                                char *p_arg, INT16 int_arg);
++                                char *p_arg, char *p_end, INT16 int_arg);
+ extern void bta_ag_at_hfp_cback(tBTA_AG_SCB *p_scb, UINT16 cmd, UINT8 arg_type,
+-                                char *p_arg, INT16 int_arg);
++                                char *p_arg, char *p_end, INT16 int_arg);
+ extern void bta_ag_at_err_cback(tBTA_AG_SCB *p_scb, BOOLEAN unknown, char *p_arg);
+ extern BOOLEAN bta_ag_inband_enabled(tBTA_AG_SCB *p_scb);
+ extern void bta_ag_send_call_inds(tBTA_AG_SCB *p_scb, tBTA_AG_RES result);
+-- 
+2.7.4
+

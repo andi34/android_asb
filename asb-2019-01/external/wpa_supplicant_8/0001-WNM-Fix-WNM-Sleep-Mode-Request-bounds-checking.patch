@@ -1,0 +1,65 @@
+From 83fa7a1072725500ffe3da74951a073ffc7e2943 Mon Sep 17 00:00:00 2001
+From: Jouni Malinen <jouni@codeaurora.org>
+Date: Mon, 29 Oct 2018 20:48:07 +0200
+Subject: [PATCH] WNM: Fix WNM-Sleep Mode Request bounds checking
+
+ieee802_11_rx_wnmsleep_req() might be called for a short frame that has
+no more payload after the Public Action field, i.e., with len == 0. The
+bounds checking for the payload length was done only for the information
+elements while the one octet Dialog Token field was read
+unconditionally. This could result in reading one octet beyond the end
+of the received frame data.
+
+Depending on driver interface specific mechanism used for fetching the
+frame, this could result in reading one octet beyond the end of a
+stack/hash buffer or reading an uninitialized octet from within a
+buffer. The actual value that was read as the Dialog Token field is not
+used since the function returns immediately after having read this value
+when there is no information elements following the field.
+
+This issue was initially added in commit d32d94dbf47a ("WNM: Add
+WNM-Sleep Mode implementation for AP") (with CONFIG_IEEE80211V=y build
+option) and it remained in place during number of cleanup and fix
+changes in this area and renaming of the build parameter to
+CONFIG_WNM=y. The impacted function was not included in any default
+build without one of the these optional build options being explicitly
+enabled. CONFIG_WNM=y is still documented as "experimental and not
+complete implementation" in hostapd/defconfig. In addition, commit
+114f2830d2c2 ("WNM: Ignore WNM-Sleep Mode Request in wnm_sleep_mode=0
+case") made this function exit before the impact read if WNM-Sleep Mode
+support was not explicitly enabled in runtime configuration
+(wnm_sleep_mode=1 in hostapd.conf).
+
+Fix this by explicitly checking the frame has enough payload before
+reading the Dialog Token field.
+
+Bug: 111893132
+Change-Id: I4b61e22c39d1a5683923eff34e43bb0c509913d4
+Merged-In: I4b61e22c39d1a5683923eff34e43bb0c509913d4
+Signed-off-by: Jouni Malinen <jouni@codeaurora.org>
+(cherry picked from commit 7a543744db8ece2376b019040b5668ede68ebd8b)
+---
+ src/ap/wnm_ap.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/ap/wnm_ap.c b/src/ap/wnm_ap.c
+index 41d50ce..02daa9b 100644
+--- a/src/ap/wnm_ap.c
++++ b/src/ap/wnm_ap.c
+@@ -202,6 +202,13 @@ static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
+ 	u8 *tfsreq_ie_end = NULL;
+ 	u16 tfsreq_ie_len = 0;
+ 
++	if (len < 1) {
++		wpa_printf(MSG_DEBUG,
++			   "WNM: Ignore too short WNM-Sleep Mode Request from "
++			   MACSTR, MAC2STR(addr));
++		return;
++	}
++
+ 	dialog_token = *pos++;
+ 	while (pos + 1 < frm + len) {
+ 		u8 ie_len = pos[1];
+-- 
+2.7.4
+

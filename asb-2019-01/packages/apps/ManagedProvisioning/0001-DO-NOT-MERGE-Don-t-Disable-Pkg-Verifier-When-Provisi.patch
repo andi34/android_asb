@@ -1,0 +1,63 @@
+From cfe1aad218270a9b3700db4ce47862b2c2338419 Mon Sep 17 00:00:00 2001
+From: arangelov <arangelov@google.com>
+Date: Thu, 18 Oct 2018 21:45:26 +0100
+Subject: [PATCH] DO NOT MERGE: Don't Disable Pkg Verifier When Provisioning
+
+Remove code that temporarily disabled the package verifier during DO
+provisioning.  This is no longer necessary, since a user dialog box no
+longer pops up with package verifier on.
+
+Bug: 116754444
+Test: Ran DO provisioning from QR code manually
+Test: com.android.managedprovisioning.task.InstallPackageTaskTest
+Change-Id: I9d4c931b9f1ce0a79298e91035fcf472b375d011
+(cherry picked from commit d4c69259fb13a2e5b9f1a42b240ffd80efc634ad)
+---
+ .../android/managedprovisioning/task/InstallPackageTask.java   | 10 ----------
+ 1 file changed, 10 deletions(-)
+
+diff --git a/src/com/android/managedprovisioning/task/InstallPackageTask.java b/src/com/android/managedprovisioning/task/InstallPackageTask.java
+index 4c7428b..f60f50a 100644
+--- a/src/com/android/managedprovisioning/task/InstallPackageTask.java
++++ b/src/com/android/managedprovisioning/task/InstallPackageTask.java
+@@ -23,7 +23,6 @@ import android.content.pm.ActivityInfo;
+ import android.content.pm.PackageInfo;
+ import android.content.pm.PackageManager;
+ import android.net.Uri;
+-import android.provider.Settings.Global;
+ import android.text.TextUtils;
+ import android.Manifest.permission;
+ 
+@@ -51,7 +50,6 @@ public class InstallPackageTask {
+     private final Callback mCallback;
+ 
+     private PackageManager mPm;
+-    private int mPackageVerifierEnable;
+     private Set<InstallInfo> mPackagesToInstall;
+ 
+     /**
+@@ -98,11 +96,6 @@ public class InstallPackageTask {
+                 installExistingPackage(info);
+ 
+             } else if (packageContentIsCorrect(info.packageName, info.location)) {
+-                // Temporarily turn off package verification.
+-                mPackageVerifierEnable = Global.getInt(mContext.getContentResolver(),
+-                        Global.PACKAGE_VERIFIER_ENABLE, 1);
+-                Global.putInt(mContext.getContentResolver(), Global.PACKAGE_VERIFIER_ENABLE, 0);
+-
+                 // Allow for replacing an existing package.
+                 // Needed in case this task is performed multiple times.
+                 mPm.installPackage(Uri.parse("file://" + info.location),
+@@ -189,9 +182,6 @@ public class InstallPackageTask {
+                 return;
+             }
+         }
+-        // Set package verification flag to its original value.
+-        Global.putInt(mContext.getContentResolver(), Global.PACKAGE_VERIFIER_ENABLE,
+-                mPackageVerifierEnable);
+         mCallback.onSuccess();
+     }
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,31 @@
+From aa4affe172fa47d765fbbeb4310523bec854b627 Mon Sep 17 00:00:00 2001
+From: Vasyl Gello <vasek.gello@gmail.com>
+Date: Thu, 7 Feb 2019 08:13:18 +0200
+Subject: [PATCH] Drop legacy OpenCV from manifest
+
+The only component referencing OpenCV as an optional dependency
+is FFmpeg. But the respected configuration is never built anymore
+and the codebase is so ancient that it was already dropped in O
+and P last month.
+
+Change-Id: I487119e3e4da53dd3c17d24df0d5b5495846309f
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+---
+ aosp.xml | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/aosp.xml b/aosp.xml
+index 7f88a4a..c3215cb 100644
+--- a/aosp.xml
++++ b/aosp.xml
+@@ -255,7 +255,6 @@
+   <project path="external/oauth" name="platform/external/oauth" groups="pdk" />
+   <project path="external/objenesis" name="platform/external/objenesis" groups="pdk" />
+   <project path="external/okhttp" name="platform/external/okhttp" groups="pdk" />
+-  <project path="external/opencv" name="platform/external/opencv" groups="pdk-cw-fs,pdk-fs" />
+   <project path="external/openfst" name="platform/external/openfst" groups="pdk" />
+   <project path="external/openssh" name="platform/external/openssh" groups="pdk" />
+   <project path="external/owasp/sanitizer" name="platform/external/owasp/sanitizer" groups="pdk" />
+-- 
+2.7.4
+

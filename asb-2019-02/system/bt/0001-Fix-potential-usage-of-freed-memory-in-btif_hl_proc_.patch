@@ -1,0 +1,64 @@
+From 9b6e1aff2393e77f0e2baf5fa4be7fd62dcf3f4a Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Tue, 20 Nov 2018 22:31:31 +0100
+Subject: [PATCH 1/2] Fix potential usage of freed memory in
+ btif_hl_proc_sdp_query_cfm
+
+Bug: 116222069
+Test: compilation
+Change-Id: Iebe2c500dfc2806ca321fdcd170e20c680619d4d
+(cherry picked from commit 889efd5b9165ed7641fcd75eabbbef56be2ef5df)
+---
+ bta/hl/bta_hl_main.c | 6 +-----
+ btif/src/btif_hl.c   | 4 ++++
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/bta/hl/bta_hl_main.c b/bta/hl/bta_hl_main.c
+index b4d96cd..8bf2bc6 100644
+--- a/bta/hl/bta_hl_main.c
++++ b/bta/hl/bta_hl_main.c
+@@ -1564,15 +1564,14 @@ static void bta_hl_sdp_query_results(tBTA_HL_CB *p_cb, tBTA_HL_DATA *p_data)
+     tBTA_HL_MCL_CB      *p_mcb =  BTA_HL_GET_MCL_CB_PTR( app_idx,  mcl_idx);
+     tBTA_HL_SDP         *p_sdp=NULL;
+     UINT16              event;
+-    BOOLEAN             release_sdp_buf=FALSE;
+     UNUSED(p_cb);
+ 
+     event = p_data->hdr.event;
+ 
+     if (event == BTA_HL_SDP_QUERY_OK_EVT) {
++        // this is freed in btif_hl_proc_sdp_query_cfm
+         p_sdp = (tBTA_HL_SDP *)osi_malloc(sizeof(tBTA_HL_SDP));
+         memcpy(p_sdp, &p_mcb->sdp, sizeof(tBTA_HL_SDP));
+-        release_sdp_buf = TRUE;
+     } else {
+         status = BTA_HL_STATUS_SDP_FAIL;
+     }
+@@ -1589,9 +1588,6 @@ static void bta_hl_sdp_query_results(tBTA_HL_CB *p_cb, tBTA_HL_DATA *p_data)
+                                p_mcb->bd_addr,p_sdp,status);
+     p_acb->p_cback(BTA_HL_SDP_QUERY_CFM_EVT,(tBTA_HL *) &evt_data );
+ 
+-    if (release_sdp_buf)
+-        osi_free_and_reset((void **)&p_sdp);
+-
+     if (p_data->cch_sdp.release_mcl_cb) {
+         memset(p_mcb, 0, sizeof(tBTA_HL_MCL_CB));
+     } else {
+diff --git a/btif/src/btif_hl.c b/btif/src/btif_hl.c
+index eec9d34..97ca1c2 100644
+--- a/btif/src/btif_hl.c
++++ b/btif/src/btif_hl.c
+@@ -2333,6 +2333,10 @@ static BOOLEAN btif_hl_proc_sdp_query_cfm(tBTA_HL *p_data){
+                 }
+             }
+         }
++
++    // this was allocated in bta_hl_sdp_query_results
++    osi_free_and_reset((void**)&p_data->sdp_query_cfm.p_sdp);
++
+     return status;
+ }
+ 
+-- 
+2.7.4
+

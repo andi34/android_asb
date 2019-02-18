@@ -1,0 +1,95 @@
+From ef2105edc256150b6b1e8dd183656f1f9b0051bb Mon Sep 17 00:00:00 2001
+From: Leon Scroggins III <scroggo@google.com>
+Date: Thu, 8 Nov 2018 09:40:09 -0500
+Subject: [PATCH 1/2] RESTRICT AUTOMERGE: Add
+ SkAndroidFrameworkUtils::SafetyNetLog
+
+Cherry-picked from upstream (minus SkPngCodec-specific
+code):
+https://skia-review.googlesource.com/c/skia/+/170354
+
+Bug: 117838472
+Bug: 118372692
+Bug: 118143775
+Test: Iae4d7f393c892111b12282c5eae31d79912721f9
+Change-Id: I463f8b2c11c07098e9ec24448f66fcafcf6cd76b
+(cherry picked from commit 2277702eee7eb6e99002b6b5248254fe9ffd5f76)
+---
+ Android.mk                                |  1 +
+ include/android/SkAndroidFrameworkUtils.h | 25 +++++++++++++++++++++++++
+ src/android/SkAndroidFrameworkUtils.cpp   | 19 +++++++++++++++++++
+ 3 files changed, 45 insertions(+)
+ create mode 100644 include/android/SkAndroidFrameworkUtils.h
+ create mode 100644 src/android/SkAndroidFrameworkUtils.cpp
+
+diff --git a/Android.mk b/Android.mk
+index 4dbd17b..a501e2c 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -89,6 +89,7 @@ LOCAL_SRC_FILES := \
+ 	src/codec/SkWebpCodec.cpp \
+ 	src/codec/SkCodecImageGenerator.cpp \
+ 	src/ports/SkImageGenerator_skia.cpp \
++	src/android/SkAndroidFrameworkUtils.cpp \
+ 	src/android/SkBitmapRegionCanvas.cpp \
+ 	src/android/SkBitmapRegionCodec.cpp \
+ 	src/android/SkBitmapRegionDecoder.cpp \
+diff --git a/include/android/SkAndroidFrameworkUtils.h b/include/android/SkAndroidFrameworkUtils.h
+new file mode 100644
+index 0000000..abe9599
+--- /dev/null
++++ b/include/android/SkAndroidFrameworkUtils.h
+@@ -0,0 +1,25 @@
++/*
++ * Copyright 2017 Google Inc.
++ *
++ * Use of this source code is governed by a BSD-style license that can be
++ * found in the LICENSE file.
++ */
++
++#ifndef SkAndroidFrameworkUtils_DEFINED
++#define SkAndroidFrameworkUtils_DEFINED
++
++#include "SkTypes.h"
++
++#ifdef SK_BUILD_FOR_ANDROID_FRAMEWORK
++
++/**
++ *  SkAndroidFrameworkUtils expose private APIs used only by Android framework.
++ */
++class SkAndroidFrameworkUtils {
++public:
++    static void SafetyNetLog(const char*);
++};
++
++#endif // SK_BUILD_FOR_ANDROID_FRAMEWORK
++
++#endif // SkAndroidFrameworkUtils_DEFINED
+diff --git a/src/android/SkAndroidFrameworkUtils.cpp b/src/android/SkAndroidFrameworkUtils.cpp
+new file mode 100644
+index 0000000..968b7b7
+--- /dev/null
++++ b/src/android/SkAndroidFrameworkUtils.cpp
+@@ -0,0 +1,19 @@
++/*
++ * Copyright 2017 Google Inc.
++ *
++ * Use of this source code is governed by a BSD-style license that can be
++ * found in the LICENSE file.
++ */
++
++#include "SkAndroidFrameworkUtils.h"
++
++#ifdef SK_BUILD_FOR_ANDROID_FRAMEWORK
++
++#include <log/log.h>
++
++void SkAndroidFrameworkUtils::SafetyNetLog(const char* bugNumber) {
++    android_errorWriteLog(0x534e4554, bugNumber);
++}
++
++#endif // SK_BUILD_FOR_ANDROID_FRAMEWORK
++
+-- 
+2.7.4
+
