@@ -1,0 +1,48 @@
+From 1b99a9c3f8490b616afe17a0f9813fa146cbe969 Mon Sep 17 00:00:00 2001
+From: Tianjie Xu <xunchang@google.com>
+Date: Fri, 7 Sep 2018 15:24:58 -0700
+Subject: [PATCH] DO NOT MERGE: Initialize the ZipArchive to zero before
+ parsing
+
+The fields of the ZipArchive on the stack are not initialized before we
+call libminzip to parse the zip file. As a result, some random memory
+location is freed unintentionally when we close the ZipArchive upon
+parsing failures.
+
+Bug: 35385357
+Test: recompile and run the poc with asan.
+Change-Id: I7e7f8ab4816c84a158af7389e1a889f8fc65f079
+---
+ install.cpp       | 2 +-
+ updater/updater.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/install.cpp b/install.cpp
+index c7d382f..91e0f86 100644
+--- a/install.cpp
++++ b/install.cpp
+@@ -243,7 +243,7 @@ really_install_package(const char *path, bool* wipe_cache, bool needs_mount)
+ 
+     /* Try to open the package.
+      */
+-    ZipArchive zip;
++    ZipArchive zip = {};
+     err = mzOpenZipArchive(map.addr, map.length, &zip);
+     if (err != 0) {
+         LOGE("Can't open %s\n(%s)\n", path, err != -1 ? strerror(err) : "bad");
+diff --git a/updater/updater.c b/updater/updater.c
+index 661f695..f504961 100644
+--- a/updater/updater.c
++++ b/updater/updater.c
+@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
+         printf("failed to map package %s\n", argv[3]);
+         return 3;
+     }
+-    ZipArchive za;
++    ZipArchive za = {};
+     int err;
+     err = mzOpenZipArchive(map.addr, map.length, &za);
+     if (err != 0) {
+-- 
+2.7.4
+
