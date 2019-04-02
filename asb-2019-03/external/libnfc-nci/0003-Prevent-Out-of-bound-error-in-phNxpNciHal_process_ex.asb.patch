@@ -1,0 +1,47 @@
+From 370e48f295f2c663d93a6c3b49a26af89b08c81a Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Tue, 25 Dec 2018 14:37:54 +0800
+Subject: [PATCH 03/10] Prevent Out of bound error in
+ phNxpNciHal_process_ext_rsp
+
+Bug: 118152591
+Test: Nfc Enable/Disable, R/W, P2P
+Change-Id: I53bfc1b7eca4c3306f20488dc5fb8ccf9ed0e330
+(cherry picked from commit 5ff72ad602488ba0b8102d6054fd04cd2d6531ee)
+---
+ halimpl/pn54x/hal/phNxpNciHal_ext.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/halimpl/pn54x/hal/phNxpNciHal_ext.c b/halimpl/pn54x/hal/phNxpNciHal_ext.c
+index 893f986..b7c3159 100644
+--- a/halimpl/pn54x/hal/phNxpNciHal_ext.c
++++ b/halimpl/pn54x/hal/phNxpNciHal_ext.c
+@@ -13,6 +13,7 @@
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
++#include <log/log.h>
+ #include <phNxpNciHal_ext.h>
+ #include <phNxpNciHal.h>
+ #include <phTmlNfc.h>
+@@ -109,6 +110,17 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
+     NFCSTATUS status = NFCSTATUS_SUCCESS;
+     uint16_t rf_technology_length_param = 0;
+ 
++    if (p_ntf[0] == 0x61 && p_ntf[1] == 0x05 && *p_len < 14)
++    {
++      if (*p_len <= 6)
++      {
++        android_errorWriteLog(0x534e4554, "118152591");
++      }
++      NXPLOG_NCIHAL_E("RF_INTF_ACTIVATED_NTF length error!");
++      status = NFCSTATUS_FAILED;
++      return status;
++    }
++
+     if (p_ntf[0] == 0x61 &&
+         p_ntf[1] == 0x05 &&
+         p_ntf[4] == 0x03 &&
+-- 
+2.7.4
+

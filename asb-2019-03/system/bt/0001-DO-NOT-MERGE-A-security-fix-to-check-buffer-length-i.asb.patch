@@ -1,0 +1,69 @@
+From 40af82e751fdf16394fb0f174ee229a2269504da Mon Sep 17 00:00:00 2001
+From: Stanley Tng <stng@google.com>
+Date: Tue, 11 Dec 2018 14:45:13 -0800
+Subject: [PATCH] DO NOT MERGE A security fix to check buffer length in
+ l2c_lcc_proc_pdu
+
+Add check to make sure that data buffer is big enough to read the 2
+bytes for length.
+
+Also, fix a regression from the previous CL that checks the buffer length
+before doing a memcpy. The previous check is too strict causing valid
+sized buffers to be rejected. The length check is incorrect and off by the header size.
+
+Bug: 120665616
+Test: Run the SL4A Test for LE CoC, BleCoCTest
+Merged-In: I30b7a8af11d3a5f974cb39e06b0e3463bebc8e9a
+Change-Id: I30b7a8af11d3a5f974cb39e06b0e3463bebc8e9a
+(cherry picked from commit fcb1994de1f6ee34b8dc6804a2b32e20bf138073)
+(cherry picked from commit 1f1d8b97d80d25023c4c7b04d2aa18d367f4158d)
+(cherry picked from commit 6b2739f309f7719086eb8201b3e1a35ba60035f4)
+(cherry picked from commit c1fcbd5508a75ae3eaf5f311d706d026fee2fe48)
+---
+ stack/l2cap/l2c_fcr.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/stack/l2cap/l2c_fcr.c b/stack/l2cap/l2c_fcr.c
+index 2b041f1..b31a4e1 100644
+--- a/stack/l2cap/l2c_fcr.c
++++ b/stack/l2cap/l2c_fcr.c
+@@ -840,7 +840,17 @@ void l2c_lcc_proc_pdu(tL2C_CCB *p_ccb, BT_HDR *p_buf)
+ 
+     if (p_ccb->is_first_seg)
+     {
++        if (p_buf->len < sizeof(sdu_length))
++        {
++            L2CAP_TRACE_ERROR("%s: buffer length=%d too small. Need at least 2.",
++                              __func__, p_buf->len);
++            android_errorWriteWithInfoLog(0x534e4554, "120665616", -1, NULL, 0);
++            /* Discard the buffer */
++            osi_free(p_buf);
++            return;
++        }
+         STREAM_TO_UINT16(sdu_length, p);
++
+         /* Check the SDU Length with local MTU size */
+         if (sdu_length > p_ccb->local_conn_cfg.mtu)
+         {
+@@ -849,6 +859,9 @@ void l2c_lcc_proc_pdu(tL2C_CCB *p_ccb, BT_HDR *p_buf)
+             return;
+         }
+ 
++        p_buf->len -= sizeof(sdu_length);
++        p_buf->offset += sizeof(sdu_length);
++
+         if (sdu_length < p_buf->len) {
+             L2CAP_TRACE_ERROR("%s: Invalid sdu_length: %d", __func__, sdu_length);
+             android_errorWriteWithInfoLog(0x534e4554, "112321180", -1, NULL, 0);
+@@ -867,8 +880,6 @@ void l2c_lcc_proc_pdu(tL2C_CCB *p_ccb, BT_HDR *p_buf)
+         p_data->len = 0;
+         p_ccb->ble_sdu_length = sdu_length;
+         L2CAP_TRACE_DEBUG ("%s SDU Length = %d",__func__,sdu_length);
+-        p_buf->len -= sizeof(sdu_length);
+-        p_buf->offset += sizeof(sdu_length);
+         p_data->offset = 0;
+ 
+     }
+-- 
+2.7.4
+

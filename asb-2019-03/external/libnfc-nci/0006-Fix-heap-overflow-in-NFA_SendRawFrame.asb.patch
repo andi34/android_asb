@@ -1,0 +1,43 @@
+From 8481ad26c5ddd18ec1c412825fbfbdd0d43f3894 Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Mon, 7 Jan 2019 16:17:48 -0800
+Subject: [PATCH 06/10] Fix heap overflow in NFA_SendRawFrame()
+
+Bug: 120664978
+Test: NFC enable/disable
+Change-Id: I1b6a062fb5bf10364a20e99faf4adef13a478d22
+(cherry picked from commit fc81ec955925391d772214043be62e48a6d65275)
+---
+ src/nfa/dm/nfa_dm_api.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/nfa/dm/nfa_dm_api.c b/src/nfa/dm/nfa_dm_api.c
+index 89f667f..2b55941 100644
+--- a/src/nfa/dm/nfa_dm_api.c
++++ b/src/nfa/dm/nfa_dm_api.c
+@@ -22,7 +22,9 @@
+  *  NFA interface for device management
+  *
+  ******************************************************************************/
++#include <log/log.h>
+ #include <string.h>
++
+ #include "nfa_api.h"
+ #include "nfa_sys.h"
+ #include "nfa_dm_int.h"
+@@ -869,6 +871,12 @@ tNFA_STATUS NFA_SendRawFrame (UINT8  *p_raw_data,
+         return (NFA_STATUS_INVALID_PARAM);
+ 
+     size = BT_HDR_SIZE + NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE + data_len;
++    /* Check for integer overflow */
++    if (size < data_len)
++    {
++        android_errorWriteLog(0x534e4554, "120664978");
++        return NFA_STATUS_INVALID_PARAM;
++    }
+     if ((p_msg = (BT_HDR *) GKI_getbuf (size)) != NULL)
+     {
+         p_msg->event  = NFA_DM_API_RAW_FRAME_EVT;
+-- 
+2.7.4
+

@@ -1,0 +1,31 @@
+From b2198ad600613f5d214e0d1920ba557a78a65d89 Mon Sep 17 00:00:00 2001
+From: Jack Yu <jackcwyu@google.com>
+Date: Tue, 8 Jan 2019 21:20:15 +0800
+Subject: [PATCH 08/10] Prevent OOB read in rw_t3t_act_handle_ndef_detect_rsp()
+
+Test: NFC enable/disable
+Bug: 120428041
+Change-Id: Iecabf9c9b2115371f02eefe3bb1fd1c8875fed45
+(cherry picked from commit 352f23a26c162d5482a11660ea38571b858e0fd4)
+---
+ src/nfc/tags/rw_t3t.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/nfc/tags/rw_t3t.c b/src/nfc/tags/rw_t3t.c
+index 2ed2461..1e5da86 100644
+--- a/src/nfc/tags/rw_t3t.c
++++ b/src/nfc/tags/rw_t3t.c
+@@ -1288,6 +1288,10 @@ void rw_t3t_act_handle_ndef_detect_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+     {
+         evt_data.status = NFC_STATUS_FAILED;
+     }
++    else if (p_msg_rsp->len < (T3T_MSG_RSP_OFFSET_CHECK_DATA + T3T_MSG_BLOCKSIZE)) {
++        evt_data.status = NFC_STATUS_FAILED;
++        android_errorWriteLog(0x534e4554, "120428041");
++    }
+     else
+     {
+         /* Get checksum from received ndef attribute msg */
+-- 
+2.7.4
+

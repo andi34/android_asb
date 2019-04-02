@@ -1,0 +1,48 @@
+From cabcbd4fe9bc549d08d397bf83166481c98d7ba7 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Tue, 5 Mar 2019 00:52:31 +0100
+Subject: [PATCH] Bump Security Patch Level to 2019-03-01
+
+CVE-2018-20346	A-121156452	High	Change 243410
+CVE-2019-1985	A-118694079	High	Change 243422
+CVE-2019-2003	A-116321860	High	Change 243421
+CVE-2019-2004	A-115739809	High	Change 243423
+CVE-2019-1989	A-118399205	Crit.	Change 243408
+CVE-2019-1990	A-118453553	Crit.	Change 243409
+CVE-2019-2009	A-120665616	Crit.	Change 243424
+CVE-2019-2010	A-118152591	High	Change 243413
+CVE-2019-2012	A-120497437	High	Change 243414
+CVE-2019-2013	A-120497583	High	Change 243414
+CVE-2019-2014	A-120499324	High	Change 243417
+CVE-2019-2015	A-120503926	High	Change 243415
+CVE-2019-2016	A-120664978	High	Change 243416
+CVE-2019-2017	A-121035711	High	Change 243420
+CVE-2018-9561	A-111660010	High	Change 243411
+CVE-2018-9563	A-114237888	High	Change 243411
+CVE-2018-9564	A-114238578	High	Change 243411
+CVE-2019-2019	A-115635871	High	Change 243419
+CVE-2019-2020	A-116788646	High	Change 243412
+CVE-2019-2021	A-120428041	High	Change 243418
+CVE-2019-2022	A-120506143	High	Change 243414
+
+Change-Id: I16eca71b15f85304d750213d47bd871aee52a1a9
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 34e983c..5376c6b 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2019-02-05
++    PLATFORM_SECURITY_PATCH := 2019-03-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

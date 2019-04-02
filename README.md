@@ -35,5 +35,6 @@ repo forall -c "rm -rf *.asb.patch"
 
 ### 2019
 
-- https://review.lineageos.org/#/q/topic:n_asb_01-2019+(status:open+OR+status:merged)
-- https://review.lineageos.org/#/q/topic:n_asb_02-2019+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n-asb-2019-1+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:n-asb-2019-2+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:asb-2019.03-cm14+(status:open+OR+status:merged)

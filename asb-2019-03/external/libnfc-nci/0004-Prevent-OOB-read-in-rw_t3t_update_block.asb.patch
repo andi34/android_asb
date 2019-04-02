@@ -1,0 +1,69 @@
+From 03d99af58116f089619410abc850815e21825d69 Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Mon, 7 Jan 2019 17:36:52 -0800
+Subject: [PATCH 04/10] Prevent OOB read in rw_t3t_update_block()
+
+Test: NFC enable/disable
+Bug: 120506143
+Bug: 120497437
+Bug: 120497583
+Change-Id: I839333505a253788e43a48a61eb7a646328c7fec
+(cherry picked from commit 496e85481cf8d394dcf6ed7c1885536b16990f73)
+---
+ src/nfc/tags/rw_t3t.c | 20 ++++++++++++++------
+ 1 file changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/src/nfc/tags/rw_t3t.c b/src/nfc/tags/rw_t3t.c
+index f8ec361..a0640fa 100644
+--- a/src/nfc/tags/rw_t3t.c
++++ b/src/nfc/tags/rw_t3t.c
+@@ -23,7 +23,9 @@
+  *  mode.
+  *
+  ******************************************************************************/
++#include <log/log.h>
+ #include <string.h>
++
+ #include "nfc_target.h"
+ #include "bt_types.h"
+ #include "trace_api.h"
+@@ -1957,6 +1959,11 @@ void rw_t3t_act_handle_fmt_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+         {
+             evt_data.status = NFC_STATUS_FAILED;
+         }
++        else if (p_msg_rsp->len < (T3T_MSG_RSP_OFFSET_CHECK_DATA + T3T_MSG_BLOCKSIZE))
++        {
++            evt_data.status = NFC_STATUS_FAILED;
++            android_errorWriteLog(0x534e4554, "120506143");
++        }
+         else
+         {
+             /* Check if memory configuration (MC) block to see if SYS_OP=1 (NDEF enabled) */
+@@ -2169,17 +2176,18 @@ void rw_t3t_act_handle_sro_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+         {
+             evt_data.status = NFC_STATUS_FAILED;
+         }
++        else if (p_msg_rsp->len < (T3T_MSG_RSP_OFFSET_CHECK_DATA + T3T_MSG_BLOCKSIZE))
++        {
++            evt_data.status = NFC_STATUS_FAILED;
++            android_errorWriteLog(0x534e4554, "120506143");
++        }
+         else
+         {
+             /* Check if memory configuration (MC) block to see if SYS_OP=1 (NDEF enabled) */
+             p_mc = &p_t3t_rsp[T3T_MSG_RSP_OFFSET_CHECK_DATA];  /* Point to MC data of CHECK response */
+ 
+-            if (p_mc[T3T_MSG_FELICALITE_MC_OFFSET_SYS_OP] != 0x01)
+-            {
+-                /* Tag is not currently enabled for NDEF */
+-                evt_data.status = NFC_STATUS_FAILED;
+-            }
+-            else
++            evt_data.status = NFC_STATUS_FAILED;
++            if (p_mc[T3T_MSG_FELICALITE_MC_OFFSET_SYS_OP] == 0x01)
+             {
+                 /* Set MC_SP field with MC[0] = 0x00 & MC[1] = 0xC0 (Hardlock) to change access permission from RW to RO */
+                 p_mc[T3T_MSG_FELICALITE_MC_OFFSET_MC_SP]     = 0x00;
+-- 
+2.7.4
+

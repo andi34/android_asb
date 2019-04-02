@@ -1,0 +1,48 @@
+From a1acf9016fe66fef443479ba87fd12e367f1314a Mon Sep 17 00:00:00 2001
+From: Rakesh Kumar <rakesh.kumar@ittiam.com>
+Date: Mon, 12 Nov 2018 18:00:27 +0530
+Subject: [PATCH] Decoder: Signal IVD_RES_CHANGED error for change in crop
+ params
+
+IVD_RES_CHANGED was not signaled when crop parameters changed, i.e.
+display dimensions changed without change in decode dimensions.
+
+In such cases, if output buffer was allocated as per the current
+dimension being decoded, without IVD_RES_CHANGED signalled, there can be
+an OOB write if the new buffer is smaller than the frame being returned
+as output
+
+Bug: 118453553
+Test: vendor
+Change-Id: Ic74c6fb9612403f75a8f9ddb3a93861bca82cf16
+(cherry picked from commit fdbbd60bfebe48c0539897d7eeeeb5816e59ce1b)
+---
+ decoder/ihevcd_parse_headers.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index b234005..0ad0faf 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1602,6 +1602,18 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+         if((0 >= disp_wd) || (0 >= disp_ht))
+             return IHEVCD_INVALID_PARAMETER;
+ 
++        if((0 != ps_codec->u4_allocate_dynamic_done) &&
++                            ((ps_codec->i4_disp_wd != disp_wd) ||
++                            (ps_codec->i4_disp_ht != disp_ht)))
++        {
++            if(0 == ps_codec->i4_first_pic_done)
++            {
++                return IHEVCD_INVALID_PARAMETER;
++            }
++            ps_codec->i4_reset_flag = 1;
++            return (IHEVCD_ERROR_T)IVD_RES_CHANGED;
++        }
++
+         ps_codec->i4_disp_wd = disp_wd;
+         ps_codec->i4_disp_ht = disp_ht;
+ 
+-- 
+2.7.4
+

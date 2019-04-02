@@ -1,0 +1,1211 @@
+From 34fa8e53a61f63a38c1fdd816bbbd587994b3280 Mon Sep 17 00:00:00 2001
+From: Hui Yu <huiyu@google.com>
+Date: Wed, 19 Dec 2018 18:27:34 -0800
+Subject: [PATCH] RESTRICT AUTOMERGE: Apply security patch to sqlite 3.9.
+
+This patch fixes Magellan SQLite Security Vulnerability as in
+b/121156452
+
+Download from https://www.sqlite.org/src/info/4cb67252d39fc537
+Get the Tarball or ZIP Archive, unzip it on linux machine then run:
+mkdir bld; cd bld; ../configure; make sqlite3.c
+
+Copy sqlite3.c, sqlite3.h, sqlite3ext.h, shell.c from bld directory
+to dist/orig.
+
+dist contains a copy of dist/orig, but with the Android.patch
+file applied.
+
+Bug: 121156452
+
+Test: select sqlite_version() - returns 3.9.3
+Test: cts-tradefed run cts -m CtsDatabaseTestCases -t android.database.sqlite.cts.SQLiteDatabaseTest
+Test: cts-tradefed run cts -m CtsDatabaseTestCases -t android.database.sqlite.cts.SQLiteSecurityTest
+Change-Id: Iad8c3d1d74d8591a75a4c033c8bf9d3956d2fe4f
+(cherry picked from commit e86e209f72f8136f100c782580026c78b3cfa615)
+---
+ README.version         |   5 +-
+ dist/Android.patch     |  28 +++++----
+ dist/orig/sqlite3.c    | 156 +++++++++++++++++++++++++++++++++++--------------
+ dist/orig/sqlite3.h    |  37 +++++++++---
+ dist/orig/sqlite3ext.h |   3 +
+ dist/sqlite3.c         | 156 +++++++++++++++++++++++++++++++++++--------------
+ dist/sqlite3.h         |  37 +++++++++---
+ dist/sqlite3ext.h      |   3 +
+ 8 files changed, 300 insertions(+), 125 deletions(-)
+
+diff --git a/README.version b/README.version
+index 6fe7d18..0c7f39c 100644
+--- a/README.version
++++ b/README.version
+@@ -1,3 +1,4 @@
+-URL: https://sqlite.org/src/tarball/SQLite-69906880.tar.gz?uuid=69906880cee1f246cce494672402e0c7f29bd4ec19c437d26d603870d2bd625d
+-Version: 3.9.2
++URL: https://www.sqlite.org/src/info/4cb67252d39fc537
++Version: 3.9.3 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0
++This patch fixes Magellan SQLite Security Vulnerability as in b/121156452
+ BugComponent: 24950
+diff --git a/dist/Android.patch b/dist/Android.patch
+index f766487..71c3f78 100644
+--- a/dist/Android.patch
++++ b/dist/Android.patch
+@@ -1,6 +1,5 @@
+-diff -r -u -d orig/shell.c ./shell.c
+---- orig/shell.c	2017-07-21 01:25:18.136530117 -0700
+-+++ ./shell.c	2017-07-21 01:25:55.316260658 -0700
++--- orig/shell.c	2018-12-26 11:55:34.963956755 -0800
+++++ shell.c	2018-12-26 11:57:10.134892741 -0800
+ @@ -52,6 +52,12 @@
+  #endif
+  #include <ctype.h>
+@@ -37,10 +36,9 @@ diff -r -u -d orig/shell.c ./shell.c
+    }
+  }
+  
+-diff -r -u -d orig/sqlite3.c ./sqlite3.c
+---- orig/sqlite3.c	2017-07-21 01:25:18.524527313 -0700
+-+++ ./sqlite3.c	2017-07-21 01:25:55.356260367 -0700
+-@@ -26474,6 +26474,13 @@
++--- orig/sqlite3.c	2018-12-26 11:55:34.975956620 -0800
+++++ sqlite3.c	2018-12-26 11:57:10.162892428 -0800
++@@ -26494,6 +26494,13 @@
+  /* #include "sqliteInt.h" */
+  #if SQLITE_OS_UNIX              /* This file is used on unix only */
+  
+@@ -54,7 +52,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+  /*
+  ** There are various methods for file locking used for concurrency
+  ** control:
+-@@ -27028,7 +27035,12 @@
++@@ -27048,7 +27055,12 @@
+  #else
+    { "pread64",      (sqlite3_syscall_ptr)0,          0  },
+  #endif
+@@ -67,7 +65,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+  
+    { "write",        (sqlite3_syscall_ptr)write,      0  },
+  #define osWrite     ((ssize_t(*)(int,const void*,size_t))aSyscall[11].pCurrent)
+-@@ -27046,8 +27058,14 @@
++@@ -27066,8 +27078,14 @@
+  #else
+    { "pwrite64",     (sqlite3_syscall_ptr)0,          0  },
+  #endif
+@@ -82,7 +80,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+  
+    { "fchmod",       (sqlite3_syscall_ptr)fchmod,     0  },
+  #define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
+-@@ -30296,7 +30314,7 @@
++@@ -30316,7 +30334,7 @@
+    SimulateIOError( rc=1 );
+    if( rc!=0 ){
+      storeLastErrno((unixFile*)id, errno);
+@@ -91,7 +89,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+    }
+    *pSize = buf.st_size;
+  
+-@@ -30332,7 +30350,7 @@
++@@ -30352,7 +30370,7 @@
+      struct stat buf;              /* Used to hold return values of fstat() */
+     
+      if( osFstat(pFile->h, &buf) ){
+@@ -100,7 +98,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+      }
+  
+      nSize = ((nByte+pFile->szChunk-1) / pFile->szChunk) * pFile->szChunk;
+-@@ -30917,7 +30935,7 @@
++@@ -30937,7 +30955,7 @@
+      ** with the same permissions.
+      */
+      if( osFstat(pDbFd->h, &sStat) && pInode->bProcessLock==0 ){
+@@ -109,7 +107,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+        goto shm_open_err;
+      }
+  
+-@@ -32264,7 +32282,7 @@
++@@ -32284,7 +32302,7 @@
+        *pUid = sStat.st_uid;
+        *pGid = sStat.st_gid;
+      }else{
+@@ -118,7 +116,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+      }
+    }else if( flags & SQLITE_OPEN_DELETEONCLOSE ){
+      *pMode = 0600;
+-@@ -108062,7 +108080,7 @@
++@@ -108108,7 +108126,7 @@
+    }
+    if( pDb->pSchema->file_format>SQLITE_MAX_FILE_FORMAT ){
+      sqlite3SetString(pzErrMsg, db, "unsupported file format");
+@@ -127,7 +125,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+      goto initone_error_out;
+    }
+  
+-@@ -139799,16 +139817,28 @@
++@@ -139856,16 +139874,28 @@
+    ** module with sqlite.
+    */
+    if( SQLITE_OK==rc 
+diff --git a/dist/orig/sqlite3.c b/dist/orig/sqlite3.c
+index f943a00..7021588 100644
+--- a/dist/orig/sqlite3.c
++++ b/dist/orig/sqlite3.c
+@@ -1,6 +1,6 @@
+ /******************************************************************************
+ ** This file is an amalgamation of many separate C source files from SQLite
+-** version 3.9.2.  By combining all the individual C code files into this 
++** version 3.9.3.  By combining all the individual C code files into this 
+ ** single large file, the entire code can be compiled as a single translation
+ ** unit.  This allows many compilers to do optimizations that would not be
+ ** possible if the files were compiled separately.  Performance improvements
+@@ -325,9 +325,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.9.2"
+-#define SQLITE_VERSION_NUMBER 3009002
+-#define SQLITE_SOURCE_ID      "2017-07-21 07:45:23 69906880cee1f246cce494672402e0c7f29bd4ec19c437d26d603870d2bd625d"
++#define SQLITE_VERSION        "3.9.3"
++#define SQLITE_VERSION_NUMBER 3009003
++#define SQLITE_SOURCE_ID      "2018-12-19 16:03:56 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -3746,6 +3746,15 @@ typedef struct sqlite3_context sqlite3_context;
+ ** [sqlite3_blob_open | incremental BLOB I/O] routines.
+ ** ^A negative value for the zeroblob results in a zero-length BLOB.
+ **
++** ^The sqlite3_bind_pointer(S,I,P) routine causes the I-th parameter in
++** [prepared statement] S to have an SQL value of NULL, but to also be
++** associated with the pointer P.
++** ^The sqlite3_bind_pointer() routine can be used to pass
++** host-language pointers into [application-defined SQL functions].
++** ^A parameter that is initialized using [sqlite3_bind_pointer()] appears
++** to be an ordinary SQL NULL value to everything other than
++** [sqlite3_value_pointer()].
++**
+ ** ^If any of the sqlite3_bind_*() routines are called with a NULL pointer
+ ** for the [prepared statement] or with a prepared statement for which
+ ** [sqlite3_step()] has been called more recently than [sqlite3_reset()],
+@@ -3779,6 +3788,7 @@ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text16(sqlite3_stmt*, int, const void
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text64(sqlite3_stmt*, int, const char*, sqlite3_uint64,
+                          void(*)(void*), unsigned char encoding);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_value(sqlite3_stmt*, int, const sqlite3_value*);
++SQLITE_API int SQLITE_STDCALL sqlite3_bind_pointer(sqlite3_stmt*, int, void*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob(sqlite3_stmt*, int, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob64(sqlite3_stmt*, int, sqlite3_uint64);
+ 
+@@ -4543,6 +4553,11 @@ SQLITE_API SQLITE_DEPRECATED int SQLITE_STDCALL sqlite3_memory_alarm(void(*)(voi
+ ** sqlite3_value_text16be() and sqlite3_value_text16le() interfaces
+ ** extract UTF-16 strings as big-endian and little-endian respectively.
+ **
++** ^If [sqlite3_value] object V was initialized 
++** using [sqlite3_bind_pointer(S,I,P)] or [sqlite3_result_pointer(C,P)], then
++** sqlite3_value_pointer(V) will return the pointer P.  Otherwise,
++** sqlite3_value_pointer(V) returns a NULL.
++**
+ ** ^(The sqlite3_value_numeric_type() interface attempts to apply
+ ** numeric affinity to the value.  This means that an attempt is
+ ** made to convert the value to an integer or floating point.  If
+@@ -4566,11 +4581,11 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_bytes16(sqlite3_value*);
+ SQLITE_API double SQLITE_STDCALL sqlite3_value_double(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_int(sqlite3_value*);
+ SQLITE_API sqlite3_int64 SQLITE_STDCALL sqlite3_value_int64(sqlite3_value*);
+-SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API const unsigned char *SQLITE_STDCALL sqlite3_value_text(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16le(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16be(sqlite3_value*);
++SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_type(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ 
+@@ -4583,10 +4598,6 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ ** information can be used to pass a limited amount of context from
+ ** one SQL function to another.  Use the [sqlite3_result_subtype()]
+ ** routine to set the subtype for the return value of an SQL function.
+-**
+-** SQLite makes no use of subtype itself.  It merely passes the subtype
+-** from the result of one [application-defined SQL function] into the
+-** input of another.
+ */
+ SQLITE_API unsigned int SQLITE_STDCALL sqlite3_value_subtype(sqlite3_value*);
+ 
+@@ -4863,6 +4874,14 @@ typedef void (*sqlite3_destructor_type)(void*);
+ ** [unprotected sqlite3_value] object is required, so either
+ ** kind of [sqlite3_value] object can be used with this interface.
+ **
++** ^The sqlite3_result_pointer(C,P) interface sets the result to an
++** SQL NULL value, just like [sqlite3_result_null(C)], except that it
++** also associates the host-language pointer P with that NULL value such
++** that the pointer can be retrieved within an
++** [application-defined SQL function] using [sqlite3_value_pointer()].
++** This mechanism can be used to pass non-SQL values between
++** application-defined functions.
++**
+ ** If these routines are called from within the different thread
+ ** than the one containing the application-defined function that received
+ ** the [sqlite3_context] pointer, the results are undefined.
+@@ -4879,7 +4898,6 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_error_code(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int64(sqlite3_context*, sqlite3_int64);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_null(sqlite3_context*);
+-SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text(sqlite3_context*, const char*, int, void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text64(sqlite3_context*, const char*,sqlite3_uint64,
+                            void(*)(void*), unsigned char encoding);
+@@ -4887,6 +4905,7 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16(sqlite3_context*, const voi
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16le(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16be(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_value(sqlite3_context*, sqlite3_value*);
++SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_zeroblob(sqlite3_context*, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_result_zeroblob64(sqlite3_context*, sqlite3_uint64 n);
+ 
+@@ -15417,7 +15436,7 @@ struct Mem {
+     double r;           /* Real value used when MEM_Real is set in flags */
+     i64 i;              /* Integer value used when MEM_Int is set in flags */
+     int nZero;          /* Used when bit MEM_Zero is set in flags */
+-    void *pPtr;         /* Pointer when flags==MEM_Ptr|MEM_Null */
++    void *pPtr;         /* Pointer when flags=MEM_NULL and eSubtype='p' */
+     FuncDef *pDef;      /* Used only when flags==MEM_Agg */
+     RowSet *pRowSet;    /* Used only when flags==MEM_RowSet */
+     VdbeFrame *pFrame;  /* Used when flags==MEM_Frame */
+@@ -15467,7 +15486,7 @@ struct Mem {
+ #define MEM_Frame     0x0040   /* Value is a VdbeFrame object */
+ #define MEM_Undefined 0x0080   /* Value is undefined */
+ #define MEM_Cleared   0x0100   /* NULL set by OP_Null, not from data */
+-#define MEM_TypeMask  0x01ff   /* Mask of type bits */
++#define MEM_TypeMask  0x81ff   /* Mask of type bits */
+ 
+ 
+ /* Whenever Mem contains a valid string or blob representation, one of
+@@ -15475,13 +15494,13 @@ struct Mem {
+ ** policy for Mem.z.  The MEM_Term flag tells us whether or not the
+ ** string is \000 or \u0000 terminated
+ */
+-#define MEM_Ptr       0x8000   /* u.pPtr is valid if type==SQLITE_NULL */
+ #define MEM_Term      0x0200   /* String rep is nul terminated */
+ #define MEM_Dyn       0x0400   /* Need to call Mem.xDel() on Mem.z */
+ #define MEM_Static    0x0800   /* Mem.z points to a static string */
+ #define MEM_Ephem     0x1000   /* Mem.z points to an ephemeral string */
+ #define MEM_Agg       0x2000   /* Mem.z points to an agg function context */
+ #define MEM_Zero      0x4000   /* Mem.i contains count of 0s appended to blob */
++#define MEM_Subtype   0x8000 
+ #ifdef SQLITE_OMIT_INCRBLOB
+   #undef MEM_Zero
+   #define MEM_Zero 0x0000
+@@ -15491,7 +15510,7 @@ struct Mem {
+ ** Clear any existing type flags from a Mem and replace them with f
+ */
+ #define MemSetTypeFlag(p, f) \
+-   ((p)->flags = ((p)->flags&~(MEM_TypeMask|MEM_Zero|MEM_Ptr))|f)
++   ((p)->flags = ((p)->flags&~(MEM_TypeMask|MEM_Zero))|f)
+ 
+ /*
+ ** Return true if a memory cell is not marked as invalid.  This macro
+@@ -15686,6 +15705,7 @@ SQLITE_PRIVATE void sqlite3VdbeMemSetInt64(Mem*, i64);
+ #else
+ SQLITE_PRIVATE   void sqlite3VdbeMemSetDouble(Mem*, double);
+ #endif
++SQLITE_PRIVATE void sqlite3VdbeMemSetPointer(Mem*, void*);
+ SQLITE_PRIVATE void sqlite3VdbeMemInit(Mem*,sqlite3*,u16);
+ SQLITE_PRIVATE void sqlite3VdbeMemSetNull(Mem*);
+ SQLITE_PRIVATE void sqlite3VdbeMemSetZeroBlob(Mem*,int);
+@@ -65660,6 +65680,17 @@ SQLITE_PRIVATE void sqlite3VdbeMemSetInt64(Mem *pMem, i64 val){
+   }
+ }
+ 
++/*
++** Set the value stored in *pMem should already be a NULL.
++** Also store a pointer to go with it.
++*/
++SQLITE_PRIVATE void sqlite3VdbeMemSetPointer(Mem *pMem, void *pPtr){
++  assert( pMem->flags==MEM_Null );
++  pMem->flags = MEM_Null|MEM_Subtype;
++  pMem->u.pPtr = pPtr;
++  pMem->eSubtype = 'p';
++}
++
+ #ifndef SQLITE_OMIT_FLOATING_POINT
+ /*
+ ** Delete any previous value and set the value stored in *pMem to val,
+@@ -71144,8 +71175,11 @@ SQLITE_API unsigned int SQLITE_STDCALL sqlite3_value_subtype(sqlite3_value *pVal
+ }
+ SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value *pVal){
+   Mem *p = (Mem*)pVal;
+-  if( (p->flags&(MEM_TypeMask|MEM_Ptr))==(MEM_Null|MEM_Ptr) ) return p->u.pPtr;
+-  return 0;
++  if( (p->flags & MEM_TypeMask)==(MEM_Null|MEM_Subtype) && p->eSubtype=='p' ){
++    return p->u.pPtr;
++  }else{
++    return 0;
++  }
+ }
+ SQLITE_API const unsigned char *SQLITE_STDCALL sqlite3_value_text(sqlite3_value *pVal){
+   return (const unsigned char *)sqlite3ValueText(pVal, SQLITE_UTF8);
+@@ -71321,17 +71355,16 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_int64(sqlite3_context *pCtx, i64 i
+   assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+   sqlite3VdbeMemSetInt64(pCtx->pOut, iVal);
+ }
+-SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context *pCtx, void *pPtr){
+-  assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+-  sqlite3VdbeMemSetNull(pCtx->pOut);
+-  assert( (pCtx->pOut->flags & (MEM_TypeMask|MEM_Ptr))==MEM_Null );
+-  pCtx->pOut->flags |= MEM_Ptr;
+-  pCtx->pOut->u.pPtr = pPtr;
+-}
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_null(sqlite3_context *pCtx){
+   assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+   sqlite3VdbeMemSetNull(pCtx->pOut);
+ }
++SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context *pCtx, void *pPtr){
++  Mem *pOut = pCtx->pOut;
++  assert( sqlite3_mutex_held(pOut->db->mutex) );
++  sqlite3VdbeMemSetNull(pOut);
++  sqlite3VdbeMemSetPointer(pOut, pPtr);
++}
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_subtype(sqlite3_context *pCtx, unsigned int eSubtype){
+   assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+   pCtx->pOut->eSubtype = eSubtype & 0xff;
+@@ -72310,6 +72343,16 @@ SQLITE_API int SQLITE_STDCALL sqlite3_bind_null(sqlite3_stmt *pStmt, int i){
+   }
+   return rc;
+ }
++SQLITE_API int SQLITE_STDCALL sqlite3_bind_pointer(sqlite3_stmt *pStmt, int i, void *pPtr){
++  int rc;
++  Vdbe *p = (Vdbe*)pStmt;
++  rc = vdbeUnbind(p, i);
++  if( rc==SQLITE_OK ){
++    sqlite3VdbeMemSetPointer(&p->aVar[i-1], pPtr);
++    sqlite3_mutex_leave(p->db->mutex);
++  }
++  return rc;
++}
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text( 
+   sqlite3_stmt *pStmt, 
+   int i, 
+@@ -104577,6 +104620,9 @@ struct sqlite3_api_routines {
+ /* Version 3.9.0 and later */
+ #define sqlite3_value_subtype          sqlite3_api->value_subtype
+ #define sqlite3_result_subtype         sqlite3_api->result_subtype
++#define sqlite3_bind_pointer           sqlite3_api->bind_pointer
++#define sqlite3_result_pointer         sqlite3_api->result_pointer
++#define sqlite3_value_pointer          sqlite3_api->value_pointer
+ #endif /* !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION) */
+ 
+ #if !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION)
+@@ -123582,8 +123628,6 @@ static int whereLoopAddBtreeIndex(
+   assert( (pNew->wsFlags & WHERE_TOP_LIMIT)==0 );
+   if( pNew->wsFlags & WHERE_BTM_LIMIT ){
+     opMask = WO_LT|WO_LE;
+-  }else if( /*pProbe->tnum<=0 ||*/ (pSrc->fg.jointype & JT_LEFT)!=0 ){
+-    opMask = WO_EQ|WO_IN|WO_GT|WO_GE|WO_LT|WO_LE;
+   }else{
+     opMask = WO_EQ|WO_IN|WO_GT|WO_GE|WO_LT|WO_LE|WO_ISNULL|WO_IS;
+   }
+@@ -123621,6 +123665,18 @@ static int whereLoopAddBtreeIndex(
+     ** to mix with a lower range bound from some other source */
+     if( pTerm->wtFlags & TERM_LIKEOPT && pTerm->eOperator==WO_LT ) continue;
+ 
++    /* Do not allow IS constraints from the WHERE clause to be used by the
++    ** right table of a LEFT JOIN.  Only constraints in the ON clause are
++    ** allowed */
++    if( (pSrc->fg.jointype & JT_LEFT)!=0
++     && !ExprHasProperty(pTerm->pExpr, EP_FromJoin)
++     && (eOp & (WO_IS|WO_ISNULL))!=0
++    ){
++      testcase( eOp & WO_IS );
++      testcase( eOp & WO_ISNULL );
++      continue;
++    }
++
+     pNew->wsFlags = saved_wsFlags;
+     pNew->u.btree.nEq = saved_nEq;
+     pNew->nLTerm = saved_nLTerm;
+@@ -137653,7 +137709,7 @@ static int fts3ScanInteriorNode(
+   const char *zCsr = zNode;       /* Cursor to iterate through node */
+   const char *zEnd = &zCsr[nNode];/* End of interior node buffer */
+   char *zBuffer = 0;              /* Buffer to load terms into */
+-  int nAlloc = 0;                 /* Size of allocated buffer */
++  i64 nAlloc = 0;                 /* Size of allocated buffer */
+   int isFirstTerm = 1;            /* True when processing first term on page */
+   sqlite3_int64 iChild;           /* Block id of child node to descend to */
+ 
+@@ -137690,14 +137746,14 @@ static int fts3ScanInteriorNode(
+     isFirstTerm = 0;
+     zCsr += fts3GetVarint32(zCsr, &nSuffix);
+     
+-    if( nPrefix<0 || nSuffix<0 || &zCsr[nSuffix]>zEnd ){
++    if( nPrefix<0 || nSuffix<0 || nPrefix>zCsr-zNode || nSuffix>zEnd-zCsr ){
+       rc = FTS_CORRUPT_VTAB;
+       goto finish_scan;
+     }
+-    if( nPrefix+nSuffix>nAlloc ){
++    if( (i64)nPrefix+nSuffix>nAlloc ){
+       char *zNew;
+-      nAlloc = (nPrefix+nSuffix) * 2;
+-      zNew = (char *)sqlite3_realloc(zBuffer, nAlloc);
++      nAlloc = ((i64)nPrefix+nSuffix) * 2;
++      zNew = (char *)sqlite3_realloc64(zBuffer, nAlloc);
+       if( !zNew ){
+         rc = SQLITE_NOMEM;
+         goto finish_scan;
+@@ -139186,8 +139242,7 @@ static int fts3ColumnMethod(
+     */
+     sqlite3_result_int64(pCtx, pCsr->iPrevId);
+   }else if( iCol==p->nColumn ){
+-    /* The extra column whose name is the same as the table.
+-    ** Return a blob which is a pointer to the cursor.  */
++    /* The extra column whose name is the same as the table. */
+     sqlite3_result_pointer(pCtx, pCsr);
+   }else if( iCol==p->nColumn+2 && pCsr->pExpr ){
+     sqlite3_result_int64(pCtx, pCsr->iLangid);
+@@ -139400,15 +139455,17 @@ static int fts3FunctionArg(
+   sqlite3_value *pVal,            /* argv[0] passed to function */
+   Fts3Cursor **ppCsr              /* OUT: Store cursor handle here */
+ ){
+-  Fts3Cursor *pRet = (Fts3Cursor*)sqlite3_value_pointer(pVal);
+-  if( pRet==0 ){
++  int rc;
++  *ppCsr = (Fts3Cursor*)sqlite3_value_pointer(pVal);
++  if( (*ppCsr)!=0 ){
++    rc = SQLITE_OK;
++  }else{
+     char *zErr = sqlite3_mprintf("illegal first argument to %s", zFunc);
+     sqlite3_result_error(pContext, zErr, -1);
+     sqlite3_free(zErr);
+-    return SQLITE_ERROR;
++    rc = SQLITE_ERROR;
+   }
+-  *ppCsr = pRet;
+-  return SQLITE_OK;
++  return rc;
+ }
+ 
+ /*
+@@ -147272,15 +147329,19 @@ static int fts3SegReaderNext(
+   ** safe (no risk of overread) even if the node data is corrupted. */
+   pNext += fts3GetVarint32(pNext, &nPrefix);
+   pNext += fts3GetVarint32(pNext, &nSuffix);
+-  if( nPrefix<0 || nSuffix<=0 
+-   || &pNext[nSuffix]>&pReader->aNode[pReader->nNode] 
++  if( nSuffix<=0 
++   || (&pReader->aNode[pReader->nNode] - pNext)<nSuffix
++   || nPrefix>pReader->nTermAlloc
+   ){
+     return FTS_CORRUPT_VTAB;
+   }
+ 
+-  if( nPrefix+nSuffix>pReader->nTermAlloc ){
+-    int nNew = (nPrefix+nSuffix)*2;
+-    char *zNew = sqlite3_realloc(pReader->zTerm, nNew);
++  /* Both nPrefix and nSuffix were read by fts3GetVarint32() and so are
++  ** between 0 and 0x7FFFFFFF. But the sum of the two may cause integer
++  ** overflow - hence the (i64) casts.  */
++  if( (i64)nPrefix+nSuffix>(i64)pReader->nTermAlloc ){
++    i64 nNew = ((i64)nPrefix+nSuffix)*2;
++    char *zNew = sqlite3_realloc64(pReader->zTerm, nNew);
+     if( !zNew ){
+       return SQLITE_NOMEM;
+     }
+@@ -147302,7 +147363,7 @@ static int fts3SegReaderNext(
+   ** b-tree node. And that the final byte of the doclist is 0x00. If either 
+   ** of these statements is untrue, then the data structure is corrupt.
+   */
+-  if( &pReader->aDoclist[pReader->nDoclist]>&pReader->aNode[pReader->nNode] 
++  if( (&pReader->aNode[pReader->nNode] - pReader->aDoclist)<pReader->nDoclist
+    || (pReader->nPopulate==0 && pReader->aDoclist[pReader->nDoclist-1])
+   ){
+     return FTS_CORRUPT_VTAB;
+@@ -149625,6 +149686,9 @@ static int nodeReaderNext(NodeReader *p){
+     }
+     p->iOff += fts3GetVarint32(&p->aNode[p->iOff], &nSuffix);
+ 
++    if( nPrefix>p->iOff || nSuffix>p->nNode-p->iOff ){
++      return SQLITE_CORRUPT_VTAB;
++    }
+     blobGrowBuffer(&p->term, nPrefix+nSuffix, &rc);
+     if( rc==SQLITE_OK ){
+       memcpy(&p->term.a[nPrefix], &p->aNode[p->iOff], nSuffix);
+@@ -149632,6 +149696,9 @@ static int nodeReaderNext(NodeReader *p){
+       p->iOff += nSuffix;
+       if( p->iChild==0 ){
+         p->iOff += fts3GetVarint32(&p->aNode[p->iOff], &p->nDoclist);
++        if( (p->nNode-p->iOff)<p->nDoclist ){
++          return SQLITE_CORRUPT_VTAB;
++        }
+         p->aDoclist = &p->aNode[p->iOff];
+         p->iOff += p->nDoclist;
+       }
+@@ -149639,7 +149706,6 @@ static int nodeReaderNext(NodeReader *p){
+   }
+ 
+   assert( p->iOff<=p->nNode );
+-
+   return rc;
+ }
+ 
+@@ -180615,7 +180681,7 @@ static void fts5SourceIdFunc(
+   sqlite3_value **apVal           /* Function arguments */
+ ){
+   assert( nArg==0 );
+-  sqlite3_result_text(pCtx, "fts5: 2017-07-21 07:45:23 69906880cee1f246cce494672402e0c7f29bd4ec19c437d26d603870d2bd625d", -1, SQLITE_TRANSIENT);
++  sqlite3_result_text(pCtx, "fts5: 2018-12-19 16:03:56 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0", -1, SQLITE_TRANSIENT);
+ }
+ 
+ static int fts5Init(sqlite3 *db){
+diff --git a/dist/orig/sqlite3.h b/dist/orig/sqlite3.h
+index a0c0e4e..4779f17 100644
+--- a/dist/orig/sqlite3.h
++++ b/dist/orig/sqlite3.h
+@@ -111,9 +111,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.9.2"
+-#define SQLITE_VERSION_NUMBER 3009002
+-#define SQLITE_SOURCE_ID      "2017-07-21 07:45:23 69906880cee1f246cce494672402e0c7f29bd4ec19c437d26d603870d2bd625d"
++#define SQLITE_VERSION        "3.9.3"
++#define SQLITE_VERSION_NUMBER 3009003
++#define SQLITE_SOURCE_ID      "2018-12-19 16:03:56 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -3532,6 +3532,15 @@ typedef struct sqlite3_context sqlite3_context;
+ ** [sqlite3_blob_open | incremental BLOB I/O] routines.
+ ** ^A negative value for the zeroblob results in a zero-length BLOB.
+ **
++** ^The sqlite3_bind_pointer(S,I,P) routine causes the I-th parameter in
++** [prepared statement] S to have an SQL value of NULL, but to also be
++** associated with the pointer P.
++** ^The sqlite3_bind_pointer() routine can be used to pass
++** host-language pointers into [application-defined SQL functions].
++** ^A parameter that is initialized using [sqlite3_bind_pointer()] appears
++** to be an ordinary SQL NULL value to everything other than
++** [sqlite3_value_pointer()].
++**
+ ** ^If any of the sqlite3_bind_*() routines are called with a NULL pointer
+ ** for the [prepared statement] or with a prepared statement for which
+ ** [sqlite3_step()] has been called more recently than [sqlite3_reset()],
+@@ -3565,6 +3574,7 @@ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text16(sqlite3_stmt*, int, const void
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text64(sqlite3_stmt*, int, const char*, sqlite3_uint64,
+                          void(*)(void*), unsigned char encoding);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_value(sqlite3_stmt*, int, const sqlite3_value*);
++SQLITE_API int SQLITE_STDCALL sqlite3_bind_pointer(sqlite3_stmt*, int, void*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob(sqlite3_stmt*, int, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob64(sqlite3_stmt*, int, sqlite3_uint64);
+ 
+@@ -4329,6 +4339,11 @@ SQLITE_API SQLITE_DEPRECATED int SQLITE_STDCALL sqlite3_memory_alarm(void(*)(voi
+ ** sqlite3_value_text16be() and sqlite3_value_text16le() interfaces
+ ** extract UTF-16 strings as big-endian and little-endian respectively.
+ **
++** ^If [sqlite3_value] object V was initialized 
++** using [sqlite3_bind_pointer(S,I,P)] or [sqlite3_result_pointer(C,P)], then
++** sqlite3_value_pointer(V) will return the pointer P.  Otherwise,
++** sqlite3_value_pointer(V) returns a NULL.
++**
+ ** ^(The sqlite3_value_numeric_type() interface attempts to apply
+ ** numeric affinity to the value.  This means that an attempt is
+ ** made to convert the value to an integer or floating point.  If
+@@ -4352,11 +4367,11 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_bytes16(sqlite3_value*);
+ SQLITE_API double SQLITE_STDCALL sqlite3_value_double(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_int(sqlite3_value*);
+ SQLITE_API sqlite3_int64 SQLITE_STDCALL sqlite3_value_int64(sqlite3_value*);
+-SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API const unsigned char *SQLITE_STDCALL sqlite3_value_text(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16le(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16be(sqlite3_value*);
++SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_type(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ 
+@@ -4369,10 +4384,6 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ ** information can be used to pass a limited amount of context from
+ ** one SQL function to another.  Use the [sqlite3_result_subtype()]
+ ** routine to set the subtype for the return value of an SQL function.
+-**
+-** SQLite makes no use of subtype itself.  It merely passes the subtype
+-** from the result of one [application-defined SQL function] into the
+-** input of another.
+ */
+ SQLITE_API unsigned int SQLITE_STDCALL sqlite3_value_subtype(sqlite3_value*);
+ 
+@@ -4649,6 +4660,14 @@ typedef void (*sqlite3_destructor_type)(void*);
+ ** [unprotected sqlite3_value] object is required, so either
+ ** kind of [sqlite3_value] object can be used with this interface.
+ **
++** ^The sqlite3_result_pointer(C,P) interface sets the result to an
++** SQL NULL value, just like [sqlite3_result_null(C)], except that it
++** also associates the host-language pointer P with that NULL value such
++** that the pointer can be retrieved within an
++** [application-defined SQL function] using [sqlite3_value_pointer()].
++** This mechanism can be used to pass non-SQL values between
++** application-defined functions.
++**
+ ** If these routines are called from within the different thread
+ ** than the one containing the application-defined function that received
+ ** the [sqlite3_context] pointer, the results are undefined.
+@@ -4665,7 +4684,6 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_error_code(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int64(sqlite3_context*, sqlite3_int64);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_null(sqlite3_context*);
+-SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text(sqlite3_context*, const char*, int, void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text64(sqlite3_context*, const char*,sqlite3_uint64,
+                            void(*)(void*), unsigned char encoding);
+@@ -4673,6 +4691,7 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16(sqlite3_context*, const voi
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16le(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16be(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_value(sqlite3_context*, sqlite3_value*);
++SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_zeroblob(sqlite3_context*, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_result_zeroblob64(sqlite3_context*, sqlite3_uint64 n);
+ 
+diff --git a/dist/orig/sqlite3ext.h b/dist/orig/sqlite3ext.h
+index 017ea30..2e60e2a 100644
+--- a/dist/orig/sqlite3ext.h
++++ b/dist/orig/sqlite3ext.h
+@@ -514,6 +514,9 @@ struct sqlite3_api_routines {
+ /* Version 3.9.0 and later */
+ #define sqlite3_value_subtype          sqlite3_api->value_subtype
+ #define sqlite3_result_subtype         sqlite3_api->result_subtype
++#define sqlite3_bind_pointer           sqlite3_api->bind_pointer
++#define sqlite3_result_pointer         sqlite3_api->result_pointer
++#define sqlite3_value_pointer          sqlite3_api->value_pointer
+ #endif /* !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION) */
+ 
+ #if !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION)
+diff --git a/dist/sqlite3.c b/dist/sqlite3.c
+index 715b2f7..ce99f63 100644
+--- a/dist/sqlite3.c
++++ b/dist/sqlite3.c
+@@ -1,6 +1,6 @@
+ /******************************************************************************
+ ** This file is an amalgamation of many separate C source files from SQLite
+-** version 3.9.2.  By combining all the individual C code files into this 
++** version 3.9.3.  By combining all the individual C code files into this 
+ ** single large file, the entire code can be compiled as a single translation
+ ** unit.  This allows many compilers to do optimizations that would not be
+ ** possible if the files were compiled separately.  Performance improvements
+@@ -325,9 +325,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.9.2"
+-#define SQLITE_VERSION_NUMBER 3009002
+-#define SQLITE_SOURCE_ID      "2017-07-21 07:45:23 69906880cee1f246cce494672402e0c7f29bd4ec19c437d26d603870d2bd625d"
++#define SQLITE_VERSION        "3.9.3"
++#define SQLITE_VERSION_NUMBER 3009003
++#define SQLITE_SOURCE_ID      "2018-12-19 16:03:56 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -3746,6 +3746,15 @@ typedef struct sqlite3_context sqlite3_context;
+ ** [sqlite3_blob_open | incremental BLOB I/O] routines.
+ ** ^A negative value for the zeroblob results in a zero-length BLOB.
+ **
++** ^The sqlite3_bind_pointer(S,I,P) routine causes the I-th parameter in
++** [prepared statement] S to have an SQL value of NULL, but to also be
++** associated with the pointer P.
++** ^The sqlite3_bind_pointer() routine can be used to pass
++** host-language pointers into [application-defined SQL functions].
++** ^A parameter that is initialized using [sqlite3_bind_pointer()] appears
++** to be an ordinary SQL NULL value to everything other than
++** [sqlite3_value_pointer()].
++**
+ ** ^If any of the sqlite3_bind_*() routines are called with a NULL pointer
+ ** for the [prepared statement] or with a prepared statement for which
+ ** [sqlite3_step()] has been called more recently than [sqlite3_reset()],
+@@ -3779,6 +3788,7 @@ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text16(sqlite3_stmt*, int, const void
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text64(sqlite3_stmt*, int, const char*, sqlite3_uint64,
+                          void(*)(void*), unsigned char encoding);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_value(sqlite3_stmt*, int, const sqlite3_value*);
++SQLITE_API int SQLITE_STDCALL sqlite3_bind_pointer(sqlite3_stmt*, int, void*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob(sqlite3_stmt*, int, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob64(sqlite3_stmt*, int, sqlite3_uint64);
+ 
+@@ -4543,6 +4553,11 @@ SQLITE_API SQLITE_DEPRECATED int SQLITE_STDCALL sqlite3_memory_alarm(void(*)(voi
+ ** sqlite3_value_text16be() and sqlite3_value_text16le() interfaces
+ ** extract UTF-16 strings as big-endian and little-endian respectively.
+ **
++** ^If [sqlite3_value] object V was initialized 
++** using [sqlite3_bind_pointer(S,I,P)] or [sqlite3_result_pointer(C,P)], then
++** sqlite3_value_pointer(V) will return the pointer P.  Otherwise,
++** sqlite3_value_pointer(V) returns a NULL.
++**
+ ** ^(The sqlite3_value_numeric_type() interface attempts to apply
+ ** numeric affinity to the value.  This means that an attempt is
+ ** made to convert the value to an integer or floating point.  If
+@@ -4566,11 +4581,11 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_bytes16(sqlite3_value*);
+ SQLITE_API double SQLITE_STDCALL sqlite3_value_double(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_int(sqlite3_value*);
+ SQLITE_API sqlite3_int64 SQLITE_STDCALL sqlite3_value_int64(sqlite3_value*);
+-SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API const unsigned char *SQLITE_STDCALL sqlite3_value_text(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16le(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16be(sqlite3_value*);
++SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_type(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ 
+@@ -4583,10 +4598,6 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ ** information can be used to pass a limited amount of context from
+ ** one SQL function to another.  Use the [sqlite3_result_subtype()]
+ ** routine to set the subtype for the return value of an SQL function.
+-**
+-** SQLite makes no use of subtype itself.  It merely passes the subtype
+-** from the result of one [application-defined SQL function] into the
+-** input of another.
+ */
+ SQLITE_API unsigned int SQLITE_STDCALL sqlite3_value_subtype(sqlite3_value*);
+ 
+@@ -4863,6 +4874,14 @@ typedef void (*sqlite3_destructor_type)(void*);
+ ** [unprotected sqlite3_value] object is required, so either
+ ** kind of [sqlite3_value] object can be used with this interface.
+ **
++** ^The sqlite3_result_pointer(C,P) interface sets the result to an
++** SQL NULL value, just like [sqlite3_result_null(C)], except that it
++** also associates the host-language pointer P with that NULL value such
++** that the pointer can be retrieved within an
++** [application-defined SQL function] using [sqlite3_value_pointer()].
++** This mechanism can be used to pass non-SQL values between
++** application-defined functions.
++**
+ ** If these routines are called from within the different thread
+ ** than the one containing the application-defined function that received
+ ** the [sqlite3_context] pointer, the results are undefined.
+@@ -4879,7 +4898,6 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_error_code(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int64(sqlite3_context*, sqlite3_int64);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_null(sqlite3_context*);
+-SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text(sqlite3_context*, const char*, int, void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text64(sqlite3_context*, const char*,sqlite3_uint64,
+                            void(*)(void*), unsigned char encoding);
+@@ -4887,6 +4905,7 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16(sqlite3_context*, const voi
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16le(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16be(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_value(sqlite3_context*, sqlite3_value*);
++SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_zeroblob(sqlite3_context*, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_result_zeroblob64(sqlite3_context*, sqlite3_uint64 n);
+ 
+@@ -15417,7 +15436,7 @@ struct Mem {
+     double r;           /* Real value used when MEM_Real is set in flags */
+     i64 i;              /* Integer value used when MEM_Int is set in flags */
+     int nZero;          /* Used when bit MEM_Zero is set in flags */
+-    void *pPtr;         /* Pointer when flags==MEM_Ptr|MEM_Null */
++    void *pPtr;         /* Pointer when flags=MEM_NULL and eSubtype='p' */
+     FuncDef *pDef;      /* Used only when flags==MEM_Agg */
+     RowSet *pRowSet;    /* Used only when flags==MEM_RowSet */
+     VdbeFrame *pFrame;  /* Used when flags==MEM_Frame */
+@@ -15467,7 +15486,7 @@ struct Mem {
+ #define MEM_Frame     0x0040   /* Value is a VdbeFrame object */
+ #define MEM_Undefined 0x0080   /* Value is undefined */
+ #define MEM_Cleared   0x0100   /* NULL set by OP_Null, not from data */
+-#define MEM_TypeMask  0x01ff   /* Mask of type bits */
++#define MEM_TypeMask  0x81ff   /* Mask of type bits */
+ 
+ 
+ /* Whenever Mem contains a valid string or blob representation, one of
+@@ -15475,13 +15494,13 @@ struct Mem {
+ ** policy for Mem.z.  The MEM_Term flag tells us whether or not the
+ ** string is \000 or \u0000 terminated
+ */
+-#define MEM_Ptr       0x8000   /* u.pPtr is valid if type==SQLITE_NULL */
+ #define MEM_Term      0x0200   /* String rep is nul terminated */
+ #define MEM_Dyn       0x0400   /* Need to call Mem.xDel() on Mem.z */
+ #define MEM_Static    0x0800   /* Mem.z points to a static string */
+ #define MEM_Ephem     0x1000   /* Mem.z points to an ephemeral string */
+ #define MEM_Agg       0x2000   /* Mem.z points to an agg function context */
+ #define MEM_Zero      0x4000   /* Mem.i contains count of 0s appended to blob */
++#define MEM_Subtype   0x8000 
+ #ifdef SQLITE_OMIT_INCRBLOB
+   #undef MEM_Zero
+   #define MEM_Zero 0x0000
+@@ -15491,7 +15510,7 @@ struct Mem {
+ ** Clear any existing type flags from a Mem and replace them with f
+ */
+ #define MemSetTypeFlag(p, f) \
+-   ((p)->flags = ((p)->flags&~(MEM_TypeMask|MEM_Zero|MEM_Ptr))|f)
++   ((p)->flags = ((p)->flags&~(MEM_TypeMask|MEM_Zero))|f)
+ 
+ /*
+ ** Return true if a memory cell is not marked as invalid.  This macro
+@@ -15686,6 +15705,7 @@ SQLITE_PRIVATE void sqlite3VdbeMemSetInt64(Mem*, i64);
+ #else
+ SQLITE_PRIVATE   void sqlite3VdbeMemSetDouble(Mem*, double);
+ #endif
++SQLITE_PRIVATE void sqlite3VdbeMemSetPointer(Mem*, void*);
+ SQLITE_PRIVATE void sqlite3VdbeMemInit(Mem*,sqlite3*,u16);
+ SQLITE_PRIVATE void sqlite3VdbeMemSetNull(Mem*);
+ SQLITE_PRIVATE void sqlite3VdbeMemSetZeroBlob(Mem*,int);
+@@ -65678,6 +65698,17 @@ SQLITE_PRIVATE void sqlite3VdbeMemSetInt64(Mem *pMem, i64 val){
+   }
+ }
+ 
++/*
++** Set the value stored in *pMem should already be a NULL.
++** Also store a pointer to go with it.
++*/
++SQLITE_PRIVATE void sqlite3VdbeMemSetPointer(Mem *pMem, void *pPtr){
++  assert( pMem->flags==MEM_Null );
++  pMem->flags = MEM_Null|MEM_Subtype;
++  pMem->u.pPtr = pPtr;
++  pMem->eSubtype = 'p';
++}
++
+ #ifndef SQLITE_OMIT_FLOATING_POINT
+ /*
+ ** Delete any previous value and set the value stored in *pMem to val,
+@@ -71162,8 +71193,11 @@ SQLITE_API unsigned int SQLITE_STDCALL sqlite3_value_subtype(sqlite3_value *pVal
+ }
+ SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value *pVal){
+   Mem *p = (Mem*)pVal;
+-  if( (p->flags&(MEM_TypeMask|MEM_Ptr))==(MEM_Null|MEM_Ptr) ) return p->u.pPtr;
+-  return 0;
++  if( (p->flags & MEM_TypeMask)==(MEM_Null|MEM_Subtype) && p->eSubtype=='p' ){
++    return p->u.pPtr;
++  }else{
++    return 0;
++  }
+ }
+ SQLITE_API const unsigned char *SQLITE_STDCALL sqlite3_value_text(sqlite3_value *pVal){
+   return (const unsigned char *)sqlite3ValueText(pVal, SQLITE_UTF8);
+@@ -71339,17 +71373,16 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_int64(sqlite3_context *pCtx, i64 i
+   assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+   sqlite3VdbeMemSetInt64(pCtx->pOut, iVal);
+ }
+-SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context *pCtx, void *pPtr){
+-  assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+-  sqlite3VdbeMemSetNull(pCtx->pOut);
+-  assert( (pCtx->pOut->flags & (MEM_TypeMask|MEM_Ptr))==MEM_Null );
+-  pCtx->pOut->flags |= MEM_Ptr;
+-  pCtx->pOut->u.pPtr = pPtr;
+-}
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_null(sqlite3_context *pCtx){
+   assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+   sqlite3VdbeMemSetNull(pCtx->pOut);
+ }
++SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context *pCtx, void *pPtr){
++  Mem *pOut = pCtx->pOut;
++  assert( sqlite3_mutex_held(pOut->db->mutex) );
++  sqlite3VdbeMemSetNull(pOut);
++  sqlite3VdbeMemSetPointer(pOut, pPtr);
++}
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_subtype(sqlite3_context *pCtx, unsigned int eSubtype){
+   assert( sqlite3_mutex_held(pCtx->pOut->db->mutex) );
+   pCtx->pOut->eSubtype = eSubtype & 0xff;
+@@ -72328,6 +72361,16 @@ SQLITE_API int SQLITE_STDCALL sqlite3_bind_null(sqlite3_stmt *pStmt, int i){
+   }
+   return rc;
+ }
++SQLITE_API int SQLITE_STDCALL sqlite3_bind_pointer(sqlite3_stmt *pStmt, int i, void *pPtr){
++  int rc;
++  Vdbe *p = (Vdbe*)pStmt;
++  rc = vdbeUnbind(p, i);
++  if( rc==SQLITE_OK ){
++    sqlite3VdbeMemSetPointer(&p->aVar[i-1], pPtr);
++    sqlite3_mutex_leave(p->db->mutex);
++  }
++  return rc;
++}
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text( 
+   sqlite3_stmt *pStmt, 
+   int i, 
+@@ -104595,6 +104638,9 @@ struct sqlite3_api_routines {
+ /* Version 3.9.0 and later */
+ #define sqlite3_value_subtype          sqlite3_api->value_subtype
+ #define sqlite3_result_subtype         sqlite3_api->result_subtype
++#define sqlite3_bind_pointer           sqlite3_api->bind_pointer
++#define sqlite3_result_pointer         sqlite3_api->result_pointer
++#define sqlite3_value_pointer          sqlite3_api->value_pointer
+ #endif /* !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION) */
+ 
+ #if !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION)
+@@ -123600,8 +123646,6 @@ static int whereLoopAddBtreeIndex(
+   assert( (pNew->wsFlags & WHERE_TOP_LIMIT)==0 );
+   if( pNew->wsFlags & WHERE_BTM_LIMIT ){
+     opMask = WO_LT|WO_LE;
+-  }else if( /*pProbe->tnum<=0 ||*/ (pSrc->fg.jointype & JT_LEFT)!=0 ){
+-    opMask = WO_EQ|WO_IN|WO_GT|WO_GE|WO_LT|WO_LE;
+   }else{
+     opMask = WO_EQ|WO_IN|WO_GT|WO_GE|WO_LT|WO_LE|WO_ISNULL|WO_IS;
+   }
+@@ -123639,6 +123683,18 @@ static int whereLoopAddBtreeIndex(
+     ** to mix with a lower range bound from some other source */
+     if( pTerm->wtFlags & TERM_LIKEOPT && pTerm->eOperator==WO_LT ) continue;
+ 
++    /* Do not allow IS constraints from the WHERE clause to be used by the
++    ** right table of a LEFT JOIN.  Only constraints in the ON clause are
++    ** allowed */
++    if( (pSrc->fg.jointype & JT_LEFT)!=0
++     && !ExprHasProperty(pTerm->pExpr, EP_FromJoin)
++     && (eOp & (WO_IS|WO_ISNULL))!=0
++    ){
++      testcase( eOp & WO_IS );
++      testcase( eOp & WO_ISNULL );
++      continue;
++    }
++
+     pNew->wsFlags = saved_wsFlags;
+     pNew->u.btree.nEq = saved_nEq;
+     pNew->nLTerm = saved_nLTerm;
+@@ -137671,7 +137727,7 @@ static int fts3ScanInteriorNode(
+   const char *zCsr = zNode;       /* Cursor to iterate through node */
+   const char *zEnd = &zCsr[nNode];/* End of interior node buffer */
+   char *zBuffer = 0;              /* Buffer to load terms into */
+-  int nAlloc = 0;                 /* Size of allocated buffer */
++  i64 nAlloc = 0;                 /* Size of allocated buffer */
+   int isFirstTerm = 1;            /* True when processing first term on page */
+   sqlite3_int64 iChild;           /* Block id of child node to descend to */
+ 
+@@ -137708,14 +137764,14 @@ static int fts3ScanInteriorNode(
+     isFirstTerm = 0;
+     zCsr += fts3GetVarint32(zCsr, &nSuffix);
+     
+-    if( nPrefix<0 || nSuffix<0 || &zCsr[nSuffix]>zEnd ){
++    if( nPrefix<0 || nSuffix<0 || nPrefix>zCsr-zNode || nSuffix>zEnd-zCsr ){
+       rc = FTS_CORRUPT_VTAB;
+       goto finish_scan;
+     }
+-    if( nPrefix+nSuffix>nAlloc ){
++    if( (i64)nPrefix+nSuffix>nAlloc ){
+       char *zNew;
+-      nAlloc = (nPrefix+nSuffix) * 2;
+-      zNew = (char *)sqlite3_realloc(zBuffer, nAlloc);
++      nAlloc = ((i64)nPrefix+nSuffix) * 2;
++      zNew = (char *)sqlite3_realloc64(zBuffer, nAlloc);
+       if( !zNew ){
+         rc = SQLITE_NOMEM;
+         goto finish_scan;
+@@ -139204,8 +139260,7 @@ static int fts3ColumnMethod(
+     */
+     sqlite3_result_int64(pCtx, pCsr->iPrevId);
+   }else if( iCol==p->nColumn ){
+-    /* The extra column whose name is the same as the table.
+-    ** Return a blob which is a pointer to the cursor.  */
++    /* The extra column whose name is the same as the table. */
+     sqlite3_result_pointer(pCtx, pCsr);
+   }else if( iCol==p->nColumn+2 && pCsr->pExpr ){
+     sqlite3_result_int64(pCtx, pCsr->iLangid);
+@@ -139418,15 +139473,17 @@ static int fts3FunctionArg(
+   sqlite3_value *pVal,            /* argv[0] passed to function */
+   Fts3Cursor **ppCsr              /* OUT: Store cursor handle here */
+ ){
+-  Fts3Cursor *pRet = (Fts3Cursor*)sqlite3_value_pointer(pVal);
+-  if( pRet==0 ){
++  int rc;
++  *ppCsr = (Fts3Cursor*)sqlite3_value_pointer(pVal);
++  if( (*ppCsr)!=0 ){
++    rc = SQLITE_OK;
++  }else{
+     char *zErr = sqlite3_mprintf("illegal first argument to %s", zFunc);
+     sqlite3_result_error(pContext, zErr, -1);
+     sqlite3_free(zErr);
+-    return SQLITE_ERROR;
++    rc = SQLITE_ERROR;
+   }
+-  *ppCsr = pRet;
+-  return SQLITE_OK;
++  return rc;
+ }
+ 
+ /*
+@@ -147302,15 +147359,19 @@ static int fts3SegReaderNext(
+   ** safe (no risk of overread) even if the node data is corrupted. */
+   pNext += fts3GetVarint32(pNext, &nPrefix);
+   pNext += fts3GetVarint32(pNext, &nSuffix);
+-  if( nPrefix<0 || nSuffix<=0 
+-   || &pNext[nSuffix]>&pReader->aNode[pReader->nNode] 
++  if( nSuffix<=0 
++   || (&pReader->aNode[pReader->nNode] - pNext)<nSuffix
++   || nPrefix>pReader->nTermAlloc
+   ){
+     return FTS_CORRUPT_VTAB;
+   }
+ 
+-  if( nPrefix+nSuffix>pReader->nTermAlloc ){
+-    int nNew = (nPrefix+nSuffix)*2;
+-    char *zNew = sqlite3_realloc(pReader->zTerm, nNew);
++  /* Both nPrefix and nSuffix were read by fts3GetVarint32() and so are
++  ** between 0 and 0x7FFFFFFF. But the sum of the two may cause integer
++  ** overflow - hence the (i64) casts.  */
++  if( (i64)nPrefix+nSuffix>(i64)pReader->nTermAlloc ){
++    i64 nNew = ((i64)nPrefix+nSuffix)*2;
++    char *zNew = sqlite3_realloc64(pReader->zTerm, nNew);
+     if( !zNew ){
+       return SQLITE_NOMEM;
+     }
+@@ -147332,7 +147393,7 @@ static int fts3SegReaderNext(
+   ** b-tree node. And that the final byte of the doclist is 0x00. If either 
+   ** of these statements is untrue, then the data structure is corrupt.
+   */
+-  if( &pReader->aDoclist[pReader->nDoclist]>&pReader->aNode[pReader->nNode] 
++  if( (&pReader->aNode[pReader->nNode] - pReader->aDoclist)<pReader->nDoclist
+    || (pReader->nPopulate==0 && pReader->aDoclist[pReader->nDoclist-1])
+   ){
+     return FTS_CORRUPT_VTAB;
+@@ -149655,6 +149716,9 @@ static int nodeReaderNext(NodeReader *p){
+     }
+     p->iOff += fts3GetVarint32(&p->aNode[p->iOff], &nSuffix);
+ 
++    if( nPrefix>p->iOff || nSuffix>p->nNode-p->iOff ){
++      return SQLITE_CORRUPT_VTAB;
++    }
+     blobGrowBuffer(&p->term, nPrefix+nSuffix, &rc);
+     if( rc==SQLITE_OK ){
+       memcpy(&p->term.a[nPrefix], &p->aNode[p->iOff], nSuffix);
+@@ -149662,6 +149726,9 @@ static int nodeReaderNext(NodeReader *p){
+       p->iOff += nSuffix;
+       if( p->iChild==0 ){
+         p->iOff += fts3GetVarint32(&p->aNode[p->iOff], &p->nDoclist);
++        if( (p->nNode-p->iOff)<p->nDoclist ){
++          return SQLITE_CORRUPT_VTAB;
++        }
+         p->aDoclist = &p->aNode[p->iOff];
+         p->iOff += p->nDoclist;
+       }
+@@ -149669,7 +149736,6 @@ static int nodeReaderNext(NodeReader *p){
+   }
+ 
+   assert( p->iOff<=p->nNode );
+-
+   return rc;
+ }
+ 
+@@ -180645,7 +180711,7 @@ static void fts5SourceIdFunc(
+   sqlite3_value **apVal           /* Function arguments */
+ ){
+   assert( nArg==0 );
+-  sqlite3_result_text(pCtx, "fts5: 2017-07-21 07:45:23 69906880cee1f246cce494672402e0c7f29bd4ec19c437d26d603870d2bd625d", -1, SQLITE_TRANSIENT);
++  sqlite3_result_text(pCtx, "fts5: 2018-12-19 16:03:56 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0", -1, SQLITE_TRANSIENT);
+ }
+ 
+ static int fts5Init(sqlite3 *db){
+diff --git a/dist/sqlite3.h b/dist/sqlite3.h
+index a0c0e4e..4779f17 100644
+--- a/dist/sqlite3.h
++++ b/dist/sqlite3.h
+@@ -111,9 +111,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.9.2"
+-#define SQLITE_VERSION_NUMBER 3009002
+-#define SQLITE_SOURCE_ID      "2017-07-21 07:45:23 69906880cee1f246cce494672402e0c7f29bd4ec19c437d26d603870d2bd625d"
++#define SQLITE_VERSION        "3.9.3"
++#define SQLITE_VERSION_NUMBER 3009003
++#define SQLITE_SOURCE_ID      "2018-12-19 16:03:56 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -3532,6 +3532,15 @@ typedef struct sqlite3_context sqlite3_context;
+ ** [sqlite3_blob_open | incremental BLOB I/O] routines.
+ ** ^A negative value for the zeroblob results in a zero-length BLOB.
+ **
++** ^The sqlite3_bind_pointer(S,I,P) routine causes the I-th parameter in
++** [prepared statement] S to have an SQL value of NULL, but to also be
++** associated with the pointer P.
++** ^The sqlite3_bind_pointer() routine can be used to pass
++** host-language pointers into [application-defined SQL functions].
++** ^A parameter that is initialized using [sqlite3_bind_pointer()] appears
++** to be an ordinary SQL NULL value to everything other than
++** [sqlite3_value_pointer()].
++**
+ ** ^If any of the sqlite3_bind_*() routines are called with a NULL pointer
+ ** for the [prepared statement] or with a prepared statement for which
+ ** [sqlite3_step()] has been called more recently than [sqlite3_reset()],
+@@ -3565,6 +3574,7 @@ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text16(sqlite3_stmt*, int, const void
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_text64(sqlite3_stmt*, int, const char*, sqlite3_uint64,
+                          void(*)(void*), unsigned char encoding);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_value(sqlite3_stmt*, int, const sqlite3_value*);
++SQLITE_API int SQLITE_STDCALL sqlite3_bind_pointer(sqlite3_stmt*, int, void*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob(sqlite3_stmt*, int, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_bind_zeroblob64(sqlite3_stmt*, int, sqlite3_uint64);
+ 
+@@ -4329,6 +4339,11 @@ SQLITE_API SQLITE_DEPRECATED int SQLITE_STDCALL sqlite3_memory_alarm(void(*)(voi
+ ** sqlite3_value_text16be() and sqlite3_value_text16le() interfaces
+ ** extract UTF-16 strings as big-endian and little-endian respectively.
+ **
++** ^If [sqlite3_value] object V was initialized 
++** using [sqlite3_bind_pointer(S,I,P)] or [sqlite3_result_pointer(C,P)], then
++** sqlite3_value_pointer(V) will return the pointer P.  Otherwise,
++** sqlite3_value_pointer(V) returns a NULL.
++**
+ ** ^(The sqlite3_value_numeric_type() interface attempts to apply
+ ** numeric affinity to the value.  This means that an attempt is
+ ** made to convert the value to an integer or floating point.  If
+@@ -4352,11 +4367,11 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_bytes16(sqlite3_value*);
+ SQLITE_API double SQLITE_STDCALL sqlite3_value_double(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_int(sqlite3_value*);
+ SQLITE_API sqlite3_int64 SQLITE_STDCALL sqlite3_value_int64(sqlite3_value*);
+-SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API const unsigned char *SQLITE_STDCALL sqlite3_value_text(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16le(sqlite3_value*);
+ SQLITE_API const void *SQLITE_STDCALL sqlite3_value_text16be(sqlite3_value*);
++SQLITE_API void *SQLITE_STDCALL sqlite3_value_pointer(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_type(sqlite3_value*);
+ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ 
+@@ -4369,10 +4384,6 @@ SQLITE_API int SQLITE_STDCALL sqlite3_value_numeric_type(sqlite3_value*);
+ ** information can be used to pass a limited amount of context from
+ ** one SQL function to another.  Use the [sqlite3_result_subtype()]
+ ** routine to set the subtype for the return value of an SQL function.
+-**
+-** SQLite makes no use of subtype itself.  It merely passes the subtype
+-** from the result of one [application-defined SQL function] into the
+-** input of another.
+ */
+ SQLITE_API unsigned int SQLITE_STDCALL sqlite3_value_subtype(sqlite3_value*);
+ 
+@@ -4649,6 +4660,14 @@ typedef void (*sqlite3_destructor_type)(void*);
+ ** [unprotected sqlite3_value] object is required, so either
+ ** kind of [sqlite3_value] object can be used with this interface.
+ **
++** ^The sqlite3_result_pointer(C,P) interface sets the result to an
++** SQL NULL value, just like [sqlite3_result_null(C)], except that it
++** also associates the host-language pointer P with that NULL value such
++** that the pointer can be retrieved within an
++** [application-defined SQL function] using [sqlite3_value_pointer()].
++** This mechanism can be used to pass non-SQL values between
++** application-defined functions.
++**
+ ** If these routines are called from within the different thread
+ ** than the one containing the application-defined function that received
+ ** the [sqlite3_context] pointer, the results are undefined.
+@@ -4665,7 +4684,6 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_error_code(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int(sqlite3_context*, int);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_int64(sqlite3_context*, sqlite3_int64);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_null(sqlite3_context*);
+-SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text(sqlite3_context*, const char*, int, void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text64(sqlite3_context*, const char*,sqlite3_uint64,
+                            void(*)(void*), unsigned char encoding);
+@@ -4673,6 +4691,7 @@ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16(sqlite3_context*, const voi
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16le(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_text16be(sqlite3_context*, const void*, int,void(*)(void*));
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_value(sqlite3_context*, sqlite3_value*);
++SQLITE_API void SQLITE_STDCALL sqlite3_result_pointer(sqlite3_context*, void*);
+ SQLITE_API void SQLITE_STDCALL sqlite3_result_zeroblob(sqlite3_context*, int n);
+ SQLITE_API int SQLITE_STDCALL sqlite3_result_zeroblob64(sqlite3_context*, sqlite3_uint64 n);
+ 
+diff --git a/dist/sqlite3ext.h b/dist/sqlite3ext.h
+index 017ea30..2e60e2a 100644
+--- a/dist/sqlite3ext.h
++++ b/dist/sqlite3ext.h
+@@ -514,6 +514,9 @@ struct sqlite3_api_routines {
+ /* Version 3.9.0 and later */
+ #define sqlite3_value_subtype          sqlite3_api->value_subtype
+ #define sqlite3_result_subtype         sqlite3_api->result_subtype
++#define sqlite3_bind_pointer           sqlite3_api->bind_pointer
++#define sqlite3_result_pointer         sqlite3_api->result_pointer
++#define sqlite3_value_pointer          sqlite3_api->value_pointer
+ #endif /* !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION) */
+ 
+ #if !defined(SQLITE_CORE) && !defined(SQLITE_OMIT_LOAD_EXTENSION)
+-- 
+2.7.4
+
