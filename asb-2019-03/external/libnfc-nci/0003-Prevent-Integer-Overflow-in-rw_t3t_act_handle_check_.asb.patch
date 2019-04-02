@@ -1,0 +1,45 @@
+From c82737b895be2a729173a2a4766f12ef07e70733 Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Mon, 7 Jan 2019 17:36:52 -0800
+Subject: [PATCH 03/10] Prevent Integer Overflow in
+ rw_t3t_act_handle_check_rsp()
+
+Bug: 120503926
+Test: NFC Enable/Disable
+Change-Id: I260c2028ab56260ae4d26ce7c4699763df20ce7a
+(cherry picked from commit cee2f35a694627e191c7bf26728f9ff7aa07414a)
+---
+ src/nfc/tags/rw_t3t.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/nfc/tags/rw_t3t.c b/src/nfc/tags/rw_t3t.c
+index bed3979..82aa26b 100644
+--- a/src/nfc/tags/rw_t3t.c
++++ b/src/nfc/tags/rw_t3t.c
+@@ -1346,8 +1346,8 @@ void rw_t3t_act_handle_check_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+         RW_TRACE_ERROR2 ("Response error: expecting rsp_code %02X, but got %02X", T3T_MSG_OPC_CHECK_RSP, p_t3t_rsp[T3T_MSG_RSP_OFFSET_RSPCODE]);
+         nfc_status = NFC_STATUS_FAILED;
+         GKI_freebuf (p_msg_rsp);
+-    }
+-    else
++    } 
++    else if (p_msg_rsp->len >= T3T_MSG_RSP_OFFSET_CHECK_DATA) 
+     {
+         /* Copy incoming data into buffer */
+         p_msg_rsp->offset += T3T_MSG_RSP_OFFSET_CHECK_DATA;     /* Skip over t3t header */
+@@ -1355,6 +1355,12 @@ void rw_t3t_act_handle_check_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+         evt_data.status = NFC_STATUS_OK;
+         evt_data.p_data = p_msg_rsp;
+         (*(rw_cb.p_cback)) (RW_T3T_CHECK_EVT, (tRW_DATA *) &evt_data);
++    } 
++    else 
++    {
++      android_errorWriteLog(0x534e4554, "120503926");
++      nfc_status = NFC_STATUS_FAILED;
++      GKI_freebuf (p_msg_rsp);
+     }
+ 
+ 
+-- 
+2.7.4
+

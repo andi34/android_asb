@@ -1,0 +1,76 @@
+From 40d048e8c802e88c088192ebc9ea4c65bb040e2e Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Tue, 20 Nov 2018 22:31:31 +0100
+Subject: [PATCH 1/2] Fix potential usage of freed memory in
+ btif_hl_proc_sdp_query_cfm
+
+Bug: 116222069
+Test: compilation
+Change-Id: Iebe2c500dfc2806ca321fdcd170e20c680619d4d
+(cherry picked from commit 889efd5b9165ed7641fcd75eabbbef56be2ef5df)
+---
+ bta/hl/bta_hl_main.c | 8 +-------
+ btif/src/btif_hl.c   | 5 +++++
+ 2 files changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/bta/hl/bta_hl_main.c b/bta/hl/bta_hl_main.c
+index f229c10..0a19719 100644
+--- a/bta/hl/bta_hl_main.c
++++ b/bta/hl/bta_hl_main.c
+@@ -1563,17 +1563,16 @@ static void bta_hl_sdp_query_results(tBTA_HL_CB *p_cb, tBTA_HL_DATA *p_data)
+     tBTA_HL_SDP         *p_sdp=NULL;
+     tBTA_HL_SDP_OPER    sdp_oper;
+     UINT16              event;
+-    BOOLEAN             release_sdp_buf=FALSE;
+ 
+     event = p_data->hdr.event;
+     sdp_oper = p_mcb->sdp_oper;
+ 
+     if ( event == BTA_HL_SDP_QUERY_OK_EVT)
+     {
++        // this is freed in btif_hl_proc_sdp_query_cfm
+         if ((p_sdp = (tBTA_HL_SDP *)GKI_getbuf((UINT16)(sizeof(tBTA_HL_SDP)))) != NULL)
+         {
+             memcpy(p_sdp, &p_mcb->sdp, sizeof(tBTA_HL_SDP));
+-            release_sdp_buf = TRUE;
+         }
+         else
+         {
+@@ -1597,11 +1596,6 @@ static void bta_hl_sdp_query_results(tBTA_HL_CB *p_cb, tBTA_HL_DATA *p_data)
+                                p_mcb->bd_addr,p_sdp,status);
+     p_acb->p_cback(BTA_HL_SDP_QUERY_CFM_EVT,(tBTA_HL *) &evt_data );
+ 
+-    if (release_sdp_buf)
+-    {
+-        utl_freebuf((void **) &p_sdp);
+-    }
+-
+     if (p_data->cch_sdp.release_mcl_cb)
+     {
+         memset(p_mcb, 0 ,sizeof(tBTA_HL_MCL_CB));
+diff --git a/btif/src/btif_hl.c b/btif/src/btif_hl.c
+index c657fbf..8e30fbd 100644
+--- a/btif/src/btif_hl.c
++++ b/btif/src/btif_hl.c
+@@ -57,6 +57,7 @@
+ #include "btif_hl.h"
+ #include "btif_storage.h"
+ #include "btu.h"
++#include "utl.h"
+ 
+ #define MAX_DATATYPE_SUPPORTED 8
+ 
+@@ -2491,6 +2492,10 @@ static BOOLEAN btif_hl_proc_sdp_query_cfm(tBTA_HL *p_data){
+                 }
+             }
+         }
++
++    // this was allocated in bta_hl_sdp_query_results
++    utl_freebuf((void **)&p_data->sdp_query_cfm.p_sdp);
++
+     return status;
+ }
+ 
+-- 
+2.7.4
+

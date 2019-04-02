@@ -1,0 +1,50 @@
+From f8b2fe863354f13d12077a29390a8ba991954feb Mon Sep 17 00:00:00 2001
+From: Adam Lesinski <adamlesinski@google.com>
+Date: Mon, 27 Apr 2015 12:13:33 -0700
+Subject: [PATCH 1/2] Prevent integer overflow when allocating native_handle_t
+
+User specified values of numInts and numFds can overflow
+and cause malloc to allocate less than we expect, causing
+heap corruption in subsequent operations on the allocation.
+
+Bug: 19334482
+Change-Id: I43c75f536ea4c08f14ca12ca6288660fd2d1ec55
+---
+ libcutils/native_handle.c | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/libcutils/native_handle.c b/libcutils/native_handle.c
+index 4089968..61fa38e 100644
+--- a/libcutils/native_handle.c
++++ b/libcutils/native_handle.c
+@@ -25,14 +25,22 @@
+ #include <cutils/log.h>
+ #include <cutils/native_handle.h>
+ 
++static const int kMaxNativeFds = 1024;
++static const int kMaxNativeInts = 1024;
++
+ native_handle_t* native_handle_create(int numFds, int numInts)
+ {
+-    native_handle_t* h = malloc(
+-            sizeof(native_handle_t) + sizeof(int)*(numFds+numInts));
++    if (numFds < 0 || numInts < 0 || numFds > kMaxNativeFds || numInts > kMaxNativeInts) {
++        return NULL;
++    }
+ 
+-    h->version = sizeof(native_handle_t);
+-    h->numFds = numFds;
+-    h->numInts = numInts;
++    size_t mallocSize = sizeof(native_handle_t) + (sizeof(int) * (numFds + numInts));
++    native_handle_t* h = malloc(mallocSize);
++    if (h) {
++        h->version = sizeof(native_handle_t);
++        h->numFds = numFds;
++        h->numInts = numInts;
++    }
+     return h;
+ }
+ 
+-- 
+2.7.4
+

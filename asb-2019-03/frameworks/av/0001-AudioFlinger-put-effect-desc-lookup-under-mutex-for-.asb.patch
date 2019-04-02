@@ -1,0 +1,40 @@
+From 1024e33aeae4e605339fbf810e5ffdc06a187707 Mon Sep 17 00:00:00 2001
+From: Andy Hung <hunga@google.com>
+Date: Thu, 10 Jan 2019 13:27:31 -0800
+Subject: [PATCH] AudioFlinger: put effect desc lookup under mutex for
+ createEffect
+
+Test: native poc
+Bug: 122309228
+Change-Id: I48333c69f5c1b1bf1b98f57eb813ec39e074f3a7
+Merged-In: I9d339a7d6d81161065e1adaf427dd2d3430436c2
+(cherry picked from commit a41770b682117fdfc20236fbc45d975099f9147a)
+---
+ services/audioflinger/AudioFlinger.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/services/audioflinger/AudioFlinger.cpp b/services/audioflinger/AudioFlinger.cpp
+index 3d0aec3..19539ff 100644
+--- a/services/audioflinger/AudioFlinger.cpp
++++ b/services/audioflinger/AudioFlinger.cpp
+@@ -2136,6 +2136,8 @@ sp<IEffect> AudioFlinger::createEffect(
+     }
+ 
+     {
++        Mutex::Autolock _l(mLock);
++
+         if (!EffectIsNullUuid(&pDesc->uuid)) {
+             // if uuid is specified, request effect descriptor
+             lStatus = EffectGetDescriptor(&pDesc->uuid, &desc);
+@@ -2191,6 +2193,8 @@ sp<IEffect> AudioFlinger::createEffect(
+                 desc = d;
+             }
+         }
++    }
++    {
+ 
+         // Do not allow auxiliary effects on a session different from 0 (output mix)
+         if (sessionId != AUDIO_SESSION_OUTPUT_MIX &&
+-- 
+2.7.4
+

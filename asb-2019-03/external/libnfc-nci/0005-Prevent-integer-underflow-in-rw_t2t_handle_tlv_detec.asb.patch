@@ -1,0 +1,63 @@
+From 4117649d6d206ea046fe007445a831fcb87c619a Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Tue, 8 Jan 2019 22:32:42 +0800
+Subject: [PATCH 05/10] Prevent integer underflow in
+ rw_t2t_handle_tlv_detect_rsp()
+
+Bug: 121035711
+Test: NFC Enable/Disable
+Change-Id: Ifa3e5fdf23f267a0d6c3aa8495c4c83f20153025
+(cherry picked from commit 83439b5ca03c9a52ddbf9d9a033c18d9e456a97b)
+---
+ src/nfc/tags/rw_t2t_ndef.c | 21 ++++++++++++++++++---
+ 1 file changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/src/nfc/tags/rw_t2t_ndef.c b/src/nfc/tags/rw_t2t_ndef.c
+index 1da69b3..616525d 100644
+--- a/src/nfc/tags/rw_t2t_ndef.c
++++ b/src/nfc/tags/rw_t2t_ndef.c
+@@ -647,7 +647,12 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                 break;
+ 
+             case TAG_LOCK_CTRL_TLV:
+-                p_t2t->bytes_count--;
++                if (p_t2t->bytes_count > 0)
++                {
++                    p_t2t->bytes_count--;
++                } else {
++                    android_errorWriteLog(0x534e4554, "120506143");
++                }
+                 if (  (tlvtype == TAG_LOCK_CTRL_TLV)
+                     ||(tlvtype == TAG_NDEF_TLV)  )
+                 {
+@@ -695,7 +700,12 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                 break;
+ 
+             case TAG_MEM_CTRL_TLV:
+-                p_t2t->bytes_count--;
++                 if (p_t2t->bytes_count > 0)
++                 {
++                     p_t2t->bytes_count--;
++                 } else {
++                     android_errorWriteLog(0x534e4554, "120506143");
++                }
+                 if (  (tlvtype == TAG_MEM_CTRL_TLV)
+                     ||(tlvtype == TAG_NDEF_TLV)  )
+                 {
+@@ -730,7 +740,12 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                 break;
+ 
+             case TAG_PROPRIETARY_TLV:
+-                p_t2t->bytes_count--;
++                if (p_t2t->bytes_count > 0)
++                {
++                    p_t2t->bytes_count--;
++                } else {
++                    android_errorWriteLog(0x534e4554, "120506143");
++                }
+                 if (tlvtype == TAG_PROPRIETARY_TLV)
+                 {
+                     found = TRUE;
+-- 
+2.7.4
+

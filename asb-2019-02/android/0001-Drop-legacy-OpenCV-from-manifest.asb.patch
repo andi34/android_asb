@@ -1,0 +1,31 @@
+From 1e4ff60a93f4ee83ce5ece4b4cc0e75a95223ae5 Mon Sep 17 00:00:00 2001
+From: Vasyl Gello <vasek.gello@gmail.com>
+Date: Thu, 7 Feb 2019 08:13:18 +0200
+Subject: [PATCH] Drop legacy OpenCV from manifest
+
+The only component referencing OpenCV as an optional dependency
+is FFmpeg. But the respected configuration is never built anymore
+and the codebase is so ancient that it was already dropped in O
+and P last month.
+
+Change-Id: I487119e3e4da53dd3c17d24df0d5b5495846309f
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+---
+ aosp.xml | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/aosp.xml b/aosp.xml
+index 5ce3173..bb82f0d 100644
+--- a/aosp.xml
++++ b/aosp.xml
+@@ -193,7 +193,6 @@
+   <project path="external/objenesis" name="platform/external/objenesis" />
+   <project path="external/okhttp" name="platform/external/okhttp" />
+   <project path="external/open-vcdiff" name="platform/external/open-vcdiff" />
+-  <project path="external/opencv" name="platform/external/opencv" />
+   <project path="external/openfst" name="platform/external/openfst" />
+   <project path="external/openssh" name="platform/external/openssh" />
+   <project path="external/openssl" name="platform/external/openssl" groups="pdk" />
+-- 
+2.7.4
+

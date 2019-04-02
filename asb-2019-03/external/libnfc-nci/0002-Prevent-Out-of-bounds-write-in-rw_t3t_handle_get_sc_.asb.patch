@@ -1,0 +1,35 @@
+From 06d3c74c51da2403f04fc7ab0b1ed6c12f092a22 Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Tue, 8 Jan 2019 15:20:51 +0800
+Subject: [PATCH 02/10] Prevent Out of bounds write in
+ rw_t3t_handle_get_sc_poll_rsp()
+
+Test: Read T3T Tag
+Bug: 120499324
+Change-Id: I5f76f207d16ee744ec9be06e94034adf01727ac8
+(cherry picked from commit a9bf25ee60d821f301b91e21d7257315df554211)
+---
+ src/nfc/tags/rw_t3t.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/nfc/tags/rw_t3t.c b/src/nfc/tags/rw_t3t.c
+index 74e60c0..bed3979 100644
+--- a/src/nfc/tags/rw_t3t.c
++++ b/src/nfc/tags/rw_t3t.c
+@@ -1608,7 +1608,12 @@ static void rw_t3t_handle_get_sc_poll_rsp (tRW_T3T_CB *p_cb, UINT8 nci_status, U
+             {
+                 RW_TRACE_DEBUG1 ("FeliCa Lite tag detected (system code %04X)", sc);
+                 /* Store system code */
+-                p_cb->system_codes[p_cb->num_system_codes++] = sc;
++                if (p_cb->num_system_codes < T3T_MAX_SYSTEM_CODES) {
++                  p_cb->system_codes[p_cb->num_system_codes++] = sc;
++                } else {
++                  RW_TRACE_DEBUG0 ("Exceed T3T_MAX_SYSTEM_CODES!");
++                  android_errorWriteLog(0x534e4554, "120499324");
++                }
+ 
+                 /* Poll for NDEF system code */
+                 if ((status = (tNFC_STATUS) nci_snd_t3t_polling (T3T_SYSTEM_CODE_NDEF, 0, 0)) == NCI_STATUS_OK)
+-- 
+2.7.4
+
