@@ -1,0 +1,48 @@
+From 8af7ab182d35503e48f4b7ba2c0d4b8269f9f120 Mon Sep 17 00:00:00 2001
+From: Marco Nelissen <marcone@google.com>
+Date: Wed, 23 Jan 2019 16:10:48 -0800
+Subject: [PATCH] Add some error/overflow checks in codebook handling
+
+Bug: 119120561
+Test: manual
+Change-Id: I2476ef29d81a8335fdcbdbbaa175a575138d4039
+(cherry picked from commit b5e041da6bfe79b5ee5fb48374cd753df6d18015)
+(cherry picked from commit 6eb63e119294ba92f93f03bbda6c4b203f0f87bb)
+---
+ Tremolo/codebook.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/Tremolo/codebook.c b/Tremolo/codebook.c
+index 467640d..a06302d 100644
+--- a/Tremolo/codebook.c
++++ b/Tremolo/codebook.c
+@@ -376,14 +376,21 @@ long _book_maptype1_quantvals(codebook *b){
+     long acc=1;
+     long acc1=1;
+     int i;
+-    for(i=0;i<b->dim;i++){
+-      acc*=vals;
+-      acc1*=vals+1;
++    for (i = 0; i < b->dim; i++) {
++      if (acc > b->entries / vals) {
++          break;
++      }
++      acc *= vals;
++      if (acc1 > LONG_MAX / (vals + 1)) {
++        acc1 = LONG_MAX;
++      } else {
++        acc1 *= (vals + 1);
++      }
+     }
+-    if(acc<=b->entries && acc1>b->entries){
++    if (i >= b->dim && acc <= b->entries && acc1 > b->entries) {
+       return(vals);
+     }else{
+-      if(acc>b->entries){
++      if (i < b->dim || acc > b->entries) {
+         vals--;
+       }else{
+         vals++;
+-- 
+2.7.4
+
