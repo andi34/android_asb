@@ -1,0 +1,45 @@
+From d9a4b315e209c7372291f9f2ea187d7283d10b2f Mon Sep 17 00:00:00 2001
+From: akirilov <akirilov@google.com>
+Date: Fri, 27 Apr 2018 15:05:14 -0700
+Subject: [PATCH] Fixes two bluetooth bugs causing remote overreads (2/2)
+
+Bug: 74075873
+Test: manual
+
+Change-Id: I28a78084a1ab451b407ee6e7a5495c1e43ed757b
+Merged-In: I76058b11c90dc40b78f26fb64b74d609f3473f5d
+(cherry picked from commit 0a8453ba419af4b33f84405f51542d17b0eeb51e)
+
+Change-Id: I330a81c5e04b6a66031aa9e2f9a27ca2ee26a112
+---
+ stack/sdp/sdp_discovery.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/stack/sdp/sdp_discovery.c b/stack/sdp/sdp_discovery.c
+index 9f4fee5..414763f 100644
+--- a/stack/sdp/sdp_discovery.c
++++ b/stack/sdp/sdp_discovery.c
+@@ -366,7 +366,7 @@ static void process_service_search_rsp (tCONN_CB* p_ccb, uint8_t* p_reply,
+ #if (SDP_RAW_DATA_INCLUDED == TRUE)
+ static void sdp_copy_raw_data (tCONN_CB *p_ccb, BOOLEAN offset)
+ {
+-    unsigned int    cpy_len;
++    unsigned int    cpy_len, rem_len;
+     UINT32          list_len;
+     UINT8           *p;
+     UINT8           type;
+@@ -405,6 +405,11 @@ static void sdp_copy_raw_data (tCONN_CB *p_ccb, BOOLEAN offset)
+         {
+             cpy_len = list_len;
+         }
++        rem_len = SDP_MAX_LIST_BYTE_COUNT - (unsigned int)(p - &p_ccb->rsp_list[0]);
++        if (cpy_len > rem_len) {
++            SDP_TRACE_WARNING("rem_len :%d less than cpy_len:%d", rem_len, cpy_len);
++            cpy_len = rem_len;
++        }
+         SDP_TRACE_WARNING(
+           "%s: list_len:%d cpy_len:%d p:%p p_ccb:%p p_db:%p raw_size:%d "
+           "raw_used:%d raw_data:%p",
+-- 
+2.7.4
+

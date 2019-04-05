@@ -1,0 +1,48 @@
+From 900900cf9ade4ed1352064e87056c4152e1af35f Mon Sep 17 00:00:00 2001
+From: Ajay Panicker <apanicke@google.com>
+Date: Wed, 6 Jun 2018 14:58:54 -0700
+Subject: [PATCH] DO NOT MERGE: Don't reuse buffer when building response
+
+Bug: 79541338
+Test: Compile and connect to remote headset
+Change-Id: I5e059615db589e165630f39d631a922006c2d70f
+(cherry picked from commit ecef51ee8fc216ef654fd73bdc5e2802b2cf9a7e)
+---
+ stack/avrc/avrc_api.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/stack/avrc/avrc_api.c b/stack/avrc/avrc_api.c
+index 8bac127..17c8597 100644
+--- a/stack/avrc/avrc_api.c
++++ b/stack/avrc/avrc_api.c
+@@ -318,15 +318,15 @@ static BT_HDR * avrc_proc_vendor_command(UINT8 handle, UINT8 label,
+ 
+     if (status != AVRC_STS_NO_ERROR)
+     {
+-        /* use the current GKI buffer to build/send the reject message */
+-        p_data = (UINT8 *)(p_pkt+1) + p_pkt->offset;
++        p_rsp = (BT_HDR*)osi_malloc(BT_DEFAULT_BUFFER_SIZE);
++        p_rsp->offset = p_pkt->offset;
++        p_data = (uint8_t*)(p_rsp + 1) + p_pkt->offset;
+         *p_data++ = AVRC_RSP_REJ;
+         p_data += AVRC_VENDOR_HDR_SIZE; /* pdu */
+         *p_data++ = 0;                  /* pkt_type */
+         UINT16_TO_BE_STREAM(p_data, 1); /* len */
+         *p_data++ = status;             /* error code */
+-        p_pkt->len = AVRC_VENDOR_HDR_SIZE + 5;
+-        p_rsp = p_pkt;
++        p_rsp->len = AVRC_VENDOR_HDR_SIZE + 5;
+     }
+ 
+     return p_rsp;
+@@ -474,6 +474,7 @@ static UINT8 avrc_proc_far_msg(UINT8 handle, UINT8 label, UINT8 cr, BT_HDR **pp_
+             if (p_rsp)
+             {
+                 AVCT_MsgReq( handle, label, AVCT_RSP, p_rsp);
++                osi_free_and_reset((void **)pp_pkt);
+                 drop_code = 3;
+             }
+             else if (p_msg->hdr.opcode == AVRC_OP_DROP)
+-- 
+2.7.4
+
