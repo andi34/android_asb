@@ -1,7 +1,7 @@
 From dd806d1c4c0a45c2d3a5507ae5bb49562a0eddaf Mon Sep 17 00:00:00 2001
 From: Ugo Yu <ugoyu@google.com>
 Date: Wed, 8 Aug 2018 14:46:42 +0800
-Subject: [PATCH 08/10] DO NOT MERGE Fix OOB read before buffer length check
+Subject: [PATCH 08/11] DO NOT MERGE Fix OOB read before buffer length check
 
 Bug: 111936834
 Test: manual

@@ -1,7 +1,7 @@
 From 844e3a3e794838ab714276a017191015c043f7a0 Mon Sep 17 00:00:00 2001
 From: Jakub Pawlowski <jpawlowski@google.com>
 Date: Mon, 16 Jul 2018 06:40:35 -0700
-Subject: [PATCH 02/10] Fix copy length calculation in sdp_copy_raw_data
+Subject: [PATCH 02/11] Fix copy length calculation in sdp_copy_raw_data
 
 Test: compilation
 Bug: 110216176

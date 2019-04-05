@@ -1,7 +1,7 @@
 From 07c0d4d20c713c551000fd14588881fa87106a22 Mon Sep 17 00:00:00 2001
 From: Chienyuan <chienyuanhuang@google.com>
 Date: Wed, 8 Aug 2018 11:21:28 +0800
-Subject: [PATCH 07/10] Check packet length in bta_av_proc_meta_cmd
+Subject: [PATCH 07/11] Check packet length in bta_av_proc_meta_cmd
 
 Bug: 111893951
 Test: manual - connect A2DP

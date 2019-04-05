@@ -1,7 +1,7 @@
 From 03f28127c4a8cc368b2ff733b561121697f2e8a5 Mon Sep 17 00:00:00 2001
 From: Ugo Yu <ugoyu@google.com>
 Date: Wed, 8 Aug 2018 16:09:58 +0800
-Subject: [PATCH 09/10] Add packet length check in smp_proc_master_id
+Subject: [PATCH 09/11] Add packet length check in smp_proc_master_id
 
 Bug: 111937027
 Test: manual

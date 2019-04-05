@@ -1,7 +1,7 @@
 From 209b7d80642e0048af14dd374018c863b907890e Mon Sep 17 00:00:00 2001
 From: Ugo Yu <ugoyu@google.com>
 Date: Tue, 30 Oct 2018 01:57:06 +0800
-Subject: [PATCH 4/4] Fix possible OOB when AVDT data channel recive ACL data
+Subject: [PATCH 4/5] Fix possible OOB when AVDT data channel recive ACL data
 
 Bug: 111450156
 

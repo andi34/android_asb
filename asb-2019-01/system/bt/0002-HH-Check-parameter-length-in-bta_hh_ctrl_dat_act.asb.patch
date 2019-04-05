@@ -1,7 +1,7 @@
 From aa3057c31e65aa4db49b867824f98d1f5d2e224b Mon Sep 17 00:00:00 2001
 From: Myles Watson <mylesgw@google.com>
 Date: Thu, 25 Oct 2018 14:33:33 -0700
-Subject: [PATCH 2/4] HH: Check parameter length in bta_hh_ctrl_dat_act
+Subject: [PATCH 2/5] HH: Check parameter length in bta_hh_ctrl_dat_act
 
 Bug: 116108738
 Test: send a malformed GET_IDLE command with no parameters

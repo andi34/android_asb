@@ -1,7 +1,7 @@
 From 0b8298bc677f3ced9a6d7bac1214a176ec813366 Mon Sep 17 00:00:00 2001
 From: Myles Watson <mylesgw@google.com>
 Date: Wed, 24 Oct 2018 17:05:12 -0700
-Subject: [PATCH 1/4] SDP: Check p_end in save_attr_seq and add_attr
+Subject: [PATCH 1/5] SDP: Check p_end in save_attr_seq and add_attr
 
 Bug: 115900043
 Test: Sanity pairing and SDP PTS

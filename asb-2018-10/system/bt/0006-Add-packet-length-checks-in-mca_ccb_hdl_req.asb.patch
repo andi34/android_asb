@@ -1,7 +1,7 @@
 From 36b2c6aa5f3a0e691a4216a0cc24bfb2537bc14e Mon Sep 17 00:00:00 2001
 From: Cheney Ni <cheneyni@google.com>
 Date: Tue, 7 Aug 2018 21:32:07 +0800
-Subject: [PATCH 06/10] Add packet length checks in mca_ccb_hdl_req
+Subject: [PATCH 06/11] Add packet length checks in mca_ccb_hdl_req
 
 Bug: 110791536
 Test: manual

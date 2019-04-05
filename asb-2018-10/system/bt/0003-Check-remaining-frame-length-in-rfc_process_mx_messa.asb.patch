@@ -1,7 +1,7 @@
 From 68c7ab4bbbead6b4b3a61ba7941df569ff7767b5 Mon Sep 17 00:00:00 2001
 From: Hansong Zhang <hsz@google.com>
 Date: Wed, 8 Aug 2018 11:31:28 -0700
-Subject: [PATCH 03/10] Check remaining frame length in rfc_process_mx_message
+Subject: [PATCH 03/11] Check remaining frame length in rfc_process_mx_message
 
 Bug: 111936792
 Bug: 80432928

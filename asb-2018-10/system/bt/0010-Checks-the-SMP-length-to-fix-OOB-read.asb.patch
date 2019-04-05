@@ -1,7 +1,7 @@
 From e2512dff03a6c79cf10fa96e4295945f9f7d010c Mon Sep 17 00:00:00 2001
 From: Cheney Ni <cheneyni@google.com>
 Date: Wed, 8 Aug 2018 22:20:08 +0800
-Subject: [PATCH 10/10] Checks the SMP length to fix OOB read
+Subject: [PATCH 10/11] Checks the SMP length to fix OOB read
 
 Bug: 111937065
 Test: manual

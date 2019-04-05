@@ -1,0 +1,81 @@
+From d8d337d445ccfadec4b4e44d5c217a6210895041 Mon Sep 17 00:00:00 2001
+From: Pavlin Radoslavov <pavlin@google.com>
+Date: Thu, 9 Aug 2018 13:40:54 -0700
+Subject: [PATCH 11/11] DO NOT MERGE: Add missing AVRCP message length checks
+ inside avrc_msg_cback
+
+Explicitly check the length of the received message before
+accessing the data.
+
+Bug: 111803925
+Bug: 79883824
+Test: POC scripts
+Change-Id: I50d1d1f7dd7038ffcd5f0d5975ab1db43178067f
+Merged-In: I00b1c6bd6dd7e18ac2c469ef2032c7ff10dcaecb
+(cherry picked from commit b78d265f362dab7df559883617dd766bcc60ad43)
+---
+ stack/avrc/avrc_api.c | 27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/stack/avrc/avrc_api.c b/stack/avrc/avrc_api.c
+index 77ca7d4..8bac127 100644
+--- a/stack/avrc/avrc_api.c
++++ b/stack/avrc/avrc_api.c
+@@ -24,6 +24,8 @@
+ #include <assert.h>
+ #include <string.h>
+ 
++#include <log/log.h>
++
+ #include "bt_common.h"
+ #include "avrc_api.h"
+ #include "avrc_int.h"
+@@ -564,6 +566,13 @@ static void avrc_msg_cback(UINT8 handle, UINT8 label, UINT8 cr,
+     p_data  = (UINT8 *)(p_pkt+1) + p_pkt->offset;
+     memset(&msg, 0, sizeof(tAVRC_MSG) );
+     {
++        if (p_pkt->len < AVRC_AVC_HDR_SIZE) {
++            android_errorWriteLog(0x534e4554, "111803925");
++            AVRC_TRACE_WARNING("%s: message length %d too short: must be at least %d",
++                               __func__, p_pkt->len, AVRC_AVC_HDR_SIZE);
++            osi_free(p_pkt);
++            return;
++        }
+         msg.hdr.ctype           = p_data[0] & AVRC_CTYPE_MASK;
+         AVRC_TRACE_DEBUG("avrc_msg_cback handle:%d, ctype:%d, offset:%d, len: %d",
+                 handle, msg.hdr.ctype, p_pkt->offset, p_pkt->len);
+@@ -602,6 +611,15 @@ static void avrc_msg_cback(UINT8 handle, UINT8 label, UINT8 cr,
+             else
+             {
+                 /* parse response */
++                if (p_pkt->len < AVRC_OP_UNIT_INFO_RSP_LEN) {
++                    AVRC_TRACE_WARNING(
++                        "%s: message length %d too short: must be at least %d",
++                        __func__, p_pkt->len, AVRC_OP_UNIT_INFO_RSP_LEN);
++                    android_errorWriteLog(0x534e4554, "79883824");
++                    drop = TRUE;
++                    p_drop_msg = "UNIT_INFO_RSP too short";
++                    break;
++                }
+                 p_data += 4; /* 3 bytes: ctype, subunit*, opcode + octet 3 (is 7)*/
+                 msg.unit.unit_type  = (*p_data & AVRC_SUBTYPE_MASK) >> AVRC_SUBTYPE_SHIFT;
+                 msg.unit.unit       = *p_data & AVRC_SUBID_MASK;
+@@ -633,6 +651,15 @@ static void avrc_msg_cback(UINT8 handle, UINT8 label, UINT8 cr,
+             else
+             {
+                 /* parse response */
++                if (p_pkt->len < AVRC_OP_SUB_UNIT_INFO_RSP_LEN) {
++                    AVRC_TRACE_WARNING(
++                        "%s: message length %d too short: must be at least %d",
++                        __func__, p_pkt->len, AVRC_OP_SUB_UNIT_INFO_RSP_LEN);
++                    android_errorWriteLog(0x534e4554, "79883824");
++                    drop = TRUE;
++                    p_drop_msg = "SUB_UNIT_INFO_RSP too short";
++                    break;
++                }
+                 p_data += AVRC_AVC_HDR_SIZE; /* 3 bytes: ctype, subunit*, opcode */
+                 msg.sub.page    = (*p_data++ >> AVRC_SUB_PAGE_SHIFT) & AVRC_SUB_PAGE_MASK;
+                 xx      = 0;
+-- 
+2.7.4
+

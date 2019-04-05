@@ -1,7 +1,7 @@
 From a2df22e7d7b87449196e50a76aedec965750d9df Mon Sep 17 00:00:00 2001
 From: Hansong Zhang <hsz@google.com>
 Date: Fri, 13 Jul 2018 13:45:46 -0700
-Subject: [PATCH 05/10] Fix a wrong check in rfc_parse_data
+Subject: [PATCH 05/11] Fix a wrong check in rfc_parse_data
 
 Bug: 78288018
 Bug: 111436796

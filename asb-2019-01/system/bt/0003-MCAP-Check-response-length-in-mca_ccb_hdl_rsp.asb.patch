@@ -1,7 +1,7 @@
 From 58274f566547110d8bd3f9471fb94129682255fd Mon Sep 17 00:00:00 2001
 From: Myles Watson <mylesgw@google.com>
 Date: Thu, 25 Oct 2018 15:27:03 -0700
-Subject: [PATCH 3/4] MCAP: Check response length in mca_ccb_hdl_rsp
+Subject: [PATCH 3/5] MCAP: Check response length in mca_ccb_hdl_rsp
 
 Bug: 116319076
 Test: Send a short MCAP response
