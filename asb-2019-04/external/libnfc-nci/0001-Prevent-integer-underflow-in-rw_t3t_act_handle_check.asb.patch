@@ -23,7 +23,7 @@ index 1e5da86..19dd8b7 100644
      }
 -    else
 +    else if (p_msg_rsp->len >= T3T_MSG_RSP_OFFSET_CHECK_DATA &&
-+             p_t3t_rsp[T3T_MSG_RSP_OFFSET_NUMBLOCKS] > 0) {
++             p_t3t_rsp[T3T_MSG_RSP_OFFSET_NUMBLOCKS] > 0)
      {
          /* Notify app of NDEF segment received */
 -        rsp_num_bytes_rx = p_t3t_rsp[T3T_MSG_RSP_OFFSET_NUMBLOCKS] * 16;    /* Number of bytes received, according to header */
