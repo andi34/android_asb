@@ -1,0 +1,44 @@
+From 7f5fb5d62ffd0c4b6a6f56b9e58f79bb26ab06dc Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Thu, 29 Nov 2018 18:54:21 +0100
+Subject: [PATCH] Bluetooth: Check descriptors size in BluetoothHidDeviceAppSdpSettings
+
+Bug: 119819889
+Test: compilation
+Change-Id: If51d0e2af74d99758f79a603d40cc2f5c84e4dde
+(cherry picked from commit 63519217e8c0682369b5b3dc11417f79b3b48b7e)
+---
+
+diff --git a/core/java/android/bluetooth/BluetoothHidDeviceAppSdpSettings.java b/core/java/android/bluetooth/BluetoothHidDeviceAppSdpSettings.java
+index db88f0d..022bd02 100644
+--- a/core/java/android/bluetooth/BluetoothHidDeviceAppSdpSettings.java
++++ b/core/java/android/bluetooth/BluetoothHidDeviceAppSdpSettings.java
+@@ -20,12 +20,15 @@
+ 
+ import android.os.Parcel;
+ import android.os.Parcelable;
++import android.util.EventLog;
+ 
+ import java.util.Random;
+ 
+ /** @hide */
+ public final class BluetoothHidDeviceAppSdpSettings implements Parcelable {
+ 
++    private static final int MAX_DESCRIPTOR_SIZE = 2048;
++
+     final public String name;
+     final public String description;
+     final public String provider;
+@@ -38,6 +41,12 @@
+         this.description = description;
+         this.provider = provider;
+         this.subclass = subclass;
++
++        if (descriptors == null || descriptors.length > MAX_DESCRIPTOR_SIZE) {
++            EventLog.writeEvent(0x534e4554, "119819889", -1, "");
++            throw new IllegalArgumentException("descriptors must be not null and shorter than "
++                    + MAX_DESCRIPTOR_SIZE);
++        }
+         this.descriptors = descriptors.clone();
+     }
+ 
