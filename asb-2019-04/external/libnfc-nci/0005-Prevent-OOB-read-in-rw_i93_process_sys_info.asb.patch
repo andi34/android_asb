@@ -1,37 +1,37 @@
-From 82cbc8aacccb863e62ec7966e991fee64987763c Mon Sep 17 00:00:00 2001
+From 48a5011c4717a03e9c97469381cad90d2ee6927d Mon Sep 17 00:00:00 2001
 From: Ruchi Kandoi <kandoiruchi@google.com>
 Date: Thu, 24 Jan 2019 14:45:55 -0800
-Subject: [PATCH 2/5] Prevent OOB read in rw_i93_process_sys_info()
+Subject: [PATCH 5/5] Prevent OOB read in rw_i93_process_sys_info()
 
 Test: Nfc Enable/Disable
 Bug: 121259048
 Change-Id: Iad8809e5d270f1049b3738891ef4b44346084047
-(cherry picked from commit c1da325665ece30e0d1a0e9ab0c9113909739bcf)
+(cherry picked from commit 8e8de2b13b00dd2ad9ac61e773b8a1c2573759d6)
 ---
- src/nfc/tags/rw_i93.c | 42 ++++++++++++++++++++++++++++++++++++------
- 1 file changed, 36 insertions(+), 6 deletions(-)
+ src/nfc/tags/rw_i93.c | 44 ++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 38 insertions(+), 6 deletions(-)
 
 diff --git a/src/nfc/tags/rw_i93.c b/src/nfc/tags/rw_i93.c
-index cec6af9..68d61cf 100644
+index 4fcf4ac..8884970 100644
 --- a/src/nfc/tags/rw_i93.c
 +++ b/src/nfc/tags/rw_i93.c
-@@ -203,7 +203,7 @@ void rw_i93_get_product_version (UINT8 *p_uid)
+@@ -204,7 +204,7 @@ void rw_i93_get_product_version (UINT8 *p_uid)
  ** Returns          FALSE if retrying with protocol extension flag
  **
  *******************************************************************************/
 -BOOLEAN rw_i93_process_sys_info (UINT8* p_data)
-+BOOLEAN rw_i93_process_sys_info (UINT8* p_data, uint16_t length)
++BOOLEAN rw_i93_process_sys_info (UINT8* p_data, UINT16 length)
  {
      UINT8      *p     = p_data;
      tRW_I93_CB *p_i93 = &rw_cb.tcb.i93;
-@@ -211,38 +211,68 @@ BOOLEAN rw_i93_process_sys_info (UINT8* p_data)
+@@ -212,38 +212,70 @@ BOOLEAN rw_i93_process_sys_info (UINT8* p_data)
  
      RW_TRACE_DEBUG0 ("rw_i93_process_sys_info ()");
  
 +    if (length < (I93_UID_BYTE_LEN + 1))
 +    {
-+        android_errorWriteLog(0x534e4554, "121259048");
-+        return false;
++        android_errorWriteLog (0x534e4554, "121259048");
++        return FALSE;
 +    }
      STREAM_TO_UINT8 (p_i93->info_flags, p);
 +    length--;
@@ -44,8 +44,8 @@ index cec6af9..68d61cf 100644
      {
 +        if (length == 0)
 +        {
-+            android_errorWriteLog(0x534e4554, "121259048");
-+            return false;
++            android_errorWriteLog (0x534e4554, "121259048");
++            return FALSE;
 +        }
          STREAM_TO_UINT8 (p_i93->dsfid, p);
 +        length--;
@@ -54,8 +54,8 @@ index cec6af9..68d61cf 100644
      {
 +        if (length == 0)
 +        {
-+            android_errorWriteLog(0x534e4554, "121259048");
-+            return false;
++            android_errorWriteLog (0x534e4554, "121259048");
++            return FALSE;
 +        }
          STREAM_TO_UINT8 (p_i93->afi, p);
 +        length--;
@@ -63,7 +63,7 @@ index cec6af9..68d61cf 100644
      if (p_i93->info_flags & I93_INFO_FLAG_MEM_SIZE)
      {
 -        if (p_i93->intl_flags & RW_I93_FLAG_16BIT_NUM_BLOCK)
-+        bool block_16_bit = p_i93->intl_flags & RW_I93_FLAG_16BIT_NUM_BLOCK;
++        BOOLEAN block_16_bit = p_i93->intl_flags & RW_I93_FLAG_16BIT_NUM_BLOCK;
 +        if (block_16_bit && length > 2)
          {
              STREAM_TO_UINT16 (p_i93->num_block, p);
@@ -74,9 +74,10 @@ index cec6af9..68d61cf 100644
          {
              STREAM_TO_UINT8 (p_i93->num_block, p);
 +            length--;
-+        } else {
++        }
++        else {
 +            android_errorWriteLog(0x534e4554, "121259048");
-+            return false;
++            return FALSE;
          }
          /* it is one less than actual number of bytes */
          p_i93->num_block += 1;
@@ -88,14 +89,15 @@ index cec6af9..68d61cf 100644
      }
      if (p_i93->info_flags & I93_INFO_FLAG_IC_REF)
      {
-+        if (length == 0) {
++        if (length == 0)
++        {
 +            android_errorWriteLog(0x534e4554, "121259048");
-+            return false;
++            return FALSE;
 +        }
          STREAM_TO_UINT8 (p_i93->ic_reference, p);
  
          /* clear existing UID to set product version */
-@@ -447,7 +477,7 @@ void rw_i93_send_to_upper (BT_HDR *p_resp)
+@@ -448,7 +480,7 @@ void rw_i93_send_to_upper (BT_HDR *p_resp)
  
      case I93_CMD_GET_SYS_INFO:
  
@@ -104,7 +106,7 @@ index cec6af9..68d61cf 100644
          {
              rw_data.i93_sys_info.status     = NFC_STATUS_OK;
              rw_data.i93_sys_info.info_flags = p_i93->info_flags;
-@@ -1558,7 +1588,7 @@ void rw_i93_sm_detect_ndef (BT_HDR *p_resp)
+@@ -1568,7 +1600,7 @@ void rw_i93_sm_detect_ndef (BT_HDR *p_resp)
          p_i93->block_size = 0;
          p_i93->num_block  = 0;
  
@@ -113,7 +115,7 @@ index cec6af9..68d61cf 100644
          {
              /* retrying with protocol extension flag */
              break;
-@@ -2418,7 +2448,7 @@ void rw_i93_sm_format (BT_HDR *p_resp)
+@@ -2457,7 +2489,7 @@ void rw_i93_sm_format (BT_HDR *p_resp)
          p_i93->block_size = 0;
          p_i93->num_block  = 0;
  

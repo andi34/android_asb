@@ -1,22 +1,21 @@
-From 13f7974513468f3f7b6d911dec9336c8de719ca1 Mon Sep 17 00:00:00 2001
+From 50d942a31fa2f89c4073a7813be83d7d1eafc8d2 Mon Sep 17 00:00:00 2001
 From: Jack Yu <jackcwyu@google.com>
-Date: Wed, 30 Jan 2019 14:59:09 +0800
-Subject: [PATCH 4/5] Prevent OOB error in rw_i93_sm_read_ndef()
+Date: Wed, 30 Jan 2019 15:35:01 +0800
+Subject: [PATCH 3/5] Prevent OOB error in rw_i93_sm_read_ndef()
 
 Bug: 122035770
 Test: NFC tag reading
-Change-Id: Ic006676962578871ad7ce20064226b096aad662f
-Merged-In: I053e9f01dc921bab55b5781c83f048d2638d5b87
-(cherry picked from commit 61fcf8972501f9897e9e6e0bc37c60e908421e9a)
+Change-Id: I63eccf903fedf048739c6b2bc663b3669b9ed69b
+(cherry picked from commit a85ffb7b1adfd44202c9d958b3911727a59d5086)
 ---
  src/nfc/tags/rw_i93.c | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/src/nfc/tags/rw_i93.c b/src/nfc/tags/rw_i93.c
-index 605ce1b..3b4e253 100644
+index e4a2aed..d883d96 100644
 --- a/src/nfc/tags/rw_i93.c
 +++ b/src/nfc/tags/rw_i93.c
-@@ -1994,6 +1994,12 @@ void rw_i93_sm_read_ndef (BT_HDR *p_resp)
+@@ -1962,6 +1962,12 @@ void rw_i93_sm_read_ndef (BT_HDR *p_resp)
  
      RW_TRACE_DEBUG0 ("rw_i93_sm_read_ndef ()");
  
