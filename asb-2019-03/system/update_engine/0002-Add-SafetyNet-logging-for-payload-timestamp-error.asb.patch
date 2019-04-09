@@ -1,0 +1,45 @@
+From 9df6da43bd0b307188eec22110f142d21e3a6e81 Mon Sep 17 00:00:00 2001
+From: Sen Jiang <senj@google.com>
+Date: Thu, 19 Oct 2017 13:30:19 -0700
+Subject: [PATCH 2/2] Add SafetyNet logging for payload timestamp error.
+
+Bug: 36232423
+Test: mma
+
+Merged-In: Ica752e24e78e84350e13c66a2a0a56092f232d0b
+Change-Id: Ica752e24e78e84350e13c66a2a0a56092f232d0b
+(cherry picked from commit b75539b3ee05aa07b107fd711f010af54a80b0f2)
+(cherry picked from commit c2edd69550306c42b8140ffe3035111fcbe52181)
+Exempt-From-Owner-Approval: OWNERS file outdated in nyc-*
+(cherry picked from commit 570a360a0b267f953d5274ca3952ffa23a4f64ba)
+---
+ update_attempter_android.cc | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/update_attempter_android.cc b/update_attempter_android.cc
+index 1269cef..0fa1fa1 100644
+--- a/update_attempter_android.cc
++++ b/update_attempter_android.cc
+@@ -26,6 +26,7 @@
+ #include <brillo/bind_lambda.h>
+ #include <brillo/message_loops/message_loop.h>
+ #include <brillo/strings/string_utils.h>
++#include <log/log.h>
+ 
+ #include "update_engine/common/constants.h"
+ #include "update_engine/common/file_fetcher.h"
+@@ -308,6 +309,11 @@ void UpdateAttempterAndroid::ProcessingDone(const ActionProcessor* processor,
+       LOG(INFO) << "Resetting update progress.";
+       break;
+ 
++    case ErrorCode::kPayloadTimestampError:
++      // SafetyNet logging, b/36232423
++      android_errorWriteLog(0x534e4554, "36232423");
++      break;
++
+     default:
+       // Ignore all other error codes.
+       break;
+-- 
+2.7.4
+
