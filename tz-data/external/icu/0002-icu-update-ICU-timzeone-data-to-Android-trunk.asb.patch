@@ -1,0 +1,496 @@
+From b66983e75b823b3a32245f737bb318d58a526f5a Mon Sep 17 00:00:00 2001
+From: Basil Gello <vasek.gello@gmail.com>
+Date: Fri, 11 May 2018 18:39:28 +0300
+Subject: [PATCH 2/7] icu: update ICU timzeone data to Android trunk
+
+Change-Id: I05e1f6498fa82c3957ffdbcfa04c72e8ff86240a
+---
+ icu4c/source/data/misc/metaZones.txt     |  54 ++++++++++++++--
+ icu4c/source/data/misc/timezoneTypes.txt |  19 +++---
+ icu4c/source/data/misc/windowsZones.txt  |  33 +++++++---
+ icu4c/source/tools/tzcode/icuregions     |   4 ++
+ icu4c/source/tools/tzcode/icuzones       | 106 +++++++++++++++++++++++++++++++
+ 5 files changed, 192 insertions(+), 24 deletions(-)
+
+diff --git a/icu4c/source/data/misc/metaZones.txt b/icu4c/source/data/misc/metaZones.txt
+index e63ae3c..ba47caa 100644
+--- a/icu4c/source/data/misc/metaZones.txt
++++ b/icu4c/source/data/misc/metaZones.txt
+@@ -131,11 +131,11 @@ metaZones:table(nofallback){
+             001{"America/Halifax"}
+             AG{"America/Antigua"}
+             AI{"America/Anguilla"}
+-            AN{"America/Curacao"}
+             AW{"America/Aruba"}
+             BB{"America/Barbados"}
+             BM{"Atlantic/Bermuda"}
+             BQ{"America/Kralendijk"}
++            CW{"America/Curacao"}
+             DM{"America/Dominica"}
+             GD{"America/Grenada"}
+             GL{"America/Thule"}
+@@ -212,7 +212,6 @@ metaZones:table(nofallback){
+         }
+         Chile{
+             001{"America/Santiago"}
+-            AQ{"Antarctica/Palmer"}
+         }
+         China{
+             001{"Asia/Shanghai"}
+@@ -345,7 +344,6 @@ metaZones:table(nofallback){
+             SH{"Atlantic/St_Helena"}
+             SL{"Africa/Freetown"}
+             SN{"Africa/Dakar"}
+-            ST{"Africa/Sao_Tome"}
+             TG{"Africa/Lome"}
+         }
+         Galapagos{
+@@ -913,6 +911,11 @@ metaZones:table(nofallback){
+             {
+                 "Africa_Eastern",
+                 "2000-01-15 10:00",
++                "2017-10-31 21:00",
++            }
++            {
++                "Africa_Central",
++                "2017-10-31 21:00",
+                 "9999-12-31 23:59",
+             }
+         }
+@@ -1026,6 +1029,13 @@ metaZones:table(nofallback){
+         "Africa:Sao_Tome"{
+             {
+                 "GMT",
++                "1970-01-01 00:00",
++                "2018-01-01 01:00",
++            }
++            {
++                "Africa_Western",
++                "2018-01-01 01:00",
++                "9999-12-31 23:59",
+             }
+         }
+         "Africa:Tripoli"{
+@@ -1079,11 +1089,16 @@ metaZones:table(nofallback){
+             {
+                 "Africa_Central",
+                 "1990-03-20 22:00",
+-                "1994-04-02 22:00",
++                "1994-03-20 22:00",
+             }
+             {
+                 "Africa_Western",
+-                "1994-04-02 22:00",
++                "1994-03-20 22:00",
++                "2017-10-23 22:00",
++            }
++            {
++                "Africa_Central",
++                "2017-10-23 22:00",
+                 "9999-12-31 23:59",
+             }
+         }
+@@ -1638,6 +1653,11 @@ metaZones:table(nofallback){
+             {
+                 "Atlantic",
+                 "2015-11-01 06:00",
++                "2018-03-11 07:00",
++            }
++            {
++                "America_Eastern",
++                "2018-03-11 07:00",
+                 "9999-12-31 23:59",
+             }
+         }
+@@ -2245,6 +2265,13 @@ metaZones:table(nofallback){
+                 "Atlantic",
+             }
+         }
++        "America:Punta_Arenas"{
++            {
++                "Chile",
++                "1970-01-01 00:00",
++                "2016-12-03 23:00",
++            }
++        }
+         "America:Rainy_River"{
+             {
+                 "America_Central",
+@@ -2532,6 +2559,11 @@ metaZones:table(nofallback){
+             {
+                 "Casey",
+                 "2016-10-21 16:00",
++                "2016-03-10 17:00",
++            }
++            {
++                "Australia_Western",
++                "2018-03-10 17:00",
+                 "9999-12-31 23:59",
+             }
+         }
+@@ -2576,7 +2608,7 @@ metaZones:table(nofallback){
+             {
+                 "Chile",
+                 "1982-05-01 03:00",
+-                "9999-12-31 23:59",
++                "2016-12-03 23:00",
+             }
+         }
+         "Antarctica:Rothera"{
+@@ -3100,6 +3132,11 @@ metaZones:table(nofallback){
+             {
+                 "Pyongyang",
+                 "2015-08-14 15:00",
++                "2018-05-05 08:30",
++            }
++            {
++                "Korea",
++                "2018-05-05 08:30",
+                 "9999-12-31 23:59",
+             }
+         }
+@@ -3454,6 +3491,11 @@ metaZones:table(nofallback){
+                 "America_Eastern",
+             }
+         }
++        "Etc:GMT"{
++            {
++                "GMT",
++            }
++        }
+         "Europe:Amsterdam"{
+             {
+                 "Europe_Central",
+diff --git a/icu4c/source/data/misc/timezoneTypes.txt b/icu4c/source/data/misc/timezoneTypes.txt
+index 07a4ac4..92be78c 100644
+--- a/icu4c/source/data/misc/timezoneTypes.txt
++++ b/icu4c/source/data/misc/timezoneTypes.txt
+@@ -80,10 +80,9 @@ timezoneTypes:table(nofallback){
+             "Etc:GMT-0"{"Etc/GMT"}
+             "Etc:GMT0"{"Etc/GMT"}
+             "Etc:Greenwich"{"Etc/GMT"}
+-            "Etc:UCT"{"Etc/GMT"}
+-            "Etc:UTC"{"Etc/GMT"}
+-            "Etc:Universal"{"Etc/GMT"}
+-            "Etc:Zulu"{"Etc/GMT"}
++            "Etc:UCT"{"Etc/UTC"}
++            "Etc:Universal"{"Etc/UTC"}
++            "Etc:Zulu"{"Etc/UTC"}
+             "Europe:Belfast"{"Europe/London"}
+             "Europe:Nicosia"{"Asia/Nicosia"}
+             "Europe:Tiraspol"{"Europe/Chisinau"}
+@@ -138,11 +137,11 @@ timezoneTypes:table(nofallback){
+             ROK{"Asia/Seoul"}
+             Singapore{"Asia/Singapore"}
+             Turkey{"Europe/Istanbul"}
+-            UCT{"Etc/GMT"}
+-            UTC{"Etc/GMT"}
+-            Universal{"Etc/GMT"}
++            UCT{"Etc/UTC"}
++            UTC{"Etc/UTC"}
++            Universal{"Etc/UTC"}
+             W-SU{"Europe/Moscow"}
+-            Zulu{"Etc/GMT"}
++            Zulu{"Etc/UTC"}
+         }
+     }
+     typeMap{
+@@ -316,6 +315,7 @@ timezoneTypes:table(nofallback){
+             "America:Port_of_Spain"{"ttpos"}
+             "America:Porto_Velho"{"brpvh"}
+             "America:Puerto_Rico"{"prsju"}
++            "America:Punta_Arenas"{"clpuq"}
+             "America:Rainy_River"{"caffs"}
+             "America:Rankin_Inlet"{"cayek"}
+             "America:Recife"{"brrec"}
+@@ -463,7 +463,7 @@ timezoneTypes:table(nofallback){
+             "Australia:Melbourne"{"aumel"}
+             "Australia:Perth"{"auper"}
+             "Australia:Sydney"{"ausyd"}
+-            "Etc:GMT"{"utc"}
++            "Etc:GMT"{"gmt"}
+             "Etc:GMT+1"{"utcw01"}
+             "Etc:GMT+10"{"utcw10"}
+             "Etc:GMT+11"{"utcw11"}
+@@ -490,6 +490,7 @@ timezoneTypes:table(nofallback){
+             "Etc:GMT-7"{"utce07"}
+             "Etc:GMT-8"{"utce08"}
+             "Etc:GMT-9"{"utce09"}
++            "Etc:UTC"{"utc"}
+             "Etc:Unknown"{"unk"}
+             "Europe:Amsterdam"{"nlams"}
+             "Europe:Andorra"{"adalv"}
+diff --git a/icu4c/source/data/misc/windowsZones.txt b/icu4c/source/data/misc/windowsZones.txt
+index 4606b16..6428c54 100644
+--- a/icu4c/source/data/misc/windowsZones.txt
++++ b/icu4c/source/data/misc/windowsZones.txt
+@@ -58,7 +58,7 @@ windowsZones:table(nofallback){
+         }
+         "Astrakhan Standard Time"{
+             001{"Europe/Astrakhan"}
+-            RU{"Europe/Astrakhan Europe/Saratov Europe/Ulyanovsk"}
++            RU{"Europe/Astrakhan Europe/Ulyanovsk"}
+         }
+         "Atlantic Standard Time"{
+             001{"America/Halifax"}
+@@ -156,7 +156,6 @@ windowsZones:table(nofallback){
+         }
+         "Central Pacific Standard Time"{
+             001{"Pacific/Guadalcanal"}
+-            AQ{"Antarctica/Casey"}
+             AU{"Antarctica/Macquarie"}
+             FM{"Pacific/Ponape Pacific/Kosrae"}
+             NC{"Pacific/Noumea"}
+@@ -212,7 +211,6 @@ windowsZones:table(nofallback){
+             KE{"Africa/Nairobi"}
+             KM{"Indian/Comoro"}
+             MG{"Indian/Antananarivo"}
+-            SD{"Africa/Khartoum"}
+             SO{"Africa/Mogadishu"}
+             SS{"Africa/Juba"}
+             TZ{"Africa/Dar_es_Salaam"}
+@@ -316,7 +314,6 @@ windowsZones:table(nofallback){
+             SH{"Atlantic/St_Helena"}
+             SL{"Africa/Freetown"}
+             SN{"Africa/Dakar"}
+-            ST{"Africa/Sao_Tome"}
+             TG{"Africa/Lome"}
+         }
+         "Haiti Standard Time"{
+@@ -372,6 +369,11 @@ windowsZones:table(nofallback){
+             001{"Asia/Magadan"}
+             RU{"Asia/Magadan"}
+         }
++        "Magallanes Standard Time"{
++            001{"America/Punta_Arenas"}
++            AQ{"Antarctica/Palmer"}
++            CL{"America/Punta_Arenas"}
++        }
+         "Marquesas Standard Time"{
+             001{"Pacific/Marquesas"}
+             PF{"Pacific/Marquesas"}
+@@ -457,7 +459,6 @@ windowsZones:table(nofallback){
+         }
+         "Pacific SA Standard Time"{
+             001{"America/Santiago"}
+-            AQ{"Antarctica/Palmer"}
+             CL{"America/Santiago"}
+         }
+         "Pacific Standard Time (Mexico)"{
+@@ -579,6 +580,10 @@ windowsZones:table(nofallback){
+             001{"Pacific/Apia"}
+             WS{"Pacific/Apia"}
+         }
++        "Saratov Standard Time"{
++            001{"Europe/Saratov"}
++            RU{"Europe/Saratov"}
++        }
+         "Singapore Standard Time"{
+             001{"Asia/Singapore"}
+             BN{"Asia/Brunei"}
+@@ -607,6 +612,10 @@ windowsZones:table(nofallback){
+             001{"Asia/Colombo"}
+             LK{"Asia/Colombo"}
+         }
++        "Sudan Standard Time"{
++            001{"Africa/Khartoum"}
++            SD{"Africa/Khartoum"}
++        }
+         "Syria Standard Time"{
+             001{"Asia/Damascus"}
+             SY{"Asia/Damascus"}
+@@ -637,10 +646,7 @@ windowsZones:table(nofallback){
+         }
+         "Tonga Standard Time"{
+             001{"Pacific/Tongatapu"}
+-            KI{"Pacific/Enderbury"}
+-            TK{"Pacific/Fakaofo"}
+             TO{"Pacific/Tongatapu"}
+-            ZZ{"Etc/GMT-13"}
+         }
+         "Transbaikal Standard Time"{
+             001{"Asia/Chita"}
+@@ -648,6 +654,7 @@ windowsZones:table(nofallback){
+         }
+         "Turkey Standard Time"{
+             001{"Europe/Istanbul"}
++            CY{"Asia/Famagusta"}
+             TR{"Europe/Istanbul"}
+         }
+         "Turks And Caicos Standard Time"{
+@@ -668,7 +675,7 @@ windowsZones:table(nofallback){
+         "UTC"{
+             001{"Etc/GMT"}
+             GL{"America/Danmarkshavn"}
+-            ZZ{"Etc/GMT"}
++            ZZ{"Etc/GMT Etc/UTC"}
+         }
+         "UTC+12"{
+             001{"Etc/GMT-12"}
+@@ -680,6 +687,12 @@ windowsZones:table(nofallback){
+             WF{"Pacific/Wallis"}
+             ZZ{"Etc/GMT-12"}
+         }
++        "UTC+13"{
++            001{"Etc/GMT-13"}
++            KI{"Pacific/Enderbury"}
++            TK{"Pacific/Fakaofo"}
++            ZZ{"Etc/GMT-13"}
++        }
+         "UTC-02"{
+             001{"Etc/GMT+2"}
+             BR{"America/Noronha"}
+@@ -717,6 +730,7 @@ windowsZones:table(nofallback){
+         }
+         "W. Australia Standard Time"{
+             001{"Australia/Perth"}
++            AQ{"Antarctica/Casey"}
+             AU{"Australia/Perth"}
+         }
+         "W. Central Africa Standard Time"{
+@@ -732,6 +746,7 @@ windowsZones:table(nofallback){
+             GQ{"Africa/Malabo"}
+             NE{"Africa/Niamey"}
+             NG{"Africa/Lagos"}
++            ST{"Africa/Sao_Tome"}
+             TD{"Africa/Ndjamena"}
+             TN{"Africa/Tunis"}
+             ZZ{"Etc/GMT-1"}
+diff --git a/icu4c/source/tools/tzcode/icuregions b/icu4c/source/tools/tzcode/icuregions
+index b09f35b..91d5b37 100644
+--- a/icu4c/source/tools/tzcode/icuregions
++++ b/icu4c/source/tools/tzcode/icuregions
+@@ -1,3 +1,5 @@
++# Copyright (C) 2016 and later: Unicode, Inc. and others.
++# License & terms of use: http://www.unicode.org/copyright.html
+ ######################################################################
+ # Copyright (C) 2013-2014, International Business Machines
+ # Corporation and others.  All Rights Reserved.
+@@ -9,4 +11,6 @@
+ #
+ Africa/Asmera ER
+ America/Montreal CA
++Europe/Simferopol UA
++Pacific/Johnston UM
+ 
+diff --git a/icu4c/source/tools/tzcode/icuzones b/icu4c/source/tools/tzcode/icuzones
+index f8cbc7c..c1ded7b 100644
+--- a/icu4c/source/tools/tzcode/icuzones
++++ b/icu4c/source/tools/tzcode/icuzones
+@@ -1,3 +1,5 @@
++# Copyright (C) 2016 and later: Unicode, Inc. and others.
++# License & terms of use: http://www.unicode.org/copyright.html
+ ######################################################################
+ # Copyright (C) 2007-2014, International Business Machines
+ # Corporation and others.  All Rights Reserved.
+@@ -69,3 +71,107 @@ Link America/Los_Angeles PST
+ Link Pacific/Guadalcanal SST
+ #Link Etc/UTC UTC # Olson LINK
+ Link Asia/Ho_Chi_Minh VST
++
++#
++# Aliases already dropped from the TZ database.
++# ICU may also remove these aliases.
++#
++Link America/Regina Canada/East-Saskatchewan # removed from backward in 2017c
++
++
++# Note:
++#   Following section was added for tz database 2018a and 2018b.
++# ICU has a bug handling negative DST, and we also don't want to
++# flip sumer time name and winter time name for Dublin at least for
++# now. Because the change had major impacts to tz database external
++# consumers, the tz database maintainer once reverted the Europe/Dublin
++# rules (same as 2017c or older) in 2018c. The tz database maintainer
++# thinks the changes in 2018a should be brought back when external
++# tz database consumers are ready to adopt the change. We don't know
++# what CLDR TC want to do with this for now. But if tz database brings
++# back the change, and CLDR TC (and ICU TC) want to keep the display name
++# unchanged, then we can uncomment the block below to restore ICU
++# custom override. (Yoshito 2018-01-23)
++
++#
++# tzdata2018a changed Europe/Dublin to use IST (UTC+1) as the standard time
++# of the region, and GMT (UTC) as the daylight saving time with negative
++# offset (-1 hour) in winter. ICU SimpleTimeZone rejects a zone with negative
++# daylight saving time offset. We could remove the restriction in newer version
++# of ICU, but such data does not work well with older ICU runtime without
++# fixing the issue. For now, we define our own Europe/Dubin in ICU, replacing
++# Europe/Dublin data from the tz database.
++#
++
++#
++# tzdata2018e suggests to use alternative zone definitions for use GB-Eire
++# and EU rule after Oct 27, 1968. (Yoshito 2018-05-04)
++#
++
++# Zone	NAME		GMTOFF	RULES	FORMAT	[UNTIL]
++Zone	Europe/Dublin--ICU	-0:25:00 -	LMT	1880 Aug  2
++			-0:25:21 -	DMT	1916 May 21  2:00s
++			-0:25:21 1:00	IST	1916 Oct  1  2:00s
++			 0:00	GB-Eire	%s	1921 Dec  6 # independence
++			 0:00	GB-Eire	GMT/IST	1940 Feb 25  2:00s
++			 0:00	1:00	IST	1946 Oct  6  2:00s
++			 0:00	-	GMT	1947 Mar 16  2:00s
++			 0:00	1:00	IST	1947 Nov  2  2:00s
++			 0:00	-	GMT	1948 Apr 18  2:00s
++			 0:00	GB-Eire	GMT/IST	1968 Oct 27
++# The next line is for when negative SAVE values are used.
++#			 1:00	Eire	IST/GMT
++# These three lines are for when SAVE values are always nonnegative.
++			 1:00	-	IST	1971 Oct 31  2:00u
++			 0:00	GB-Eire	GMT/IST	1996
++			 0:00	EU	GMT/IST
++
++Link Europe/Dublin--ICU Eire--ICU
++
++
++#
++# tzdata2018e also added another instance of negative DST to
++# Europe/Prague and Africa/Windhoek
++#
++# Zone	NAME		GMTOFF	RULES	FORMAT	[UNTIL]
++Zone	Europe/Prague--ICU	0:57:44 -	LMT	1850
++			0:57:44	-	PMT	1891 Oct    # Prague Mean Time
++			1:00	C-Eur	CE%sT	1945 May  9
++			1:00	Czech	CE%sT	1946 Dec  1  3:00
++# Vanguard section, for zic and other parsers that support negative DST.
++#			1:00	-1:00	GMT	1947 Feb 23  2:00
++# Rearguard section, for parsers that do not support negative DST.
++			0:00	-	GMT	1947 Feb 23  2:00
++# End of rearguard section.
++			1:00	Czech	CE%sT	1979
++			1:00	EU	CE%sT
++
++# Slovakia
++Link Europe/Prague--ICU Europe/Bratislava--ICU
++
++# RULE	NAME	FROM	TO	TYPE	IN	ON	AT	SAVE	LETTER/S
++# Vanguard section, for zic and other parsers that support negative DST.
++#Rule	Namibia	1994	only	-	Mar	21	0:00	-1:00	WAT
++#Rule	Namibia	1994	2017	-	Sep	Sun>=1	2:00	0	CAT
++#Rule	Namibia	1995	2017	-	Apr	Sun>=1	2:00	-1:00	WAT
++# Rearguard section, for parsers that do not support negative DST.
++Rule	Namibia--ICU	1994	only	-	Mar	21	0:00	0	WAT
++Rule	Namibia--ICU	1994	2017	-	Sep	Sun>=1	2:00	1:00	CAT
++Rule	Namibia--ICU	1995	2017	-	Apr	Sun>=1	2:00	0	WAT
++
++# Zone	NAME		GMTOFF	RULES	FORMAT	[UNTIL]
++Zone	Africa/Windhoek--ICU	1:08:24 -	LMT	1892 Feb 8
++			1:30	-	+0130	1903 Mar
++			2:00	-	SAST	1942 Sep 20  2:00
++			2:00	1:00	SAST	1943 Mar 21  2:00
++			2:00	-	SAST	1990 Mar 21 # independence
++# Vanguard section, for zic and other parsers that support negative DST.
++#			2:00	Namibia	%s
++# Rearguard section, for parsers that do not support negative DST.
++			2:00	-	CAT	1994 Mar 21  0:00
++# From Paul Eggert (2017-04-07):
++# The official date of the 2017 rule change was 2017-10-24.  See:
++# http://www.lac.org.na/laws/annoSTAT/Namibian%20Time%20Act%209%20of%202017.pdf
++			1:00	Namibia--ICU	%s	2017 Oct 24
++			2:00	-	CAT
++# End of rearguard section.
+-- 
+2.7.4
+
