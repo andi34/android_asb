@@ -1,0 +1,63 @@
+From 8ac4e71d8c9299ec2508ff795f76c1ef5dc24b0e Mon Sep 17 00:00:00 2001
+From: Fan Zhang <zhfan@google.com>
+Date: Thu, 14 Feb 2019 16:07:37 -0800
+Subject: [PATCH] Do not allow draw on top for default sms picker.
+
+Fixes: 120484087
+Test: manual
+Change-Id: I4be265565678302fad207839216d5cd65dcb6e94
+Merged-In: I4be265565678302fad207839216d5cd65dcb6e94
+(cherry picked from commit 9d46e1fdfe1b70618c5a92c3e3461a4b379db236)
+(cherry picked from commit 95d0fb7f4911403844666632ece42467f60ad753)
+---
+ src/com/android/settings/SmsDefaultDialog.java | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/src/com/android/settings/SmsDefaultDialog.java b/src/com/android/settings/SmsDefaultDialog.java
+index 830187c..73cca47 100644
+--- a/src/com/android/settings/SmsDefaultDialog.java
++++ b/src/com/android/settings/SmsDefaultDialog.java
+@@ -16,6 +16,8 @@
+ 
+ package com.android.settings;
+ 
++import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++
+ import android.content.ComponentName;
+ import android.content.Context;
+ import android.content.DialogInterface;
+@@ -30,6 +32,8 @@ import android.text.TextUtils;
+ import android.view.LayoutInflater;
+ import android.view.View;
+ import android.view.ViewGroup;
++import android.view.Window;
++import android.view.WindowManager;
+ import android.widget.BaseAdapter;
+ import android.widget.ImageView;
+ import android.widget.TextView;
+@@ -60,6 +64,22 @@ public final class SmsDefaultDialog extends AlertActivity implements
+     }
+ 
+     @Override
++    protected void onStart() {
++        super.onStart();
++        getWindow().addPrivateFlags(PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS);
++        android.util.EventLog.writeEvent(0x534e4554, "120484087", -1, "");
++    }
++
++    @Override
++    protected void onStop() {
++        super.onStop();
++        final Window window = getWindow();
++        final WindowManager.LayoutParams attrs = window.getAttributes();
++        attrs.privateFlags &= ~PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++        window.setAttributes(attrs);
++    }
++
++    @Override
+     public void onClick(DialogInterface dialog, int which) {
+         switch (which) {
+             case BUTTON_POSITIVE:
+-- 
+2.7.4
+

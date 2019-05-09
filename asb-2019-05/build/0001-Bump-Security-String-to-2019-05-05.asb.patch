@@ -1,0 +1,47 @@
+From 18b5abe25308d5c81a572932b3e542f30ceb780a Mon Sep 17 00:00:00 2001
+From: Vasyl Gello <vasek.gello@gmail.com>
+Date: Tue, 7 May 2019 08:35:24 +0300
+Subject: [PATCH] Bump Security String to 2019-05-05
+
+Implemented:
+============
+CVE:            References:  Type:  Severity:  Updated AOSP versions:
+CVE-2019-2043   A-120484087  EoP    Moderate   7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2044   A-123701862  RCE    Critical   7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2045   A-117554758  RCE    Critical   7.0, 7.1.1, 7.1.2, 8.1, 9
+CVE-2019-2046   A-117556220  RCE    Critical   7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2047   A-117607414  RCE    Critical   7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2051   A-117555811  ID     High       7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2052   A-117556606  ID     High       7.0, 7.1.1, 7.1.2, 8.1, 9
+CVE-2019-2053   A-122074159  ID     High       7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+Not Implemented:
+================
+None
+
+Not Applicable (platform source):
+================
+CVE:            References:  Type:  Severity:  Updated AOSP versions:
+CVE-2019-2049   A-120445479  EoP    High       9
+CVE-2019-2050   A-121327323  EoP    High       8.0, 8.1, 9
+
+Change-Id: I636a1c0b84dd78244596cb9ea9be24d5d56b5163
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 1d6cd62..c0ceb52 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2019-04-05
++    PLATFORM_SECURITY_PATCH := 2019-05-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+
