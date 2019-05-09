@@ -1,0 +1,38 @@
+From 1620b006d3b193ba06768610094b2dc37a2cee90 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Mon, 15 Apr 2019 10:57:34 +0200
+Subject: [PATCH] Bump Security Patch Level to 2019-04-01
+
+CVE-2019-2027	A-119120561	Crit.	Change 245622
+CVE-2019-2028	A-120644655	Crit.
+CVE-2019-2031	A-120502559	High	Change 245634
+CVE-2019-2034	A-122035770	High	Change 245688
+CVE-2019-2035	A-122320256	High	Change 245704
+CVE-2019-2038	A-121259048	High	Change 245705
+CVE-2019-2039	A-121260197	High	Change 245728
+CVE-2019-2029	A-120612744	Crit.	Change 246251
+CVE-2019-2037	A-119870451	High	Change 246257
+
+Reference version: 7.0
+
+Change-Id: Ia6cc0e0e8a6aebd80566b6506c97538e389af3a9
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 53fa328..6974e34 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2019-03-01
++  PLATFORM_SECURITY_PATCH := 2019-04-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+

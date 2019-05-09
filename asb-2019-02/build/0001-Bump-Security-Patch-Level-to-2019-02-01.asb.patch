@@ -1,0 +1,39 @@
+From 66162ef7caa7fa010eaa43200401bd2376050045 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sun, 3 Mar 2019 12:21:07 +0100
+Subject: [PATCH] Bump Security Patch Level to 2019-02-01
+
+CVE-2019-1987	A-118143775 [1]	Crit.
+CVE-2019-1987	A-118143775 [2]	Crit.
+CVE-2017-17760	A-78029030*	High	Not publicly available
+CVE-2018-5268	A-78029634*	High	Not publicly available
+CVE-2018-5269	A-78029727*	High	Not publicly available
+CVE-2017-18009	A-78026242*	Mod.	Not publicly available
+CVE-2019-1991	A-110166268	Crit.	Change 241449
+CVE-2019-1992	A-116222069	Crit.	Change 241453
+CVE-2019-1993	A-119819889	High	Change 241451
+CVE-2019-1995	A-32589229 [1]	High
+CVE-2019-1995	A-32589229 [2]	High
+CVE-2019-1997	A-117508900	High	Change 241471
+
+Change-Id: I2716fea3dc9bddd893196124d7e3c5c8115460d2
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 6a8cb46..fb7beec 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -81,7 +81,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   # Can be an arbitrary string, but must be a single word.
+   #
+   # If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2019-01-01
++  PLATFORM_SECURITY_PATCH := 2019-02-01
+ endif
+ 
+ ifeq "" "$(BUILD_ID)"
+-- 
+2.7.4
+
