@@ -1,0 +1,70 @@
+From c37b14053243171f3d5f4ce454fe4c1df322ca76 Mon Sep 17 00:00:00 2001
+From: Sehee Park <sehee32.park@samsung.com>
+Date: Wed, 26 Dec 2018 07:28:23 +0900
+Subject: [PATCH 1/2] Fix fortify_fatal issue during DNSServiceProcessResult()
+
+fd was checked at beginnig of DNSServiceProcessResult()
+but fd was changed to -1. So, fortify_fatal was occured
+when FD_SET() was called.
+Abort message: 'FORTIFY: FD_SET: file descriptor -1 < 0'
+
+Test: Build
+Bug: 120910016
+Bug: 121327565
+Change-Id: Ib4c8dcc08223578fb53647637b44a20a4c221050
+Merged-In: Ib4c8dcc08223578fb53647637b44a20a4c221050
+Signed-off-by: Sehee Park <sehee32.park@samsung.com>
+(cherry picked from commit 3eeb0e6b86ac8a7f00968d0a086381e7dcd8cc2b)
+---
+ MDnsSdListener.cpp | 10 +++++++++-
+ MDnsSdListener.h   |  1 +
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/MDnsSdListener.cpp b/MDnsSdListener.cpp
+index 4944e18..6953099 100644
+--- a/MDnsSdListener.cpp
++++ b/MDnsSdListener.cpp
+@@ -143,7 +143,7 @@ void MDnsSdListener::Handler::stop(SocketClient *cli, int argc, char **argv, con
+         return;
+     }
+     if (VDBG) ALOGD("Stopping %s with ref %p", str, ref);
+-    DNSServiceRefDeallocate(*ref);
++    mMonitor->deallocateServiceRef(ref);
+     mMonitor->freeServiceRef(requestId);
+     char *msg;
+     asprintf(&msg, "%s stopped", str);
+@@ -565,7 +565,9 @@ void MDnsSdListener::Monitor::run() {
+                         ALOGD("Monitor found [%d].revents = %d - calling ProcessResults",
+                                 i, mPollFds[i].revents);
+                     }
++                    pthread_mutex_lock(&mHeadMutex);
+                     DNSServiceProcessResult(*(mPollRefs[i]));
++                    pthread_mutex_unlock(&mHeadMutex);
+                     mPollFds[i].revents = 0;
+                 }
+             }
+@@ -731,3 +733,9 @@ void MDnsSdListener::Monitor::freeServiceRef(int id) {
+     }
+     pthread_mutex_unlock(&mHeadMutex);
+ }
++
++void MDnsSdListener::Monitor::deallocateServiceRef(DNSServiceRef* ref) {
++    pthread_mutex_lock(&mHeadMutex);
++    DNSServiceRefDeallocate(*ref);
++    pthread_mutex_unlock(&mHeadMutex);
++}
+diff --git a/MDnsSdListener.h b/MDnsSdListener.h
+index a3b14ad..5abc45c 100644
+--- a/MDnsSdListener.h
++++ b/MDnsSdListener.h
+@@ -76,6 +76,7 @@ public:
+         static void *threadStart(void *handler);
+         int startService();
+         int stopService();
++        void deallocateServiceRef(DNSServiceRef* ref);
+     private:
+         void run();
+         int rescan(); // returns the number of elements in the poll
+-- 
+2.7.4
+

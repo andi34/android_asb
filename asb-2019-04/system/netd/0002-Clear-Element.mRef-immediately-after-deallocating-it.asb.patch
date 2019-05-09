@@ -1,0 +1,34 @@
+From 9d5eed0b94f7674163abeb8d0337757c3854de63 Mon Sep 17 00:00:00 2001
+From: Ken Chen <cken@google.com>
+Date: Sat, 26 Jan 2019 19:17:00 +0800
+Subject: [PATCH 2/2] Clear Element.mRef immediately after deallocating it
+
+DNSServiceRefDeallocate() and pointer dereferencing in request handler
+thread are protected by two separate lock/unlock pairs on mHeadMutex.
+If rescan() runs between these, it could dereference mRef, causing
+a heap-use-after-free bug.
+
+Solution: set mRef to null immediately after freeing it.
+
+Bug: 121327565
+Test: build
+Change-Id: I56ace2ad8a2da528afa375aefb1b9420547658a7
+(cherry picked from commit 9762bc1964a37ec56091ee2b6070e19c5206f615)
+---
+ MDnsSdListener.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/MDnsSdListener.cpp b/MDnsSdListener.cpp
+index 6953099..5ce4ce5 100644
+--- a/MDnsSdListener.cpp
++++ b/MDnsSdListener.cpp
+@@ -737,5 +737,6 @@ void MDnsSdListener::Monitor::freeServiceRef(int id) {
+ void MDnsSdListener::Monitor::deallocateServiceRef(DNSServiceRef* ref) {
+     pthread_mutex_lock(&mHeadMutex);
+     DNSServiceRefDeallocate(*ref);
++    *ref = NULL;
+     pthread_mutex_unlock(&mHeadMutex);
+ }
+-- 
+2.7.4
+
