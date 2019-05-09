@@ -1,0 +1,40 @@
+From a9ee69a94ac2cf7e62b2d17c7c3b5285a48ba246 Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sat, 23 Mar 2019 15:22:30 +0100
+Subject: [PATCH] Bump Security Patch Level to 2019-02-01
+
+CVE-2019-1987	A-118143775 [1]	Crit.	Dependency of [2]
+CVE-2019-1987	A-118143775 [2]	Crit.	Not applicable
+CVE-2017-17760	A-78029030*	High	Change 244765
+CVE-2018-5268	A-78029634*	High	Change 244765
+CVE-2018-5269	A-78029727*	High	Change 244765
+CVE-2017-18009	A-78026242*	Mod.	Change 244765
+CVE-2019-1991	A-110166268	Crit.	Change 244753
+CVE-2019-1992	A-116222069	Crit.	Change 244755
+CVE-2019-1995	A-32589229 [1]	High	Change 244756
+CVE-2019-1995	A-32589229 [2]	High	Change 244757
+CVE-2019-1997	A-117508900	High	Change 244758
+
+Reference Version: 7.0
+
+Change-Id: Iac3b46a870f0a91900fcfe486e863ad1ff3466e6
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 3443956..390fc7a 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -105,7 +105,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+   #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+   #
+   #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-  PLATFORM_SECURITY_PATCH := 2019-01-01
++  PLATFORM_SECURITY_PATCH := 2019-02-01
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.7.4
+

@@ -1,0 +1,25 @@
+From ddaec96a5f60e40231cbfc4ed7d6b8400e51ce0b Mon Sep 17 00:00:00 2001
+From: Tim Schumacher <timschumi@gmx.de>
+Date: Sat, 23 Mar 2019 17:30:30 +0100
+Subject: [PATCH] Drop OpenCV
+
+Change-Id: I1fdf6f9f1423178f967aaaf61fe581e8b2eb041a
+---
+ aosp.xml | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/aosp.xml b/aosp.xml
+index 5bfd9da..3fb8180 100644
+--- a/aosp.xml
++++ b/aosp.xml
+@@ -212,7 +212,6 @@
+   <project path="external/oauth" name="platform/external/oauth" groups="pdk-cw-fs,pdk-fs" />
+   <project path="external/objenesis" name="platform/external/objenesis" groups="pdk-cw-fs,pdk-fs" />
+   <project path="external/okhttp" name="platform/external/okhttp" groups="pdk-cw-fs,pdk-fs" />
+-  <project path="external/opencv" name="platform/external/opencv" groups="pdk-cw-fs,pdk-fs" />
+   <project path="external/openfst" name="platform/external/openfst" groups="pdk-cw-fs,pdk-fs" />
+   <project path="external/openssh" name="platform/external/openssh" groups="pdk-cw-fs,pdk-fs" />
+   <project path="external/owasp/sanitizer" name="platform/external/owasp/sanitizer" groups="pdk-fs" />
+-- 
+2.7.4
+

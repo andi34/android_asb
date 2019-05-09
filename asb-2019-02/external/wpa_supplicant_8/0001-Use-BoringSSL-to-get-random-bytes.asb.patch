@@ -1,0 +1,51 @@
+From 610f47c96fb6b7b64992b40db7c0768cd852847c Mon Sep 17 00:00:00 2001
+From: Rich Cannings <richc@google.com>
+Date: Tue, 9 Oct 2018 13:56:37 -0700
+Subject: [PATCH] Use BoringSSL to get random bytes
+
+Bug: 117508900
+Change-Id: I4889513c0671ff2b689f1beca8084d6f149d473d
+Test: Existing tests pass
+(cherry picked from commit 29d54b87f121c79d5df87b0b2bcd7a1eb6090c1f)
+---
+ src/crypto/random.c       | 7 +++++++
+ wpa_supplicant/Android.mk | 1 +
+ 2 files changed, 8 insertions(+)
+
+diff --git a/src/crypto/random.c b/src/crypto/random.c
+index bc758aa..948e880 100644
+--- a/src/crypto/random.c
++++ b/src/crypto/random.c
+@@ -160,10 +160,17 @@ int random_get_bytes(void *buf, size_t len)
+ 	wpa_printf(MSG_MSGDUMP, "Get randomness: len=%u entropy=%u",
+ 		   (unsigned int) len, entropy);
+ 
++#ifdef CONFIG_USE_OPENSSL_RNG
++	/* Start with assumed strong randomness from OpenSSL */
++	ret = crypto_get_random(buf, len);
++	wpa_hexdump_key(MSG_EXCESSIVE, "random from crypto_get_random",
++			buf, len);
++#else /* CONFIG_USE_OPENSSL_RNG */
+ 	/* Start with assumed strong randomness from OS */
+ 	ret = os_get_random(buf, len);
+ 	wpa_hexdump_key(MSG_EXCESSIVE, "random from os_get_random",
+ 			buf, len);
++#endif /* CONFIG_USE_OPENSSL_RNG */
+ 
+ 	/* Mix in additional entropy extracted from the internal pool */
+ 	left = len;
+diff --git a/wpa_supplicant/Android.mk b/wpa_supplicant/Android.mk
+index 6089690..cfe2870 100644
+--- a/wpa_supplicant/Android.mk
++++ b/wpa_supplicant/Android.mk
+@@ -943,6 +943,7 @@ endif
+ 
+ ifndef CONFIG_TLS
+ CONFIG_TLS=openssl
++L_CFLAGS += -DCONFIG_USE_OPENSSL_RNG
+ endif
+ 
+ ifdef CONFIG_TLSV11
+-- 
+2.7.4
+
