@@ -1,0 +1,43 @@
+From 4e5dae5806003db461027f5e7bacdfb6d1b32f68 Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Mon, 7 Jan 2019 17:36:52 -0800
+Subject: [PATCH 02/10] Prevent Integer Overflow in
+ rw_t3t_act_handle_check_rsp()
+
+Bug: 120503926
+Test: NFC Enable/Disable
+Change-Id: I260c2028ab56260ae4d26ce7c4699763df20ce7a
+(cherry picked from commit 2fa7388789742b3e75173d998925d4c6165814a6)
+---
+ src/nfc/tags/rw_t3t.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/nfc/tags/rw_t3t.c b/src/nfc/tags/rw_t3t.c
+index 7db0fac..3e733bd 100644
+--- a/src/nfc/tags/rw_t3t.c
++++ b/src/nfc/tags/rw_t3t.c
+@@ -1399,7 +1399,7 @@ void rw_t3t_act_handle_check_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+         nfc_status = NFC_STATUS_FAILED;
+         GKI_freebuf (p_msg_rsp);
+     }
+-    else
++    else if (p_msg_rsp->len >= T3T_MSG_RSP_OFFSET_CHECK_DATA)
+     {
+         /* Copy incoming data into buffer */
+         p_msg_rsp->offset += T3T_MSG_RSP_OFFSET_CHECK_DATA;     /* Skip over t3t header */
+@@ -1408,6 +1408,12 @@ void rw_t3t_act_handle_check_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+         evt_data.p_data = p_msg_rsp;
+         (*(rw_cb.p_cback)) (RW_T3T_CHECK_EVT, (tRW_DATA *) &evt_data);
+     }
++    else
++    {
++        android_errorWriteLog(0x534e4554, "120503926");
++        nfc_status = NFC_STATUS_FAILED;
++        GKI_freebuf(p_msg_rsp);
++    }
+ 
+ 
+     p_cb->rw_state = RW_T3T_STATE_IDLE;
+-- 
+2.7.4
+

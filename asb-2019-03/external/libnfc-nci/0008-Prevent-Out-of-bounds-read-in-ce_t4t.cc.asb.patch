@@ -1,0 +1,109 @@
+From e09ea7a417ef8d76664689ece8312db721dbad9d Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Thu, 29 Nov 2018 23:52:29 +0800
+Subject: [PATCH 08/10] Prevent Out of bounds read in ce_t4t.cc
+
+Test: Nfc Enable/Disable; Send wrong length AID to HCE
+Bug: 115635871
+Change-Id: Ie522424d5d9e611fac5875a0cf1f8cbd640528ff
+(cherry picked from commit a7ad729fb82a68f56b3bfc9f3404858f7feab7f2)
+---
+ src/nfc/tags/ce_t4t.c | 51 +++++++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 41 insertions(+), 10 deletions(-)
+
+diff --git a/src/nfc/tags/ce_t4t.c b/src/nfc/tags/ce_t4t.c
+index b812cff..98870e7 100644
+--- a/src/nfc/tags/ce_t4t.c
++++ b/src/nfc/tags/ce_t4t.c
+@@ -23,6 +23,7 @@
+  *  mode.
+  *
+  ******************************************************************************/
++#include <log/log.h>
+ #include <string.h>
+ #include "nfc_target.h"
+ #include "bt_types.h"
+@@ -431,6 +432,14 @@ static void ce_t4t_process_select_app_cmd (UINT8 *p_cmd, BT_HDR *p_c_apdu)
+     /* Lc Byte */
+     BE_STREAM_TO_UINT8 (data_len, p_cmd);
+ 
++    /*CLS+INS+P1+P2+Lc+Data*/
++    if (data_len > (p_c_apdu->len - T4T_CMD_MAX_HDR_SIZE)) {
++        CE_TRACE_ERROR0("Wrong length in ce_t4t_process_select_app_cmd");
++        android_errorWriteLog(0x534e4554, "115635871");
++        ce_t4t_send_status(T4T_RSP_WRONG_LENGTH);
++        GKI_freebuf(p_c_apdu);
++        return;
++    }
+ #if (CE_TEST_INCLUDED == TRUE)
+     if (mapping_aid_test_enabled)
+     {
+@@ -599,7 +608,7 @@ static void ce_t4t_data_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_
+ {
+     BT_HDR  *p_c_apdu;
+     UINT8   *p_cmd;
+-    UINT8    cla, instruct, select_type = 0, length;
++    UINT8    cla = 0, instruct = 0, select_type = 0, length = 0;
+     UINT16   offset, max_file_size;
+     tCE_DATA ce_data;
+ 
+@@ -623,6 +632,15 @@ static void ce_t4t_data_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_
+ 
+     p_cmd = (UINT8 *) (p_c_apdu + 1) + p_c_apdu->offset;
+ 
++    if (p_c_apdu->len == 0)
++    {
++        CE_TRACE_ERROR0("Wrong length in ce_t4t_data_cback");
++        android_errorWriteLog(0x534e4554, "115635871");
++        ce_t4t_send_status(T4T_RSP_WRONG_LENGTH);
++        if (p_c_apdu) GKI_freebuf(p_c_apdu);
++        return;
++    }
++
+     /* Class Byte */
+     BE_STREAM_TO_UINT8 (cla, p_cmd);
+ 
+@@ -636,18 +654,31 @@ static void ce_t4t_data_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_
+         return;
+     }
+ 
+-    /* Instruction Byte */
+-    BE_STREAM_TO_UINT8 (instruct, p_cmd);
+-
+-    if ((cla == T4T_CMD_CLASS) && (instruct == T4T_CMD_INS_SELECT))
++    /*CLA+INS+P1+P2 = 4 bytes*/
++    if (p_c_apdu->len >= T4T_CMD_MIN_HDR_SIZE)
+     {
+-        /* P1 Byte */
+-        BE_STREAM_TO_UINT8 (select_type, p_cmd);
++        /* Instruction Byte */
++        BE_STREAM_TO_UINT8 (instruct, p_cmd);
+ 
+-        if (select_type == T4T_CMD_P1_SELECT_BY_NAME)
++        if ((cla == T4T_CMD_CLASS) && (instruct == T4T_CMD_INS_SELECT))
+         {
+-            ce_t4t_process_select_app_cmd (p_cmd, p_c_apdu);
+-            return;
++            /* P1 Byte */
++            BE_STREAM_TO_UINT8 (select_type, p_cmd);
++
++            if (select_type == T4T_CMD_P1_SELECT_BY_NAME)
++            {
++                /*CLA+INS+P1+P2+Lc = 5 bytes*/
++                if (p_c_apdu->len >= T4T_CMD_MAX_HDR_SIZE) {
++                    ce_t4t_process_select_app_cmd(p_cmd, p_c_apdu);
++                    return;
++                 } else {
++                     CE_TRACE_ERROR0("Wrong length in select app cmd");
++                     android_errorWriteLog(0x534e4554, "115635871");
++                     ce_t4t_send_status(T4T_RSP_NOT_FOUND);
++                     if (p_c_apdu) GKI_freebuf(p_c_apdu);
++                     return;
++                 }
++            }
+         }
+     }
+ 
+-- 
+2.7.4
+

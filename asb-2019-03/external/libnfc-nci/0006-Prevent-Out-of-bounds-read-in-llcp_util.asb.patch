@@ -1,0 +1,287 @@
+From 202e018948ed5a6e374b1ad0b6579c986f44bd95 Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Thu, 27 Sep 2018 17:44:36 -0700
+Subject: [PATCH 06/10] Prevent Out of bounds read in llcp_util
+
+Test: Nfc Enable/Disable, Android Beam, Tag reading
+Bug: 114237888
+Bug: 114238578
+Bug: 111660010
+Change-Id: Icf03e6cc2f37bee6718efb692f0a1ff6da2cbc9d
+(cherry picked from commit ae4fd453041b91a9ea326365802a2662f8dbd500)
+---
+ src/nfc/llcp/llcp_link.c |   2 +-
+ src/nfc/llcp/llcp_util.c | 135 +++++++++++++++++++++++++++++------------------
+ 2 files changed, 85 insertions(+), 52 deletions(-)
+
+diff --git a/src/nfc/llcp/llcp_link.c b/src/nfc/llcp/llcp_link.c
+index 49c1382..415fd40 100644
+--- a/src/nfc/llcp/llcp_link.c
++++ b/src/nfc/llcp/llcp_link.c
+@@ -1188,7 +1188,7 @@ static void llcp_link_proc_agf_pdu (BT_HDR *p_agf)
+     agf_length = p_agf->len;
+     p = (UINT8 *) (p_agf + 1) + p_agf->offset;
+ 
+-    while (agf_length > 0)
++    while (agf_length >= LLCP_PDU_HEADER_SIZE)
+     {
+         /* get length of PDU */
+         p_pdu_length = p;
+diff --git a/src/nfc/llcp/llcp_util.c b/src/nfc/llcp/llcp_util.c
+index 2f4420c..8f6a557 100644
+--- a/src/nfc/llcp/llcp_util.c
++++ b/src/nfc/llcp/llcp_util.c
+@@ -22,7 +22,7 @@
+  *  This file contains the LLCP utilities
+  *
+  ******************************************************************************/
+-
++#include <log/log.h>
+ #include <string.h>
+ #include "gki.h"
+ #include "nfc_target.h"
+@@ -45,21 +45,38 @@ BOOLEAN llcp_util_parse_link_params (UINT16 length, UINT8 *p_bytes)
+ {
+     UINT8 param_type, param_len, *p = p_bytes;
+ 
+-    while (length)
++    while (length >= 2)
+     {
+-        BE_STREAM_TO_UINT8 (param_type, p);
+-        length--;
++        BE_STREAM_TO_UINT8(param_type, p);
++        BE_STREAM_TO_UINT8(param_len, p);
++        if (length < param_len + 2)
++        {
++            android_errorWriteLog(0x534e4554, "114238578");
++            LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++            return FALSE;
++        }
++        length -= param_len + 2;
+ 
+         switch (param_type)
+         {
+         case LLCP_VERSION_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_VERSION_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "114238578");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++                return FALSE;
++            }
+             BE_STREAM_TO_UINT8 (llcp_cb.lcb.peer_version, p);
+             LLCP_TRACE_DEBUG1 ("Peer Version - 0x%02X", llcp_cb.lcb.peer_version);
+             break;
+ 
+         case LLCP_MIUX_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_MIUX_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "114238578");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++                return FALSE;
++            }
+             BE_STREAM_TO_UINT16 (llcp_cb.lcb.peer_miu, p);
+             llcp_cb.lcb.peer_miu &= LLCP_MIUX_MASK;
+             llcp_cb.lcb.peer_miu += LLCP_DEFAULT_MIU;
+@@ -67,38 +84,44 @@ BOOLEAN llcp_util_parse_link_params (UINT16 length, UINT8 *p_bytes)
+             break;
+ 
+         case LLCP_WKS_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_WKS_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "114238578");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++                return FALSE;
++            }
+             BE_STREAM_TO_UINT16 (llcp_cb.lcb.peer_wks, p);
+             LLCP_TRACE_DEBUG1 ("Peer WKS - 0x%04X", llcp_cb.lcb.peer_wks);
+             break;
+ 
+         case LLCP_LTO_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_LTO_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "114238578");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++                return FALSE;
++            }
+             BE_STREAM_TO_UINT8 (llcp_cb.lcb.peer_lto, p);
+             llcp_cb.lcb.peer_lto *= LLCP_LTO_UNIT;  /* 10ms unit */
+             LLCP_TRACE_DEBUG1 ("Peer LTO - %d ms", llcp_cb.lcb.peer_lto);
+             break;
+ 
+         case LLCP_OPT_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_OPT_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "114238578");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++                return FALSE;
++            }
+             BE_STREAM_TO_UINT8 (llcp_cb.lcb.peer_opt, p);
+             LLCP_TRACE_DEBUG1 ("Peer OPT - 0x%02X", llcp_cb.lcb.peer_opt);
+             break;
+ 
+         default:
+             LLCP_TRACE_ERROR1 ("llcp_util_parse_link_params (): Unexpected type 0x%x", param_type);
+-            BE_STREAM_TO_UINT8 (param_len, p);
+             p += param_len;
+             break;
+         }
+-
+-        if (length >= param_len + 1)
+-            length -= param_len + 1;
+-        else
+-        {
+-            LLCP_TRACE_ERROR0 ("llcp_util_parse_link_params (): Bad LTV's");
+-            return (FALSE);
+-        }
+     }
+     return (TRUE);
+ }
+@@ -498,15 +521,27 @@ tLLCP_STATUS llcp_util_parse_connect (UINT8  *p_bytes, UINT16 length, tLLCP_CONN
+     p_params->sn[0] = 0;
+     p_params->sn[1] = 0;
+ 
+-    while (length)
++    while (length >= 2)
+     {
+-        BE_STREAM_TO_UINT8 (param_type, p);
+-        length--;
++        BE_STREAM_TO_UINT8(param_type, p);
++        BE_STREAM_TO_UINT8(param_len, p);
++        /* check remaining lengh */
++        if (length < param_len + 2) {
++            android_errorWriteLog(0x534e4554, "111660010");
++            LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++            return LLCP_STATUS_FAIL;
++        }
++        length -= param_len + 2;
+ 
+         switch (param_type)
+         {
+         case LLCP_MIUX_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_MIUX_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "111660010");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++                return LLCP_STATUS_FAIL;
++            }
+             BE_STREAM_TO_UINT16 (p_params->miu, p);
+             p_params->miu &= LLCP_MIUX_MASK;
+             p_params->miu += LLCP_DEFAULT_MIU;
+@@ -515,7 +550,12 @@ tLLCP_STATUS llcp_util_parse_connect (UINT8  *p_bytes, UINT16 length, tLLCP_CONN
+             break;
+ 
+         case LLCP_RW_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_RW_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "111660010");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad TLV's");
++                return LLCP_STATUS_FAIL;
++            }
+             BE_STREAM_TO_UINT8 (p_params->rw, p);
+             p_params->rw &= 0x0F;
+ 
+@@ -523,8 +563,6 @@ tLLCP_STATUS llcp_util_parse_connect (UINT8  *p_bytes, UINT16 length, tLLCP_CONN
+             break;
+ 
+         case LLCP_SN_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
+-
+             if (param_len == 0)
+             {
+                 /* indicate that SN type is included without SN */
+@@ -547,21 +585,9 @@ tLLCP_STATUS llcp_util_parse_connect (UINT8  *p_bytes, UINT16 length, tLLCP_CONN
+ 
+         default:
+             LLCP_TRACE_ERROR1 ("llcp_util_parse_connect (): Unexpected type 0x%x", param_type);
+-            BE_STREAM_TO_UINT8 (param_len, p);
+             p += param_len;
+             break;
+         }
+-
+-        /* check remaining lengh */
+-        if (length >= param_len + 1)
+-        {
+-            length -= param_len + 1;
+-        }
+-        else
+-        {
+-            LLCP_TRACE_ERROR0 ("llcp_util_parse_connect (): Bad LTV's");
+-            return LLCP_STATUS_FAIL;
+-        }
+     }
+     return LLCP_STATUS_SUCCESS;
+ }
+@@ -641,15 +667,26 @@ tLLCP_STATUS llcp_util_parse_cc (UINT8 *p_bytes, UINT16 length, UINT16 *p_miu, U
+     *p_miu = LLCP_DEFAULT_MIU;
+     *p_rw  = LLCP_DEFAULT_RW;
+ 
+-    while (length)
++    while (length >= 2)
+     {
+-        BE_STREAM_TO_UINT8 (param_type, p);
+-        length--;
++        BE_STREAM_TO_UINT8(param_type, p);
++        BE_STREAM_TO_UINT8(param_len, p);
++        if (length < param_len + 2) {
++            android_errorWriteLog(0x534e4554, "114237888");
++            LLCP_TRACE_ERROR0 ("llcp_util_parse_cc (): Bad TLV's");
++            return LLCP_STATUS_FAIL;
++        }
++        length -= param_len + 2;
+ 
+         switch (param_type)
+         {
+         case LLCP_MIUX_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_MIUX_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "114237888");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_cc (): Bad TLV's");
++                return LLCP_STATUS_FAIL;
++            }
+             BE_STREAM_TO_UINT16 ((*p_miu), p);
+             (*p_miu) &= LLCP_MIUX_MASK;
+             (*p_miu) += LLCP_DEFAULT_MIU;
+@@ -658,7 +695,12 @@ tLLCP_STATUS llcp_util_parse_cc (UINT8 *p_bytes, UINT16 length, UINT16 *p_miu, U
+             break;
+ 
+         case LLCP_RW_TYPE:
+-            BE_STREAM_TO_UINT8 (param_len, p);
++            if (param_len != LLCP_RW_LEN)
++            {
++                android_errorWriteLog(0x534e4554, "114237888");
++                LLCP_TRACE_ERROR0 ("llcp_util_parse_cc (): Bad TLV's");
++                return LLCP_STATUS_FAIL;
++            }
+             BE_STREAM_TO_UINT8 ((*p_rw), p);
+             (*p_rw) &= 0x0F;
+ 
+@@ -667,18 +709,9 @@ tLLCP_STATUS llcp_util_parse_cc (UINT8 *p_bytes, UINT16 length, UINT16 *p_miu, U
+ 
+         default:
+             LLCP_TRACE_ERROR1 ("llcp_util_parse_cc (): Unexpected type 0x%x", param_type);
+-            BE_STREAM_TO_UINT8 (param_len, p);
+             p += param_len;
+             break;
+         }
+-
+-        if (length >= param_len + 1)
+-            length -= param_len + 1;
+-        else
+-        {
+-            LLCP_TRACE_ERROR0 ("llcp_util_parse_cc (): Bad LTV's");
+-            return LLCP_STATUS_FAIL;
+-        }
+     }
+     return LLCP_STATUS_SUCCESS;
+ }
+-- 
+2.7.4
+

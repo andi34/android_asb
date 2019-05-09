@@ -1,0 +1,55 @@
+From f67afb9fcaba88d073883f96d3686a1559dbb316 Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Wed, 24 Oct 2018 17:42:25 -0700
+Subject: [PATCH] decoder: Signal IVD_RES_CHANGED error for change in crop
+ params
+
+IVD_RES_CHANGED was not signaled when crop parameters changed, i.e.
+display dimensions changed without change in decode dimensions.
+
+In such cases, if output buffer was allocated as per the current
+dimension being decoded, without IVD_RES_CHANGED signalled, there can be
+an OOB write if the new buffer is smaller than the frame being returned
+as output
+
+Bug: 118399205
+Test: vendor
+Change-Id: Ia750a99cda08a3254a6f8ea8b55d07e655b34d05
+(cherry picked from commit 442a01bf37d5bd97bb6d13b382f00265051abbe8)
+---
+ decoder/ih264d_parse_headers.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/decoder/ih264d_parse_headers.c b/decoder/ih264d_parse_headers.c
+index b669331..ee38315 100644
+--- a/decoder/ih264d_parse_headers.c
++++ b/decoder/ih264d_parse_headers.c
+@@ -918,12 +918,25 @@ WORD32 ih264d_parse_sps(dec_struct_t *ps_dec, dec_bit_stream_t *ps_bitstrm)
+             ps_dec->u1_res_changed = 1;
+             return IVD_RES_CHANGED;
+         }
++
++        if((ps_dec->i4_header_decoded & 1) && (ps_dec->u2_disp_width != i4_cropped_wd))
++        {
++            ps_dec->u1_res_changed = 1;
++            return IVD_RES_CHANGED;
++        }
++
+         if((ps_dec->i4_header_decoded & 1) && (ps_dec->u2_pic_ht != u2_pic_ht))
+         {
+             ps_dec->u1_res_changed = 1;
+             return IVD_RES_CHANGED;
+         }
+ 
++        if((ps_dec->i4_header_decoded & 1) && (ps_dec->u2_disp_height != i4_cropped_ht))
++        {
++            ps_dec->u1_res_changed = 1;
++            return IVD_RES_CHANGED;
++        }
++
+         /* Check for unsupported resolutions */
+         if((u2_pic_wd > H264_MAX_FRAME_WIDTH) || (u2_pic_ht > H264_MAX_FRAME_HEIGHT))
+         {
+-- 
+2.7.4
+

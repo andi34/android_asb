@@ -1,0 +1,72 @@
+From a9c45fc79836cb3564796cc43ab7a8263b7ed8e0 Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Wed, 9 Jan 2019 14:18:51 +0800
+Subject: [PATCH 07/10] Prevent integer underflow in
+ rw_t2t_handle_tlv_detect_rsp()
+
+Bug: 121035711
+Test: NFC Enable/Disable
+Change-Id: Ifa3e5fdf23f267a0d6c3aa8495c4c83f20153025
+(cherry picked from commit e477a1c45b9f94b40540acc568eef2b8a2100d12)
+---
+ src/nfc/tags/rw_t2t_ndef.c | 30 +++++++++++++++++++++++++++---
+ 1 file changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/src/nfc/tags/rw_t2t_ndef.c b/src/nfc/tags/rw_t2t_ndef.c
+index 7bacc72..82e5131 100644
+--- a/src/nfc/tags/rw_t2t_ndef.c
++++ b/src/nfc/tags/rw_t2t_ndef.c
+@@ -647,7 +647,15 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                 break;
+ 
+             case TAG_LOCK_CTRL_TLV:
+-                p_t2t->bytes_count--;
++                if (p_t2t->bytes_count > 0)
++                {
++                  p_t2t->bytes_count--;
++                }
++                else
++                {
++                  RW_TRACE_ERROR0 ("Underflow p_t2t->bytes_count!");
++                  android_errorWriteLog(0x534e4554, "120506143");
++                }
+                 if (  (tlvtype == TAG_LOCK_CTRL_TLV)
+                     ||(tlvtype == TAG_NDEF_TLV)  )
+                 {
+@@ -694,7 +702,15 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                 break;
+ 
+             case TAG_MEM_CTRL_TLV:
+-                p_t2t->bytes_count--;
++                if (p_t2t->bytes_count > 0)
++                {
++                  p_t2t->bytes_count--;
++                }
++                else
++                {
++                  RW_TRACE_ERROR0 ("Underflow p_t2t->bytes_count!");
++                  android_errorWriteLog(0x534e4554, "120506143");
++                }
+                 if (  (tlvtype == TAG_MEM_CTRL_TLV)
+                     ||(tlvtype == TAG_NDEF_TLV)  )
+                 {
+@@ -729,7 +745,15 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                 break;
+ 
+             case TAG_PROPRIETARY_TLV:
+-                p_t2t->bytes_count--;
++                if (p_t2t->bytes_count > 0)
++                {
++                  p_t2t->bytes_count--;
++                }
++                else
++                {
++                  RW_TRACE_ERROR0 ("Underflow p_t2t->bytes_count!");
++                  android_errorWriteLog(0x534e4554, "120506143");
++                }
+                 if (tlvtype == TAG_PROPRIETARY_TLV)
+                 {
+                     found = TRUE;
+-- 
+2.7.4
+

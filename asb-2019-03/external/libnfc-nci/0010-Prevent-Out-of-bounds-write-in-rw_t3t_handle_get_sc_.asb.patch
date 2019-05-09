@@ -1,0 +1,73 @@
+From 884f017dabd6106de6f7a097695418ad2e1860e9 Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Tue, 8 Jan 2019 16:34:28 +0800
+Subject: [PATCH 10/10] Prevent Out of bounds write in
+ rw_t3t_handle_get_sc_poll_rsp()
+
+Test: Read T3T Tag
+Bug: 120499324
+Change-Id: I5f76f207d16ee744ec9be06e94034adf01727ac8
+(cherry picked from commit 17b8a8126c018062f36bd492c7535e216b6660c0)
+---
+ src/nfc/tags/rw_t3t.c | 31 +++++++++++++++++++++++++++----
+ 1 file changed, 27 insertions(+), 4 deletions(-)
+
+diff --git a/src/nfc/tags/rw_t3t.c b/src/nfc/tags/rw_t3t.c
+index 6dc0a73..4e4c830 100644
+--- a/src/nfc/tags/rw_t3t.c
++++ b/src/nfc/tags/rw_t3t.c
+@@ -1679,8 +1679,15 @@ static void rw_t3t_handle_get_sc_poll_rsp (tRW_T3T_CB *p_cb, UINT8 nci_status, U
+             {
+                 RW_TRACE_DEBUG1 ("FeliCa Lite tag detected (system code %04X)", sc);
+                 /* Store system code */
+-                p_cb->system_codes[p_cb->num_system_codes++] = sc;
+-
++                if (p_cb->num_system_codes < T3T_MAX_SYSTEM_CODES)
++                {
++                    p_cb->system_codes[p_cb->num_system_codes++] = sc;
++                }
++                else
++                {
++                    RW_TRACE_ERROR0 ("Exceed T3T_MAX_SYSTEM_CODES!");
++                    android_errorWriteLog(0x534e4554, "120499324");
++                }
+                 /* Poll for NDEF system code */
+                 if ((status = (tNFC_STATUS) nci_snd_t3t_polling (T3T_SYSTEM_CODE_NDEF, 0, 0)) == NCI_STATUS_OK)
+                 {
+@@ -1726,7 +1733,15 @@ static void rw_t3t_handle_get_sc_poll_rsp (tRW_T3T_CB *p_cb, UINT8 nci_status, U
+         if ((nci_status == NCI_STATUS_OK) && (num_responses > 0))
+         {
+             /* Tag responded for NDEF poll */
+-            p_cb->system_codes[p_cb->num_system_codes++] = T3T_SYSTEM_CODE_NDEF;
++            if (p_cb->num_system_codes < T3T_MAX_SYSTEM_CODES)
++            {
++                p_cb->system_codes[p_cb->num_system_codes++] = T3T_SYSTEM_CODE_NDEF;
++            }
++            else
++            {
++                RW_TRACE_ERROR0 ("Exceed T3T_MAX_SYSTEM_CODES!");
++                android_errorWriteLog(0x534e4554, "120499324");
++            }
+         }
+         rw_t3t_handle_get_system_codes_cplt ();
+     }
+@@ -1834,7 +1849,15 @@ void rw_t3t_act_handle_get_sc_rsp (tRW_T3T_CB *p_cb, BT_HDR *p_msg_rsp)
+         for (i = 0; i < num_sc; i++)
+         {
+             BE_STREAM_TO_UINT16 (sc, p);
+-            p_cb->system_codes[p_cb->num_system_codes++] = sc;
++            if (p_cb->num_system_codes < T3T_MAX_SYSTEM_CODES)
++            {
++                p_cb->system_codes[p_cb->num_system_codes++] = sc;
++            }
++            else
++            {
++                RW_TRACE_ERROR0 ("Exceed T3T_MAX_SYSTEM_CODES!");
++                android_errorWriteLog(0x534e4554, "120499324");
++            }
+         }
+     }
+     rw_t3t_handle_get_system_codes_cplt ();
+-- 
+2.7.4
+
