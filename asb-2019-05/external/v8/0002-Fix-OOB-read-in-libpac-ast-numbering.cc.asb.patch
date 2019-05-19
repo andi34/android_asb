@@ -1,0 +1,46 @@
+From b04cf4f5a028448d6cdb6973c9e7b762f38fa819 Mon Sep 17 00:00:00 2001
+From: Bryan Ferris <bferris@google.com>
+Date: Tue, 5 Mar 2019 15:05:33 -0800
+Subject: [PATCH 2/5] Fix OOB read in libpac ast-numbering.cc
+
+From the upstream patch
+(https://chromium.googlesource.com/v8/v8.git/+/fbf974e2af0f62b075e62701581099211f83adb6%5E%21/#F0):
+
+"""
+Add missing early-bailouts in ast traversal visitors
+"""
+
+Bug: 117555811
+
+Test: adb shell /data/nativetest/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Test: gts-tradefed run gts --test \
+  com.google.android.gts.devicepolicy.DeviceOwnerTest#testProxyPacProxyTest \
+  --module GtsGmscoreHostTestCases
+
+Test: PoC from bug report
+
+Merged-In: I2e02d994f107e64e4f465b4d8a02d4159a95240e
+
+Change-Id: Ia62b5ea79d79400166b7e238be1933c55730612b
+(cherry picked from commit 8cc1440e71299ca16640b4371adf378d0a61983f)
+---
+ src/ast/ast-numbering.cc | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/ast/ast-numbering.cc b/src/ast/ast-numbering.cc
+index 499760d..811bd33 100644
+--- a/src/ast/ast-numbering.cc
++++ b/src/ast/ast-numbering.cc
+@@ -616,6 +616,8 @@ void AstNumberingVisitor::VisitStatements(ZoneList<Statement*>* statements) {
+   if (statements == NULL) return;
+   for (int i = 0; i < statements->length(); i++) {
+     Visit(statements->at(i));
++    if (statements->at(i)->IsJump())
++        break;
+   }
+ }
+ 
+-- 
+2.7.4
+

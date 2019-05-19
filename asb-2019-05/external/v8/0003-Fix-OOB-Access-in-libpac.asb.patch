@@ -1,0 +1,47 @@
+From 629aedd6088247a2358859c468305787bb8a3005 Mon Sep 17 00:00:00 2001
+From: Bryan Ferris <bferris@google.com>
+Date: Tue, 5 Mar 2019 14:38:25 -0800
+Subject: [PATCH 3/5] Fix OOB Access in libpac
+
+Bug: 117554758
+
+Test: /data/nativetest/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Test: gts-tradefed run gts --test \
+  com.google.android.gts.devicepolicy.DeviceOwnerTest#testProxyPacProxyTest \
+  --module GtsGmscoreHostTestCases
+
+Test: PoC from bug report
+
+From upstream commit
+(https://chromium.googlesource.com/v8/v8.git/+/389539ca30406101971745820d3105e7f39bb772%5E%21/#F0):
+
+"""
+Fix type of String#indexOf and String#lastIndexOf.
+
+The Typer put the wrong type on String#index and String#lastIndexOf
+builtins, with an off by one on the upper bound.
+"""
+
+Change-Id: I6230c1b764cacf9349317ad5870d7a679600d7d5
+(cherry picked from commit 7b2ae5555f9bd97c7902dee4fc491a7bf2d06bb6)
+---
+ src/compiler/typer.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/compiler/typer.cc b/src/compiler/typer.cc
+index ed1a04a..09003ca 100644
+--- a/src/compiler/typer.cc
++++ b/src/compiler/typer.cc
+@@ -1431,7 +1431,7 @@ Type* Typer::Visitor::JSCallTyper(Type* fun, Typer* t) {
+           return Type::String();
+         case kStringIndexOf:
+         case kStringLastIndexOf:
+-          return Type::Range(-1.0, String::kMaxLength - 1.0, t->zone());
++          return Type::Range(-1.0, String::kMaxLength, t->zone());
+         case kStringEndsWith:
+         case kStringIncludes:
+           return Type::Boolean();
+-- 
+2.7.4
+

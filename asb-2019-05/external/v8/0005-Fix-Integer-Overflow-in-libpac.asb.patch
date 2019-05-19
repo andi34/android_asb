@@ -1,0 +1,190 @@
+From 26dda6fa4d8b5a87d5fcb2f587b7e65c4920333b Mon Sep 17 00:00:00 2001
+From: Bryan Ferris <bferris@google.com>
+Date: Tue, 5 Mar 2019 18:06:51 -0800
+Subject: [PATCH 5/5] Fix Integer Overflow in libpac
+
+Bug: 117556220
+
+Test: /data/local/nativetest/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Test: gts-tradefed run gts --test \
+  com.google.android.gts.devicepolicy.DeviceOwnerTest#testProxyPacProxyTest \
+  --module GtsGmscoreHostTestCases
+
+Test: PoC from bug report
+
+From the upstream patch
+(https://chromium.googlesource.com/v8/v8.git/+/7b27040e66c8a83006aebc90fe97d21bb42156a7%5E%21/#F0):
+
+"""
+Harden JSFunction::CalculateInstanceSizeHelper(...)
+"""
+
+Change-Id: I72321236f4d4cf8da993addc3ef7a1dc018c434b
+(cherry picked from commit 115676264716a143a39c21f8be21080075f1bc55)
+---
+ src/objects.cc | 109 ++++++++++++++++++++++++++++++++++-----------------------
+ src/objects.h  |   3 ++
+ 2 files changed, 69 insertions(+), 43 deletions(-)
+
+diff --git a/src/objects.cc b/src/objects.cc
+index 9f9a628..d5b7777 100644
+--- a/src/objects.cc
++++ b/src/objects.cc
+@@ -12670,6 +12670,53 @@ void JSFunction::EnsureHasInitialMap(Handle<JSFunction> function) {
+   map->StartInobjectSlackTracking();
+ }
+ 
++namespace {
++bool FastInitializeDerivedMap(Isolate* isolate, Handle<JSFunction> new_target,
++                              Handle<JSFunction> constructor,
++                              Handle<Map> constructor_initial_map) {
++  // Check that |function|'s initial map still in sync with the |constructor|,
++  // otherwise we must create a new initial map for |function|.
++  if (new_target->has_initial_map() &&
++      new_target->initial_map()->GetConstructor() == *constructor) {
++    DCHECK(new_target->instance_prototype()->IsJSReceiver());
++    return true;
++  }
++  // Create a new map with the size and number of in-object properties
++  // suggested by |function|.
++
++  // Link initial map and constructor function if the new.target is actually a
++  // subclass constructor.
++  if (!IsDerivedConstructor(new_target->shared()->kind())) return false;
++
++  Handle<Object> prototype(new_target->instance_prototype(), isolate);
++  InstanceType instance_type = constructor_initial_map->instance_type();
++  DCHECK(CanSubclassHaveInobjectProperties(instance_type));
++
++  int internal_fields =
++      JSObject::GetInternalFieldCount(*constructor_initial_map);
++  int pre_allocated = constructor_initial_map->GetInObjectProperties() -
++                      constructor_initial_map->unused_property_fields();
++  int instance_size;
++  int in_object_properties;
++  new_target->CalculateInstanceSizeForDerivedClass(
++      instance_type, internal_fields, &instance_size,
++      &in_object_properties);
++
++  int unused_property_fields = in_object_properties - pre_allocated;
++  Handle<Map> map =
++      Map::CopyInitialMap(constructor_initial_map, instance_size,
++                          in_object_properties, unused_property_fields);
++  map->set_new_target_is_base(false);
++
++  JSFunction::SetInitialMap(new_target, map, prototype);
++  map->SetConstructor(*constructor);
++  map->set_construction_counter(Map::kNoSlackTracking);
++  map->StartInobjectSlackTracking();
++
++  return true;
++}
++
++}  // namespace
+ 
+ // static
+ MaybeHandle<Map> JSFunction::GetDerivedMap(Isolate* isolate,
+@@ -12688,42 +12735,10 @@ MaybeHandle<Map> JSFunction::GetDerivedMap(Isolate* isolate,
+ 
+     // Check that |function|'s initial map still in sync with the |constructor|,
+     // otherwise we must create a new initial map for |function|.
+-    if (function->has_initial_map() &&
+-        function->initial_map()->GetConstructor() == *constructor) {
++    if (FastInitializeDerivedMap(isolate, function, constructor,
++                                 constructor_initial_map)) {
+       return handle(function->initial_map(), isolate);
+     }
+-
+-    // Create a new map with the size and number of in-object properties
+-    // suggested by |function|.
+-
+-    // Link initial map and constructor function if the new.target is actually a
+-    // subclass constructor.
+-    if (IsDerivedConstructor(function->shared()->kind())) {
+-      Handle<Object> prototype(function->instance_prototype(), isolate);
+-      InstanceType instance_type = constructor_initial_map->instance_type();
+-      DCHECK(CanSubclassHaveInobjectProperties(instance_type));
+-      int internal_fields =
+-          JSObject::GetInternalFieldCount(*constructor_initial_map);
+-      int pre_allocated = constructor_initial_map->GetInObjectProperties() -
+-                          constructor_initial_map->unused_property_fields();
+-      int instance_size;
+-      int in_object_properties;
+-      function->CalculateInstanceSizeForDerivedClass(
+-          instance_type, internal_fields, &instance_size,
+-          &in_object_properties);
+-
+-      int unused_property_fields = in_object_properties - pre_allocated;
+-      Handle<Map> map =
+-          Map::CopyInitialMap(constructor_initial_map, instance_size,
+-                              in_object_properties, unused_property_fields);
+-      map->set_new_target_is_base(false);
+-
+-      JSFunction::SetInitialMap(function, map, prototype);
+-      map->SetConstructor(*constructor);
+-      map->set_construction_counter(Map::kNoSlackTracking);
+-      map->StartInobjectSlackTracking();
+-      return map;
+-    }
+   }
+ 
+   // Slow path, new.target is either a proxy or can't cache the map.
+@@ -13371,15 +13386,17 @@ void JSFunction::CalculateInstanceSizeHelper(InstanceType instance_type,
+                                              int* instance_size,
+                                              int* in_object_properties) {
+   int header_size = JSObject::GetHeaderSize(instance_type);
+-  DCHECK_LE(requested_internal_fields,
+-            (JSObject::kMaxInstanceSize - header_size) >> kPointerSizeLog2);
++  int max_nof_fields =
++      (JSObject::kMaxInstanceSize - header_size) >> kPointerSizeLog2;
++  CHECK_LE(max_nof_fields, JSObject::kMaxInObjectProperties);
++  *in_object_properties = Min(requested_in_object_properties, max_nof_fields);
++  CHECK_LE(requested_internal_fields, max_nof_fields - *in_object_properties);
+   *instance_size =
+-      Min(header_size +
+-              ((requested_internal_fields + requested_in_object_properties)
+-               << kPointerSizeLog2),
+-          JSObject::kMaxInstanceSize);
+-  *in_object_properties = ((*instance_size - header_size) >> kPointerSizeLog2) -
+-                          requested_internal_fields;
++      header_size +
++      ((requested_internal_fields + *in_object_properties) << kPointerSizeLog2);
++  CHECK_EQ(*in_object_properties,
++           ((*instance_size - header_size) >> kPointerSizeLog2) -
++               requested_internal_fields);
+ }
+ 
+ 
+@@ -13404,7 +13421,13 @@ void JSFunction::CalculateInstanceSizeForDerivedClass(
+     if (!current->IsJSFunction()) break;
+     JSFunction* func = JSFunction::cast(current);
+     SharedFunctionInfo* shared = func->shared();
+-    expected_nof_properties += shared->expected_nof_properties();
++    int count = shared->expected_nof_properties();
++    // Check that the estimate is sane.
++    if (expected_nof_properties <= JSObject::kMaxInObjectProperties - count) {
++      expected_nof_properties += count;
++    } else {
++      expected_nof_properties = JSObject::kMaxInObjectProperties;
++    }
+     if (!IsDerivedConstructor(shared->kind())) {
+       break;
+     }
+diff --git a/src/objects.h b/src/objects.h
+index 04d3d38..289f5fc 100644
+--- a/src/objects.h
++++ b/src/objects.h
+@@ -2544,6 +2544,9 @@ class JSObject: public JSReceiver {
+   static const int kHeaderSize = kElementsOffset + kPointerSize;
+ 
+   STATIC_ASSERT(kHeaderSize == Internals::kJSObjectHeaderSize);
++  static const int kMaxInObjectProperties =
++      (kMaxInstanceSize - kHeaderSize) >> kPointerSizeLog2;
++  STATIC_ASSERT(kMaxInObjectProperties <= kMaxNumberOfDescriptors);
+ 
+   typedef FlexibleBodyDescriptor<JSReceiver::kPropertiesOffset> BodyDescriptor;
+ 
+-- 
+2.7.4
+

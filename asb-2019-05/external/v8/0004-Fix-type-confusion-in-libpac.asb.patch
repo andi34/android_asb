@@ -1,0 +1,107 @@
+From 14a0f9847c0d7b7807bf8d3d3c32ee68017a31c3 Mon Sep 17 00:00:00 2001
+From: Bryan Ferris <bferris@google.com>
+Date: Tue, 5 Mar 2019 16:19:48 -0800
+Subject: [PATCH 4/5] Fix type confusion in libpac
+
+From the upstream patch
+(https://chromium.googlesource.com/v8/v8.git/+/55a98076827edac8eba775f8025df3749bcd8367%5E%21/#F0):
+
+"""
+Fix regexp fast path in MaybeCallFunctionAtSymbol
+
+The regexp fast path in MaybeCallFunctionAtSymbol had an issue in which
+we'd call ToString after checking that the given {object} was a fast
+regexp and deciding to take the fast path. This is invalid since
+ToString() can call into user-controlled JS and may mutate {object}.
+
+There's no way to place the ToString call correctly in this instance:
+1 before BranchIfFastRegExp, it's a spec violation if we end up on the
+  slow regexp path;
+2 the problem with the current location is already described above;
+3 and we can't place it into the fast-path regexp builtin (e.g.
+  RegExpReplace) either due to the same reasons as 1.
+
+The solution in this CL is to restrict the fast path to string
+arguments only, i.e. cases where ToString would be a nop and can safely
+be skipped.
+"""
+
+Bug: 117556606
+
+Test: /data/nativetest/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Test: gts-tradefed run gts --test \
+  com.google.android.gts.devicepolicy.DeviceOwnerTest#testProxyPacProxyTest \
+  --module GtsGmscoreHostTestCases
+
+Test: PoC from bug report
+
+Merged-In: I2e02d994f107e64e4f465b4d8a02d4159a95240e
+
+Change-Id: Ifb58de2b3c547c442f1ad69e0bca0fa934d1f728
+(cherry picked from commit 16fdb895ce82b018db8e8c277666bf04c795406d)
+---
+ src/builtins/builtins-string.cc | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/src/builtins/builtins-string.cc b/src/builtins/builtins-string.cc
+index 7cef567..04be7a3 100644
+--- a/src/builtins/builtins-string.cc
++++ b/src/builtins/builtins-string.cc
+@@ -139,6 +139,7 @@ class StringBuiltinsAssembler : public CodeStubAssembler {
+   typedef std::function<Node*()> NodeFunction0;
+   typedef std::function<Node*(Node* fn)> NodeFunction1;
+   void MaybeCallFunctionAtSymbol(Node* const context, Node* const object,
++                                 Node* const maybe_string,
+                                  Handle<Symbol> symbol,
+                                  const NodeFunction0& regexp_call,
+                                  const NodeFunction1& generic_call);
+@@ -1189,8 +1190,9 @@ void StringBuiltinsAssembler::RequireObjectCoercible(Node* const context,
+ }
+ 
+ void StringBuiltinsAssembler::MaybeCallFunctionAtSymbol(
+-    Node* const context, Node* const object, Handle<Symbol> symbol,
+-    const NodeFunction0& regexp_call, const NodeFunction1& generic_call) {
++    Node* const context, Node* const object, Node* const maybe_string,
++    Handle<Symbol> symbol, const NodeFunction0& regexp_call,
++    const NodeFunction1& generic_call) {
+   Label out(this);
+ 
+   // Smis definitely don't have an attached symbol.
+@@ -1220,9 +1222,15 @@ void StringBuiltinsAssembler::MaybeCallFunctionAtSymbol(
+   }
+ 
+   // Take the fast path for RegExps.
++  // There's two conditions: {object} needs to be a fast regexp, and
++  // {maybe_string} must be a string (we can't call ToString on the fast path
++  // since it may mutate {object}).
+   {
+     Label stub_call(this), slow_lookup(this);
+ 
++    GotoIf(TaggedIsSmi(maybe_string), &slow_lookup);
++    GotoIfNot(IsString(maybe_string), &slow_lookup);
++
+     RegExpBuiltinsAssembler regexp_asm(state());
+     regexp_asm.BranchIfFastRegExp(context, object, object_map, &stub_call,
+                                   &slow_lookup);
+@@ -1267,7 +1275,7 @@ TF_BUILTIN(StringPrototypeReplace, StringBuiltinsAssembler) {
+   // Redirect to replacer method if {search[@@replace]} is not undefined.
+ 
+   MaybeCallFunctionAtSymbol(
+-      context, search, isolate()->factory()->replace_symbol(),
++      context, search, receiver, isolate()->factory()->replace_symbol(),
+       [=]() {
+         Callable tostring_callable = CodeFactory::ToString(isolate());
+         Node* const subject_string =
+@@ -1435,7 +1443,7 @@ TF_BUILTIN(StringPrototypeSplit, StringBuiltinsAssembler) {
+   // Redirect to splitter method if {separator[@@split]} is not undefined.
+ 
+   MaybeCallFunctionAtSymbol(
+-      context, separator, isolate()->factory()->split_symbol(),
++      context, separator, receiver, isolate()->factory()->split_symbol(),
+       [=]() {
+         Callable tostring_callable = CodeFactory::ToString(isolate());
+         Node* const subject_string =
+-- 
+2.7.4
+
