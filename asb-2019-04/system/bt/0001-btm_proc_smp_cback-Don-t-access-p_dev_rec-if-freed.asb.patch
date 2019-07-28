@@ -1,0 +1,44 @@
+From 10d7e969e5ebc00d0260322eb908d2711dd10487 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Wed, 9 Jan 2019 18:18:17 -0800
+Subject: [PATCH 1/2] btm_proc_smp_cback: Don't access p_dev_rec if freed
+
+In btm_proc_smp_cback(), return after p_dev_rec is freed in the middle
+to prevent use after free
+
+Bug: 120612744
+Test: Use ASAN build; connect to a LE device and wait for timeout
+Change-Id: Ic9d0eaeb62a1a1b24884146ca82f4104fabc5bac
+(cherry picked from commit 953dd279502980b1d8d30656eb78c6445a6e31f7)
+---
+ stack/btm/btm_ble.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/stack/btm/btm_ble.c b/stack/btm/btm_ble.c
+index eb9e864..a3cc8ae 100644
+--- a/stack/btm/btm_ble.c
++++ b/stack/btm/btm_ble.c
+@@ -34,6 +34,7 @@
+ #include "btm_int.h"
+ #include "btm_ble_api.h"
+ #include "smp_api.h"
++#include "log/log.h"
+ #include "l2c_int.h"
+ #include "gap_api.h"
+ #include "bt_utils.h"
+@@ -1969,6 +1970,12 @@ UINT8 btm_proc_smp_cback(tSMP_EVT event, BD_ADDR bd_addr, tSMP_EVT_DATA *p_data)
+ 
+                 if (event == SMP_COMPLT_EVT)
+                 {
++                    p_dev_rec = btm_find_dev(bd_addr);
++                    if (p_dev_rec == NULL) {
++                        BTM_TRACE_ERROR("%s: p_dev_rec is NULL", __func__);
++                        android_errorWriteLog(0x534e4554, "120612744");
++                        return 0;
++                    }
+                     BTM_TRACE_DEBUG ("evt=SMP_COMPLT_EVT before update sec_level=0x%x sec_flags=0x%x", p_data->cmplt.sec_level , p_dev_rec->sec_flags );
+ 
+                     res = (p_data->cmplt.reason == SMP_SUCCESS) ? BTM_SUCCESS : BTM_ERR_PROCESSING;
+-- 
+2.7.4
+

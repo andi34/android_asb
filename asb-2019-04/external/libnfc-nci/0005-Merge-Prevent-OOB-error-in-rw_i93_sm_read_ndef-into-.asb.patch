@@ -1,0 +1,32 @@
+From cdc7d43f55fd6e3f5e4ee8b8a91d195f190e099b Mon Sep 17 00:00:00 2001
+From: Jack Yu <jackcwyu@google.com>
+Date: Fri, 1 Feb 2019 15:58:05 -0800
+Subject: [PATCH 5/5] Merge "Prevent OOB error in rw_i93_sm_read_ndef()" into
+ oc-dev am: 46f44fd653 am: e010bdd3de am: e079b7a95a
+
+Change-Id: I6e24e6eca85a59767f5227755389e63b32ad1254
+(cherry picked from commit baa27d0bcc73012684fab286c52a0830f0f1ccb3)
+---
+ src/nfc/tags/rw_i93.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/nfc/tags/rw_i93.c b/src/nfc/tags/rw_i93.c
+index 72f8520..0dbdc69 100644
+--- a/src/nfc/tags/rw_i93.c
++++ b/src/nfc/tags/rw_i93.c
+@@ -1992,6 +1992,12 @@ void rw_i93_sm_read_ndef (BT_HDR *p_resp)
+ 
+     RW_TRACE_DEBUG0 ("rw_i93_sm_read_ndef ()");
+ 
++    if (length == 0) {
++        android_errorWriteLog(0x534e4554, "122035770");
++        rw_i93_handle_error(NFC_STATUS_FAILED);
++        return;
++    }
++
+     STREAM_TO_UINT8 (flags, p);
+     length--;
+ 
+-- 
+2.7.4
+

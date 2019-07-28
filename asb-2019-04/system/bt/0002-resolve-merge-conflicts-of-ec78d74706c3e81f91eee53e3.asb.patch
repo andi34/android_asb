@@ -1,0 +1,122 @@
+From 00c6b04367cf0b88b3e99730f141fbe3dab33357 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Fri, 1 Feb 2019 17:45:30 -0800
+Subject: [PATCH 2/2] resolve merge conflicts of
+ ec78d74706c3e81f91eee53e3d9f959f66e5d77f to pi-dev
+
+Bug: None
+Test: I solemnly swear I tested this conflict resolution.
+Change-Id: Id658b3485fdc0025bc44850be9f23bb2d2146d9b
+(cherry picked from commit 6c0f22f324ed0bdf9dea3e803e5ee6176d03fdb4)
+---
+ stack/l2cap/l2c_main.c  | 44 ++++++++++++++++++++++++++++++++++----------
+ stack/l2cap/l2c_utils.c |  3 +++
+ 2 files changed, 37 insertions(+), 10 deletions(-)
+
+diff --git a/stack/l2cap/l2c_main.c b/stack/l2cap/l2c_main.c
+index cc035b5..da81231 100644
+--- a/stack/l2cap/l2c_main.c
++++ b/stack/l2cap/l2c_main.c
+@@ -540,7 +540,11 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+                 {
+                 case L2CAP_CFG_TYPE_MTU:
+                     cfg_info.mtu_present = TRUE;
+-                    if (p + 2 > p_next_cmd) {
++                    if (cfg_len != 2) {
++                        android_errorWriteLog(0x534e4554, "119870451");
++                        return;
++                    }
++                    if (p + cfg_len > p_next_cmd) {
+                       android_errorWriteLog(0x534e4554, "74202041");
+                       return;
+                     }
+@@ -549,7 +553,11 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+ 
+                 case L2CAP_CFG_TYPE_FLUSH_TOUT:
+                     cfg_info.flush_to_present = TRUE;
+-                    if (p + 2 > p_next_cmd) {
++                    if (cfg_len != 2) {
++                        android_errorWriteLog(0x534e4554, "119870451");
++                        return;
++                    }
++                    if (p + cfg_len > p_next_cmd) {
+                       android_errorWriteLog(0x534e4554, "74202041");
+                       return;
+                     }
+@@ -558,9 +566,13 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+ 
+                 case L2CAP_CFG_TYPE_QOS:
+                     cfg_info.qos_present = TRUE;
+-                    if (p + 2 + 5 * 4 > p_next_cmd) {
+-                      android_errorWriteLog(0x534e4554, "74202041");
+-                      return;
++                    if (cfg_len != 2 + 5 * 4) {
++                        android_errorWriteLog(0x534e4554, "119870451");
++                        return;
++                    }
++                    if (p + cfg_len > p_next_cmd) {
++                        android_errorWriteLog(0x534e4554, "74202041");
++                        return;
+                     }
+                     STREAM_TO_UINT8  (cfg_info.qos.qos_flags, p);
+                     STREAM_TO_UINT8  (cfg_info.qos.service_type, p);
+@@ -573,9 +585,13 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+ 
+                 case L2CAP_CFG_TYPE_FCR:
+                     cfg_info.fcr_present = TRUE;
+-                    if (p + 3 + 3 * 2 > p_next_cmd) {
+-                      android_errorWriteLog(0x534e4554, "74202041");
+-                      return;
++                    if (cfg_len != 3 + 3 * 2) {
++                        android_errorWriteLog(0x534e4554, "119870451");
++                        return;
++                    }
++                    if (p + cfg_len > p_next_cmd) {
++                        android_errorWriteLog(0x534e4554, "74202041");
++                        return;
+                     }
+                     STREAM_TO_UINT8 (cfg_info.fcr.mode, p);
+                     STREAM_TO_UINT8 (cfg_info.fcr.tx_win_sz, p);
+@@ -587,7 +603,11 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+ 
+                 case L2CAP_CFG_TYPE_FCS:
+                     cfg_info.fcs_present = TRUE;
+-                    if (p + 1 > p_next_cmd) {
++                    if (cfg_len != 1) {
++                        android_errorWriteLog(0x534e4554, "119870451");
++                        return;
++                    }
++                    if (p + cfg_len > p_next_cmd) {
+                       android_errorWriteLog(0x534e4554, "74202041");
+                       return;
+                     }
+@@ -596,7 +616,11 @@ static void process_l2cap_cmd (tL2C_LCB *p_lcb, UINT8 *p, UINT16 pkt_len)
+ 
+                 case L2CAP_CFG_TYPE_EXT_FLOW:
+                     cfg_info.ext_flow_spec_present = TRUE;
+-                    if (p + 2 + 2 + 3 * 4 > p_next_cmd) {
++                    if (cfg_len != 2 + 2 + 3 * 4) {
++                        android_errorWriteLog(0x534e4554, "119870451");
++                        return;
++                    }
++                    if (p + cfg_len > p_next_cmd) {
+                       android_errorWriteLog(0x534e4554, "74202041");
+                       return;
+                     }
+diff --git a/stack/l2cap/l2c_utils.c b/stack/l2cap/l2c_utils.c
+index e80d16b..5cdcbc3 100644
+--- a/stack/l2cap/l2c_utils.c
++++ b/stack/l2cap/l2c_utils.c
+@@ -857,6 +857,9 @@ void l2cu_send_peer_config_rej (tL2C_CCB *p_ccb, UINT8 *p_data, UINT16 data_len,
+             case L2CAP_CFG_TYPE_MTU:
+             case L2CAP_CFG_TYPE_FLUSH_TOUT:
+             case L2CAP_CFG_TYPE_QOS:
++            case L2CAP_CFG_TYPE_FCR:
++            case L2CAP_CFG_TYPE_FCS:
++            case L2CAP_CFG_TYPE_EXT_FLOW:
+                 p_data += cfg_len + L2CAP_CFG_OPTION_OVERHEAD;
+                 break;
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,125 @@
+From d3998bf786ad0ddf141c70d2247802388ec09201 Mon Sep 17 00:00:00 2001
+From: Ruchi Kandoi <kandoiruchi@google.com>
+Date: Mon, 4 Feb 2019 11:00:45 -0800
+Subject: [PATCH 3/5] Merge "Prevent OOB read in rw_i93_process_sys_info()"
+ into oc-dev am: 2c605825f8 am: 6430e95d82 am: 404c66d3f1
+
+Change-Id: I23a0c2be3563c3dae9b2835e2605b82fd946d064
+(cherry picked from commit 34eb9823a391c1a47e2addfba094ea56106f8112)
+---
+ src/nfc/tags/rw_i93.c | 41 +++++++++++++++++++++++++++++++++++------
+ 1 file changed, 35 insertions(+), 6 deletions(-)
+
+diff --git a/src/nfc/tags/rw_i93.c b/src/nfc/tags/rw_i93.c
+index c3a2f26..8d1851a 100644
+--- a/src/nfc/tags/rw_i93.c
++++ b/src/nfc/tags/rw_i93.c
+@@ -204,7 +204,7 @@ void rw_i93_get_product_version (UINT8 *p_uid)
+ ** Returns          FALSE if retrying with protocol extension flag
+ **
+ *******************************************************************************/
+-BOOLEAN rw_i93_process_sys_info (UINT8* p_data)
++BOOLEAN rw_i93_process_sys_info (UINT8* p_data, UINT16 length)
+ {
+     UINT8      *p     = p_data;
+     tRW_I93_CB *p_i93 = &rw_cb.tcb.i93;
+@@ -212,38 +212,67 @@ BOOLEAN rw_i93_process_sys_info (UINT8* p_data)
+ 
+     RW_TRACE_DEBUG0 ("rw_i93_process_sys_info ()");
+ 
++    if (length < (I93_UID_BYTE_LEN + 1)) {
++        android_errorWriteLog(0x534e4554, "121259048");
++        return FALSE;
++    }
+     STREAM_TO_UINT8 (p_i93->info_flags, p);
++    length--;
+ 
+     p_uid = uid;
+     STREAM_TO_ARRAY8 (p_uid, p);
++    length -= I93_UID_BYTE_LEN;
+ 
+     if (p_i93->info_flags & I93_INFO_FLAG_DSFID)
+     {
++        if (length == 0) {
++            android_errorWriteLog(0x534e4554, "121259048");
++            return FALSE;
++        }
+         STREAM_TO_UINT8 (p_i93->dsfid, p);
++        length--;
+     }
+     if (p_i93->info_flags & I93_INFO_FLAG_AFI)
+     {
++        if (length == 0) {
++            android_errorWriteLog(0x534e4554, "121259048");
++            return FALSE;
++        }
+         STREAM_TO_UINT8 (p_i93->afi, p);
++        length--;
+     }
+     if (p_i93->info_flags & I93_INFO_FLAG_MEM_SIZE)
+     {
+-        if (p_i93->intl_flags & RW_I93_FLAG_16BIT_NUM_BLOCK)
++        BOOLEAN block_16_bit = p_i93->intl_flags & RW_I93_FLAG_16BIT_NUM_BLOCK;
++        if (block_16_bit && length > 2)
+         {
+             STREAM_TO_UINT16 (p_i93->num_block, p);
++            length -= 2;
+         }
+-        else
++        else if (!block_16_bit && length > 1)
+         {
+             STREAM_TO_UINT8 (p_i93->num_block, p);
++            length--;
++        }
++        else
++        {
++            android_errorWriteLog(0x534e4554, "121259048");
++            return FALSE;
+         }
+         /* it is one less than actual number of bytes */
+         p_i93->num_block += 1;
+ 
+         STREAM_TO_UINT8 (p_i93->block_size, p);
++        length--;
+         /* it is one less than actual number of blocks */
+         p_i93->block_size = (p_i93->block_size & 0x1F) + 1;
+     }
+     if (p_i93->info_flags & I93_INFO_FLAG_IC_REF)
+     {
++        if (length == 0) {
++            android_errorWriteLog(0x534e4554, "121259048");
++            return FALSE;
++        }
+         STREAM_TO_UINT8 (p_i93->ic_reference, p);
+ 
+         /* clear existing UID to set product version */
+@@ -448,7 +477,7 @@ void rw_i93_send_to_upper (BT_HDR *p_resp)
+ 
+     case I93_CMD_GET_SYS_INFO:
+ 
+-        if (rw_i93_process_sys_info (p))
++        if (rw_i93_process_sys_info (p, length))
+         {
+             rw_data.i93_sys_info.status     = NFC_STATUS_OK;
+             rw_data.i93_sys_info.info_flags = p_i93->info_flags;
+@@ -1569,7 +1598,7 @@ void rw_i93_sm_detect_ndef (BT_HDR *p_resp)
+         p_i93->block_size = 0;
+         p_i93->num_block  = 0;
+ 
+-        if (!rw_i93_process_sys_info (p))
++        if (!rw_i93_process_sys_info (p, length))
+         {
+             /* retrying with protocol extension flag */
+             break;
+@@ -2421,7 +2450,7 @@ void rw_i93_sm_format (BT_HDR *p_resp)
+         p_i93->block_size = 0;
+         p_i93->num_block  = 0;
+ 
+-        if (!rw_i93_process_sys_info (p))
++        if (!rw_i93_process_sys_info (p, length))
+         {
+             /* retrying with protocol extension flag */
+             break;
+-- 
+2.7.4
+
