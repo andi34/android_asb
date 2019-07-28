@@ -77,3 +77,6 @@ repo forall -c "rm -rf *.asb.patch"
 - https://review.lineageos.org/#/q/topic:asb-2019.02-cm11+(status:open+OR+status:merged)
 - https://review.lineageos.org/#/q/topic:asb-2019.03-cm11+(status:open+OR+status:merged)
 - https://review.lineageos.org/#/q/topic:asb-2019.04-cm11+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:asb-2019.05-cm11+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:asb-2019.06-cm11+(status:open+OR+status:merged)
+- https://review.lineageos.org/#/q/topic:asb-2019.07-cm11+(status:open+OR+status:merged)
