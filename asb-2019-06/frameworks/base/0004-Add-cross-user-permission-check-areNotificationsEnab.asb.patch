@@ -1,0 +1,36 @@
+From 6bbda5344dd457d8a2558cd9b2526e6eb8de029a Mon Sep 17 00:00:00 2001
+From: Julia Reynolds <juliacr@google.com>
+Date: Wed, 27 Mar 2019 12:15:57 -0400
+Subject: [PATCH 4/5] Add cross user permission check -
+ areNotificationsEnabledForPackage
+
+Test: atest
+Fixes: 128599467
+Change-Id: I13a0ca7590f8c4b44379730e0ee2088aba400c2a
+Merged-In: I13a0ca7590f8c4b44379730e0ee2088aba400c2a
+(cherry picked from commit 657d164136199126ae241848887de0230699cea0)
+(cherry picked from commit 63846a7093ca7c6d89b73fc77bdff267b3ecb4ef)
+---
+ .../com/android/server/notification/NotificationManagerService.java | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/services/core/java/com/android/server/notification/NotificationManagerService.java b/services/core/java/com/android/server/notification/NotificationManagerService.java
+index 4973e17..62cbb01 100644
+--- a/services/core/java/com/android/server/notification/NotificationManagerService.java
++++ b/services/core/java/com/android/server/notification/NotificationManagerService.java
+@@ -1432,6 +1432,12 @@ public class NotificationManagerService extends SystemService {
+         @Override
+         public boolean areNotificationsEnabledForPackage(String pkg, int uid) {
+             checkCallerIsSystemOrSameApp(pkg);
++            if (UserHandle.getCallingUserId() != UserHandle.getUserId(uid)) {
++                getContext().enforceCallingPermission(
++                        android.Manifest.permission.INTERACT_ACROSS_USERS,
++                        "canNotifyAsPackage for uid " + uid);
++            }
++
+             return (mAppOps.checkOpNoThrow(AppOpsManager.OP_POST_NOTIFICATION, uid, pkg)
+                     == AppOpsManager.MODE_ALLOWED) && !isPackageSuspendedForUser(pkg, uid);
+         }
+-- 
+2.7.4
+

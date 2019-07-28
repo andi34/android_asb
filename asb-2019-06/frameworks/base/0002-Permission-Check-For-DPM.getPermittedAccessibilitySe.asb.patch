@@ -1,0 +1,31 @@
+From 2c0b36695ce615e45aba083e206e80637edb47c9 Mon Sep 17 00:00:00 2001
+From: Eran Messeri <eranm@google.com>
+Date: Mon, 25 Mar 2019 14:31:04 +0000
+Subject: [PATCH 2/5] Permission Check For
+ DPM.getPermittedAccessibilityServices
+
+Bug: 128599660
+Test: com.android.server.devicepolicy.DevicePolicyManagerTest
+Test: com.google.android.gts.devicepolicy.DeviceOwnerTest
+Change-Id: I8be915bd6a4ff99884d23005a4c6f0100806dbe8
+Merged-In: I8ee3f876fcaffa63636645f0f59709cd147254ef
+(cherry picked from commit 4fd13eefcf99d9b9b0d5f5ea99fdc7c799c83d23)
+---
+ .../java/com/android/server/devicepolicy/DevicePolicyManagerService.java | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java b/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java
+index f3b3c67..82e8660 100644
+--- a/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java
++++ b/services/devicepolicy/java/com/android/server/devicepolicy/DevicePolicyManagerService.java
+@@ -7117,6 +7117,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
+         if (!mHasFeature) {
+             return null;
+         }
++        enforceManageUsers();
+         synchronized (this) {
+             List<String> result = null;
+             // If we have multiple profiles we return the intersection of the
+-- 
+2.7.4
+

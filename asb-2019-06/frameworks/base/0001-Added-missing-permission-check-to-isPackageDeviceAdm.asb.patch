@@ -1,0 +1,48 @@
+From 09ab99336770e4005831015c6dd7a21df549765f Mon Sep 17 00:00:00 2001
+From: Varun Shah <varunshah@google.com>
+Date: Wed, 20 Mar 2019 11:10:33 -0700
+Subject: [PATCH 1/5] Added missing permission check to
+ isPackageDeviceAdminOnAnyUser.
+
+Added a check for the MANAGE_USERS permission to
+PackageManagerService#isPackageDeviceAdminOnAnyUser.
+
+To test that the method is still usable:
+1) Enable virtual storage via: adb shell sm set-virtual-disk true
+2) Follow instructions by clicking on notification to set up virtual storage
+3) Go to Settings -> Apps & notifications -> See all X apps
+4) Click on any non-system app (example Instagram)
+5) Tap Storage and you should see a "Change" button (if not, choose another app)
+6) Tap Change and you should see Internal and Virtual storage options listed
+7) The above step confirms the method is still usable by Settings
+
+Bug: 128599183
+Test: SafetyNet logging (steps listed above)
+Change-Id: I989f1daf52a71f6c778ebd81baa6f1bf83e9a718
+Merged-In: I36521fa43daab399e08869647326a7ac32d1e512
+(cherry picked from commit 18e7dedf6c35f07daf8b7239d501737745ac7f43)
+---
+ .../core/java/com/android/server/pm/PackageManagerService.java     | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index b6a9940..9b80c49 100644
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -15686,6 +15686,13 @@ public class PackageManagerService extends IPackageManager.Stub {
+ 
+     @Override
+     public boolean isPackageDeviceAdminOnAnyUser(String packageName) {
++        final int callingUid = Binder.getCallingUid();
++        if (checkUidPermission(android.Manifest.permission.MANAGE_USERS, callingUid)
++                != PERMISSION_GRANTED) {
++            EventLog.writeEvent(0x534e4554, "128599183", -1, "");
++            throw new SecurityException(android.Manifest.permission.MANAGE_USERS
++                    + " permission is required to call this API");
++        }
+         return isPackageDeviceAdmin(packageName, UserHandle.USER_ALL);
+     }
+ 
+-- 
+2.7.4
+

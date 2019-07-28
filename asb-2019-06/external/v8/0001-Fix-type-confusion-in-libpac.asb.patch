@@ -1,0 +1,45 @@
+From f67a7bcac760f87a89c024c79b8d2ba7e6a4ba9c Mon Sep 17 00:00:00 2001
+From: Bryan Ferris <bferris@google.com>
+Date: Fri, 8 Mar 2019 10:29:11 -0800
+Subject: [PATCH] Fix type confusion in libpac
+
+From the upstream patch
+(https://chromium.googlesource.com/v8/v8/+/e33fd30777f99a0d6e16b16d096a2663b1031457%5E%21/#F0):
+
+"""
+Fix HAliasAnalyzer for constants
+"""
+
+Bug: 117606285
+
+Test: /data/local/nativetest/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Test: gts-tradefed run gts --test \
+  com.google.android.gts.devicepolicy.DeviceOwnerTest#testProxyPacProxyTest \
+  --module GtsGmscoreHostTestCases
+
+Test: PoC from bug report
+
+Merged-In: I2e02d994f107e64e4f465b4d8a02d4159a95240e
+Change-Id: I297f27c69e94666c9f61efb216244b3d534cd018
+(cherry picked from commit cad793346e55ab582a4aa43a246bb3cb10b76109)
+---
+ src/crankshaft/hydrogen-alias-analysis.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/crankshaft/hydrogen-alias-analysis.h b/src/crankshaft/hydrogen-alias-analysis.h
+index 1f32b7ac..d06aabc 100644
+--- a/src/crankshaft/hydrogen-alias-analysis.h
++++ b/src/crankshaft/hydrogen-alias-analysis.h
+@@ -43,7 +43,7 @@ class HAliasAnalyzer : public ZoneObject {
+     }
+ 
+     // Constant objects can be distinguished statically.
+-    if (a->IsConstant()) {
++    if (a->IsConstant() && b->IsConstant()) {
+       return a->Equals(b) ? kMustAlias : kNoAlias;
+     }
+     return kMayAlias;
+-- 
+2.7.4
+

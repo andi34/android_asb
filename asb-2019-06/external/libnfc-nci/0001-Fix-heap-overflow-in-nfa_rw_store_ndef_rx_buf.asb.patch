@@ -1,0 +1,52 @@
+From b123cb47523309e3ae90b75ec7cee5e125dea7a2 Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Sat, 23 Feb 2019 15:40:42 +0800
+Subject: [PATCH] Fix heap overflow in nfa_rw_store_ndef_rx_buf
+
+Test: Read Tag
+Bug: 123583388
+Merged-In: I712c1af4442dea526a1fb27123eefdb2ac60c830
+Change-Id: I712c1af4442dea526a1fb27123eefdb2ac60c830
+(cherry picked from commit 11d0ac5feac5a933255a524ffc12501d566ac81b)
+---
+ src/nfa/rw/nfa_rw_act.c | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/src/nfa/rw/nfa_rw_act.c b/src/nfa/rw/nfa_rw_act.c
+index 5a1091d..697e20a 100644
+--- a/src/nfa/rw/nfa_rw_act.c
++++ b/src/nfa/rw/nfa_rw_act.c
+@@ -22,6 +22,7 @@
+  *  This file contains the action functions the NFA_RW state machine.
+  *
+  ******************************************************************************/
++#include <log/log.h>
+ #include <string.h>
+ #include "nfa_rw_int.h"
+ #include "nfa_dm_int.h"
+@@ -77,9 +78,19 @@ static void nfa_rw_store_ndef_rx_buf (tRW_DATA *p_rw_data)
+ 
+     p = (UINT8 *)(p_rw_data->data.p_data + 1) + p_rw_data->data.p_data->offset;
+ 
+-    /* Save data into buffer */
+-    memcpy(&nfa_rw_cb.p_ndef_buf[nfa_rw_cb.ndef_rd_offset], p, p_rw_data->data.p_data->len);
+-    nfa_rw_cb.ndef_rd_offset += p_rw_data->data.p_data->len;
++   if ((nfa_rw_cb.ndef_rd_offset + p_rw_data->data.p_data->len) <=
++       nfa_rw_cb.ndef_cur_size)
++   {
++       /* Save data into buffer */
++       memcpy(&nfa_rw_cb.p_ndef_buf[nfa_rw_cb.ndef_rd_offset], p,
++              p_rw_data->data.p_data->len);
++       nfa_rw_cb.ndef_rd_offset += p_rw_data->data.p_data->len;
++   }
++   else
++   {
++     NFA_TRACE_ERROR0("Exceed ndef_cur_size error");
++     android_errorWriteLog(0x534e4554, "123583388");
++   }
+ 
+     GKI_freebuf(p_rw_data->data.p_data);
+     p_rw_data->data.p_data = NULL;
+-- 
+2.7.4
+
