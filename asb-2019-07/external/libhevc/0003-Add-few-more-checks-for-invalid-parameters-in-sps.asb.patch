@@ -1,0 +1,104 @@
+From 499db8ac48d5f3e88b5deac90a741122dea55be2 Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Fri, 29 Mar 2019 13:48:28 -0700
+Subject: [PATCH 3/3] Add few more checks for invalid parameters in sps
+
+Following elements didn't have a bound check in SPS as spec doesn't list
+the bounds on these explicitly.
+
+log2_min_coding_block_size_minus3, log2_diff_max_min_coding_block_size,
+log2_min_transform_block_size_minus2 and log2_diff_max_min_transform_block_size
+
+Added appopriate error checks on these fields
+
+Bug: 129366952
+Bug: 130023983
+Test: vendor
+Merged-In: I59d95f43c2ef98300132d664095e88df8e87a164
+Change-Id: I59d95f43c2ef98300132d664095e88df8e87a164
+(cherry picked from commit 2f30da4ca25fc764a1e0a3fe1ea964a112df6e27)
+---
+ common/ihevc_defs.h            |  9 ++++++++-
+ decoder/ihevcd_parse_headers.c | 20 ++++++++++++++++++++
+ 2 files changed, 28 insertions(+), 1 deletion(-)
+
+diff --git a/common/ihevc_defs.h b/common/ihevc_defs.h
+index c4e34ba..9294e51 100644
+--- a/common/ihevc_defs.h
++++ b/common/ihevc_defs.h
+@@ -294,10 +294,14 @@ typedef enum {
+ /* CTB Size Range */
+ #define MAX_CTB_SIZE        64
+ #define MIN_CTB_SIZE        16
++#define LOG2_MAX_CTB_SIZE   6
++#define LOG2_MIN_CTB_SIZE   4
+ 
+ /* TU Size Range */
+ #define MAX_TU_SIZE         32
+ #define MIN_TU_SIZE         4
++#define LOG2_MAX_TU_SIZE    5
++#define LOG2_MIN_TU_SIZE    2
+ 
+ /* Max Transform Size */
+ #define MAX_TRANS_SIZE      (MAX_TU_SIZE*MAX_TU_SIZE)
+@@ -305,11 +309,14 @@ typedef enum {
+ /* PU Size Range */
+ #define MAX_PU_SIZE         64
+ #define MIN_PU_SIZE         4
++#define LOG2_MAX_PU_SIZE    6
++#define LOG2_MIN_PU_SIZE    2
+ 
+ /* CU Size Range */
+ #define MAX_CU_SIZE         64
+ #define MIN_CU_SIZE         8
+-
++#define LOG2_MAX_CU_SIZE    6
++#define LOG2_MIN_CU_SIZE    3
+ 
+ /* Number of max TU in a CTB row */
+ #define MAX_TU_IN_CTB_ROW   ((MAX_CTB_SIZE / MIN_TU_SIZE))
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index 50ed117..3bf64f1 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1382,17 +1382,37 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+     }
+ 
+     UEV_PARSE("log2_min_coding_block_size_minus3", value, ps_bitstrm);
++    if(value > (LOG2_MAX_CU_SIZE - 3))
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+     ps_sps->i1_log2_min_coding_block_size = value + 3;
+ 
+     UEV_PARSE("log2_diff_max_min_coding_block_size", value, ps_bitstrm);
++    if(value > (LOG2_MAX_CU_SIZE - LOG2_MIN_CU_SIZE))
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+     ps_sps->i1_log2_diff_max_min_coding_block_size = value;
+ 
+     ctb_log2_size_y = ps_sps->i1_log2_min_coding_block_size + ps_sps->i1_log2_diff_max_min_coding_block_size;
+ 
+     UEV_PARSE("log2_min_transform_block_size_minus2", value, ps_bitstrm);
++    if(value > (LOG2_MAX_TU_SIZE - 2))
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+     ps_sps->i1_log2_min_transform_block_size = value + 2;
++    if(ps_sps->i1_log2_min_transform_block_size >= ps_sps->i1_log2_min_coding_block_size)
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+ 
+     UEV_PARSE("log2_diff_max_min_transform_block_size", value, ps_bitstrm);
++    if(value > (LOG2_MAX_TU_SIZE - LOG2_MIN_TU_SIZE))
++    {
++        return IHEVCD_INVALID_PARAMETER;
++    }
+     ps_sps->i1_log2_diff_max_min_transform_block_size = value;
+ 
+     ps_sps->i1_log2_max_transform_block_size = ps_sps->i1_log2_min_transform_block_size +
+-- 
+2.7.4
+

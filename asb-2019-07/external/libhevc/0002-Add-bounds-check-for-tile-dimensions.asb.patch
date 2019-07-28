@@ -1,0 +1,43 @@
+From cc8d3d2c2bc1f18420872e7e389bc59adc4bc129 Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Fri, 5 Apr 2019 12:54:40 -0700
+Subject: [PATCH 2/3] Add bounds check for tile dimensions
+
+Bug: 129976164
+Bug: 130024844
+Test: vendor/poc
+Change-Id: I1e54babaec9c5ad199b60c7cfc1e24e36422f630
+(cherry picked from commit 05f83e945884735a665555d171dec4cfdefa3956)
+---
+ decoder/ihevcd_parse_headers.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index 7e61644..50ed117 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1914,6 +1914,10 @@ IHEVCD_ERROR_T ihevcd_parse_pps(codec_t *ps_codec)
+                     {
+                         UEV_PARSE("column_width_minus1[ i ]", value, ps_bitstrm);
+                         value += 1;
++                        if (value >= ps_sps->i2_pic_wd_in_ctb - start)
++                        {
++                            return IHEVCD_INVALID_HEADER;
++                        }
+                     }
+                     else
+                     {
+@@ -1950,6 +1954,10 @@ IHEVCD_ERROR_T ihevcd_parse_pps(codec_t *ps_codec)
+ 
+                         UEV_PARSE("row_height_minus1[ i ]", value, ps_bitstrm);
+                         value += 1;
++                        if (value >= ps_sps->i2_pic_ht_in_ctb - start)
++                        {
++                            return IHEVCD_INVALID_HEADER;
++                        }
+                     }
+                     else
+                     {
+-- 
+2.7.4
+
