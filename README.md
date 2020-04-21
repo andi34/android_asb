@@ -17,6 +17,11 @@ repo forall -c "rm -rf *.asb.patch"
 
 - Add the next ASB folder and start from beginning
 
+## Rename all patch files
+
+```
+find . -name "*.patch" -exec rename 's/.patch$/.asb.patch/' {} \;
+```
 
 ## LineageOS Bulletin backports
 
