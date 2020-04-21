@@ -1,0 +1,66 @@
+From 1866ab694bfe78fd9d264d33c66d17436308c9d0 Mon Sep 17 00:00:00 2001
+From: Jonathan Scott <scottjonathan@google.com>
+Date: Tue, 25 Jun 2019 12:26:11 +0100
+Subject: [PATCH] Set MANAGED_PROVISIONING_DPC_DOWNLOADED when downloading DPC
+ (oc).
+
+Test: atest DownloadPackageTaskRoboTest
+Bug: 132261064
+Change-Id: I6174a490a3421b2217e4560d4465caa5ba8367e2
+Merged-In: Iac574dcc0acd7594bd11d1b0001df3975685c78f
+(cherry picked from commit 79be6ee2ed3330e96f3113a4fc59884116d9636a)
+---
+ .../task/DownloadPackageTask.java                | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/src/com/android/managedprovisioning/task/DownloadPackageTask.java b/src/com/android/managedprovisioning/task/DownloadPackageTask.java
+index caa3f731..f35f98e7 100644
+--- a/src/com/android/managedprovisioning/task/DownloadPackageTask.java
++++ b/src/com/android/managedprovisioning/task/DownloadPackageTask.java
+@@ -15,6 +15,8 @@
+  */
+ package com.android.managedprovisioning.task;
+ 
++import static android.provider.Settings.Secure.MANAGED_PROVISIONING_DPC_DOWNLOADED;
++
+ import android.app.DownloadManager;
+ import android.app.DownloadManager.Query;
+ import android.app.DownloadManager.Request;
+@@ -29,6 +31,7 @@ import android.content.pm.Signature;
+ import android.database.Cursor;
+ import android.net.Uri;
+ import android.text.TextUtils;
++import android.provider.Settings;
+ 
+ import com.android.managedprovisioning.NetworkMonitor;
+ import com.android.managedprovisioning.ProvisionLogger;
+@@ -100,6 +103,9 @@ public class DownloadPackageTask {
+                     + " the package");
+             mCallback.onError(ERROR_OTHER);
+         }
++
++        setDpcDownloadedSetting(mContext);
++
+         mReceiver = createDownloadReceiver();
+         mContext.registerReceiver(mReceiver,
+                 new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+@@ -133,6 +139,16 @@ public class DownloadPackageTask {
+         }
+     }
+ 
++    /**
++     * Set MANAGED_PROVISIONING_DPC_DOWNLOADED to 1, which will prevent restarting setup-wizard.
++     *
++     * <p>See b/132261064.
++     */
++    private static void setDpcDownloadedSetting(Context context) {
++        Settings.Secure.putInt(
++                context.getContentResolver(), MANAGED_PROVISIONING_DPC_DOWNLOADED, 1);
++    }
++
+     private BroadcastReceiver createDownloadReceiver() {
+         return new BroadcastReceiver() {
+             /**
+-- 
+2.17.1
+

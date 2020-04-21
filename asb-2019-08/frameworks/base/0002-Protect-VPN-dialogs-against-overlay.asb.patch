@@ -1,0 +1,52 @@
+From a5e3a1f344f7332acfc2cd86f02a10d912a2ae83 Mon Sep 17 00:00:00 2001
+From: Chalard Jean <jchalard@google.com>
+Date: Mon, 20 May 2019 13:11:37 +0900
+Subject: [PATCH 2/2] Protect VPN dialogs against overlay.
+
+Bug: 130568701
+Test: manual. After this, can't display on top of it
+Change-Id: Ib032f800edb0416cc15f01a34954340d0d0ffa78
+Merged-In: Ib032f800edb0416cc15f01a34954340d0d0ffa78
+(cherry picked from commit 4e80dc2861614d25a1f957f50040a8cf04812d11)
+(cherry picked from commit 016c72c8abfbae08eda269afb8923e8fc8a4ce44)
+---
+ packages/VpnDialogs/AndroidManifest.xml                        | 1 +
+ .../VpnDialogs/src/com/android/vpndialogs/ConfirmDialog.java   | 3 +++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/packages/VpnDialogs/AndroidManifest.xml b/packages/VpnDialogs/AndroidManifest.xml
+index a3d27ce8a3d..60ed3245bc2 100644
+--- a/packages/VpnDialogs/AndroidManifest.xml
++++ b/packages/VpnDialogs/AndroidManifest.xml
+@@ -21,6 +21,7 @@
+ 
+     <uses-permission android:name="android.permission.CONTROL_VPN" />
+     <uses-permission android:name="android.permission.CONNECTIVITY_INTERNAL" />
++    <uses-permission android:name="android.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS"/>
+ 
+     <application android:label="VpnDialogs"
+             android:allowBackup="false" >
+diff --git a/packages/VpnDialogs/src/com/android/vpndialogs/ConfirmDialog.java b/packages/VpnDialogs/src/com/android/vpndialogs/ConfirmDialog.java
+index 72ce9c4efdc..09339743db5 100644
+--- a/packages/VpnDialogs/src/com/android/vpndialogs/ConfirmDialog.java
++++ b/packages/VpnDialogs/src/com/android/vpndialogs/ConfirmDialog.java
+@@ -16,6 +16,8 @@
+ 
+ package com.android.vpndialogs;
+ 
++import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++
+ import android.content.Context;
+ import android.content.DialogInterface;
+ import android.content.pm.PackageManager;
+@@ -78,6 +80,7 @@ public class ConfirmDialog extends AlertActivity
+         setupAlert();
+ 
+         getWindow().setCloseOnTouchOutside(false);
++        getWindow().addPrivateFlags(PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS);
+         Button button = mAlert.getButton(DialogInterface.BUTTON_POSITIVE);
+         button.setFilterTouchesWhenObscured(true);
+     }
+-- 
+2.17.1
+

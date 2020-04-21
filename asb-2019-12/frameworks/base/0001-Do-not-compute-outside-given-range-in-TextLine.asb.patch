@@ -1,0 +1,49 @@
+From 19f40324d173bb94fc5d4095a77ee9e596ccbc65 Mon Sep 17 00:00:00 2001
+From: Seigo Nonaka <nona@google.com>
+Date: Mon, 16 Sep 2019 14:49:49 -0700
+Subject: [PATCH] Do not compute outside given range in TextLine
+
+This is second attempt of I646851973b3816bf9ba32dfe26748c0345a5a081
+which breaks various layout test on application.
+The empty string must be also handled by the TextLine since it
+retrieves the default line height from the empty string.
+
+Bug: 140632678
+Test: StaticLayoutTest
+Test: Manually done
+Change-Id: I7089ed9b711dddd7de2b27c9c2fa0fb4cb53a735
+---
+ core/java/android/text/TextLine.java | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/core/java/android/text/TextLine.java b/core/java/android/text/TextLine.java
+index 79333563af1..c32846bbae2 100644
+--- a/core/java/android/text/TextLine.java
++++ b/core/java/android/text/TextLine.java
+@@ -208,6 +208,7 @@ class TextLine {
+         int lastRunIndex = runs.length - 2;
+         for (int i = 0; i < runs.length; i += 2) {
+             int runStart = runs[i];
++            if (runStart > mLen) break;
+             int runLimit = runStart + (runs[i+1] & Layout.RUN_LENGTH_MASK);
+             if (runLimit > mLen) {
+                 runLimit = mLen;
+@@ -285,6 +286,7 @@ class TextLine {
+         int[] runs = mDirections.mDirections;
+         for (int i = 0; i < runs.length; i += 2) {
+             int runStart = runs[i];
++            if (runStart > mLen) break;
+             int runLimit = runStart + (runs[i+1] & Layout.RUN_LENGTH_MASK);
+             if (runLimit > mLen) {
+                 runLimit = mLen;
+@@ -374,6 +376,7 @@ class TextLine {
+         int[] runs = mDirections.mDirections;
+         for (int i = 0; i < runs.length; i += 2) {
+             int runStart = runs[i];
++            if (runStart > mLen) break;
+             int runLimit = runStart + (runs[i + 1] & Layout.RUN_LENGTH_MASK);
+             if (runLimit > mLen) {
+                 runLimit = mLen;
+-- 
+2.17.1
+

@@ -1,0 +1,33 @@
+From dc653147a85f8793b30b23a57b29b5f7e6304662 Mon Sep 17 00:00:00 2001
+From: Calin Juravle <calin@google.com>
+Date: Thu, 23 May 2019 13:14:35 -0700
+Subject: [PATCH] Use conservative permissions when creating files in ART
+
+Use 644 permissions by default so that only the owner has write-rights.
+
+Bug: 130821293
+Test: host run-test & gtest
+Merged-In: Ic4dae399a5bfe862aff3d8614c45b38044d805db
+Merged-In: I09eab9749d1ce5872ecaf7d5a80fc45c9c708853
+Change-Id: I09eab9749d1ce5872ecaf7d5a80fc45c9c708853
+(cherry picked from commit e69642936ef28e09970e8a3abb36f31e3d7d17bf)
+---
+ runtime/os_linux.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/runtime/os_linux.cc b/runtime/os_linux.cc
+index f45e9f6030..b628846d66 100644
+--- a/runtime/os_linux.cc
++++ b/runtime/os_linux.cc
+@@ -54,7 +54,7 @@ File* OS::CreateEmptyFileWriteOnly(const char* name) {
+ File* OS::OpenFileWithFlags(const char* name, int flags) {
+   CHECK(name != nullptr);
+   std::unique_ptr<File> file(new File);
+-  if (!file->Open(name, flags, 0666)) {
++  if (!file->Open(name, flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) {
+     return nullptr;
+   }
+   return file.release();
+-- 
+2.17.1
+

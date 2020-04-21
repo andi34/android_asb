@@ -1,0 +1,90 @@
+From b26eaa27433a879355d3dce8a9dd507d19611da6 Mon Sep 17 00:00:00 2001
+From: Rubin Xu <rubinxu@google.com>
+Date: Tue, 10 Sep 2019 16:17:42 +0100
+Subject: [PATCH] Fix use-after-free in proxy resolver
+
+Bug: 139806216
+Test: m -j proxy_resolver_v8_unittest && adb sync && adb shell \
+      /data/nativetest64/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Change-Id: I663829a8a7467f50f9b11fd8b787108ff5d64acc
+Merged-In: I663829a8a7467f50f9b11fd8b787108ff5d64acc
+(cherry picked from commit ed9838b89ee2c43a5240f411d9c77558b4b34966)
+---
+ src/proxy_resolver_v8.cc           |  3 +--
+ test/js-unittest/b_139806216.js    |  4 ++++
+ test/proxy_resolver_v8_unittest.cc | 15 +++++++++++++++
+ test/proxy_test_script.h           |  6 ++++++
+ 4 files changed, 26 insertions(+), 2 deletions(-)
+ create mode 100644 test/js-unittest/b_139806216.js
+
+diff --git a/src/proxy_resolver_v8.cc b/src/proxy_resolver_v8.cc
+index 0504b03..5d8b776 100644
+--- a/src/proxy_resolver_v8.cc
++++ b/src/proxy_resolver_v8.cc
+@@ -767,9 +767,8 @@ int ProxyResolverV8::SetPacScript(const android::String16& script_data) {
+   v8::V8::SetFlagsFromString(kNoOpt, strlen(kNoOpt));
+ 
+   // Try parsing the PAC script.
+-  ArrayBufferAllocator allocator;
+   v8::Isolate::CreateParams create_params;
+-  create_params.array_buffer_allocator = &allocator;
++  create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+ 
+   context_ = new Context(js_bindings_, error_listener_, v8::Isolate::New(create_params));
+   int rv;
+diff --git a/test/js-unittest/b_139806216.js b/test/js-unittest/b_139806216.js
+new file mode 100644
+index 0000000..3a1e34d
+--- /dev/null
++++ b/test/js-unittest/b_139806216.js
+@@ -0,0 +1,4 @@
++function FindProxyForURL(url, host){
++    var x = new ArrayBuffer(1);
++    return "DIRECT";
++}
+diff --git a/test/proxy_resolver_v8_unittest.cc b/test/proxy_resolver_v8_unittest.cc
+index 73e4405..fa11f73 100644
+--- a/test/proxy_resolver_v8_unittest.cc
++++ b/test/proxy_resolver_v8_unittest.cc
+@@ -572,5 +572,20 @@ TEST(ProxyResolverV8Test, B_132073833) {
+   EXPECT_EQ("DIRECT", proxies[0]);
+ }
+ 
++TEST(ProxyResolverV8Test, B_139806216) {
++  ProxyResolverV8WithMockBindings resolver(new MockJSBindings());
++  int result = resolver.SetPacScript(String16(B_139806216_JS));
++  EXPECT_EQ(OK, result);
++
++  // Execute FindProxyForURL().
++  result = resolver.GetProxyForURL(kQueryUrl, kQueryHost, &kResults);
++
++  EXPECT_EQ(OK, result);
++  std::vector<std::string> proxies = string16ToProxyList(kResults);
++  EXPECT_EQ(1U, proxies.size());
++  EXPECT_EQ("DIRECT", proxies[0]);
++}
++
++
+ }  // namespace
+ }  // namespace net
+diff --git a/test/proxy_test_script.h b/test/proxy_test_script.h
+index aa10016..bb8502c 100644
+--- a/test/proxy_test_script.h
++++ b/test/proxy_test_script.h
+@@ -27,6 +27,12 @@
+   "\n" \
+   "var object;\n" \
+ 
++#define B_139806216_JS \
++  "function FindProxyForURL(url, host){\n" \
++  "    var x = new ArrayBuffer(1);\n" \
++  "    return \"DIRECT\";\n" \
++  "}\n" \
++
+ #define BINDING_FROM_GLOBAL_JS \
+   "// Calls a bindings outside of FindProxyForURL(). This causes the code to\n" \
+   "// get exercised during initialization.\n" \
+-- 
+2.17.1
+

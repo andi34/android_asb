@@ -1,0 +1,96 @@
+From 0edc1f83ff19a56ac1a052449ec08ed8e8eef4fe Mon Sep 17 00:00:00 2001
+From: Vasyl Gello <vasek.gello@gmail.com>
+Date: Fri, 8 Nov 2019 12:16:09 +0000
+Subject: [PATCH 5/5] Add __undef_macros and LIBCPP_PUSH/POP_MACROS
+
+Fixes compilation of backported commits.
+
+Ref:
+
+https://raw.githubusercontent.com/llvm-mirror/libcxx/master/include/__undef_macros
+https://github.com/llvm-mirror/libcxx/blob/master/include/__config
+
+Change-Id: I870d53ca1891e439ee0630775f2668ea4164b9c9
+---
+ include/__config       | 26 ++++++++++++++++++++++++++
+ include/__undef_macros | 33 +++++++++++++++++++++++++++++++++
+ 2 files changed, 59 insertions(+)
+ create mode 100644 include/__undef_macros
+
+diff --git a/include/__config b/include/__config
+index e001215b8..97dd03bee 100644
+--- a/include/__config
++++ b/include/__config
+@@ -767,4 +767,30 @@ extern "C" void __sanitizer_annotate_contiguous_container(
+ #define _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
+ #endif
+ 
++#if defined(_LIBCPP_HAS_NO_PRAGMA_PUSH_POP_MACRO)
++#  define _LIBCPP_PUSH_MACROS
++#  define _LIBCPP_POP_MACROS
++#else
++  // Don't warn about macro conflicts when we can restore them at the
++  // end of the header.
++#  ifndef _LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS
++#    define _LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS
++#  endif
++#  if defined(_LIBCPP_COMPILER_MSVC)
++#    define _LIBCPP_PUSH_MACROS    \
++       __pragma(push_macro("min")) \
++       __pragma(push_macro("max"))
++#    define _LIBCPP_POP_MACROS     \
++       __pragma(pop_macro("min"))  \
++       __pragma(pop_macro("max"))
++#  else
++#    define _LIBCPP_PUSH_MACROS        \
++       _Pragma("push_macro(\"min\")")  \
++       _Pragma("push_macro(\"max\")")
++#    define _LIBCPP_POP_MACROS         \
++       _Pragma("pop_macro(\"min\")")   \
++       _Pragma("pop_macro(\"max\")")
++#  endif
++#endif // defined(_LIBCPP_HAS_NO_PRAGMA_PUSH_POP_MACRO)
++
+ #endif  // _LIBCPP_CONFIG
+diff --git a/include/__undef_macros b/include/__undef_macros
+new file mode 100644
+index 000000000..4923ee6b4
+--- /dev/null
++++ b/include/__undef_macros
+@@ -0,0 +1,33 @@
++// -*- C++ -*-
++//===------------------------ __undef_macros ------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++
++#ifdef min
++#if !defined(_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
++#if defined(_LIBCPP_WARNING)
++_LIBCPP_WARNING("macro min is incompatible with C++.  Try #define NOMINMAX "
++                "before any Windows header. #undefing min")
++#else
++#warning: macro min is incompatible with C++.  #undefing min
++#endif
++#endif
++#undef min
++#endif
++
++#ifdef max
++#if !defined(_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
++#if defined(_LIBCPP_WARNING)
++_LIBCPP_WARNING("macro max is incompatible with C++.  Try #define NOMINMAX "
++                "before any Windows header. #undefing max")
++#else
++#warning: macro max is incompatible with C++.  #undefing max
++#endif
++#endif
++#undef max
++#endif
+-- 
+2.17.1
+

@@ -1,0 +1,62 @@
+From df3ddd4b29df9a1d0b4c96f36198325eaa6ee2ad Mon Sep 17 00:00:00 2001
+From: Mihai Popa <popam@google.com>
+Date: Tue, 25 Jun 2019 11:15:18 +0100
+Subject: [PATCH 3/3] Fix Layout.primaryIsTrailingPreviousAllLineOffsets
+
+The CL fixes a crash in Layout.primaryIsTrailingPreviousAllLineOffsets.
+The crash was happening when the method was called for a line beginning
+with an empty bidi run. This could happen, for example, for empty text -
+I was unable to find any other case. The CL improves the existing test
+for the method with this case, which was previously crashing.
+
+The CL also fixes a potential crash in getLineHorizontals. However, this
+bug could never happen as in the current code path clamped is always
+false (and kept as parameter for parity with getHorizontal).
+
+Bug: 135444178
+Bug: 78464361
+Test: atest FrameworksCoreTests:android.text.LayoutTest\#testPrimaryIsTrailingPrevious
+Change-Id: I47157abe1d74675884734e3810628a566e40c1b4
+(cherry picked from commit 7ad499d00716f45fffdf7331493ed21d1b8d9b77)
+(cherry picked from commit d3e81cd63f91533915feb159e0b4241729592963)
+---
+ core/java/android/text/Layout.java | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/core/java/android/text/Layout.java b/core/java/android/text/Layout.java
+index 3bc9390c581..0999b982d99 100644
+--- a/core/java/android/text/Layout.java
++++ b/core/java/android/text/Layout.java
+@@ -919,6 +919,9 @@ public abstract class Layout {
+             if (limit > lineEnd) {
+                 limit = lineEnd;
+             }
++            if (limit == start) {
++                continue;
++            }
+             level[limit - lineStart - 1] =
+                     (byte) ((runs[i + 1] >>> RUN_LEVEL_SHIFT) & RUN_LEVEL_MASK);
+         }
+@@ -1014,8 +1017,8 @@ public abstract class Layout {
+     }
+ 
+     /**
+-     * Computes in linear time the results of calling
+-     * #getHorizontal for all offsets on a line.
++     * Computes in linear time the results of calling #getHorizontal for all offsets on a line.
++     *
+      * @param line The line giving the offsets we compute information for
+      * @param clamped Whether to clamp the results to the width of the layout
+      * @param primary Whether the results should be the primary or the secondary horizontal
+@@ -1050,7 +1053,7 @@ public abstract class Layout {
+         TextLine.recycle(tl);
+ 
+         if (clamped) {
+-            for (int offset = 0; offset <= wid.length; ++offset) {
++            for (int offset = 0; offset < wid.length; ++offset) {
+                 if (wid[offset] > mWidth) {
+                     wid[offset] = mWidth;
+                 }
+-- 
+2.17.1
+

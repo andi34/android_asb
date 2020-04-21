@@ -1,0 +1,115 @@
+From 9c9179680b3e1310b9236ac5ea244d3528ff14c8 Mon Sep 17 00:00:00 2001
+From: Raman Tenneti <rtenneti@google.com>
+Date: Mon, 16 Sep 2019 10:45:52 -0700
+Subject: [PATCH 2/3] Deleted "<action
+ android:name="android.intent.action.SEND_MULTIPLE" />" in
+ "com.android.email.activity.ComposeActivityEmailExternal" activity of the
+ AndroidManifest.xml as part of cleanup.
+
+Bug: 139259734
+Bug: 127320867
+
+Test: manual - Ran the following tests on Pixel phone. Tested the email UI.
+
+$ make -j 40
+$ make Email -j
+$ make EmailTests -j
+  -rw-r--r-- 1 rtenneti primarygroup 6356400 Sep 16 10:59 out/target/product/marlin/testcases/Email/arm64/Email.apk
+  -rw-r--r-- 1 rtenneti primarygroup 389599 Sep 16 10:57 out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+
+$ adb install -r -d -g out/target/product/marlin/testcases/Email/arm64/Email.apk
+$ adb install -r -d -g out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+$ adb shell am instrument -w com.android.email.tests
+  Time: 10.338
+  OK (157 tests)
+
+$ atest EmailTests
+  Summary
+  -------
+  EmailTests: Passed: 157, Failed: 0, Ignored: 0, Assumption Failed: 0
+
+  All tests passed!
+
+Deleted "<action android:name="android.intent.action.SEND" />" in "com.android.email.activity.ComposeActivityEmailExternal" activity of the AndroidManifest.xml as part of cleanup.
+
+Bug: 139259734
+Bug: 127320867
+
+Test: manual - Ran the following tests on Pixel phone. Tested the email UI.
+
+$ make -j 40
+$ make Email -j
+$ make EmailTests -j
+  -rw-r--r-- 1 rtenneti primarygroup 6356400 Sep 18 15:32 out/target/product/marlin/testcases/Email/arm64/Email.apk
+  -rw-r--r-- 1 rtenneti primarygroup  389599 Sep 18 15:32 out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+
+$ adb install -r -d -g out/target/product/marlin/testcases/Email/arm64/Email.apk
+$ adb install -r -d -g out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+$ adb shell am instrument -w com.android.email.tests
+  Time: 3.38
+  OK (157 tests)
+
+$ atest EmailTests
+  com.android.email.tests (157 Tests)
+  [1/157] com.android.email.DummyFlakyTest#imNotReallyFlaky: PASSED (2ms)
+  ...
+  [157/157] com.android.emailcommon.utility.UtilityTest#testParseEmailDateTime: PASSED (0ms)
+
+  EmailTests: Passed: 157, Failed: 0, Ignored: 0, Assumption Failed: 0
+
+  All tests passed!
+
+Change-Id: Iff7a42a3248a8b45cf128d2335624fc298c8888c
+(cherry picked from commit 37275ba2833057630de85bfa95c141ec55c6d304)
+Merged-In: Iff7a42a3248a8b45cf128d2335624fc298c8888c
+(cherry picked from commit 25fb2204e56f3750cec63cffbb9e2f76e7f21ca4)
+---
+ AndroidManifest.xml | 28 ----------------------------
+ 1 file changed, 28 deletions(-)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 68919393d..0dd27de1a 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -114,38 +114,10 @@
+                 <category
+                     android:name="android.intent.category.BROWSABLE" />
+             </intent-filter>
+-            <intent-filter
+-                android:label="@string/app_name">
+-                <action
+-                    android:name="android.intent.action.SEND" />
+-                <data
+-                    android:mimeType="*/*" />
+-                <category
+-                    android:name="android.intent.category.DEFAULT" />
+-            </intent-filter>
+-            <intent-filter
+-                android:label="@string/app_name">
+-                <action
+-                    android:name="android.intent.action.SEND_MULTIPLE" />
+-                <data
+-                    android:mimeType="*/*" />
+-                <category
+-                    android:name="android.intent.category.DEFAULT" />
+-            </intent-filter>
+             <intent-filter>
+                 <action
+                     android:name="com.android.email.intent.action.REPLY" />
+             </intent-filter>
+-            <intent-filter>
+-                <action android:name="android.intent.action.SEND" />
+-                <category
+-                    android:name="android.intent.category.DEFAULT" />
+-                <data
+-                    android:scheme="content"
+-                    android:host="ui.email2.android.com"
+-                    android:pathPrefix="/compose"
+-                    />
+-            </intent-filter>
+             <intent-filter>
+                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                 <category android:name="android.intent.category.DEFAULT" />
+-- 
+2.17.1
+

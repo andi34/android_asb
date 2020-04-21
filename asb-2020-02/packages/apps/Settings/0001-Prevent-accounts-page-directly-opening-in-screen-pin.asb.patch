@@ -1,0 +1,58 @@
+From 0ec1848fe68798a0cea7ae99030d1d7139a7bc75 Mon Sep 17 00:00:00 2001
+From: Mill Chen <millchen@google.com>
+Date: Tue, 16 Jul 2019 17:45:46 +0800
+Subject: [PATCH] Prevent accounts page directly opening in screen pinning mode
+
+In Settings there is no auth mechanism to prevent accounts page being
+opened in screen pinning mode. This CL makes it so that when users are
+trying to navigate to any pages in Settings from other apps in screen
+pinning mode, Settings app will directly close its page.
+
+Bug: 137015265
+Bug: 135604684
+Test: manual
+Change-Id: If26eda408a9ef6fa03ad82e5bee51bb7185950d6
+Merged-In: If26eda408a9ef6fa03ad82e5bee51bb7185950d6
+(cherry picked from commit f3242dab3546c019d4b79c502f7b8850d36123a5)
+(cherry picked from commit ad2502a91a6d0814396b2d26a7270e8cbdb2ed38)
+---
+ src/com/android/settings/SettingsActivity.java | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/src/com/android/settings/SettingsActivity.java b/src/com/android/settings/SettingsActivity.java
+index 76041f2d1b..aa1e890379 100644
+--- a/src/com/android/settings/SettingsActivity.java
++++ b/src/com/android/settings/SettingsActivity.java
+@@ -522,6 +522,12 @@ public class SettingsActivity extends SettingsDrawerActivity
+     @Override
+     protected void onCreate(Bundle savedState) {
+         super.onCreate(savedState);
++
++        if (isLockTaskModePinned() && !isSettingsRunOnTop()) {
++            Log.w(LOG_TAG, "Devices lock task mode pinned.");
++            finish();
++        }
++
+         long startTime = System.currentTimeMillis();
+ 
+         // Should happen before any call to getIntent()
+@@ -1287,4 +1293,16 @@ public class SettingsActivity extends SettingsDrawerActivity
+         }
+         super.onActivityResult(requestCode, resultCode, data);
+     }
++    private boolean isLockTaskModePinned() {
++        final ActivityManager activityManager =
++            getApplicationContext().getSystemService(ActivityManager.class);
++        return activityManager.getLockTaskModeState() == ActivityManager.LOCK_TASK_MODE_PINNED;
++    }
++    private boolean isSettingsRunOnTop() {
++        final ActivityManager activityManager =
++            getApplicationContext().getSystemService(ActivityManager.class);
++        final String taskPkgName = activityManager.getRunningTasks(1 /* maxNum */)
++            .get(0 /* index */).baseActivity.getPackageName();
++        return TextUtils.equals(getPackageName(), taskPkgName);
++    }
+ }
+-- 
+2.17.1
+

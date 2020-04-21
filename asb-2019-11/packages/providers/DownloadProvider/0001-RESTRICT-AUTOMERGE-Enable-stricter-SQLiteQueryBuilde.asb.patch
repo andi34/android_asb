@@ -1,0 +1,599 @@
+From 49564b45f7eac6bad5db127d1e77c37d25861059 Mon Sep 17 00:00:00 2001
+From: Jeff Sharkey <jsharkey@android.com>
+Date: Wed, 17 Jul 2019 18:54:49 -0600
+Subject: [PATCH] RESTRICT AUTOMERGE Enable stricter SQLiteQueryBuilder
+ options.
+
+Malicious callers can leak side-channel information by using
+subqueries in any untrusted inputs where SQLite allows "expr" values.
+
+This change starts using setStrictColumns() and setStrictGrammar()
+on SQLiteQueryBuilder to block this class of attacks.  This means we
+now need to define the projection mapping of valid columns, which
+consists of both the columns defined in the public API and columns
+read internally by DownloadInfo.Reader.
+
+We're okay growing sAppReadableColumnsSet like this, since we're
+relying on our trusted WHERE clause to filter away any rows that
+don't belong to the calling UID.
+
+Remove the legacy Lexer code, since we're now internally relying on
+the robust and well-tested SQLiteTokenizer logic.
+
+Bug: 135270103
+Bug: 135269143
+Test: atest DownloadProviderTests
+Test: atest CtsAppTestCases:android.app.cts.DownloadManagerTest
+Change-Id: I302091ceda3591785b2124575e89dad19bc97469
+(cherry picked from commit d3e5c766a143853580dd6642a4a32c5d1a6f9fb1)
+---
+ .../providers/downloads/DownloadProvider.java | 186 +++++++------
+ .../android/providers/downloads/Helpers.java  | 263 +-----------------
+ 2 files changed, 103 insertions(+), 346 deletions(-)
+
+diff --git a/src/com/android/providers/downloads/DownloadProvider.java b/src/com/android/providers/downloads/DownloadProvider.java
+index 7b966d8..5078a58 100644
+--- a/src/com/android/providers/downloads/DownloadProvider.java
++++ b/src/com/android/providers/downloads/DownloadProvider.java
+@@ -55,13 +55,13 @@ import android.provider.Downloads;
+ import android.provider.OpenableColumns;
+ import android.text.TextUtils;
+ import android.text.format.DateUtils;
++import android.util.ArrayMap;
+ import android.util.Log;
+ 
+ import com.android.internal.util.IndentingPrintWriter;
+ 
+ import libcore.io.IoUtils;
+ 
+-import com.google.android.collect.Maps;
+ import com.google.common.annotations.VisibleForTesting;
+ 
+ import java.io.File;
+@@ -70,11 +70,7 @@ import java.io.FileNotFoundException;
+ import java.io.IOException;
+ import java.io.PrintWriter;
+ import java.util.ArrayList;
+-import java.util.Arrays;
+-import java.util.HashMap;
+-import java.util.HashSet;
+ import java.util.Iterator;
+-import java.util.List;
+ import java.util.Map;
+ 
+ /**
+@@ -132,48 +128,100 @@ public final class DownloadProvider extends ContentProvider {
+             Downloads.Impl.ALL_DOWNLOADS_CONTENT_URI,
+     };
+ 
+-    private static final String[] sAppReadableColumnsArray = new String[] {
+-        Downloads.Impl._ID,
+-        Downloads.Impl.COLUMN_APP_DATA,
+-        Downloads.Impl._DATA,
+-        Downloads.Impl.COLUMN_MIME_TYPE,
+-        Downloads.Impl.COLUMN_VISIBILITY,
+-        Downloads.Impl.COLUMN_DESTINATION,
+-        Downloads.Impl.COLUMN_CONTROL,
+-        Downloads.Impl.COLUMN_STATUS,
+-        Downloads.Impl.COLUMN_LAST_MODIFICATION,
+-        Downloads.Impl.COLUMN_NOTIFICATION_PACKAGE,
+-        Downloads.Impl.COLUMN_NOTIFICATION_CLASS,
+-        Downloads.Impl.COLUMN_TOTAL_BYTES,
+-        Downloads.Impl.COLUMN_CURRENT_BYTES,
+-        Downloads.Impl.COLUMN_TITLE,
+-        Downloads.Impl.COLUMN_DESCRIPTION,
+-        Downloads.Impl.COLUMN_URI,
+-        Downloads.Impl.COLUMN_IS_VISIBLE_IN_DOWNLOADS_UI,
+-        Downloads.Impl.COLUMN_FILE_NAME_HINT,
+-        Downloads.Impl.COLUMN_MEDIAPROVIDER_URI,
+-        Downloads.Impl.COLUMN_DELETED,
+-        OpenableColumns.DISPLAY_NAME,
+-        OpenableColumns.SIZE,
+-    };
+-
+-    private static final HashSet<String> sAppReadableColumnsSet;
+-    private static final HashMap<String, String> sColumnsMap;
+-
+-    static {
+-        sAppReadableColumnsSet = new HashSet<String>();
+-        for (int i = 0; i < sAppReadableColumnsArray.length; ++i) {
+-            sAppReadableColumnsSet.add(sAppReadableColumnsArray[i]);
++    private static void addMapping(Map<String, String> map, String column) {
++        if (!map.containsKey(column)) {
++            map.put(column, column);
++        }
++    }
++    private static void addMapping(Map<String, String> map, String column, String rawColumn) {
++        if (!map.containsKey(column)) {
++            map.put(column, rawColumn + " AS " + column);
+         }
+-
+-        sColumnsMap = Maps.newHashMap();
+-        sColumnsMap.put(OpenableColumns.DISPLAY_NAME,
+-                Downloads.Impl.COLUMN_TITLE + " AS " + OpenableColumns.DISPLAY_NAME);
+-        sColumnsMap.put(OpenableColumns.SIZE,
+-                Downloads.Impl.COLUMN_TOTAL_BYTES + " AS " + OpenableColumns.SIZE);
+     }
+-    private static final List<String> downloadManagerColumnsList =
+-            Arrays.asList(DownloadManager.UNDERLYING_COLUMNS);
++    private static final Map<String, String> sDownloadsMap = new ArrayMap<>();
++    static {
++        final Map<String, String> map = sDownloadsMap;
++        // Columns defined by public API
++        addMapping(map, DownloadManager.COLUMN_ID,
++                Downloads.Impl._ID);
++        addMapping(map, DownloadManager.COLUMN_LOCAL_FILENAME,
++                Downloads.Impl._DATA);
++        addMapping(map, DownloadManager.COLUMN_MEDIAPROVIDER_URI);
++        addMapping(map, DownloadManager.COLUMN_DESTINATION);
++        addMapping(map, DownloadManager.COLUMN_TITLE);
++        addMapping(map, DownloadManager.COLUMN_DESCRIPTION);
++        addMapping(map, DownloadManager.COLUMN_URI);
++        addMapping(map, DownloadManager.COLUMN_STATUS);
++        addMapping(map, DownloadManager.COLUMN_FILE_NAME_HINT);
++        addMapping(map, DownloadManager.COLUMN_MEDIA_TYPE,
++                Downloads.Impl.COLUMN_MIME_TYPE);
++        addMapping(map, DownloadManager.COLUMN_TOTAL_SIZE_BYTES,
++                Downloads.Impl.COLUMN_TOTAL_BYTES);
++        addMapping(map, DownloadManager.COLUMN_LAST_MODIFIED_TIMESTAMP,
++                Downloads.Impl.COLUMN_LAST_MODIFICATION);
++        addMapping(map, DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR,
++                Downloads.Impl.COLUMN_CURRENT_BYTES);
++        addMapping(map, DownloadManager.COLUMN_ALLOW_WRITE);
++        addMapping(map, DownloadManager.COLUMN_LOCAL_URI,
++                "'placeholder'");
++        addMapping(map, DownloadManager.COLUMN_REASON,
++                "'placeholder'");
++        // Columns defined by OpenableColumns
++        addMapping(map, OpenableColumns.DISPLAY_NAME,
++                Downloads.Impl.COLUMN_TITLE);
++        addMapping(map, OpenableColumns.SIZE,
++                Downloads.Impl.COLUMN_TOTAL_BYTES);
++        // Allow references to all other columns to support DownloadInfo.Reader;
++        // we're already using SQLiteQueryBuilder to block access to other rows
++        // that don't belong to the calling UID.
++        addMapping(map, Downloads.Impl._ID);
++        addMapping(map, Downloads.Impl._DATA);
++        addMapping(map, Downloads.Impl.COLUMN_ALLOWED_NETWORK_TYPES);
++        addMapping(map, Downloads.Impl.COLUMN_ALLOW_METERED);
++        addMapping(map, Downloads.Impl.COLUMN_ALLOW_ROAMING);
++        addMapping(map, Downloads.Impl.COLUMN_ALLOW_WRITE);
++        addMapping(map, Downloads.Impl.COLUMN_APP_DATA);
++        addMapping(map, Downloads.Impl.COLUMN_BYPASS_RECOMMENDED_SIZE_LIMIT);
++        addMapping(map, Downloads.Impl.COLUMN_CONTROL);
++        addMapping(map, Downloads.Impl.COLUMN_COOKIE_DATA);
++        addMapping(map, Downloads.Impl.COLUMN_CURRENT_BYTES);
++        addMapping(map, Downloads.Impl.COLUMN_DELETED);
++        addMapping(map, Downloads.Impl.COLUMN_DESCRIPTION);
++        addMapping(map, Downloads.Impl.COLUMN_DESTINATION);
++        addMapping(map, Downloads.Impl.COLUMN_ERROR_MSG);
++        addMapping(map, Downloads.Impl.COLUMN_FAILED_CONNECTIONS);
++        addMapping(map, Downloads.Impl.COLUMN_FILE_NAME_HINT);
++        addMapping(map, Downloads.Impl.COLUMN_FLAGS);
++        addMapping(map, Downloads.Impl.COLUMN_IS_PUBLIC_API);
++        addMapping(map, Downloads.Impl.COLUMN_IS_VISIBLE_IN_DOWNLOADS_UI);
++        addMapping(map, Downloads.Impl.COLUMN_LAST_MODIFICATION);
++        addMapping(map, Downloads.Impl.COLUMN_MEDIAPROVIDER_URI);
++        addMapping(map, Downloads.Impl.COLUMN_MEDIA_SCANNED);
++        addMapping(map, Downloads.Impl.COLUMN_MIME_TYPE);
++        addMapping(map, Downloads.Impl.COLUMN_NO_INTEGRITY);
++        addMapping(map, Downloads.Impl.COLUMN_NOTIFICATION_CLASS);
++        addMapping(map, Downloads.Impl.COLUMN_NOTIFICATION_EXTRAS);
++        addMapping(map, Downloads.Impl.COLUMN_NOTIFICATION_PACKAGE);
++        addMapping(map, Downloads.Impl.COLUMN_OTHER_UID);
++        addMapping(map, Downloads.Impl.COLUMN_REFERER);
++        addMapping(map, Downloads.Impl.COLUMN_STATUS);
++        addMapping(map, Downloads.Impl.COLUMN_TITLE);
++        addMapping(map, Downloads.Impl.COLUMN_TOTAL_BYTES);
++        addMapping(map, Downloads.Impl.COLUMN_URI);
++        addMapping(map, Downloads.Impl.COLUMN_USER_AGENT);
++        addMapping(map, Downloads.Impl.COLUMN_VISIBILITY);
++        addMapping(map, Constants.ETAG);
++        addMapping(map, Constants.RETRY_AFTER_X_REDIRECT_COUNT);
++        addMapping(map, Constants.UID);
++    }
++    private static final Map<String, String> sHeadersMap = new ArrayMap<>();
++    static {
++        final Map<String, String> map = sHeadersMap;
++        addMapping(map, "id");
++        addMapping(map, Downloads.Impl.RequestHeaders.COLUMN_DOWNLOAD_ID);
++        addMapping(map, Downloads.Impl.RequestHeaders.COLUMN_HEADER);
++        addMapping(map, Downloads.Impl.RequestHeaders.COLUMN_VALUE);
++    }
+ 
+     @VisibleForTesting
+     SystemFacade mSystemFacade;
+@@ -922,28 +970,6 @@ public final class DownloadProvider extends ContentProvider {
+             return qb.query(db, projection, null, null, null, null, null);
+         }
+ 
+-        if (shouldRestrictVisibility()) {
+-            if (projection == null) {
+-                projection = sAppReadableColumnsArray.clone();
+-            } else {
+-                // check the validity of the columns in projection 
+-                for (int i = 0; i < projection.length; ++i) {
+-                    if (!sAppReadableColumnsSet.contains(projection[i]) &&
+-                            !downloadManagerColumnsList.contains(projection[i])) {
+-                        throw new IllegalArgumentException(
+-                                "column " + projection[i] + " is not allowed in queries");
+-                    }
+-                }
+-            }
+-
+-            for (int i = 0; i < projection.length; i++) {
+-                final String newColumn = sColumnsMap.get(projection[i]);
+-                if (newColumn != null) {
+-                    projection[i] = newColumn;
+-                }
+-            }
+-        }
+-
+         if (Constants.LOGVV) {
+             logVerboseQueryInfo(projection, selection, selectionArgs, sort, db);
+         }
+@@ -1034,16 +1060,6 @@ public final class DownloadProvider extends ContentProvider {
+         }
+     }
+ 
+-    /**
+-     * @return true if we should restrict the columns readable by this caller
+-     */
+-    private boolean shouldRestrictVisibility() {
+-        int callingUid = Binder.getCallingUid();
+-        return Binder.getCallingPid() != Process.myPid() &&
+-                callingUid != mSystemUid &&
+-                callingUid != mDefContainerUid;
+-    }
+-
+     /**
+      * Updates a row in the database
+      */
+@@ -1051,8 +1067,6 @@ public final class DownloadProvider extends ContentProvider {
+     public int update(final Uri uri, final ContentValues values,
+             final String where, final String[] whereArgs) {
+ 
+-        Helpers.validateSelection(where, sAppReadableColumnsSet);
+-
+         final Context context = getContext();
+         final ContentResolver resolver = context.getContentResolver();
+ 
+@@ -1171,6 +1185,8 @@ public final class DownloadProvider extends ContentProvider {
+      */
+     private SQLiteQueryBuilder getQueryBuilder(final Uri uri, int match) {
+         final String table;
++        final Map<String, String> projectionMap;
++
+         final StringBuilder where = new StringBuilder();
+         switch (match) {
+             // The "my_downloads" view normally limits the caller to operating
+@@ -1181,6 +1197,7 @@ public final class DownloadProvider extends ContentProvider {
+                 // fall-through
+             case MY_DOWNLOADS:
+                 table = DB_TABLE;
++                projectionMap = sDownloadsMap;
+                 if (getContext().checkCallingOrSelfPermission(
+                         PERMISSION_ACCESS_ALL) != PackageManager.PERMISSION_GRANTED) {
+                     appendWhereExpression(where, Constants.UID + "=" + Binder.getCallingUid()
+@@ -1196,6 +1213,7 @@ public final class DownloadProvider extends ContentProvider {
+                 // fall-through
+             case ALL_DOWNLOADS:
+                 table = DB_TABLE;
++                projectionMap = sDownloadsMap;
+                 break;
+ 
+             // Headers are limited to callers holding the ACCESS_ALL_DOWNLOADS
+@@ -1203,6 +1221,7 @@ public final class DownloadProvider extends ContentProvider {
+             case MY_DOWNLOADS_ID_HEADERS:
+             case ALL_DOWNLOADS_ID_HEADERS:
+                 table = Downloads.Impl.RequestHeaders.HEADERS_DB_TABLE;
++                projectionMap = sHeadersMap;
+                 appendWhereExpression(where, Downloads.Impl.RequestHeaders.COLUMN_DOWNLOAD_ID + "="
+                         + getDownloadIdFromUri(uri));
+                 break;
+@@ -1212,8 +1231,11 @@ public final class DownloadProvider extends ContentProvider {
+         }
+ 
+         final SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+-        qb.setStrict(true);
+         qb.setTables(table);
++        qb.setProjectionMap(projectionMap);
++        qb.setStrict(true);
++        qb.setStrictColumns(true);
++        qb.setStrictGrammar(true);
+         qb.appendWhere(where);
+         return qb;
+     }
+@@ -1230,10 +1252,6 @@ public final class DownloadProvider extends ContentProvider {
+      */
+     @Override
+     public int delete(final Uri uri, final String where, final String[] whereArgs) {
+-        if (shouldRestrictVisibility()) {
+-            Helpers.validateSelection(where, sAppReadableColumnsSet);
+-        }
+-
+         final Context context = getContext();
+         final ContentResolver resolver = context.getContentResolver();
+         final JobScheduler scheduler = context.getSystemService(JobScheduler.class);
+diff --git a/src/com/android/providers/downloads/Helpers.java b/src/com/android/providers/downloads/Helpers.java
+index e954905..fe81aac 100644
+--- a/src/com/android/providers/downloads/Helpers.java
++++ b/src/com/android/providers/downloads/Helpers.java
+@@ -49,7 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
+ import java.io.File;
+ import java.io.IOException;
+ import java.util.Random;
+-import java.util.Set;
++import java.util.function.BiConsumer;
+ import java.util.regex.Matcher;
+ import java.util.regex.Pattern;
+ 
+@@ -576,265 +576,4 @@ public class Helpers {
+                 throw new IllegalStateException("unexpected destination: " + destination);
+         }
+     }
+-
+-    /**
+-     * Checks whether this looks like a legitimate selection parameter
+-     */
+-    public static void validateSelection(String selection, Set<String> allowedColumns) {
+-        try {
+-            if (selection == null || selection.isEmpty()) {
+-                return;
+-            }
+-            Lexer lexer = new Lexer(selection, allowedColumns);
+-            parseExpression(lexer);
+-            if (lexer.currentToken() != Lexer.TOKEN_END) {
+-                throw new IllegalArgumentException("syntax error");
+-            }
+-        } catch (RuntimeException ex) {
+-            if (Constants.LOGV) {
+-                Log.d(Constants.TAG, "invalid selection [" + selection + "] triggered " + ex);
+-            } else if (false) {
+-                Log.d(Constants.TAG, "invalid selection triggered " + ex);
+-            }
+-            throw ex;
+-        }
+-
+-    }
+-
+-    // expression <- ( expression ) | statement [AND_OR ( expression ) | statement] *
+-    //             | statement [AND_OR expression]*
+-    private static void parseExpression(Lexer lexer) {
+-        for (;;) {
+-            // ( expression )
+-            if (lexer.currentToken() == Lexer.TOKEN_OPEN_PAREN) {
+-                lexer.advance();
+-                parseExpression(lexer);
+-                if (lexer.currentToken() != Lexer.TOKEN_CLOSE_PAREN) {
+-                    throw new IllegalArgumentException("syntax error, unmatched parenthese");
+-                }
+-                lexer.advance();
+-            } else {
+-                // statement
+-                parseStatement(lexer);
+-            }
+-            if (lexer.currentToken() != Lexer.TOKEN_AND_OR) {
+-                break;
+-            }
+-            lexer.advance();
+-        }
+-    }
+-
+-    // statement <- COLUMN COMPARE VALUE
+-    //            | COLUMN IS NULL
+-    private static void parseStatement(Lexer lexer) {
+-        // both possibilities start with COLUMN
+-        if (lexer.currentToken() != Lexer.TOKEN_COLUMN) {
+-            throw new IllegalArgumentException("syntax error, expected column name");
+-        }
+-        lexer.advance();
+-
+-        // statement <- COLUMN COMPARE VALUE
+-        if (lexer.currentToken() == Lexer.TOKEN_COMPARE) {
+-            lexer.advance();
+-            if (lexer.currentToken() != Lexer.TOKEN_VALUE) {
+-                throw new IllegalArgumentException("syntax error, expected quoted string");
+-            }
+-            lexer.advance();
+-            return;
+-        }
+-
+-        // statement <- COLUMN IS NULL
+-        if (lexer.currentToken() == Lexer.TOKEN_IS) {
+-            lexer.advance();
+-            if (lexer.currentToken() != Lexer.TOKEN_NULL) {
+-                throw new IllegalArgumentException("syntax error, expected NULL");
+-            }
+-            lexer.advance();
+-            return;
+-        }
+-
+-        // didn't get anything good after COLUMN
+-        throw new IllegalArgumentException("syntax error after column name");
+-    }
+-
+-    /**
+-     * A simple lexer that recognizes the words of our restricted subset of SQL where clauses
+-     */
+-    private static class Lexer {
+-        public static final int TOKEN_START = 0;
+-        public static final int TOKEN_OPEN_PAREN = 1;
+-        public static final int TOKEN_CLOSE_PAREN = 2;
+-        public static final int TOKEN_AND_OR = 3;
+-        public static final int TOKEN_COLUMN = 4;
+-        public static final int TOKEN_COMPARE = 5;
+-        public static final int TOKEN_VALUE = 6;
+-        public static final int TOKEN_IS = 7;
+-        public static final int TOKEN_NULL = 8;
+-        public static final int TOKEN_END = 9;
+-
+-        private final String mSelection;
+-        private final Set<String> mAllowedColumns;
+-        private int mOffset = 0;
+-        private int mCurrentToken = TOKEN_START;
+-        private final char[] mChars;
+-
+-        public Lexer(String selection, Set<String> allowedColumns) {
+-            mSelection = selection;
+-            mAllowedColumns = allowedColumns;
+-            mChars = new char[mSelection.length()];
+-            mSelection.getChars(0, mChars.length, mChars, 0);
+-            advance();
+-        }
+-
+-        public int currentToken() {
+-            return mCurrentToken;
+-        }
+-
+-        public void advance() {
+-            char[] chars = mChars;
+-
+-            // consume whitespace
+-            while (mOffset < chars.length && chars[mOffset] == ' ') {
+-                ++mOffset;
+-            }
+-
+-            // end of input
+-            if (mOffset == chars.length) {
+-                mCurrentToken = TOKEN_END;
+-                return;
+-            }
+-
+-            // "("
+-            if (chars[mOffset] == '(') {
+-                ++mOffset;
+-                mCurrentToken = TOKEN_OPEN_PAREN;
+-                return;
+-            }
+-
+-            // ")"
+-            if (chars[mOffset] == ')') {
+-                ++mOffset;
+-                mCurrentToken = TOKEN_CLOSE_PAREN;
+-                return;
+-            }
+-
+-            // "?"
+-            if (chars[mOffset] == '?') {
+-                ++mOffset;
+-                mCurrentToken = TOKEN_VALUE;
+-                return;
+-            }
+-
+-            // "=" and "=="
+-            if (chars[mOffset] == '=') {
+-                ++mOffset;
+-                mCurrentToken = TOKEN_COMPARE;
+-                if (mOffset < chars.length && chars[mOffset] == '=') {
+-                    ++mOffset;
+-                }
+-                return;
+-            }
+-
+-            // ">" and ">="
+-            if (chars[mOffset] == '>') {
+-                ++mOffset;
+-                mCurrentToken = TOKEN_COMPARE;
+-                if (mOffset < chars.length && chars[mOffset] == '=') {
+-                    ++mOffset;
+-                }
+-                return;
+-            }
+-
+-            // "<", "<=" and "<>"
+-            if (chars[mOffset] == '<') {
+-                ++mOffset;
+-                mCurrentToken = TOKEN_COMPARE;
+-                if (mOffset < chars.length && (chars[mOffset] == '=' || chars[mOffset] == '>')) {
+-                    ++mOffset;
+-                }
+-                return;
+-            }
+-
+-            // "!="
+-            if (chars[mOffset] == '!') {
+-                ++mOffset;
+-                mCurrentToken = TOKEN_COMPARE;
+-                if (mOffset < chars.length && chars[mOffset] == '=') {
+-                    ++mOffset;
+-                    return;
+-                }
+-                throw new IllegalArgumentException("Unexpected character after !");
+-            }
+-
+-            // columns and keywords
+-            // first look for anything that looks like an identifier or a keyword
+-            //     and then recognize the individual words.
+-            // no attempt is made at discarding sequences of underscores with no alphanumeric
+-            //     characters, even though it's not clear that they'd be legal column names.
+-            if (isIdentifierStart(chars[mOffset])) {
+-                int startOffset = mOffset;
+-                ++mOffset;
+-                while (mOffset < chars.length && isIdentifierChar(chars[mOffset])) {
+-                    ++mOffset;
+-                }
+-                String word = mSelection.substring(startOffset, mOffset);
+-                if (mOffset - startOffset <= 4) {
+-                    if (word.equals("IS")) {
+-                        mCurrentToken = TOKEN_IS;
+-                        return;
+-                    }
+-                    if (word.equals("OR") || word.equals("AND")) {
+-                        mCurrentToken = TOKEN_AND_OR;
+-                        return;
+-                    }
+-                    if (word.equals("NULL")) {
+-                        mCurrentToken = TOKEN_NULL;
+-                        return;
+-                    }
+-                }
+-                if (mAllowedColumns.contains(word)) {
+-                    mCurrentToken = TOKEN_COLUMN;
+-                    return;
+-                }
+-                throw new IllegalArgumentException("unrecognized column or keyword");
+-            }
+-
+-            // quoted strings
+-            if (chars[mOffset] == '\'') {
+-                ++mOffset;
+-                while (mOffset < chars.length) {
+-                    if (chars[mOffset] == '\'') {
+-                        if (mOffset + 1 < chars.length && chars[mOffset + 1] == '\'') {
+-                            ++mOffset;
+-                        } else {
+-                            break;
+-                        }
+-                    }
+-                    ++mOffset;
+-                }
+-                if (mOffset == chars.length) {
+-                    throw new IllegalArgumentException("unterminated string");
+-                }
+-                ++mOffset;
+-                mCurrentToken = TOKEN_VALUE;
+-                return;
+-            }
+-
+-            // anything we don't recognize
+-            throw new IllegalArgumentException("illegal character: " + chars[mOffset]);
+-        }
+-
+-        private static final boolean isIdentifierStart(char c) {
+-            return c == '_' ||
+-                    (c >= 'A' && c <= 'Z') ||
+-                    (c >= 'a' && c <= 'z');
+-        }
+-
+-        private static final boolean isIdentifierChar(char c) {
+-            return c == '_' ||
+-                    (c >= 'A' && c <= 'Z') ||
+-                    (c >= 'a' && c <= 'z') ||
+-                    (c >= '0' && c <= '9');
+-        }
+-    }
+ }
+-- 
+2.17.1
+

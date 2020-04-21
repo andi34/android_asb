@@ -1,0 +1,55 @@
+From 051ef4a0c7958296f7324a51a0d8ebe90914b624 Mon Sep 17 00:00:00 2001
+From: Vasyl Gello <vasek.gello@gmail.com>
+Date: Tue, 6 Aug 2019 23:52:06 +0300
+Subject: [PATCH] Bump Security String to 2019-08-05
+
+Implemented:
+============
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+CVE-2019-2120   A-130821293     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2122   A-127605586     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2125   A-132275252     EoP     Moderate        7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2126   A-127702368     RCE     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2128   A-132647222     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2129   A-124781927     ID      High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2130   A-132073833     RCE     Critical        7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2131   A-119115683     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2132   A-130568701     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2133   A-132082342     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2134   A-132083376     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2135   A-125900276     ID      High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2136   A-132650049     ID      High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+CVE-2019-2127   A-124899895     EoP     High            7.0, 7.1.1, 7.1.2, 8.0, 8.1, 9
+
+Not Implemented:
+================
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+None
+
+Not Applicable (platform source):
+=================================
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+CVE-2019-2121   A-131105245     EoP     High            9
+CVE-2019-2137   A-132438333     DoS     High            9
+
+Change-Id: I8fa6361a9fcfe16073afc84aa1371709fc8b42e3
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index 2b2001d509..8247681132 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2019-07-05
++    PLATFORM_SECURITY_PATCH := 2019-08-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.17.1
+

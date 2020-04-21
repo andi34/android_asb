@@ -1,0 +1,181 @@
+From 17674495e1c5977630687474a5fa137931003f7c Mon Sep 17 00:00:00 2001
+From: Yohei Yukawa <yukawa@google.com>
+Date: Sat, 19 Jan 2019 11:49:37 -0800
+Subject: [PATCH 2/3] DO NOT MERGE back porting for fixing sysui direct reply
+
+Root cause: systemui run as user 0 service to handle all of users'
+notifications. And, the users can user the copy/cut/paste
+functionality.
+
+Solution: To crate @hide API in TextView let SystemUI to mark the
+TextView instance should check if the power of
+INTERACT_ACROSS_USER_FULL is needed to be restricted.
+e.x. Keyguard password textview/Notificaiton entries
+
+Bug: 123232892
+Test: manual test
+Reference: I6d11e4d6a84570bc2991a8552349e8b216b0d139
+Reference: Ibabe13e5b85e5bb91f9f8af6ec07c395c25c4393
+Reference: I975baa748c821538e5a733bb98a33ac609bf40a7
+
+Merged-In: Ie3daecd1e8fc2f7fdf37baeb5979da9f2e0b3937
+(cherry picked from commit 08391b3da7e2da3b0220eb5766e0a1774d28e9a5)
+
+[basilgello: Back-ported to 14.1:
+ - packages/SystemUI/src/com/android/keyguard/KeyguardPasswordView.java ->
+   packages/Keyguard/src/com/android/keyguard/KeyguardPasswordView.java]
+
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+Change-Id: I6d11e4d6a84570bc2991a8552349e8b216b0d139
+---
+ core/java/android/widget/TextView.java        | 53 +++++++++++++++++++
+ .../keyguard/KeyguardPasswordView.java        |  2 +
+ .../statusbar/policy/RemoteInputView.java     |  1 +
+ 3 files changed, 56 insertions(+)
+
+diff --git a/core/java/android/widget/TextView.java b/core/java/android/widget/TextView.java
+index f8daa8823d2..f96219841a0 100644
+--- a/core/java/android/widget/TextView.java
++++ b/core/java/android/widget/TextView.java
+@@ -16,6 +16,8 @@
+ 
+ package android.widget;
+ 
++import static android.Manifest.permission.INTERACT_ACROSS_USERS_FULL;
++
+ import static android.os.Build.VERSION_CODES.JELLY_BEAN_MR1;
+ 
+ import android.R;
+@@ -24,11 +26,13 @@ import android.annotation.DrawableRes;
+ import android.annotation.FloatRange;
+ import android.annotation.NonNull;
+ import android.annotation.Nullable;
++import android.annotation.RequiresPermission;
+ import android.annotation.Size;
+ import android.annotation.StringRes;
+ import android.annotation.StyleRes;
+ import android.annotation.XmlRes;
+ import android.app.Activity;
++import android.app.ActivityManager;
+ import android.app.assist.AssistStructure;
+ import android.content.ClipData;
+ import android.content.ClipboardManager;
+@@ -620,6 +624,19 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
+ 
+     private InputFilter[] mFilters = NO_FILTERS;
+ 
++    /**
++     * To keep the information to indicate if there is necessary to restrict the power of
++     * INTERACT_ACROSS_USERS_FULL.
++     * <p>
++     * SystemUI always run as user 0 to process all of direct reply. SystemUI has the poer of
++     * INTERACT_ACROSS_USERS_FULL. However, all of the notifications not only belong to user 0 but
++     * also to the other users in multiple user environment.
++     * </p>
++     *
++     * @see #setRestrictedAcrossUser(boolean)
++     */
++    private boolean mIsRestrictedAcrossUser;
++
+     private volatile Locale mCurrentSpellCheckerLocaleCache;
+ 
+     // It is possible to have a selection even when mEditor is null (programmatically set, like when
+@@ -8826,6 +8843,24 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
+                 : mCurrentSpellCheckerLocaleCache;
+     }
+ 
++    /**
++     * To notify the TextView to restricted the power of the app granted INTERACT_ACROSS_USERS_FULL
++     * permission.
++     * <p>
++     * Most of applications should not granted the INTERACT_ACROSS_USERS_FULL permssion.
++     * SystemUI is the special one that run in user 0 process to handle multiple user notification.
++     * Unforunately, the power of INTERACT_ACROSS_USERS_FULL should be limited or restricted for
++     * preventing from information leak.</p>
++     * <p>This function call is called for SystemUI Keyguard and Notification.</p>
++     *
++     * @param isRestricted is true if the power of INTERACT_ACROSS_USERS_FULL should be limited.
++     * @hide
++     */
++    @RequiresPermission(INTERACT_ACROSS_USERS_FULL)
++    public final void setRestrictedAcrossUser(boolean isRestricted) {
++        mIsRestrictedAcrossUser = isRestricted;
++    }
++
+     /**
+      * This is a temporary method. Future versions may support multi-locale text.
+      * Caveat: This method may not return the latest text services locale, but this should be
+@@ -9569,6 +9604,12 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
+     }
+ 
+     boolean canCut() {
++        if (mIsRestrictedAcrossUser
++                && UserHandle.myUserId() != ActivityManager.getCurrentUser()) {
++            // When it's restricted, and the curren user is not the process user. It can't cut
++            // because it may cut the text of the user 10 into the clipboard of user 0.
++            return false;
++        }
+         if (hasPasswordTransformationMethod()) {
+             return false;
+         }
+@@ -9582,6 +9623,12 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
+     }
+ 
+     boolean canCopy() {
++        if (mIsRestrictedAcrossUser
++                && UserHandle.myUserId() != ActivityManager.getCurrentUser()) {
++            // When it's restricted, and the curren user is not the process user. It can't copy
++            // because it may copy the text of the user 10 to the clipboard of user 0.
++            return false;
++        }
+         if (hasPasswordTransformationMethod()) {
+             return false;
+         }
+@@ -9611,6 +9658,12 @@ public class TextView extends View implements ViewTreeObserver.OnPreDrawListener
+     }
+ 
+     boolean canPaste() {
++        if (mIsRestrictedAcrossUser
++                && UserHandle.myUserId() != ActivityManager.getCurrentUser()) {
++            // When it's restricted, and the curren user is not the process user. It can't paste
++            // because it may copy the text from the user 0 clipboard in current user is 10.
++            return false;
++        }
+         return (mText instanceof Editable &&
+                 mEditor != null && mEditor.mKeyListener != null &&
+                 getSelectionStart() >= 0 &&
+diff --git a/packages/Keyguard/src/com/android/keyguard/KeyguardPasswordView.java b/packages/Keyguard/src/com/android/keyguard/KeyguardPasswordView.java
+index ddccc14a60f..e5c7a6bca3c 100644
+--- a/packages/Keyguard/src/com/android/keyguard/KeyguardPasswordView.java
++++ b/packages/Keyguard/src/com/android/keyguard/KeyguardPasswordView.java
+@@ -79,6 +79,7 @@ public class KeyguardPasswordView extends KeyguardAbsKeyInputView
+ 
+     @Override
+     protected void resetState() {
++        mPasswordEntry.setRestrictedAcrossUser(true);
+         mSecurityMessageDisplay.setMessage(R.string.kg_password_instructions, false);
+         final boolean wasDisabled = mPasswordEntry.isEnabled();
+         setPasswordEntryEnabled(true);
+@@ -175,6 +176,7 @@ public class KeyguardPasswordView extends KeyguardAbsKeyInputView
+                 Context.INPUT_METHOD_SERVICE);
+ 
+         mPasswordEntry = (TextView) findViewById(getPasswordTextViewId());
++        mPasswordEntry.setRestrictedAcrossUser(true);
+         mPasswordEntryDisabler = new TextViewInputDisabler(mPasswordEntry);
+         mPasswordEntry.setKeyListener(TextKeyListener.getInstance());
+         mPasswordEntry.setInputType(InputType.TYPE_CLASS_TEXT
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/RemoteInputView.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/RemoteInputView.java
+index f8e94edb133..cd42b220df6 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/RemoteInputView.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/RemoteInputView.java
+@@ -177,6 +177,7 @@ public class RemoteInputView extends LinearLayout implements View.OnClickListene
+                 LayoutInflater.from(context).inflate(R.layout.remote_input, root, false);
+         v.mController = controller;
+         v.mEntry = entry;
++        v.mEditText.setRestrictedAcrossUser(true);
+         v.setTag(VIEW_TAG);
+ 
+         return v;
+-- 
+2.17.1
+

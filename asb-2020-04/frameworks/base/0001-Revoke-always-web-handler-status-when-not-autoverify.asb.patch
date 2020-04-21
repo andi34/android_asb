@@ -1,0 +1,124 @@
+From 7e854285608b7557503beda9d180554be9b3ca0b Mon Sep 17 00:00:00 2001
+From: Christopher Tate <ctate@google.com>
+Date: Tue, 17 Dec 2019 11:21:02 -0800
+Subject: [PATCH 1/2] Revoke 'always' web handler status when not autoverifying
+
+If an app has previously used autoVerify to make claims about its status
+re handling web navigation intents, but is updated such that it no
+longer makes those claims, step down its "official handler" status as
+though it had never invoked autoVerify in the first place.
+
+Bug: 146204120
+Test: manual: as described in bug; observe policy before/after via
+      'adb shell dumpsys package d'
+Test: atest CtsOsHostTestCases
+Change-Id: I58502d1b32d793aba9aa772fa2ad5ac38acca48a
+Merged-In: I58502d1b32d793aba9aa772fa2ad5ac38acca48a
+(cherry picked from commit 6cf5f92825df545bd011b7163418f2ea0b337af3)
+---
+ .../server/pm/PackageManagerService.java      | 44 ++++++++++++++-----
+ .../java/com/android/server/pm/Settings.java  |  1 +
+ 2 files changed, 34 insertions(+), 11 deletions(-)
+
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index a483fd3b311..691c4568588 100644
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -15380,35 +15380,47 @@ public class PackageManagerService extends IPackageManager.Stub {
+         int count = 0;
+         final String packageName = pkg.packageName;
+ 
++        boolean handlesWebUris = false;
++        final boolean alreadyVerified;
+         synchronized (mPackages) {
+             // If this is a new install and we see that we've already run verification for this
+             // package, we have nothing to do: it means the state was restored from backup.
+-            if (!replacing) {
+-                IntentFilterVerificationInfo ivi =
+-                        mSettings.getIntentFilterVerificationLPr(packageName);
+-                if (ivi != null) {
+-                    if (DEBUG_DOMAIN_VERIFICATION) {
+-                        Slog.i(TAG, "Package " + packageName+ " already verified: status="
+-                                + ivi.getStatusString());
+-                    }
+-                    return;
++            final IntentFilterVerificationInfo ivi =
++                    mSettings.getIntentFilterVerificationLPr(packageName);
++            alreadyVerified = (ivi != null);
++            if (!replacing && alreadyVerified) {
++                if (DEBUG_DOMAIN_VERIFICATION) {
++                    Slog.i(TAG, "Package " + packageName + " already verified: status="
++                            + ivi.getStatusString());
+                 }
++                return;
+             }
+ 
+-            // If any filters need to be verified, then all need to be.
++            // If any filters need to be verified, then all need to be.  In addition, we need to
++            // know whether an updating app has any web navigation intent filters, to re-
++            // examine handling policy even if not re-verifying.
+             boolean needToVerify = false;
+             for (PackageParser.Activity a : pkg.activities) {
+                 for (ActivityIntentInfo filter : a.intents) {
++                    if (filter.handlesWebUris(true)) {
++                        handlesWebUris = true;
++                    }
+                     if (filter.needsVerification() && needsNetworkVerificationLPr(filter)) {
+                         if (DEBUG_DOMAIN_VERIFICATION) {
+                             Slog.d(TAG, "Intent filter needs verification, so processing all filters");
+                         }
+                         needToVerify = true;
++                        // It's safe to break out here because filter.needsVerification()
++                        // can only be true if filter.handlesWebUris(true) returns true, so
++                        // we've already noted that.
+                         break;
+                     }
+                 }
+             }
+ 
++            // Note whether this app publishes any web navigation handling support at all,
++            // and whether there are any web-nav filters that fit the profile for running
++            // a verification pass now.
+             if (needToVerify) {
+                 final int verificationId = mIntentFilterVerificationToken++;
+                 for (PackageParser.Activity a : pkg.activities) {
+@@ -15426,13 +15438,23 @@ public class PackageManagerService extends IPackageManager.Stub {
+         }
+ 
+         if (count > 0) {
++            // count > 0 means that we're running a full verification pass
+             if (DEBUG_DOMAIN_VERIFICATION) Slog.d(TAG, "Starting " + count
+                     + " IntentFilter verification" + (count > 1 ? "s" : "")
+                     +  " for userId:" + userId);
+             mIntentFilterVerifier.startVerifications(userId);
++        } else if (alreadyVerified && handlesWebUris) {
++            // App used autoVerify in the past, no longer does, but still handles web
++            // navigation starts.
++            if (DEBUG_DOMAIN_VERIFICATION) {
++                Slog.d(TAG, "App changed web filters but no longer verifying - resetting policy");
++            }
++            synchronized (mPackages) {
++                clearIntentFilterVerificationsLPw(packageName, userId);
++            }
+         } else {
+             if (DEBUG_DOMAIN_VERIFICATION) {
+-                Slog.d(TAG, "No filters or not all autoVerify for " + packageName);
++                Slog.d(TAG, "No web filters or no prior verify policy for " + packageName);
+             }
+         }
+     }
+diff --git a/services/core/java/com/android/server/pm/Settings.java b/services/core/java/com/android/server/pm/Settings.java
+index b0c536f0465..ebdede388d6 100644
+--- a/services/core/java/com/android/server/pm/Settings.java
++++ b/services/core/java/com/android/server/pm/Settings.java
+@@ -1325,6 +1325,7 @@ final class Settings {
+             return false;
+         }
+         ps.clearDomainVerificationStatusForUser(userId);
++        ps.setIntentFilterVerificationInfo(null);
+         return true;
+     }
+ 
+-- 
+2.17.1
+

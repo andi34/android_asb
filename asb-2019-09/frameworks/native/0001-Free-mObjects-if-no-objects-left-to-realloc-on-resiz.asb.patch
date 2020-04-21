@@ -1,0 +1,44 @@
+From af0c63a4bcde61cbf27992154701eb51e84e43da Mon Sep 17 00:00:00 2001
+From: Michael Wachenschwanz <mwachens@google.com>
+Date: Mon, 3 Jun 2019 17:24:51 -0700
+Subject: [PATCH 1/2] Free mObjects if no objects left to realloc on resize
+
+Bug: 134168436
+Bug: 133785589
+Bug: 34175893
+Test: atest CtsOsTestCases:ParcelTest#testObjectDoubleFree
+Change-Id: I82e7e8c7b4206fb45b832a71d174df45edb62710
+Merged-In: I82e7e8c7b4206fb45b832a71d174df45edb62710
+(cherry picked from commit edd3e3d8f441131b02e5a78d18babf9d16ef9e6e)
+---
+ libs/binder/Parcel.cpp | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index e9c26ea9a..fe6f3dff4 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -2549,10 +2549,16 @@ status_t Parcel::continueWrite(size_t desired)
+                 }
+                 release_object(proc, *flat, this, &mOpenAshmemSize);
+             }
+-            binder_size_t* objects =
+-                (binder_size_t*)realloc(mObjects, objectsSize*sizeof(binder_size_t));
+-            if (objects) {
+-                mObjects = objects;
++
++            if (objectsSize == 0) {
++                free(mObjects);
++                mObjects = nullptr;
++            } else {
++                binder_size_t* objects =
++                    (binder_size_t*)realloc(mObjects, objectsSize*sizeof(binder_size_t));
++                if (objects) {
++                    mObjects = objects;
++                }
+             }
+             mObjectsSize = objectsSize;
+             mNextObjectHint = 0;
+-- 
+2.17.1
+

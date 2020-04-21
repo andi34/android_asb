@@ -1,0 +1,67 @@
+From e33ff9390d9f61c05dfd81055b335b2e1738214d Mon Sep 17 00:00:00 2001
+From: Jonathan Scott <scottjonathan@google.com>
+Date: Tue, 7 May 2019 16:27:17 +0100
+Subject: [PATCH 1/2] Make Lock task default behaviour consistent with
+ Settings.
+
+Bug: 127605586
+Test: Manual
+Change-Id: I5b5b0f9184220a4ed3080ca27792f66d1f5d41aa
+(cherry picked from commit fe9f143d2c713475ed2e354e893ea26f5c2f7afa)
+---
+ .../server/am/ActivityStackSupervisor.java    | 32 ++++++++++++-------
+ 1 file changed, 20 insertions(+), 12 deletions(-)
+
+diff --git a/services/core/java/com/android/server/am/ActivityStackSupervisor.java b/services/core/java/com/android/server/am/ActivityStackSupervisor.java
+index c6ab9186456..636982f0a2d 100644
+--- a/services/core/java/com/android/server/am/ActivityStackSupervisor.java
++++ b/services/core/java/com/android/server/am/ActivityStackSupervisor.java
+@@ -3977,18 +3977,11 @@ public final class ActivityStackSupervisor implements DisplayListener {
+                             mLockTaskNotify = new LockTaskNotify(mService.mContext);
+                         }
+                         mLockTaskNotify.show(false);
+-                        try {
+-                            boolean shouldLockKeyguard = Settings.Secure.getInt(
+-                                    mService.mContext.getContentResolver(),
+-                                    Settings.Secure.LOCK_TO_APP_EXIT_LOCKED) != 0;
+-                            if (mLockTaskModeState == LOCK_TASK_MODE_PINNED && shouldLockKeyguard) {
+-                                mWindowManager.lockNow(null);
+-                                mWindowManager.dismissKeyguard();
+-                                new LockPatternUtils(mService.mContext)
+-                                        .requireCredentialEntry(UserHandle.USER_ALL);
+-                            }
+-                        } catch (SettingNotFoundException e) {
+-                            // No setting, don't lock.
++                        if (mLockTaskModeState == LOCK_TASK_MODE_PINNED && shouldLockKeyguard()) {
++                            mWindowManager.lockNow(null);
++                            mWindowManager.dismissKeyguard();
++                            new LockPatternUtils(mService.mContext)
++                                    .requireCredentialEntry(UserHandle.USER_ALL);
+                         }
+                     } catch (RemoteException ex) {
+                         throw new RuntimeException(ex);
+@@ -4025,6 +4018,21 @@ public final class ActivityStackSupervisor implements DisplayListener {
+         }
+     }
+ 
++    private boolean shouldLockKeyguard() {
++        // This functionality should be kept consistent with
++        // com.android.settings.security.ScreenPinningSettings (see b/127605586)
++        try {
++            return Settings.Secure.getInt(
++                    mService.mContext.getContentResolver(),
++                    Settings.Secure.LOCK_TO_APP_EXIT_LOCKED) != 0;
++        } catch (Settings.SettingNotFoundException e) {
++            // Log to SafetyNet for b/127605586
++            android.util.EventLog.writeEvent(0x534e4554, "127605586", -1, "");
++            LockPatternUtils lockPatternUtils = new LockPatternUtils(mService.mContext);
++            return lockPatternUtils.isSecure(mCurrentUser);
++        }
++    }
++
+     class ActivityContainer extends android.app.IActivityContainer.Stub {
+         final static int FORCE_NEW_TASK_FLAGS = FLAG_ACTIVITY_NEW_TASK |
+                 FLAG_ACTIVITY_MULTIPLE_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION;
+-- 
+2.17.1
+

@@ -1,0 +1,49 @@
+From 81e9a12e2f1976f52d5d6bf91c5a49c78882eda3 Mon Sep 17 00:00:00 2001
+From: Vasyl Gello <vasek.gello@gmail.com>
+Date: Tue, 7 Jan 2020 18:11:00 +0000
+Subject: [PATCH] Bump Security String to 2020-01-05
+
+Implemented:
+============
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+CVE-2020-0001   A-140055304     EoP     Moderate        10
+                                EoP     High            8.0, 8.1, 9
+CVE-2020-0002   A-142602711     RCE     Moderate        10
+                                RCE     Critical        8.0, 8.1, 9
+CVE-2020-0004   A-120847476     DoS     High            8.0, 8.1, 9, 10
+CVE-2020-0006   A-139738828     ID      High            8.0, 8.1, 9, 10
+CVE-2020-0007   A-141890807     ID      High            8.0, 8.1, 9, 10
+CVE-2020-0008   A-142558228     ID      High            8.0, 8.1, 9, 10
+
+Not Implemented:
+================
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+None
+
+Not Applicable (platform source):
+=================================
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+CVE-2020-0003   A-140195904     EoP     High            8.0
+
+Change-Id: I07f2843802abe502f015324011870b459607af1e
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index b567752e82..8c04c8b995 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2019-12-05
++    PLATFORM_SECURITY_PATCH := 2020-01-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.17.1
+

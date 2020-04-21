@@ -1,0 +1,61 @@
+From 2490009de9fef160cdf06f178b3bbcbcb177fd9c Mon Sep 17 00:00:00 2001
+From: Martin Brabham <optedoblivion@google.com>
+Date: Fri, 24 May 2019 15:13:38 -0700
+Subject: [PATCH 1/5] DO NOT MERGE: btif: require pairing dialog for JustWorks
+ SSP
+
+Bug: 110433804
+Test: Manual; atest net_test_bluetooth
+Change-Id: If65a8d53ff368ba3ddddb47cfc0072469090b46a
+(cherry picked from commit ddae6274742e241c03526c7659dca7b3446b9f8d)
+(cherry picked from commit ee34c562b296751cd457e828c3debf38a8d35fb4)
+---
+ btif/src/btif_dm.c | 25 -------------------------
+ 1 file changed, 25 deletions(-)
+
+diff --git a/btif/src/btif_dm.c b/btif/src/btif_dm.c
+index 8a02c2dd4..4d496f4b6 100644
+--- a/btif/src/btif_dm.c
++++ b/btif/src/btif_dm.c
+@@ -989,7 +989,6 @@ static void btif_dm_ssp_cfm_req_evt(tBTA_DM_SP_CFM_REQ *p_ssp_cfm_req)
+     bt_bdaddr_t bd_addr;
+     bt_bdname_t bd_name;
+     UINT32 cod;
+-    BOOLEAN is_incoming = !(pairing_cb.state == BT_BOND_STATE_BONDING);
+     int dev_type;
+ 
+     BTIF_TRACE_DEBUG("%s", __FUNCTION__);
+@@ -1020,30 +1019,6 @@ static void btif_dm_ssp_cfm_req_evt(tBTA_DM_SP_CFM_REQ *p_ssp_cfm_req)
+ 
+     pairing_cb.is_ssp = TRUE;
+ 
+-    /* If JustWorks auto-accept */
+-    if (p_ssp_cfm_req->just_works)
+-    {
+-        /* Pairing consent for JustWorks needed if:
+-         * 1. Incoming (non-temporary) pairing is detected AND
+-         * 2. local IO capabilities are DisplayYesNo AND
+-         * 3. remote IO capabiltiies are DisplayOnly or NoInputNoOutput;
+-         */
+-        if (is_incoming && pairing_cb.bond_type != BOND_TYPE_TEMPORARY &&
+-               ((p_ssp_cfm_req->loc_io_caps == HCI_IO_CAP_DISPLAY_YESNO) &&
+-                (p_ssp_cfm_req->rmt_io_caps == HCI_IO_CAP_DISPLAY_ONLY ||
+-                 p_ssp_cfm_req->rmt_io_caps == HCI_IO_CAP_NO_IO)))
+-        {
+-            BTIF_TRACE_EVENT("%s: User consent needed for incoming pairing request. loc_io_caps: %d, rmt_io_caps: %d",
+-                __FUNCTION__, p_ssp_cfm_req->loc_io_caps, p_ssp_cfm_req->rmt_io_caps);
+-        }
+-        else
+-        {
+-            BTIF_TRACE_EVENT("%s: Auto-accept JustWorks pairing", __FUNCTION__);
+-            btif_dm_ssp_reply(&bd_addr, BT_SSP_VARIANT_CONSENT, TRUE, 0);
+-            return;
+-        }
+-    }
+-
+     cod = devclass2uint(p_ssp_cfm_req->dev_class);
+ 
+     if (cod == 0) {
+-- 
+2.17.1
+

@@ -1,0 +1,37 @@
+From 4050f2afd85a097009dbd8f5cb2c5043e8a14831 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Fri, 24 May 2019 22:01:09 +0200
+Subject: [PATCH 2/3] DO NOT MERGE Send HCI Read Encryption Key properly
+
+This patch fixes bad HCI command being send instead of Read Encryption
+Key Size.
+
+Bug: 124301137
+Test: pair and connect with Bluetooth headset
+Change-Id: If325ef2771ca1546ae58df7c684f66ae537b8573
+(cherry picked from commit a3cc7575f9ce644a3dfceee61ab7b4b206a3982e)
+---
+ stack/hcic/hcicmds.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/stack/hcic/hcicmds.c b/stack/hcic/hcicmds.c
+index 56196ee71..97e83b78f 100644
+--- a/stack/hcic/hcicmds.c
++++ b/stack/hcic/hcicmds.c
+@@ -1360,9 +1360,12 @@ BOOLEAN btsnd_hcic_read_encryption_key_size(UINT16 handle) {
+     BT_HDR *p = (BT_HDR *)osi_malloc(HCI_CMD_BUF_SIZE);
+     UINT8 *pp = (UINT8 *)(p + 1);
+ 
+-    p->len    = HCIC_PREAMBLE_SIZE + 2;
++    p->len    = HCIC_PREAMBLE_SIZE + HCIC_PARAM_SIZE_CMD_HANDLE;
+     p->offset = 0;
+ 
++    UINT16_TO_STREAM (pp, HCI_READ_ENCR_KEY_SIZE);
++    UINT8_TO_STREAM  (pp, HCIC_PARAM_SIZE_CMD_HANDLE);
++
+     UINT16_TO_STREAM (pp, handle);
+ 
+     btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+-- 
+2.17.1
+

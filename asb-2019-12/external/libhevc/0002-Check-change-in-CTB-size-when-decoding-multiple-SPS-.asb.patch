@@ -1,0 +1,47 @@
+From fcc7c39cb50e61cb9ef3c264807becae8e9a77cf Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Fri, 13 Sep 2019 16:52:49 -0700
+Subject: [PATCH 2/2] Check change in CTB size when decoding multiple SPS with
+ same id
+
+If an SPS is being overwritten, ensure CTB size remains same.
+If not, return from decoder and reset the decoder state in the
+subsequent decode call.
+
+Bug: 140322595
+Test: poc in bug
+Change-Id: Ie1a18b18704d6ef099535149fe21a1921bcbeeaf
+Merged-In: I5f1e52d3bd2b48874a088ab32054f5a89e62eeb5
+(cherry picked from commit 072f9084f42730094e6d3cecf6078b3830577da6)
+---
+ decoder/ihevcd_parse_headers.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/decoder/ihevcd_parse_headers.c b/decoder/ihevcd_parse_headers.c
+index 3bf64f1..7b55938 100644
+--- a/decoder/ihevcd_parse_headers.c
++++ b/decoder/ihevcd_parse_headers.c
+@@ -1396,7 +1396,19 @@ IHEVCD_ERROR_T ihevcd_parse_sps(codec_t *ps_codec)
+     ps_sps->i1_log2_diff_max_min_coding_block_size = value;
+ 
+     ctb_log2_size_y = ps_sps->i1_log2_min_coding_block_size + ps_sps->i1_log2_diff_max_min_coding_block_size;
+-
++    /* Check if CTB size is different in case of multiple SPS with same ID */
++    {
++        sps_t *ps_sps_old = (ps_codec->s_parse.ps_sps_base + sps_id);
++        if(ps_sps_old->i1_sps_valid && ps_sps_old->i1_log2_ctb_size != ctb_log2_size_y)
++        {
++            if(0 == ps_codec->i4_first_pic_done)
++            {
++                return IHEVCD_INVALID_PARAMETER;
++            }
++            ps_codec->i4_reset_flag = 1;
++            return (IHEVCD_ERROR_T)IVD_RES_CHANGED;
++        }
++    }
+     UEV_PARSE("log2_min_transform_block_size_minus2", value, ps_bitstrm);
+     if(value > (LOG2_MAX_TU_SIZE - 2))
+     {
+-- 
+2.17.1
+

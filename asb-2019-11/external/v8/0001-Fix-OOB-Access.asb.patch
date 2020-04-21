@@ -1,0 +1,47 @@
+From b4eb1bc9227d4b6d6ed49aa06a8091f3755ca1db Mon Sep 17 00:00:00 2001
+From: Rubin Xu <rubinxu@google.com>
+Date: Fri, 2 Aug 2019 15:32:06 +0100
+Subject: [PATCH 1/2] Fix OOB Access
+
+https://bugs.chromium.org/p/chromium/issues/detail?id=789764
+
+Bug: 138442295
+Test: m -j proxy_resolver_v8_unittest && adb sync && adb shell \
+      /data/nativetest/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+Change-Id: I382ee8e0e3668d0e02cce91342fd5a24d42a0bfe
+(cherry picked from commit a2b186599ba7194b365b945780f2b8ec01c851c0)
+---
+ src/ast/ast-traversal-visitor.h | 1 +
+ src/objects.cc                  | 4 ++--
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/ast/ast-traversal-visitor.h b/src/ast/ast-traversal-visitor.h
+index 6d0c386f3..3a102b42c 100644
+--- a/src/ast/ast-traversal-visitor.h
++++ b/src/ast/ast-traversal-visitor.h
+@@ -245,6 +245,7 @@ void AstTraversalVisitor<Subclass>::VisitForStatement(ForStatement* stmt) {
+ template <class Subclass>
+ void AstTraversalVisitor<Subclass>::VisitForInStatement(ForInStatement* stmt) {
+   PROCESS_NODE(stmt);
++  RECURSE(Visit(stmt->each()));
+   RECURSE(Visit(stmt->enumerable()));
+   RECURSE(Visit(stmt->body()));
+ }
+diff --git a/src/objects.cc b/src/objects.cc
+index d5b777777..c2996aed2 100644
+--- a/src/objects.cc
++++ b/src/objects.cc
+@@ -13168,8 +13168,8 @@ Handle<JSObject> Script::GetWrapper(Handle<Script> script) {
+ 
+ MaybeHandle<SharedFunctionInfo> Script::FindSharedFunctionInfo(
+     Isolate* isolate, const FunctionLiteral* fun) {
+-  DCHECK_NE(fun->function_literal_id(), FunctionLiteral::kIdTypeInvalid);
+-  DCHECK_LT(fun->function_literal_id(), shared_function_infos()->length());
++  CHECK_NE(fun->function_literal_id(), FunctionLiteral::kIdTypeInvalid);
++  CHECK_LT(fun->function_literal_id(), shared_function_infos()->length());
+   Object* shared = shared_function_infos()->get(fun->function_literal_id());
+   if (shared->IsUndefined(isolate) || WeakCell::cast(shared)->cleared()) {
+     return MaybeHandle<SharedFunctionInfo>();
+-- 
+2.17.1
+

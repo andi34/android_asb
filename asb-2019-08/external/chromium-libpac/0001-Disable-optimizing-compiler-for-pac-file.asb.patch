@@ -1,0 +1,141 @@
+From 13e7972917fe7836c3f487f26928565b0d29e04c Mon Sep 17 00:00:00 2001
+From: Rubin Xu <rubinxu@google.com>
+Date: Mon, 3 Jun 2019 17:42:47 +0100
+Subject: [PATCH] Disable optimizing compiler for pac file
+
+Bug: 132073833
+Test: m -j proxy_resolver_v8_unittest && adb sync && adb shell \
+    /data/nativetest64/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Change-Id: If09d635d48aff0671f955dc6f1edc50fcda773f8
+(cherry picked from commit 42183d3219a91d729c989de2b09b78d17f61d312)
+---
+ src/proxy_resolver_v8.cc           |  4 ++++
+ test/js-unittest/b_132073833.js    | 21 +++++++++++++++++++++
+ test/proxy_resolver_v8_unittest.cc | 14 ++++++++++++++
+ test/proxy_test_script.h           | 27 +++++++++++++++++++++++++--
+ 4 files changed, 64 insertions(+), 2 deletions(-)
+ create mode 100644 test/js-unittest/b_132073833.js
+
+diff --git a/src/proxy_resolver_v8.cc b/src/proxy_resolver_v8.cc
+index f978694..0504b03 100644
+--- a/src/proxy_resolver_v8.cc
++++ b/src/proxy_resolver_v8.cc
+@@ -762,6 +762,10 @@ int ProxyResolverV8::SetPacScript(const android::String16& script_data) {
+   if (script_data.size() == 0)
+     return ERR_PAC_SCRIPT_FAILED;
+ 
++  // Disable JIT
++  static const char kNoOpt[] = "--no-opt";
++  v8::V8::SetFlagsFromString(kNoOpt, strlen(kNoOpt));
++
+   // Try parsing the PAC script.
+   ArrayBufferAllocator allocator;
+   v8::Isolate::CreateParams create_params;
+diff --git a/test/js-unittest/b_132073833.js b/test/js-unittest/b_132073833.js
+new file mode 100644
+index 0000000..79d1967
+--- /dev/null
++++ b/test/js-unittest/b_132073833.js
+@@ -0,0 +1,21 @@
++function FindProxyForURL(url, host){
++    function opt() {
++        opt['x'] = 1.1;
++        try {
++            Object.create(object);
++        } catch (e) {
++        }
++
++        for (let i = 0; i < 100000; i++) {
++
++        }
++    }
++
++    opt();
++    object = opt;
++    opt();
++
++    return "DIRECT";
++}
++
++var object;
+\ No newline at end of file
+diff --git a/test/proxy_resolver_v8_unittest.cc b/test/proxy_resolver_v8_unittest.cc
+index be7ecee..73e4405 100644
+--- a/test/proxy_resolver_v8_unittest.cc
++++ b/test/proxy_resolver_v8_unittest.cc
+@@ -558,5 +558,19 @@ TEST(ProxyResolverV8Test, GetterChangesElementKind) {
+   EXPECT_EQ("DIRECT", proxies[0]);
+ }
+ 
++TEST(ProxyResolverV8Test, B_132073833) {
++  ProxyResolverV8WithMockBindings resolver(new MockJSBindings());
++  int result = resolver.SetPacScript(String16(B_132073833_JS));
++  EXPECT_EQ(OK, result);
++
++  // Execute FindProxyForURL().
++  result = resolver.GetProxyForURL(kQueryUrl, kQueryHost, &kResults);
++
++  EXPECT_EQ(OK, result);
++  std::vector<std::string> proxies = string16ToProxyList(kResults);
++  EXPECT_EQ(1U, proxies.size());
++  EXPECT_EQ("DIRECT", proxies[0]);
++}
++
+ }  // namespace
+ }  // namespace net
+diff --git a/test/proxy_test_script.h b/test/proxy_test_script.h
+index 80c96c7..aa10016 100644
+--- a/test/proxy_test_script.h
++++ b/test/proxy_test_script.h
+@@ -4,6 +4,29 @@
+ #ifndef PROXY_TEST_SCRIPT_H_
+ #define PROXY_TEST_SCRIPT_H_
+ 
++#define B_132073833_JS \
++  "function FindProxyForURL(url, host){\n" \
++  "    function opt() {\n" \
++  "        opt['x'] = 1.1;\n" \
++  "        try {\n" \
++  "            Object.create(object);\n" \
++  "        } catch (e) {\n" \
++  "        }\n" \
++  "\n" \
++  "        for (let i = 0; i < 100000; i++) {\n" \
++  "\n" \
++  "        }\n" \
++  "    }\n" \
++  "\n" \
++  "    opt();\n" \
++  "    object = opt;\n" \
++  "    opt();\n" \
++  "\n" \
++  "    return \"DIRECT\";\n" \
++  "}\n" \
++  "\n" \
++  "var object;\n" \
++
+ #define BINDING_FROM_GLOBAL_JS \
+   "// Calls a bindings outside of FindProxyForURL(). This causes the code to\n" \
+   "// get exercised during initialization.\n" \
+@@ -80,7 +103,7 @@
+ 
+ #define CHANGE_ELEMENT_KIND_JS \
+   "// PAC script with getter that changes element kind.\n" \
+-  "	\n" \
++  "\n" \
+   "function FindProxyForURL(url, host) {\n" \
+   "  let arr = [];\n" \
+   "  arr[1000] = 0x1234;\n" \
+@@ -91,7 +114,7 @@
+   "  });\n" \
+   "\n" \
+   "  let results = Object.entries(arr);\n" \
+-  "  let str = results.toString(); \n" \
++  "  let str = results.toString();\n" \
+   "  return \"DIRECT\";\n" \
+   "}\n" \
+ 
+-- 
+2.17.1
+

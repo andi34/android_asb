@@ -1,0 +1,352 @@
+From ee6cb73f7b83b6a8155ca28c4902fe5a9c8a80cb Mon Sep 17 00:00:00 2001
+From: Ahan Wu <ahanwu@google.com>
+Date: Thu, 26 Sep 2019 18:29:59 +0800
+Subject: [PATCH 1/3] DO NOT MERGE Validate wallpaper dimension while
+ generating crop
+
+If dimensions of cropped wallpaper image exceed max texture size that
+GPU can support, it will cause ImageWallpaper keep crashing
+because hwui crashes by invalid operation (0x502).
+
+Bug: 120847476.
+Test: Write a custom app to set a 8000x800 bitmap as wallpaper.
+Test: The cropped file will be 29600x2960 and make sysui keep crashing.
+Test: After applyed this cl, wallpaper will use fallback.
+Test: Sysui will not keep crashing any more.
+Change-Id: I8ed5931298c652a2230858cf62df3f6fcd345c5a
+(cherry picked from commit f1e1f4f04d0165ed065637a4ba556583a7c79ef0)
+---
+ .../android/server/wallpaper/GLHelper.java    | 148 ++++++++++++++++++
+ .../wallpaper/WallpaperManagerService.java    | 108 ++++++++++---
+ 2 files changed, 230 insertions(+), 26 deletions(-)
+ create mode 100644 services/core/java/com/android/server/wallpaper/GLHelper.java
+
+diff --git a/services/core/java/com/android/server/wallpaper/GLHelper.java b/services/core/java/com/android/server/wallpaper/GLHelper.java
+new file mode 100644
+index 00000000000..1d733f53f05
+--- /dev/null
++++ b/services/core/java/com/android/server/wallpaper/GLHelper.java
+@@ -0,0 +1,148 @@
++/*
++ * Copyright (C) 2019 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.wallpaper;
++
++import static android.opengl.EGL14.EGL_ALPHA_SIZE;
++import static android.opengl.EGL14.EGL_BLUE_SIZE;
++import static android.opengl.EGL14.EGL_CONFIG_CAVEAT;
++import static android.opengl.EGL14.EGL_CONTEXT_CLIENT_VERSION;
++import static android.opengl.EGL14.EGL_DEFAULT_DISPLAY;
++import static android.opengl.EGL14.EGL_DEPTH_SIZE;
++import static android.opengl.EGL14.EGL_GREEN_SIZE;
++import static android.opengl.EGL14.EGL_HEIGHT;
++import static android.opengl.EGL14.EGL_NONE;
++import static android.opengl.EGL14.EGL_NO_CONTEXT;
++import static android.opengl.EGL14.EGL_NO_DISPLAY;
++import static android.opengl.EGL14.EGL_NO_SURFACE;
++import static android.opengl.EGL14.EGL_OPENGL_ES2_BIT;
++import static android.opengl.EGL14.EGL_RED_SIZE;
++import static android.opengl.EGL14.EGL_RENDERABLE_TYPE;
++import static android.opengl.EGL14.EGL_STENCIL_SIZE;
++import static android.opengl.EGL14.EGL_WIDTH;
++import static android.opengl.EGL14.eglChooseConfig;
++import static android.opengl.EGL14.eglCreateContext;
++import static android.opengl.EGL14.eglCreatePbufferSurface;
++import static android.opengl.EGL14.eglDestroyContext;
++import static android.opengl.EGL14.eglDestroySurface;
++import static android.opengl.EGL14.eglGetDisplay;
++import static android.opengl.EGL14.eglGetError;
++import static android.opengl.EGL14.eglInitialize;
++import static android.opengl.EGL14.eglMakeCurrent;
++import static android.opengl.EGL14.eglTerminate;
++import static android.opengl.GLES20.GL_MAX_TEXTURE_SIZE;
++import static android.opengl.GLES20.glGetIntegerv;
++
++import android.opengl.EGLConfig;
++import android.opengl.EGLContext;
++import android.opengl.EGLDisplay;
++import android.opengl.EGLSurface;
++import android.opengl.GLUtils;
++import android.os.SystemProperties;
++import android.util.Log;
++
++class GLHelper {
++    private static final String TAG = GLHelper.class.getSimpleName();
++    private static final int sMaxTextureSize;
++
++    static {
++        int maxTextureSize = SystemProperties.getInt("sys.max_texture_size", 0);
++        sMaxTextureSize = maxTextureSize > 0 ? maxTextureSize : retrieveTextureSizeFromGL();
++    }
++
++    private static int retrieveTextureSizeFromGL() {
++        try {
++            String err;
++
++            // Before we can retrieve info from GL,
++            // we have to create EGLContext, EGLConfig and EGLDisplay first.
++            // We will fail at querying info from GL once one of above failed.
++            // When this happens, we will use defValue instead.
++            EGLDisplay eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
++            if (eglDisplay == null || eglDisplay == EGL_NO_DISPLAY) {
++                err = "eglGetDisplay failed: " + GLUtils.getEGLErrorString(eglGetError());
++                throw new RuntimeException(err);
++            }
++
++            if (!eglInitialize(eglDisplay, null, 0 /* majorOffset */, null, 1 /* minorOffset */)) {
++                err = "eglInitialize failed: " + GLUtils.getEGLErrorString(eglGetError());
++                throw new RuntimeException(err);
++            }
++
++            EGLConfig eglConfig = null;
++            int[] configsCount = new int[1];
++            EGLConfig[] configs = new EGLConfig[1];
++            int[] configSpec = new int[] {
++                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
++                    EGL_RED_SIZE, 8,
++                    EGL_GREEN_SIZE, 8,
++                    EGL_BLUE_SIZE, 8,
++                    EGL_ALPHA_SIZE, 0,
++                    EGL_DEPTH_SIZE, 0,
++                    EGL_STENCIL_SIZE, 0,
++                    EGL_CONFIG_CAVEAT, EGL_NONE,
++                    EGL_NONE
++            };
++
++            if (!eglChooseConfig(eglDisplay, configSpec, 0 /* attrib_listOffset */,
++                    configs, 0  /* configOffset */, 1 /* config_size */,
++                    configsCount, 0 /* num_configOffset */)) {
++                err = "eglChooseConfig failed: " + GLUtils.getEGLErrorString(eglGetError());
++                throw new RuntimeException(err);
++            } else if (configsCount[0] > 0) {
++                eglConfig = configs[0];
++            }
++
++            if (eglConfig == null) {
++                throw new RuntimeException("eglConfig not initialized!");
++            }
++
++            int[] attr_list = new int[] {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
++            EGLContext eglContext = eglCreateContext(
++                    eglDisplay, eglConfig, EGL_NO_CONTEXT, attr_list, 0 /* offset */);
++
++            if (eglContext == null || eglContext == EGL_NO_CONTEXT) {
++                err = "eglCreateContext failed: " + GLUtils.getEGLErrorString(eglGetError());
++                throw new RuntimeException(err);
++            }
++
++            // We create a push buffer temporarily for querying info from GL.
++            int[] attrs = {EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE};
++            EGLSurface eglSurface =
++                    eglCreatePbufferSurface(eglDisplay, eglConfig, attrs, 0 /* offset */);
++            eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
++
++            // Now, we are ready to query the info from GL.
++            int[] maxSize = new int[1];
++            glGetIntegerv(GL_MAX_TEXTURE_SIZE, maxSize, 0 /* offset */);
++
++            // We have got the info we want, release all egl resources.
++            eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++            eglDestroySurface(eglDisplay, eglSurface);
++            eglDestroyContext(eglDisplay, eglContext);
++            eglTerminate(eglDisplay);
++            return maxSize[0];
++        } catch (RuntimeException e) {
++            Log.w(TAG, "Retrieve from GL failed", e);
++            return Integer.MAX_VALUE;
++        }
++    }
++
++    static int getMaxTextureSize() {
++        return sMaxTextureSize;
++    }
++}
++
+diff --git a/services/core/java/com/android/server/wallpaper/WallpaperManagerService.java b/services/core/java/com/android/server/wallpaper/WallpaperManagerService.java
+index d7535bb8280..69dd06d5be2 100644
+--- a/services/core/java/com/android/server/wallpaper/WallpaperManagerService.java
++++ b/services/core/java/com/android/server/wallpaper/WallpaperManagerService.java
+@@ -115,6 +115,9 @@ public class WallpaperManagerService extends IWallpaperManager.Stub {
+     static final String TAG = "WallpaperManagerService";
+     static final boolean DEBUG = false;
+ 
++    // This 100MB limitation is defined in DisplayListCanvas.
++    private static final int MAX_BITMAP_SIZE = 100 * 1024 * 1024;
++
+     public static class Lifecycle extends SystemService {
+         private WallpaperManagerService mService;
+ 
+@@ -367,7 +370,10 @@ public class WallpaperManagerService extends IWallpaperManager.Stub {
+             }
+ 
+             // scale if the crop height winds up not matching the recommended metrics
+-            needScale = (wallpaper.height != cropHint.height());
++            // also take care of invalid dimensions.
++            needScale = wallpaper.height != cropHint.height()
++                    || cropHint.height() > GLHelper.getMaxTextureSize()
++                    || cropHint.width() > GLHelper.getMaxTextureSize();
+ 
+             if (DEBUG) {
+                 Slog.v(TAG, "crop: w=" + cropHint.width() + " h=" + cropHint.height());
+@@ -379,14 +385,29 @@ public class WallpaperManagerService extends IWallpaperManager.Stub {
+             if (!needCrop && !needScale) {
+                 // Simple case:  the nominal crop fits what we want, so we take
+                 // the whole thing and just copy the image file directly.
+-                if (DEBUG) {
+-                    Slog.v(TAG, "Null crop of new wallpaper; copying");
++
++                // TODO: It is not accurate to estimate bitmap size without decoding it,
++                //  may be we can try to remove this optimized way in the future,
++                //  that means, we will always go into the 'else' block.
++
++                // This is just a quick estimation, may be smaller than it is.
++                long estimateSize = options.outWidth * options.outHeight * 4;
++
++                // A bitmap over than MAX_BITMAP_SIZE will make drawBitmap() fail.
++                // Please see: DisplayListCanvas#throwIfCannotDraw.
++                if (estimateSize < MAX_BITMAP_SIZE) {
++                    success = FileUtils.copyFile(wallpaper.wallpaperFile, wallpaper.cropFile);
+                 }
+-                success = FileUtils.copyFile(wallpaper.wallpaperFile, wallpaper.cropFile);
++
+                 if (!success) {
+                     wallpaper.cropFile.delete();
+                     // TODO: fall back to default wallpaper in this case
+                 }
++
++                if (DEBUG) {
++                    Slog.v(TAG, "Null crop of new wallpaper, estimate size=" + estimateSize
++                            + ", success=" + success);
++                }
+             } else {
+                 // Fancy case: crop and scale.  First, we decode and scale down if appropriate.
+                 FileOutputStream f = null;
+@@ -400,48 +421,78 @@ public class WallpaperManagerService extends IWallpaperManager.Stub {
+                     // We calculate the largest power-of-two under the actual ratio rather than
+                     // just let the decode take care of it because we also want to remap where the
+                     // cropHint rectangle lies in the decoded [super]rect.
+-                    final BitmapFactory.Options scaler;
+                     final int actualScale = cropHint.height() / wallpaper.height;
+                     int scale = 1;
+-                    while (2*scale < actualScale) {
++                    while (2*scale <= actualScale) {
+                         scale *= 2;
+                     }
+-                    if (scale > 1) {
+-                        scaler = new BitmapFactory.Options();
+-                        scaler.inSampleSize = scale;
++                    options.inSampleSize = scale;
++                    options.inJustDecodeBounds = false;
++
++                    final Rect estimateCrop = new Rect(cropHint);
++                    estimateCrop.scale(1f / options.inSampleSize);
++                    final float hRatio = (float) wallpaper.height / estimateCrop.height();
++                    final int destHeight = (int) (estimateCrop.height() * hRatio);
++                    final int destWidth = (int) (estimateCrop.width() * hRatio);
++
++                    // We estimated an invalid crop, try to adjust the cropHint to get a valid one.
++                    if (destWidth > GLHelper.getMaxTextureSize()) {
++                        int newHeight = (int) (wallpaper.height / hRatio);
++                        int newWidth = (int) (wallpaper.width / hRatio);
++
+                         if (DEBUG) {
+-                            Slog.v(TAG, "Downsampling cropped rect with scale " + scale);
++                            Slog.v(TAG, "Invalid crop dimensions, trying to adjust.");
+                         }
+-                    } else {
+-                        scaler = null;
++
++                        estimateCrop.set(cropHint);
++                        estimateCrop.left += (cropHint.width() - newWidth) / 2;
++                        estimateCrop.top += (cropHint.height() - newHeight) / 2;
++                        estimateCrop.right = estimateCrop.left + newWidth;
++                        estimateCrop.bottom = estimateCrop.top + newHeight;
++                        cropHint.set(estimateCrop);
++                        estimateCrop.scale(1f / options.inSampleSize);
++                    }
++
++                    // We've got the safe cropHint; now we want to scale it properly to
++                    // the desired rectangle.
++                    // That's a height-biased operation: make it fit the hinted height.
++                    final int safeHeight = (int) (estimateCrop.height() * hRatio);
++                    final int safeWidth = (int) (estimateCrop.width() * hRatio);
++
++                    if (DEBUG) {
++                        Slog.v(TAG, "Decode parameters:");
++                        Slog.v(TAG, "  cropHint=" + cropHint + ", estimateCrop=" + estimateCrop);
++                        Slog.v(TAG, "  down sampling=" + options.inSampleSize
++                                + ", hRatio=" + hRatio);
++                        Slog.v(TAG, "  dest=" + destWidth + "x" + destHeight);
++                        Slog.v(TAG, "  safe=" + safeWidth + "x" + safeHeight);
++                        Slog.v(TAG, "  maxTextureSize=" + GLHelper.getMaxTextureSize());
+                     }
+-                    Bitmap cropped = decoder.decodeRegion(cropHint, scaler);
++
++                    Bitmap cropped = decoder.decodeRegion(cropHint, options);
+                     decoder.recycle();
+ 
+                     if (cropped == null) {
+                         Slog.e(TAG, "Could not decode new wallpaper");
+                     } else {
+-                        // We've got the extracted crop; now we want to scale it properly to
+-                        // the desired rectangle.  That's a height-biased operation: make it
+-                        // fit the hinted height, and accept whatever width we end up with.
+-                        cropHint.offsetTo(0, 0);
+-                        cropHint.right /= scale;    // adjust by downsampling factor
+-                        cropHint.bottom /= scale;
+-                        final float heightR = ((float)wallpaper.height) / ((float)cropHint.height());
+-                        if (DEBUG) {
+-                            Slog.v(TAG, "scale " + heightR + ", extracting " + cropHint);
+-                        }
+-                        final int destWidth = (int)(cropHint.width() * heightR);
++                        // We are safe to create final crop with safe dimensions now.
+                         final Bitmap finalCrop = Bitmap.createScaledBitmap(cropped,
+-                                destWidth, wallpaper.height, true);
++                                safeWidth, safeHeight, true);
+                         if (DEBUG) {
+                             Slog.v(TAG, "Final extract:");
+                             Slog.v(TAG, "  dims: w=" + wallpaper.width
+                                     + " h=" + wallpaper.height);
+-                            Slog.v(TAG, "   out: w=" + finalCrop.getWidth()
++                            Slog.v(TAG, "  out: w=" + finalCrop.getWidth()
+                                     + " h=" + finalCrop.getHeight());
+                         }
+ 
++                        // A bitmap over than MAX_BITMAP_SIZE will make drawBitmap() fail.
++                        // Please see: DisplayListCanvas#throwIfCannotDraw.
++                        if (finalCrop.getByteCount() > MAX_BITMAP_SIZE) {
++                            throw new RuntimeException(
++                                    "Too large bitmap, limit=" + MAX_BITMAP_SIZE);
++                        }
++
+                         f = new FileOutputStream(wallpaper.cropFile);
+                         bos = new BufferedOutputStream(f, 32*1024);
+                         finalCrop.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+@@ -1233,6 +1284,11 @@ public class WallpaperManagerService extends IWallpaperManager.Stub {
+         if (!isWallpaperSupported(callingPackage)) {
+             return;
+         }
++
++        // Make sure both width and height are not larger than max texture size.
++        width = Math.min(width, GLHelper.getMaxTextureSize());
++        height = Math.min(height, GLHelper.getMaxTextureSize());
++
+         synchronized (mLock) {
+             int userId = UserHandle.getCallingUserId();
+             WallpaperData wallpaper = getWallpaperSafeLocked(userId, FLAG_SYSTEM);
+-- 
+2.17.1
+

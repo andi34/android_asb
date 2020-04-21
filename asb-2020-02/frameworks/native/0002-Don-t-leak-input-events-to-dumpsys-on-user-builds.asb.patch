@@ -1,0 +1,63 @@
+From d4ea6a12da1d6d38f6bf87ea6d53ab028251749e Mon Sep 17 00:00:00 2001
+From: Ashwini Oruganti <ashfall@google.com>
+Date: Fri, 6 Dec 2019 10:00:53 -0800
+Subject: [PATCH 2/2] Don't leak input events to dumpsys on user builds
+
+Remove the details of KeyEvent and MotionEvent logs.
+Bug: 139945049
+Test: Tested on a device, the input functions work as expected and input
+event logs are not leaked to dumpsys on user builds.
+
+Merged-In: I98c9c375f18963177bf0c1d8829a217b4ad4acc6
+(cherry picked from commit 3b7d779774cb81c5d922f74216392c9fd7004a1b)
+
+[basilgello: Back-ported to 14.1:
+ - motionActionToString and keyActionToString helpers are not present]
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+
+Change-Id: I98c9c375f18963177bf0c1d8829a217b4ad4acc6
+---
+ services/inputflinger/InputDispatcher.cpp | 20 ++------------------
+ 1 file changed, 2 insertions(+), 18 deletions(-)
+
+diff --git a/services/inputflinger/InputDispatcher.cpp b/services/inputflinger/InputDispatcher.cpp
+index e48c53a08..48312af8b 100644
+--- a/services/inputflinger/InputDispatcher.cpp
++++ b/services/inputflinger/InputDispatcher.cpp
+@@ -3937,11 +3937,7 @@ InputDispatcher::KeyEntry::~KeyEntry() {
+ }
+ 
+ void InputDispatcher::KeyEntry::appendDescription(String8& msg) const {
+-    msg.appendFormat("KeyEvent(deviceId=%d, source=0x%08x, action=%d, "
+-            "flags=0x%08x, keyCode=%d, scanCode=%d, metaState=0x%08x, "
+-            "repeatCount=%d), policyFlags=0x%08x",
+-            deviceId, source, action, flags, keyCode, scanCode, metaState,
+-            repeatCount, policyFlags);
++    msg.appendFormat("KeyEvent");
+ }
+ 
+ void InputDispatcher::KeyEntry::recycle() {
+@@ -3982,19 +3978,7 @@ InputDispatcher::MotionEntry::~MotionEntry() {
+ }
+ 
+ void InputDispatcher::MotionEntry::appendDescription(String8& msg) const {
+-    msg.appendFormat("MotionEvent(deviceId=%d, source=0x%08x, action=%d, actionButton=0x%08x, "
+-            "flags=0x%08x, metaState=0x%08x, buttonState=0x%08x, "
+-            "edgeFlags=0x%08x, xPrecision=%.1f, yPrecision=%.1f, displayId=%d, pointers=[",
+-            deviceId, source, action, actionButton, flags, metaState, buttonState, edgeFlags,
+-            xPrecision, yPrecision, displayId);
+-    for (uint32_t i = 0; i < pointerCount; i++) {
+-        if (i) {
+-            msg.append(", ");
+-        }
+-        msg.appendFormat("%d: (%.1f, %.1f)", pointerProperties[i].id,
+-                pointerCoords[i].getX(), pointerCoords[i].getY());
+-    }
+-    msg.appendFormat("]), policyFlags=0x%08x", policyFlags);
++    msg.appendFormat("MotionEvent");
+ }
+ 
+ 
+-- 
+2.17.1
+

@@ -1,0 +1,57 @@
+From b4be529066cf4b0a061e17b2e8b954e530295124 Mon Sep 17 00:00:00 2001
+From: Raman Tenneti <rtenneti@google.com>
+Date: Tue, 1 Oct 2019 15:16:52 -0700
+Subject: [PATCH 2/2] AOSP/UnifiedEmail - bug fix: do not allow composing
+ message with hidden private data attachments - Switch intent filtering to be
+ blacklist based rather than whitelist based.
+
++ Make EXTRA_IN_REFERENCE_TO_MESSAGE_URI public.
+
+Bug: 127320867
+
+Test: manual - Ran the following tests on Pixel phone. Tested the email UI.
+
+$ make -j 40
+$ make Email -j
+$ make UnifiedEmailTests -j
+$ make EmailTests -j
+
+  -rw-r--r-- 1 rtenneti primarygroup 6356400 Oct  1 12:07 out/target/product/marlin/testcases/Email/arm64/Email.apk
+  -rw-r--r-- 1 rtenneti primarygroup 389599 Oct  1 12:11 out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+
+$ adb install -r -d -g out/target/product/marlin/testcases/Email/arm64/Email.apk
+$ adb install -r -d -g out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+
+$ adb shell am instrument -w com.android.email.tests
+  Time: 2.739
+  OK (157 tests)
+
+$ atest EmailTests
+  Summary
+  -------
+  EmailTests: Passed: 157, Failed: 0, Ignored: 0, Assumption Failed: 0
+
+  All tests passed!
+
+Change-Id: I96273160e81f77f4746b79674129ee438440e724
+(cherry picked from commit 5b6ce82b5e8718c1d3c641323216c0db19f25c23)
+---
+ src/com/android/mail/compose/ComposeActivity.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/com/android/mail/compose/ComposeActivity.java b/src/com/android/mail/compose/ComposeActivity.java
+index 7d6834470..8da7d42de 100644
+--- a/src/com/android/mail/compose/ComposeActivity.java
++++ b/src/com/android/mail/compose/ComposeActivity.java
+@@ -246,7 +246,7 @@ public class ComposeActivity extends ActionBarActivity
+     private static final String EXTRA_IN_REFERENCE_TO_MESSAGE = "in-reference-to-message";
+     // If this is a reply/forward then this extra will hold a uri we must query
+     // to get the original message.
+-    protected static final String EXTRA_IN_REFERENCE_TO_MESSAGE_URI = "in-reference-to-message-uri";
++    public static final String EXTRA_IN_REFERENCE_TO_MESSAGE_URI = "in-reference-to-message-uri";
+     // If this is an action to edit an existing draft message, this extra will hold the
+     // draft message
+     private static final String ORIGINAL_DRAFT_MESSAGE = "original-draft-message";
+-- 
+2.17.1
+

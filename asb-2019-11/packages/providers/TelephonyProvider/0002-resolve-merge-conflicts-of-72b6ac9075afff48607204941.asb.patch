@@ -1,0 +1,87 @@
+From af619b73b3ef10a786ba9c28984cae8c7fbfc984 Mon Sep 17 00:00:00 2001
+From: Hall Liu <hallliu@google.com>
+Date: Fri, 6 Sep 2019 16:35:58 -0700
+Subject: [PATCH 2/2] resolve merge conflicts of
+ 72b6ac9075afff486072049416d38b44c046c9f2 to pi-dev
+
+Test: compile
+Bug: 138802882
+Change-Id: I4e077177577e7d583754f3e3d55c507aeb83b5fb
+Merged-In: I59b297642d2000dde0a83f77b20112c7382b7ef1
+(cherry picked from commit 02e896c5f86ced36e127dac4bccc7743bb29ac77)
+---
+ .../telephony/TelephonyProvider.java          | 39 +++++++++++--------
+ 1 file changed, 22 insertions(+), 17 deletions(-)
+
+diff --git a/src/com/android/providers/telephony/TelephonyProvider.java b/src/com/android/providers/telephony/TelephonyProvider.java
+index 80b5954..3feb358 100644
+--- a/src/com/android/providers/telephony/TelephonyProvider.java
++++ b/src/com/android/providers/telephony/TelephonyProvider.java
+@@ -109,6 +109,10 @@ public class TelephonyProvider extends ContentProvider
+     private static final String OTA_UPDATED_APNS_PATH = "misc/apns-conf.xml";
+     private static final String OLD_APNS_PATH = "etc/old-apns-conf.xml";
+ 
++    // Used to check if certain queries contain subqueries that may attempt to access sensitive
++    // fields in the carriers db.
++    private static final String SQL_SELECT_TOKEN = "select";
++
+     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+ 
+     private static final ContentValues s_currentNullMap;
+@@ -1721,25 +1725,25 @@ public class TelephonyProvider extends ContentProvider
+             }
+         }
+ 
+-        if (match != URL_SIMINFO) {
+-            // Determine if we need to do a check for fields in the selection
+-            boolean selectionOrSortContainsSensitiveFields;
++        // Determine if we need to do a check for fields in the selection
++        boolean selectionOrSortContainsSensitiveFields;
++        try {
++            selectionOrSortContainsSensitiveFields = containsSensitiveFields(selection);
++            selectionOrSortContainsSensitiveFields |= containsSensitiveFields(sort);
++        } catch (Exception e) {
++            // Malformed sql, check permission anyway.
++            selectionOrSortContainsSensitiveFields = true;
++        }
++        if (selectionOrSortContainsSensitiveFields) {
+             try {
+-                selectionOrSortContainsSensitiveFields = containsSensitiveFields(selection);
+-                selectionOrSortContainsSensitiveFields |= containsSensitiveFields(sort);
+-            } catch (Exception e) {
+-                // Malformed sql, check permission anyway.
+-                selectionOrSortContainsSensitiveFields = true;
++                checkPermission();
++            } catch (SecurityException e) {
++                EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
++                throw e;
+             }
++        }
+ 
+-            if (selectionOrSortContainsSensitiveFields) {
+-                try {
+-                    checkPermission();
+-                } catch (SecurityException e) {
+-                    EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
+-                    throw e;
+-                }
+-            }
++        if (match != URL_SIMINFO) {
+             if (projectionIn != null) {
+                 for (String column : projectionIn) {
+                     if (TYPE.equals(column) ||
+@@ -1787,9 +1791,10 @@ public class TelephonyProvider extends ContentProvider
+     private boolean containsSensitiveFields(String sqlStatement) {
+         try {
+             SqlTokenFinder.findTokens(sqlStatement, s -> {
+-                switch (s) {
++                switch (s.toLowerCase()) {
+                     case USER:
+                     case PASSWORD:
++                    case SQL_SELECT_TOKEN:
+                         throw new SecurityException();
+                 }
+             });
+-- 
+2.17.1
+

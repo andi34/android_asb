@@ -1,0 +1,33 @@
+From f328649db0ded32a03588138d5f5bc91c722e274 Mon Sep 17 00:00:00 2001
+From: Brian Duddie <bduddie@google.com>
+Date: Thu, 6 Jun 2019 16:43:41 -0700
+Subject: [PATCH 2/2] Fix race between SensorManager ctor and callback
+
+Avoids potential invalid memory access if system server crashes during
+initialization.
+
+Bug: 132927376
+Test: confirm sensors initialize
+Change-Id: If7421c452b5893ab2567323d265503a1ce304482
+Merged-In: If7421c452b5893ab2567323d265503a1ce304482
+(cherry picked from commit 4b23ed10ae94ff9e991cc6c1d0946b55733e8f89)
+---
+ libs/gui/SensorManager.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libs/gui/SensorManager.cpp b/libs/gui/SensorManager.cpp
+index 9fcf9ab2e..f49dd6e70 100644
+--- a/libs/gui/SensorManager.cpp
++++ b/libs/gui/SensorManager.cpp
+@@ -90,7 +90,7 @@ SensorManager& SensorManager::getInstanceForPackage(const String16& packageName)
+ 
+ SensorManager::SensorManager(const String16& opPackageName)
+     : mSensorList(0), mOpPackageName(opPackageName) {
+-    // okay we're not locked here, but it's not needed during construction
++    Mutex::Autolock _l(mLock);
+     assertStateLocked();
+ }
+ 
+-- 
+2.17.1
+

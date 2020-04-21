@@ -1,0 +1,36 @@
+From 932f9ff6e3d207315d204d7a16ec80b348a66dd6 Mon Sep 17 00:00:00 2001
+From: Alisher Alikhodjaev <alisher@google.com>
+Date: Thu, 16 Jan 2020 13:45:40 -0800
+Subject: [PATCH 1/2] OOB write in rw_t2t_handle_tlv_detect_rsp
+
+Bug: 147309942
+Bug: 147310271
+Test: use proxmark as described in b/147309942
+Merged-In: I44a3f26afb3591d1a94e2e0d7a8b1619beeaa7d6
+Change-Id: I46161fc7db30c203eeed02d696da792ef15f2f61
+(cherry picked from commit 975d2564e72852cfcb31e7b6f40c24b36e469bc0)
+---
+ src/nfc/tags/rw_t2t_ndef.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/nfc/tags/rw_t2t_ndef.c b/src/nfc/tags/rw_t2t_ndef.c
+index 82e5131..2080c6f 100644
+--- a/src/nfc/tags/rw_t2t_ndef.c
++++ b/src/nfc/tags/rw_t2t_ndef.c
+@@ -659,6 +659,13 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                 if (  (tlvtype == TAG_LOCK_CTRL_TLV)
+                     ||(tlvtype == TAG_NDEF_TLV)  )
+                 {
++                    if (p_t2t->num_lockbytes > 0)
++                    {
++                        RW_TRACE_ERROR0("Malformed tag!");
++                        android_errorWriteLog(0x534e4554, "147309942");
++                        failed = TRUE;
++                        break;
++                    }
+                     /* Collect Lock TLV */
+                     p_t2t->tlv_value[2 - p_t2t->bytes_count] = p_data[offset];
+                     if (p_t2t->bytes_count == 0)
+-- 
+2.17.1
+

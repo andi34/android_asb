@@ -1,0 +1,32 @@
+From 99545b628642a327976381e7df39f70247d31388 Mon Sep 17 00:00:00 2001
+From: Steven Moreland <smoreland@google.com>
+Date: Fri, 17 May 2019 13:14:06 -0700
+Subject: [PATCH 2/2] libbinder: readCString: no ubsan sub-overflow
+
+Bug: 131859347
+Test: fuzzer
+Change-Id: I95a0f59684a172925f1eab97ff21e5d14bc79cc8
+Merged-In: I95a0f59684a172925f1eab97ff21e5d14bc79cc8
+(cherry picked from commit d0d4b584fc294d2c124385644099852918416344)
+---
+ libs/binder/Parcel.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index e5a34c225..e9c26ea9a 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -1907,8 +1907,8 @@ status_t Parcel::readUtf8FromUtf16(std::unique_ptr<std::string>* str) const {
+ 
+ const char* Parcel::readCString() const
+ {
+-    const size_t avail = mDataSize-mDataPos;
+-    if (avail > 0) {
++    if (mDataPos < mDataSize) {
++        const size_t avail = mDataSize-mDataPos;
+         const char* str = reinterpret_cast<const char*>(mData+mDataPos);
+         // is the string's trailing NUL within the parcel's valid bounds?
+         const char* eos = reinterpret_cast<const char*>(memchr(str, 0, avail));
+-- 
+2.17.1
+

@@ -1,0 +1,33 @@
+From 7a3be05217579b23c30c867a412a44530dfbf2ef Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Mon, 16 Sep 2019 16:10:55 -0700
+Subject: [PATCH 1/2] decoder: Reset slice header at start of slice header
+ decode
+
+Reset slice header to zero, to avoid using invalid slice header
+contents from prior headers parsed.
+
+Bug: 140692129
+Test: poc in bug
+Change-Id: Ib2b7c006069b0226b5f2d741f9da7b681be26f82
+(cherry picked from commit 42f70ae4ef53a5fb663e43725000bacb5dc41d9c)
+---
+ decoder/ihevcd_parse_slice_header.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/decoder/ihevcd_parse_slice_header.c b/decoder/ihevcd_parse_slice_header.c
+index 04dcc6a..d116d46 100644
+--- a/decoder/ihevcd_parse_slice_header.c
++++ b/decoder/ihevcd_parse_slice_header.c
+@@ -314,7 +314,7 @@ IHEVCD_ERROR_T ihevcd_parse_slice_header(codec_t *ps_codec,
+     }
+ 
+     ps_slice_hdr = ps_codec->s_parse.ps_slice_hdr_base + (ps_codec->s_parse.i4_cur_slice_idx & (MAX_SLICE_HDR_CNT - 1));
+-
++    memset(ps_slice_hdr, 0, sizeof(*ps_slice_hdr));
+ 
+     if((ps_pps->i1_dependent_slice_enabled_flag) &&
+        (!first_slice_in_pic_flag))
+-- 
+2.17.1
+

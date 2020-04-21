@@ -1,0 +1,101 @@
+From 3e9b6f83f2d6303af7e849a5c879b713a0f113ab Mon Sep 17 00:00:00 2001
+From: Raman Tenneti <rtenneti@google.com>
+Date: Mon, 16 Sep 2019 15:19:41 -0700
+Subject: [PATCH 1/2] AOSP/UnifiedEmail - Secure UPDATE_WIDGET receiver with a
+ new permission
+
+The update methods sends a broadcast with the account name, the folder, etc.
+This implicitly bypasses the GET_ACCOUNT permission if a third-party
+applications listens to this broadcast.
+
+- Introduce a new app permission
+- com.android.email.permission.GET_WIDGET_UPDATE
+- Now the com.android.email.permission.GET_WIDGET_UPDATE is required to
+- receive the emitted broadcast
+- Add this permission to our existing widgets.
+
+Ported changes from cr/106302205
+- added uses-permission GET_WIDGET_UPDATE, so Gmail app has the permission to receive the intent
+
+Bug: 139803872
+
+Test: manual - Ran the following tests on Pixel phone. Tested the email UI.
+
+$ make -j 40
+$ make Email -j
+$ make EmailTests -j
+  -rw-r--r-- 1 rtenneti primarygroup 6356400 Sep 16 14:10 out/target/product/marlin/testcases/Email/arm64/Email.apk
+  -rw-r--r-- 1 rtenneti primarygroup 389599 Sep 16 14:18 out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+
+$ adb install -r -d -g out/target/product/marlin/testcases/Email/arm64/Email.apk
+$ adb install -r -d -g out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+$ adb shell am instrument -w com.android.email.tests
+  Time: 34.746
+  OK (157 tests)
+
+$ atest EmailTests
+  Summary
+  -------
+  EmailTests: Passed: 157, Failed: 0, Ignored: 0, Assumption Failed: 0
+
+  All tests passed!
+
+$ adb install ../security_attack/bug_139803872/poc.apk
+  Captured the logcat output at rtenneti's x20web logcat.out.0916.1503
+  while reproducting the steps in b/139803872#comment3
+
+Change-Id: Ied292eab76c672c60de57f8ce43df0e0ea6d3464
+Merged-In: Ied292eab76c672c60de57f8ce43df0e0ea6d3464
+(cherry picked from commit dc2a9eb520ae4694eba298a38ad272b0df69b3dc)
+---
+ res/values/strings.xml                             |  7 +++++++
+ .../android/mail/widget/BaseWidgetProvider.java    | 14 +++++++++++---
+ 2 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index 608acdbfb..f2501c307 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -26,6 +26,13 @@
+ 
+     <string name="app_name" translatable="false">Unified Email</string>
+ 
++    <!-- The name of the permission to get widget update notifications. -->
++    <string name="permission_update_widget" translatable="false">com.android.email.permission.GET_WIDGET_UPDATE</string>
++    <!-- Permission label for receiving updates for the widget. -->
++    <string name="permission_update_widget_label">Update widget</string>
++    <!-- Permission description for receiving updates for the widget. -->
++    <string name="permission_update_widget_desc">Allows the app to receive notifications when the widget should be refreshed, including the account name and folder name.</string>
++
+     <!-- Compose -->
+     <!-- Shown in Compose; the sender of the message [CHAR LIMIT=10] -->
+     <string name="from">From</string>
+diff --git a/src/com/android/mail/widget/BaseWidgetProvider.java b/src/com/android/mail/widget/BaseWidgetProvider.java
+index bbfe1ccb1..4a1898986 100644
+--- a/src/com/android/mail/widget/BaseWidgetProvider.java
++++ b/src/com/android/mail/widget/BaseWidgetProvider.java
+@@ -308,10 +308,18 @@ public abstract class BaseWidgetProvider extends AppWidgetProvider {
+         updateWidgetIntent.putExtra(EXTRA_FOLDER_TYPE, folderType);
+         updateWidgetIntent.putExtra(EXTRA_FOLDER_CAPABILITIES, folderCapabilities);
+         updateWidgetIntent.putExtra(EXTRA_FOLDER_URI, folderUri);
+-        updateWidgetIntent.putExtra(EXTRA_FOLDER_CONVERSATION_LIST_URI, folderConversationListUri);
+-        updateWidgetIntent.putExtra(EXTRA_FOLDER_DISPLAY_NAME, folderDisplayName);
+ 
+-        context.sendBroadcast(updateWidgetIntent);
++        if (folderConversationListUri != null) {
++            updateWidgetIntent.putExtra(EXTRA_FOLDER_CONVERSATION_LIST_URI,
++                    folderConversationListUri);
++        }
++        if (folderDisplayName != null) {
++            updateWidgetIntent.putExtra(EXTRA_FOLDER_DISPLAY_NAME, folderDisplayName);
++        }
++        updateWidgetIntent.setPackage(context.getPackageName());
++
++        context.sendBroadcast(updateWidgetIntent,
++                context.getString(R.string.permission_update_widget));
+     }
+ 
+     public static void validateAllWidgets(Context context, String accountMimeType) {
+-- 
+2.17.1
+

@@ -1,0 +1,38 @@
+From 9f60421b3110a1e690a2c028d634908aceeb77af Mon Sep 17 00:00:00 2001
+From: Nick Desaulniers <ndesaulniers@google.com>
+Date: Thu, 10 Oct 2019 14:04:47 -0700
+Subject: [PATCH] fix -Wdangling-gsl
+
+BtAddrString() returns a std::string. It's not safe to chain a call to
+c_str() as otherwise the returned std::string is a temporary, and the
+expression evaluates to an immediately dangling pointer.
+
+Bug: 139945549
+Bug: 142558228
+Test: mm
+Change-Id: I30972458abcc563b24ee0d80b289c3efd6c3e04d
+Signed-off-by: Nick Desaulniers <ndesaulniers@google.com>
+(cherry picked from commit 20ed45d6339079645ef9fe576b894e9497684c93)
+---
+ service/low_energy_client.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/service/low_energy_client.cpp b/service/low_energy_client.cpp
+index cc568def8..646ddf259 100644
+--- a/service/low_energy_client.cpp
++++ b/service/low_energy_client.cpp
+@@ -643,9 +643,9 @@ void LowEnergyClient::MtuChangedCallback(
+   if (!bda)
+     return;
+ 
+-  const char *addr = BtAddrString(bda).c_str();
++  std::string addr = BtAddrString(bda);
+   if (delegate_)
+-    delegate_->OnMtuChanged(this, status, addr, mtu);
++    delegate_->OnMtuChanged(this, status, addr.c_str(), mtu);
+ }
+ 
+ void LowEnergyClient::MultiAdvEnableCallback(
+-- 
+2.17.1
+

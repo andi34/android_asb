@@ -1,0 +1,76 @@
+From e65f405bf73fab27edf549b71f3efb1e4823d48d Mon Sep 17 00:00:00 2001
+From: Raman Tenneti <rtenneti@google.com>
+Date: Tue, 1 Oct 2019 15:20:22 -0700
+Subject: [PATCH 3/3] AOSP/Email - bug fix: do not allow composing message with
+ hidden private data attachments - Switch intent filtering to be blacklist
+ based rather than whitelist based.
+
++ Blacklist only EXTRA_IN_REFERENCE_TO_MESSAGE_URI.
++ Undoing some of the changes from https://android-review.googlesource.com/c/platform/packages/apps/Email/+/961354/
++ Ported/merged this change from CL: cl/235253805 (to match the internal version - ComposeActivityGmailExternal.java)
+
+Bug: 127320867
+
+Test: manual - Ran the following tests on Pixel phone. Tested the email UI.
+
+$ make -j 40
+$ make Email -j
+$ make UnifiedEmailTests -j
+$ make EmailTests -j
+
+  -rw-r--r-- 1 rtenneti primarygroup 6356400 Oct  1 12:07 out/target/product/marlin/testcases/Email/arm64/Email.apk
+  -rw-r--r-- 1 rtenneti primarygroup 389599 Oct  1 12:11 out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+
+$ adb install -r -d -g out/target/product/marlin/testcases/Email/arm64/Email.apk
+$ adb install -r -d -g out/target/product/marlin/testcases/EmailTests/arm64/EmailTests.apk
+
+$ adb shell am instrument -w com.android.email.tests
+  Time: 2.739
+  OK (157 tests)
+
+$ atest EmailTests
+  Summary
+  -------
+  EmailTests: Passed: 157, Failed: 0, Ignored: 0, Assumption Failed: 0
+
+  All tests passed!
+
+Change-Id: I5a397b61827b82502d26da2496831011956c868a
+(cherry picked from commit a7637e9ad2199a02fd9c4d6aa51030344afb67a6)
+---
+ .../activity/ComposeActivityEmailExternal.java | 18 +-----------------
+ 1 file changed, 1 insertion(+), 17 deletions(-)
+
+diff --git a/src/com/android/email/activity/ComposeActivityEmailExternal.java b/src/com/android/email/activity/ComposeActivityEmailExternal.java
+index a94313a86..07f6fe160 100644
+--- a/src/com/android/email/activity/ComposeActivityEmailExternal.java
++++ b/src/com/android/email/activity/ComposeActivityEmailExternal.java
+@@ -48,24 +48,8 @@ public class ComposeActivityEmailExternal extends ComposeActivityEmail {
+   private void sanitizeIntent() {
+     Intent sanitizedIntent = getIntent();
+     if (sanitizedIntent != null) {
+-      Bundle originalExtras = sanitizedIntent.getExtras();
+-       if (originalExtras == null) {
+-        originalExtras = new Bundle();
+-      }
+-      sanitizedIntent.replaceExtras(new Bundle());
+-      copyStringExtraIfExists(ComposeActivity.EXTRA_SUBJECT, originalExtras, sanitizedIntent);
+-      copyStringExtraIfExists(ComposeActivity.EXTRA_TO, originalExtras, sanitizedIntent);
+-      copyStringExtraIfExists(ComposeActivity.EXTRA_CC, originalExtras, sanitizedIntent);
+-      copyStringExtraIfExists(ComposeActivity.EXTRA_BCC, originalExtras, sanitizedIntent);
+-      copyStringExtraIfExists(ComposeActivity.EXTRA_BODY, originalExtras, sanitizedIntent);
++      sanitizedIntent.removeExtra(ComposeActivity.EXTRA_IN_REFERENCE_TO_MESSAGE_URI);
+       setIntent(sanitizedIntent);
+     }
+   }
+-
+-  private void copyStringExtraIfExists(
+-      String extraKey, Bundle originalExtras, Intent sanitizedIntent) {
+-    if (originalExtras.containsKey(extraKey)) {
+-      sanitizedIntent.putExtra(extraKey, originalExtras.getString(extraKey));
+-    }
+-  }
+ }
+-- 
+2.17.1
+

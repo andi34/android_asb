@@ -1,0 +1,82 @@
+From 3a8ac06c711768a06c06edf3677eea0d11ffdb21 Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Fri, 5 Jul 2019 17:17:05 +0800
+Subject: [PATCH 2/2] Prevent OOB read in rw_t4t.cc
+
+Bug: 120865977
+Bug: 120274615
+Bug: 124462242
+Test: Read T4T Tag
+Change-Id: Id1b07fa79edabaf27e18a7147d1e7ae66cf3c4b3
+(cherry picked from commit 5aeaa05d787c3d2b7951c6bdf83ff99e570d69f6)
+---
+ src/nfc/include/tags_defs.h |  1 +
+ src/nfc/tags/rw_t4t.c       | 19 +++++++++++++++++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/src/nfc/include/tags_defs.h b/src/nfc/include/tags_defs.h
+index 14d2859..95cc984 100644
+--- a/src/nfc/include/tags_defs.h
++++ b/src/nfc/include/tags_defs.h
+@@ -384,6 +384,7 @@ typedef UINT8 tT3T_POLL_RC;
+ 
+ #define T4T_FILE_LENGTH_SIZE            0x02
+ #define T4T_ADDI_FRAME_RESP             0xAFU
++#define T4T_DES_GET_VERSION_LEN         0x09
+ #define T4T_SIZE_IDENTIFIER_2K          0x16U
+ #define T4T_SIZE_IDENTIFIER_4K          0x18U
+ #define T4T_SIZE_IDENTIFIER_8K          0x1AU
+diff --git a/src/nfc/tags/rw_t4t.c b/src/nfc/tags/rw_t4t.c
+index c634591..044432d 100644
+--- a/src/nfc/tags/rw_t4t.c
++++ b/src/nfc/tags/rw_t4t.c
+@@ -23,6 +23,7 @@
+  *  mode.
+  *
+  ******************************************************************************/
++#include <log/log.h>
+ #include <string.h>
+ #include "nfc_target.h"
+ #include "bt_types.h"
+@@ -220,6 +221,12 @@ static BOOLEAN rw_t4t_update_version_details (BT_HDR *p_r_apdu)
+     UINT8           *p;
+     UINT16          major_version, minor_version;
+ 
++    if (p_r_apdu->len < T4T_DES_GET_VERSION_LEN) {
++        RW_TRACE_ERROR1("%s incorrect p_r_apdu length", __func__);
++        android_errorWriteLog(0x534e4554, "120865977");
++        return FALSE;
++    }
++
+     p = (UINT8 *) (p_r_apdu + 1) + p_r_apdu->offset;
+     major_version = *(p + 3);
+     minor_version = *(p + 4);
+@@ -1070,6 +1077,8 @@ static void rw_t4t_handle_error (tNFC_STATUS status, UINT8 sw1, UINT8 sw2)
+ 
+         rw_data.t4t_sw.sw1    = sw1;
+         rw_data.t4t_sw.sw2    = sw2;
++        rw_data.ndef.cur_size = 0;
++        rw_data.ndef.max_size = 0;
+ 
+         switch (p_t4t->state)
+         {
+@@ -1978,6 +1987,16 @@ static void rw_t4t_data_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_
+     RW_TRACE_DEBUG1 ("RW T4T state: %d", p_t4t->state);
+ #endif
+ 
++    if (p_t4t->state != RW_T4T_STATE_IDLE &&
++        p_t4t->state != RW_T4T_STATE_PRESENCE_CHECK &&
++        p_r_apdu->len < T4T_RSP_STATUS_WORDS_SIZE) {
++        RW_TRACE_ERROR1("%s incorrect p_r_apdu length", __func__);
++        android_errorWriteLog(0x534e4554, "120865977");
++        rw_t4t_handle_error(NFC_STATUS_FAILED, 0, 0);
++        GKI_freebuf(p_r_apdu);
++        return;
++    }
++
+     switch (p_t4t->state)
+     {
+     case RW_T4T_STATE_IDLE:
+-- 
+2.17.1
+

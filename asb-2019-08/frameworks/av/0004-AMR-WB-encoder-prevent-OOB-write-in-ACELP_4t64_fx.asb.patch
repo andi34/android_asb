@@ -1,0 +1,86 @@
+From 3e06bca2d1eb08e0f42e9de0e2cbde1ec41b4efd Mon Sep 17 00:00:00 2001
+From: Jean-Michel Trivi <jmtrivi@google.com>
+Date: Wed, 5 Jun 2019 09:11:39 -0700
+Subject: [PATCH 4/4] AMR WB encoder: prevent OOB write in ACELP_4t64_fx
+
+In ACELP_4t64_fx, when iterating over ind array, check index against
+  array size to prevent OOB write, log an error if such an access
+  was about to happen.
+
+Bug 132647222
+Test: atest EncoderTest#testAMRWBEncoders
+Merged-in: I33f476d94baec2feffc7bcccd0ad0481b8452518
+
+Change-Id: I814a05217f20ea3b941deddb70edb31cd342de6b
+(cherry picked from commit 04e48ed870c1c4163948bceee034d750ae60b5d4)
+---
+ media/libstagefright/codecs/amrwbenc/Android.mk     |  3 ++-
+ .../codecs/amrwbenc/SampleCode/Android.mk           |  3 ++-
+ media/libstagefright/codecs/amrwbenc/src/c4t64fx.c  | 13 +++++++++++--
+ 3 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/media/libstagefright/codecs/amrwbenc/Android.mk b/media/libstagefright/codecs/amrwbenc/Android.mk
+index 026006e23f..006a034007 100644
+--- a/media/libstagefright/codecs/amrwbenc/Android.mk
++++ b/media/libstagefright/codecs/amrwbenc/Android.mk
+@@ -92,7 +92,8 @@ LOCAL_ARM_MODE := arm
+ 
+ LOCAL_STATIC_LIBRARIES :=
+ 
+-LOCAL_SHARED_LIBRARIES :=
++LOCAL_SHARED_LIBRARIES := \
++        liblog
+ 
+ LOCAL_C_INCLUDES := \
+ 	frameworks/av/include \
+diff --git a/media/libstagefright/codecs/amrwbenc/SampleCode/Android.mk b/media/libstagefright/codecs/amrwbenc/SampleCode/Android.mk
+index 65d69a2c28..0d6549eea7 100644
+--- a/media/libstagefright/codecs/amrwbenc/SampleCode/Android.mk
++++ b/media/libstagefright/codecs/amrwbenc/SampleCode/Android.mk
+@@ -14,7 +14,8 @@ LOCAL_CFLAGS :=
+ 
+ LOCAL_SHARED_LIBRARIES := \
+     libstagefright \
+-    libdl
++    libdl \
++    liblog
+ 
+ LOCAL_STATIC_LIBRARIES := \
+     libstagefright_amrwbenc
+diff --git a/media/libstagefright/codecs/amrwbenc/src/c4t64fx.c b/media/libstagefright/codecs/amrwbenc/src/c4t64fx.c
+index 8cebb097bd..b26eedb508 100644
+--- a/media/libstagefright/codecs/amrwbenc/src/c4t64fx.c
++++ b/media/libstagefright/codecs/amrwbenc/src/c4t64fx.c
+@@ -47,6 +47,10 @@
+ 
+ #include "q_pulse.h"
+ 
++#undef LOG_TAG
++#define LOG_TAG "amrwbenc"
++#include <log/log.h>
++
+ static Word16 tipos[36] = {
+     0, 1, 2, 3,                            /* starting point &ipos[0], 1st iter */
+     1, 2, 3, 0,                            /* starting point &ipos[4], 2nd iter */
+@@ -745,11 +749,16 @@ void ACELP_4t64_fx(
+ 
+         i = (Word16)((vo_L_mult(track, NPMAXPT) >> 1));
+ 
+-        while (ind[i] >= 0)
++        while (i < NPMAXPT * NB_TRACK && ind[i] >= 0)
+         {
+             i += 1;
+         }
+-        ind[i] = index;
++        if (i < NPMAXPT * NB_TRACK) {
++            ind[i] = index;
++        } else {
++            ALOGE("b/132647222, OOB access in ind array track=%d i=%d", track, i);
++            android_errorWriteLog(0x534e4554, "132647222");
++        }
+     }
+ 
+     k = 0;
+-- 
+2.17.1
+

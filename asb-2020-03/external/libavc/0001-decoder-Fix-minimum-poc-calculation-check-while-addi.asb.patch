@@ -1,0 +1,57 @@
+From a9c45d88afd33babe1d4f25e048e65e5ff3d565c Mon Sep 17 00:00:00 2001
+From: Harish Mahendrakar <harish.mahendrakar@ittiam.com>
+Date: Tue, 17 Dec 2019 15:42:03 -0800
+Subject: [PATCH] decoder: Fix minimum poc calculation check while adding to
+ display
+
+While adding the decoded buffer to display queue, allow buffer with
+poc set to 0x7FFFFFFF
+
+Bug: 145364230
+Test: poc in bug
+Change-Id: I2a15f73b8422cfa4fd3360bc21c0cea4542a3375
+(cherry picked from commit ffcf2a87d66f935210ebd011eed474514d086b40)
+---
+ decoder/ih264d_utils.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/decoder/ih264d_utils.c b/decoder/ih264d_utils.c
+index b37acec..83ad19e 100644
+--- a/decoder/ih264d_utils.c
++++ b/decoder/ih264d_utils.c
+@@ -1227,7 +1227,9 @@ WORD32 ih264d_assign_display_seq(dec_struct_t *ps_dec)
+                             && (DO_NOT_DISP
+                                             != ps_dpb_mgr->ai4_poc_buf_id_map[i][0]))
+             {
+-                if(i4_poc_buf_id_map[i][1] < i4_min_poc)
++                /* Checking for <= is necessary to handle cases where there is one
++                   valid buffer with poc set to 0x7FFFFFFF. */
++                if(i4_poc_buf_id_map[i][1] <= i4_min_poc)
+                 {
+                     i4_min_poc = i4_poc_buf_id_map[i][1];
+                     i4_min_poc_buf_id = i4_poc_buf_id_map[i][0];
+@@ -1290,8 +1292,8 @@ void ih264d_release_display_bufs(dec_struct_t *ps_dec)
+     WORD32 (*i4_poc_buf_id_map)[3] = ps_dpb_mgr->ai4_poc_buf_id_map;
+ 
+     i4_min_poc = 0x7fffffff;
+-    i4_min_poc_buf_id = -1;
+-    i4_min_index = -1;
++    i4_min_poc_buf_id = 0;
++    i4_min_index = 0;
+ 
+     ih264d_delete_nonref_nondisplay_pics(ps_dpb_mgr);
+ 
+@@ -1302,7 +1304,9 @@ void ih264d_release_display_bufs(dec_struct_t *ps_dec)
+         {
+             if(i4_poc_buf_id_map[i][0] != -1)
+             {
+-                if(i4_poc_buf_id_map[i][1] < i4_min_poc)
++                /* Checking for <= is necessary to handle cases where there is one
++                   valid buffer with poc set to 0x7FFFFFFF. */
++                if(i4_poc_buf_id_map[i][1] <= i4_min_poc)
+                 {
+                     i4_min_poc = i4_poc_buf_id_map[i][1];
+                     i4_min_poc_buf_id = i4_poc_buf_id_map[i][0];
+-- 
+2.17.1
+

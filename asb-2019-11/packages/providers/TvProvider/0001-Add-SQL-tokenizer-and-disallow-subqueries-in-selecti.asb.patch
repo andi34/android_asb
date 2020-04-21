@@ -1,0 +1,521 @@
+From e73a77a1b5fe615df7943cc1e200ca41dd2956b4 Mon Sep 17 00:00:00 2001
+From: shubang <shubang@google.com>
+Date: Mon, 19 Aug 2019 16:59:13 -0700
+Subject: [PATCH] Add SQL tokenizer and disallow subqueries in selection
+
+BUG: 135269669
+Test: atest com.android.providers.tv
+Change-Id: I3d25660c6fc8d165a4de5f3de95440cf52c30255
+(cherry picked from commit f7ff08e2cbe9a4d20196b77ccf87b37258926050)
+(cherry picked from commit db1fed9f9fa3f9ee75a8efb29d6cfbfee174cfde)
+---
+ src/com/android/providers/tv/TvProvider.java  |  14 +
+ .../providers/tv/util/SqliteTokenFinder.java  | 181 ++++++++++++
+ .../tv/util/SqliteTokenFinderTest.java        | 275 ++++++++++++++++++
+ 3 files changed, 470 insertions(+)
+ create mode 100644 src/com/android/providers/tv/util/SqliteTokenFinder.java
+ create mode 100644 tests/src/com/android/providers/tv/util/SqliteTokenFinderTest.java
+
+diff --git a/src/com/android/providers/tv/TvProvider.java b/src/com/android/providers/tv/TvProvider.java
+index f7a5089..3575976 100644
+--- a/src/com/android/providers/tv/TvProvider.java
++++ b/src/com/android/providers/tv/TvProvider.java
+@@ -57,6 +57,8 @@ import com.android.internal.annotations.VisibleForTesting;
+ import com.android.internal.os.SomeArgs;
+ import com.android.providers.tv.util.SqlParams;
+ 
++import com.android.providers.tv.util.SqliteTokenFinder;
++import java.util.Locale;
+ import libcore.io.IoUtils;
+ 
+ import java.io.ByteArrayOutputStream;
+@@ -898,6 +900,18 @@ public class TvProvider extends ContentProvider {
+     private SqlParams createSqlParams(String operation, Uri uri, String selection,
+             String[] selectionArgs) {
+         int match = sUriMatcher.match(uri);
++
++        SqliteTokenFinder.findTokens(selection, p -> {
++            if (p.first == SqliteTokenFinder.TYPE_REGULAR
++                    && TextUtils.equals(p.second.toUpperCase(Locale.US), "SELECT")) {
++                // only when a keyword is not in quotes or brackets
++                // see https://www.sqlite.org/lang_keywords.html
++                android.util.EventLog.writeEvent(0x534e4554, "135269669", -1, "");
++                throw new SecurityException(
++                        "Subquery is not allowed in selection: " + selection);
++            }
++        });
++
+         SqlParams params = new SqlParams(null, selection, selectionArgs);
+ 
+         // Control access to EPG data (excluding watched programs) when the caller doesn't have all
+diff --git a/src/com/android/providers/tv/util/SqliteTokenFinder.java b/src/com/android/providers/tv/util/SqliteTokenFinder.java
+new file mode 100644
+index 0000000..bb0bac2
+--- /dev/null
++++ b/src/com/android/providers/tv/util/SqliteTokenFinder.java
+@@ -0,0 +1,181 @@
++/*
++ * Copyright (C) 2019 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.providers.tv.util;
++
++
++import android.annotation.Nullable;
++
++import android.util.Pair;
++import java.util.function.Consumer;
++
++/**
++ * Simple SQL parser to check statements for usage of prohibited/sensitive fields. Modified from
++ * packages/providers/ContactsProvider/src/com/android/providers/contacts/sqlite/SqlChecker.java
++ */
++public class SqliteTokenFinder {
++    public static final int TYPE_REGULAR = 0;
++    public static final int TYPE_IN_SINGLE_QUOTES = 1;
++    public static final int TYPE_IN_DOUBLE_QUOTES = 2;
++    public static final int TYPE_IN_BACKQUOTES = 3;
++    public static final int TYPE_IN_BRACKETS = 4;
++
++    private static boolean isAlpha(char ch) {
++        return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || (ch == '_');
++    }
++
++    private static boolean isNum(char ch) {
++        return ('0' <= ch && ch <= '9');
++    }
++
++    private static boolean isAlNum(char ch) {
++        return isAlpha(ch) || isNum(ch);
++    }
++
++    private static boolean isAnyOf(char ch, String set) {
++        return set.indexOf(ch) >= 0;
++    }
++
++    private static char peek(String s, int index) {
++        return index < s.length() ? s.charAt(index) : '\0';
++    }
++
++    /**
++     * SQL Tokenizer specialized to extract tokens from SQL (snippets).
++     *
++     * Based on sqlite3GetToken() in tokenzie.c in SQLite.
++     *
++     * Source for v3.8.6 (which android uses): http://www.sqlite.org/src/artifact/ae45399d6252b4d7
++     * (Latest source as of now: http://www.sqlite.org/src/artifact/78c8085bc7af1922)
++     *
++     * Also draft spec: http://www.sqlite.org/draft/tokenreq.html
++     *
++     * @param sql the SQL clause to be tokenized.
++     * @param checker the {@link Consumer} to check each token. The input of the checker is a pair
++     *                of token type and the token.
++     */
++    public static void findTokens(@Nullable String sql, Consumer<Pair<Integer, String>> checker) {
++        if (sql == null) {
++            return;
++        }
++        int pos = 0;
++        final int len = sql.length();
++        while (pos < len) {
++            final char ch = peek(sql, pos);
++
++            // Regular token.
++            if (isAlpha(ch)) {
++                final int start = pos;
++                pos++;
++                while (isAlNum(peek(sql, pos))) {
++                    pos++;
++                }
++                final int end = pos;
++
++                final String token = sql.substring(start, end);
++                checker.accept(Pair.create(TYPE_REGULAR, token));
++
++                continue;
++            }
++
++            // Handle quoted tokens
++            if (isAnyOf(ch, "'\"`")) {
++                final int quoteStart = pos;
++                pos++;
++
++                for (;;) {
++                    pos = sql.indexOf(ch, pos);
++                    if (pos < 0) {
++                        throw new IllegalArgumentException("Unterminated quote in" + sql);
++                    }
++                    if (peek(sql, pos + 1) != ch) {
++                        break;
++                    }
++                    // Quoted quote char -- e.g. "abc""def" is a single string.
++                    pos += 2;
++                }
++                final int quoteEnd = pos;
++                pos++;
++
++                // Extract the token
++                String token = sql.substring(quoteStart + 1, quoteEnd);
++                // Unquote if needed. i.e. "aa""bb" -> aa"bb
++                if (token.indexOf(ch) >= 0) {
++                    token = token.replaceAll(String.valueOf(ch) + ch, String.valueOf(ch));
++                }
++                int type = TYPE_REGULAR;
++                switch (ch) {
++                    case '\'':
++                        type = TYPE_IN_SINGLE_QUOTES;
++                        break;
++                    case '\"':
++                        type = TYPE_IN_DOUBLE_QUOTES;
++                        break;
++                    case '`':
++                        type = TYPE_IN_BACKQUOTES;
++                        break;
++                }
++                checker.accept(Pair.create(type, token));
++                continue;
++            }
++            // Handle tokens enclosed in [...]
++            if (ch == '[') {
++                final int quoteStart = pos;
++                pos++;
++
++                pos = sql.indexOf(']', pos);
++                if (pos < 0) {
++                    throw new IllegalArgumentException("Unterminated quote in" + sql);
++                }
++                final int quoteEnd = pos;
++                pos++;
++
++                final String token = sql.substring(quoteStart + 1, quoteEnd);
++
++                checker.accept(Pair.create(TYPE_IN_BRACKETS, token));
++                continue;
++            }
++
++            // Detect comments.
++            if (ch == '-' && peek(sql, pos + 1) == '-') {
++                pos += 2;
++                pos = sql.indexOf('\n', pos);
++                if (pos < 0) {
++                    // strings ending in an inline comment.
++                    break;
++                }
++                pos++;
++
++                continue;
++            }
++            if (ch == '/' && peek(sql, pos + 1) == '*') {
++                pos += 2;
++                pos = sql.indexOf("*/", pos);
++                if (pos < 0) {
++                    throw new IllegalArgumentException("Unterminated comment in" + sql);
++                }
++                pos += 2;
++
++                continue;
++            }
++
++            // For this purpose, we can simply ignore other characters.
++            // (Note it doesn't handle the X'' literal properly and reports this X as a token,
++            // but that should be fine...)
++            pos++;
++        }
++    }
++}
+diff --git a/tests/src/com/android/providers/tv/util/SqliteTokenFinderTest.java b/tests/src/com/android/providers/tv/util/SqliteTokenFinderTest.java
+new file mode 100644
+index 0000000..f228080
+--- /dev/null
++++ b/tests/src/com/android/providers/tv/util/SqliteTokenFinderTest.java
+@@ -0,0 +1,275 @@
++/*
++ * Copyright (C) 2019 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.providers.tv.util;
++
++import android.annotation.Nullable;
++import android.test.AndroidTestCase;
++import android.util.Pair;
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.List;
++import java.util.function.Consumer;
++
++/**
++ * Tests for {@link SqliteTokenFinder}.
++ *
++ * Modified from
++ * packages/providers/ContactsProvider/tests/src/com/android/providers/contacts/sqlite/SqlCheckerTest.java
++ */
++public class SqliteTokenFinderTest extends AndroidTestCase {
++    private List<Pair<Integer, String>> getTokens(String sql) {
++        List<Pair<Integer, String>> tokens = new ArrayList<>();
++        SqliteTokenFinder.findTokens(sql, new Consumer<Pair<Integer, String>>() {
++            @Override
++            public void accept(Pair<Integer, String> pair) {
++                tokens.add(pair);
++            }
++        });
++        return tokens;
++    }
++
++    private void checkTokens(String sql, Pair<Integer, String>... tokens) {
++        final List<Pair<Integer, String>> expected = Arrays.asList(tokens);
++
++        assertEquals(expected, getTokens(sql));
++    }
++
++    private void checkTokensRegular(String sql, @Nullable String tokens) {
++        List<Pair<Integer, String>> expected = new ArrayList<>();
++
++        if (tokens != null) {
++            for (String token : tokens.split(" ")) {
++                expected.add(Pair.create(SqliteTokenFinder.TYPE_REGULAR, token));
++            }
++        }
++
++        assertEquals(expected, getTokens(sql));
++    }
++
++    private void assertInvalidSql(String sql, String message) {
++        try {
++            getTokens(sql);
++            fail("Didn't throw Exception");
++        } catch (Exception e) {
++            assertTrue("Expected " + e.getMessage() + " to contain " + message,
++                    e.getMessage().contains(message));
++        }
++    }
++
++    public void testWhitespaces() {
++        checkTokensRegular("  select  \t\r\n a\n\n  ", "select a");
++        checkTokensRegular("a b", "a b");
++    }
++
++    public void testComment() {
++        checkTokensRegular("--\n", null);
++        checkTokensRegular("a--\n", "a");
++        checkTokensRegular("a--abcdef\n", "a");
++        checkTokensRegular("a--abcdef\nx", "a x");
++        checkTokensRegular("a--\nx", "a x");
++        checkTokensRegular("a--abcdef", "a");
++        checkTokensRegular("a--abcdef\ndef--", "a def");
++
++        checkTokensRegular("/**/", null);
++        assertInvalidSql("/*", "Unterminated comment");
++        assertInvalidSql("/*/", "Unterminated comment");
++        assertInvalidSql("/*\n* /*a", "Unterminated comment");
++        checkTokensRegular("a/**/", "a");
++        checkTokensRegular("/**/b", "b");
++        checkTokensRegular("a/**/b", "a b");
++        checkTokensRegular("a/* -- \n* /* **/b", "a b");
++    }
++
++    public void testSingleQuotes() {
++        assertInvalidSql("'", "Unterminated quote");
++        assertInvalidSql("a'", "Unterminated quote");
++        assertInvalidSql("a'''", "Unterminated quote");
++        assertInvalidSql("a''' ", "Unterminated quote");
++        checkTokens("''", Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, ""));
++
++        // 2 consecutive quotes inside quotes stands for a quote. e.g.'let''s go' -> let's go
++        checkTokens(
++                "''''",
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "\'"));
++        checkTokens(
++                "a''''b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "\'"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a' '' 'b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, " \' "),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("'abc'", Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "abc"));
++        checkTokens("'abc\ndef'", Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "abc\ndef"));
++        checkTokens(
++                "a'abc\ndef'",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "abc\ndef"));
++        checkTokens(
++                "'abc\ndef'b",
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("a'abc\ndef'b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a'''abc\nd''ef'''b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "\'abc\nd\'ef\'"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++    }
++
++    public void testDoubleQuotes() {
++        assertInvalidSql("\"", "Unterminated quote");
++        assertInvalidSql("a\"", "Unterminated quote");
++        assertInvalidSql("a\"\"\"", "Unterminated quote");
++        assertInvalidSql("a\"\"\" ", "Unterminated quote");
++        checkTokens("\"\"", Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, ""));
++        checkTokens("\"\"\"\"", Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "\""));
++        checkTokens(
++                "a\"\"\"\"b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "\""),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("a\"\t\"\"\t\"b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "\t\"\t"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("\"abc\"", Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "abc"));
++        checkTokens(
++                "\"abc\ndef\"",
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "abc\ndef"));
++        checkTokens(
++                "a\"abc\ndef\"",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "abc\ndef"));
++        checkTokens(
++                "\"abc\ndef\"b",
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("a\"abc\ndef\"b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("a\"\"\"abc\nd\"\"ef\"\"\"b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "\"abc\nd\"ef\""),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++    }
++
++    public void testBackquotes() {
++        assertInvalidSql("`", "Unterminated quote");
++        assertInvalidSql("a`", "Unterminated quote");
++        assertInvalidSql("a```", "Unterminated quote");
++        assertInvalidSql("a``` ", "Unterminated quote");
++        checkTokens("``", Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, ""));
++        checkTokens("````", Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "`"));
++        checkTokens(
++                "a````b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "`"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a`\t``\t`b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "\t`\t"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("`abc`", Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "abc"));
++        checkTokens(
++                "`abc\ndef`",
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "abc\ndef"));
++        checkTokens(
++                "a`abc\ndef`",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "abc\ndef"));
++        checkTokens(
++                "`abc\ndef`b",
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a`abc\ndef`b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a```abc\nd``ef```b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "`abc\nd`ef`"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++    }
++
++    public void testBrackets() {
++        assertInvalidSql("[", "Unterminated quote");
++        assertInvalidSql("a[", "Unterminated quote");
++        assertInvalidSql("a[ ", "Unterminated quote");
++        assertInvalidSql("a[[ ", "Unterminated quote");
++        checkTokens("[]", Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, ""));
++        checkTokens("[[]", Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "["));
++        checkTokens(
++                "a[[]b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "["),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a[\t[\t]b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "\t[\t"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens("[abc]", Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "abc"));
++        checkTokens(
++                "[abc\ndef]",
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "abc\ndef"));
++        checkTokens(
++                "a[abc\ndef]",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "abc\ndef"));
++        checkTokens(
++                "[abc\ndef]b",
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a[abc\ndef]b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "abc\ndef"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++        checkTokens(
++                "a[[abc\nd[ef[]b",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "[abc\nd[ef["),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "b"));
++    }
++
++    public void testTokens() {
++        checkTokensRegular("a,abc,a00b,_1,_123,abcdef", "a abc a00b _1 _123 abcdef");
++        checkTokens(
++                "a--\nabc/**/a00b''_1'''ABC'''`_123`abc[d]\"e\"f",
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "abc"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "a00b"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, ""),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "_1"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_SINGLE_QUOTES, "'ABC'"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BACKQUOTES, "_123"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "abc"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_BRACKETS, "d"),
++                Pair.create(SqliteTokenFinder.TYPE_IN_DOUBLE_QUOTES, "e"),
++                Pair.create(SqliteTokenFinder.TYPE_REGULAR, "f"));
++    }
++}
+-- 
+2.17.1
+

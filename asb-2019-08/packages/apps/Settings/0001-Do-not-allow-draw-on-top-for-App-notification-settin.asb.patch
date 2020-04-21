@@ -1,0 +1,88 @@
+From d7cd724e4dfc7b5931369495a4a0e629745054fe Mon Sep 17 00:00:00 2001
+From: Raff Tsai <rafftsai@google.com>
+Date: Fri, 8 Mar 2019 16:19:30 +0800
+Subject: [PATCH 1/2] Do not allow draw on top for App notification settings
+
+Fixes: 119115683
+Test: manual
+Change-Id: Ib7b878a23b4a99171c58b5de992fb87feca8a28a
+Merged-In: Ib7b878a23b4a99171c58b5de992fb87feca8a28a
+(cherry picked from commit fe86a2a51f0b8e01e5f595bd60edc594eef58aba)
+(cherry picked from commit 04208f16b02c793f52b8c04d41799f79f286b056)
+---
+ .../notification/AppNotificationSettings.java | 27 +++++++++++++++----
+ 1 file changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/src/com/android/settings/notification/AppNotificationSettings.java b/src/com/android/settings/notification/AppNotificationSettings.java
+index fd7a750111..6d5ae0d049 100644
+--- a/src/com/android/settings/notification/AppNotificationSettings.java
++++ b/src/com/android/settings/notification/AppNotificationSettings.java
+@@ -16,6 +16,8 @@
+ 
+ package com.android.settings.notification;
+ 
++import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++
+ import android.app.Notification;
+ import android.app.NotificationManager;
+ import android.content.Intent;
+@@ -28,15 +30,14 @@ import android.os.UserHandle;
+ import android.service.notification.NotificationListenerService.Ranking;
+ import android.util.ArrayMap;
+ import android.util.Log;
+-
++import android.view.Window;
++import android.view.WindowManager;
+ import com.android.internal.logging.MetricsProto.MetricsEvent;
+ import com.android.internal.widget.LockPatternUtils;
+ import com.android.settings.AppHeader;
+ import com.android.settings.R;
+ import com.android.settings.notification.NotificationBackend.AppRow;
+ import com.android.settingslib.RestrictedSwitchPreference;
+-
+-
+ import java.util.List;
+ 
+ /** These settings are per app, so should not be returned in global search results. */
+@@ -83,7 +84,8 @@ public class AppNotificationSettings extends NotificationSettingsBase {
+ 
+             NotificationManager.Policy policy =
+                     NotificationManager.from(mContext).getNotificationPolicy();
+-            mDndVisualEffectsSuppressed = policy == null ? false : policy.suppressedVisualEffects != 0;
++            mDndVisualEffectsSuppressed =
++                    policy == null ? false : policy.suppressedVisualEffects != 0;
+ 
+             // load settings intent
+             ArrayMap<String, AppRow> rows = new ArrayMap<String, AppRow>();
+@@ -98,12 +100,27 @@ public class AppNotificationSettings extends NotificationSettingsBase {
+         }
+     }
+ 
++    @Override
++    public void onResume() {
++        super.onResume();
++        getActivity().getWindow().addPrivateFlags(PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS);
++        android.util.EventLog.writeEvent(0x534e4554, "119115683", -1, "");
++    }
++
++    public void onPause() {
++        super.onPause();
++        final Window window = getActivity().getWindow();
++        final WindowManager.LayoutParams attrs = window.getAttributes();
++        attrs.privateFlags &= ~PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++        window.setAttributes(attrs);
++    }
++
+     @Override
+     protected void updateDependents(int importance) {
+         LockPatternUtils utils = new LockPatternUtils(getActivity());
+         boolean lockscreenSecure = utils.isSecure(UserHandle.myUserId());
+         UserInfo parentUser = mUm.getProfileParent(UserHandle.myUserId());
+-        if (parentUser != null){
++        if (parentUser != null) {
+             lockscreenSecure |= utils.isSecure(parentUser.id);
+         }
+ 
+-- 
+2.17.1
+

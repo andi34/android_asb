@@ -1,0 +1,53 @@
+From 6f6eaa4561b6ea39ef7abc1f724dc0aa5756331c Mon Sep 17 00:00:00 2001
+From: Martin Brabham <optedoblivion@google.com>
+Date: Thu, 20 Jun 2019 08:59:24 -0700
+Subject: [PATCH 5/5] JustWorks: Auto-accept only incoming temporary pairing.
+
+Bug: 110433804
+Bug: 134461862
+Test: Manual; atest net_test_bluetooth
+Change-Id: I4e3f39bc08e9d9493734a21ea29d76e43aeb50c8
+Merged-In: I4e3f39bc08e9d9493734a21ea29d76e43aeb50c8
+(cherry picked from commit 10e15ee4610969b10e7558969fed8ba229d8e5a0)
+---
+ btif/src/btif_dm.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/btif/src/btif_dm.c b/btif/src/btif_dm.c
+index 4d496f4b6..5cab05161 100644
+--- a/btif/src/btif_dm.c
++++ b/btif/src/btif_dm.c
+@@ -989,6 +989,7 @@ static void btif_dm_ssp_cfm_req_evt(tBTA_DM_SP_CFM_REQ *p_ssp_cfm_req)
+     bt_bdaddr_t bd_addr;
+     bt_bdname_t bd_name;
+     UINT32 cod;
++    BOOLEAN is_incoming = !(pairing_cb.state == BT_BOND_STATE_BONDING);
+     int dev_type;
+ 
+     BTIF_TRACE_DEBUG("%s", __FUNCTION__);
+@@ -1019,6 +1020,22 @@ static void btif_dm_ssp_cfm_req_evt(tBTA_DM_SP_CFM_REQ *p_ssp_cfm_req)
+ 
+     pairing_cb.is_ssp = TRUE;
+ 
++    /* If JustWorks auto-accept */
++    if (p_ssp_cfm_req->just_works)
++    {
++        /* Pairing consent for JustWorks NOT needed if:
++         * 1. Incoming temporary pairing is detected
++         */
++        if (is_incoming && pairing_cb.bond_type == BOND_TYPE_TEMPORARY)
++        {
++            BTIF_TRACE_EVENT(
++                "%s: Auto-accept JustWorks pairing for temporary incoming",
++                __func__);
++            btif_dm_ssp_reply(&bd_addr, BT_SSP_VARIANT_CONSENT, TRUE, 0);
++            return;
++        }
++    }
++
+     cod = devclass2uint(p_ssp_cfm_req->dev_class);
+ 
+     if (cod == 0) {
+-- 
+2.17.1
+

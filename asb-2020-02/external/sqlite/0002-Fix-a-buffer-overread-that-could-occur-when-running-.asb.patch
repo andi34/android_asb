@@ -1,0 +1,57 @@
+From 94b1fdf38ab69476e2e722b2e4a453a4b1fde8a4 Mon Sep 17 00:00:00 2001
+From: Dan Kennedy <danielk1977@gmail.com>
+Date: Tue, 3 Sep 2019 19:29:38 +0000
+Subject: [PATCH 2/2] Fix a buffer overread that could occur when running fts5
+ prefix queries inside a transaction.
+
+Change-Id: I939ec5b225ff971325586292c0f572d2ae9553a7
+---
+ README.version      | 4 ++--
+ dist/orig/sqlite3.c | 4 +++-
+ dist/sqlite3.c      | 4 +++-
+ 3 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/README.version b/README.version
+index 8efcffd..7661034 100644
+--- a/README.version
++++ b/README.version
+@@ -1,4 +1,4 @@
+-URL: https://sqlite.org/src/info/7b4583f932ff0933
+-Version: 3.9.3 7b4583f932ff0933280aa73ee69294b488f96d4f2bdc8422cd0136d944d9fb60
++URL: https://sqlite.org/src/info/b584fd36f787e6d7
++Version: 3.9.3 b584fd36f787e6d7926dd54ce7e2cfcfe6616030e4e05f42a5725173e8a8a680
+ This patch fixes Magellan SQLite Security Vulnerability as in b/121156452
+ BugComponent: 24950
+diff --git a/dist/orig/sqlite3.c b/dist/orig/sqlite3.c
+index 087e02e..5b0864a 100644
+--- a/dist/orig/sqlite3.c
++++ b/dist/orig/sqlite3.c
+@@ -172466,7 +172466,9 @@ static int fts5HashEntrySort(
+   for(iSlot=0; iSlot<pHash->nSlot; iSlot++){
+     Fts5HashEntry *pIter;
+     for(pIter=pHash->aSlot[iSlot]; pIter; pIter=pIter->pHashNext){
+-      if( pTerm==0 || 0==memcmp(pIter->zKey, pTerm, nTerm) ){
++      if( pTerm==0
++       || (strlen(pIter->zKey)>=nTerm && 0==memcmp(pIter->zKey, pTerm, nTerm))
++      ){
+         Fts5HashEntry *pEntry = pIter;
+         pEntry->pScanNext = 0;
+         for(i=0; ap[i]; i++){
+diff --git a/dist/sqlite3.c b/dist/sqlite3.c
+index 581a6a4..4a5b51e 100644
+--- a/dist/sqlite3.c
++++ b/dist/sqlite3.c
+@@ -172496,7 +172496,9 @@ static int fts5HashEntrySort(
+   for(iSlot=0; iSlot<pHash->nSlot; iSlot++){
+     Fts5HashEntry *pIter;
+     for(pIter=pHash->aSlot[iSlot]; pIter; pIter=pIter->pHashNext){
+-      if( pTerm==0 || 0==memcmp(pIter->zKey, pTerm, nTerm) ){
++      if( pTerm==0
++       || (strlen(pIter->zKey)>=nTerm && 0==memcmp(pIter->zKey, pTerm, nTerm))
++      ){
+         Fts5HashEntry *pEntry = pIter;
+         pEntry->pScanNext = 0;
+         for(i=0; ap[i]; i++){
+-- 
+2.17.1
+

@@ -1,0 +1,33 @@
+From 67b968b7f47ee1a5b0e9542066cdca616bae939b Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Thu, 30 May 2019 19:07:47 -0700
+Subject: [PATCH 3/4] httplive: detect oom if playlist is infinite
+
+Bug: 68399439
+Test: StagefrightTest#testStagefright_cve_2017_13279
+Change-Id: Icf39c2ae58d9d6ba7c74bbcfbe2154e66e6c9e40
+(cherry picked from commit f3808d3a2e8c646d5edad451a80daa61a4e5d836)
+---
+ media/libstagefright/httplive/HTTPDownloader.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/media/libstagefright/httplive/HTTPDownloader.cpp b/media/libstagefright/httplive/HTTPDownloader.cpp
+index 861b85a64d..5d6634efa4 100644
+--- a/media/libstagefright/httplive/HTTPDownloader.cpp
++++ b/media/libstagefright/httplive/HTTPDownloader.cpp
+@@ -157,6 +157,12 @@ ssize_t HTTPDownloader::fetchBlock(
+                  buffer->size() + bufferRemaining);
+ 
+             sp<ABuffer> copy = new ABuffer(buffer->size() + bufferRemaining);
++            if (copy->data() == NULL) {
++                android_errorWriteLog(0x534e4554, "68399439");
++                ALOGE("not enough memory to download: requesting %zu + %zu",
++                        buffer->size(), bufferRemaining);
++                return NO_MEMORY;
++            }
+             memcpy(copy->data(), buffer->data(), buffer->size());
+             copy->setRange(0, buffer->size());
+ 
+-- 
+2.17.1
+

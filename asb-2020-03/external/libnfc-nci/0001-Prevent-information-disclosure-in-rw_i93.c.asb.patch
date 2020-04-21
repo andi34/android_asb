@@ -1,0 +1,65 @@
+From 6c3de6262a30cdc83171f82c6c488f0ed73689e0 Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Tue, 7 Jan 2020 17:27:14 +0800
+Subject: [PATCH] Prevent information disclosure in rw_i93.c
+
+Bug: 143109193
+Bug: 143155861
+Bug: 143106535
+Test: R/W i93 tags
+Merged-In: I1d33d80760be986af9905304c17ce05cc0f9ce63
+Change-Id: I1d33d80760be986af9905304c17ce05cc0f9ce63
+(cherry picked from commit 0a61f668bd429c1e48561fffd4243790bbcc3353)
+---
+ src/nfc/tags/rw_i93.c | 21 ++++++++++++++++++---
+ 1 file changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/src/nfc/tags/rw_i93.c b/src/nfc/tags/rw_i93.c
+index b6d4472..4b3655b 100644
+--- a/src/nfc/tags/rw_i93.c
++++ b/src/nfc/tags/rw_i93.c
+@@ -2201,7 +2201,12 @@ void rw_i93_sm_update_ndef (BT_HDR *p_resp)
+ 
+         block_number = (p_i93->ndef_tlv_start_offset + 1) / p_i93->block_size;
+ 
+-        if (rw_i93_send_cmd_write_single_block (block_number, p) == NFC_STATUS_OK)
++        if (length < p_i93->block_size)
++        {
++            android_errorWriteLog(0x534e4554, "143109193");
++            rw_i93_handle_error(NFC_STATUS_FAILED);
++        }
++        else if (rw_i93_send_cmd_write_single_block(block_number, p) == NFC_STATUS_OK)
+         {
+             /* update next writing offset */
+             p_i93->rw_offset = (block_number + 1) * p_i93->block_size;
+@@ -2382,7 +2387,12 @@ void rw_i93_sm_update_ndef (BT_HDR *p_resp)
+ 
+                 block_number = (p_i93->rw_offset / p_i93->block_size);
+ 
+-                if (rw_i93_send_cmd_write_single_block (block_number, p) == NFC_STATUS_OK)
++                if (length < p_i93->block_size)
++                {
++                    android_errorWriteLog(0x534e4554, "143155861");
++                    rw_i93_handle_error(NFC_STATUS_FAILED);
++                }
++                else if (rw_i93_send_cmd_write_single_block(block_number, p) == NFC_STATUS_OK)
+                 {
+                     /* set offset to the beginning of next block */
+                     p_i93->rw_offset += p_i93->block_size - (p_i93->rw_offset % p_i93->block_size);
+@@ -2895,7 +2905,12 @@ void rw_i93_sm_set_read_only (BT_HDR *p_resp)
+         /* mark CC as read-only */
+         *(p+1) |= I93_ICODE_CC_READ_ONLY;
+ 
+-        if (rw_i93_send_cmd_write_single_block (0, p) == NFC_STATUS_OK)
++        if (length < p_i93->block_size)
++        {
++            android_errorWriteLog(0x534e4554, "143106535");
++            rw_i93_handle_error(NFC_STATUS_FAILED);
++        }
++        else if (rw_i93_send_cmd_write_single_block(0, p) == NFC_STATUS_OK)
+         {
+             p_i93->sub_state = RW_I93_SUBSTATE_WAIT_UPDATE_CC;
+         }
+-- 
+2.17.1
+

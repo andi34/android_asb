@@ -1,0 +1,55 @@
+From 11440ccb9d6a0a2a6282cecb177e1049271847ad Mon Sep 17 00:00:00 2001
+From: Rubin Xu <rubinxu@google.com>
+Date: Fri, 9 Aug 2019 18:56:42 +0100
+Subject: [PATCH 2/2] Fix OOB read in v8's Promise handling
+
+Bug: 138441919
+Test: m -j proxy_resolver_v8_unittest && adb sync && adb shell \
+      /data/nativetest/proxy_resolver_v8_unittest/proxy_resolver_v8_unittest
+
+Change-Id: I3d9ffb76317f94ee486fbab8712a673d807a0653
+(cherry picked from commit 1d4f1378628c425b2e03a22b5ea1c27f3af7f8c3)
+---
+ src/builtins/builtins-promise.cc | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/src/builtins/builtins-promise.cc b/src/builtins/builtins-promise.cc
+index 0d0238d26..1fb129025 100644
+--- a/src/builtins/builtins-promise.cc
++++ b/src/builtins/builtins-promise.cc
+@@ -98,6 +98,10 @@ Node* PromiseBuiltinsAssembler::NewPromiseCapability(Node* context,
+     debug_event = TrueConstant();
+   }
+ 
++  Label if_not_constructor(this, Label::kDeferred);
++  GotoIf(TaggedIsSmi(constructor), &if_not_constructor);
++  GotoIfNot(IsConstructorMap(LoadMap(constructor)), &if_not_constructor);
++
+   Node* native_context = LoadNativeContext(context);
+ 
+   Node* map = LoadRoot(Heap::kJSPromiseCapabilityMapRootIndex);
+@@ -182,6 +186,13 @@ Node* PromiseBuiltinsAssembler::NewPromiseCapability(Node* context,
+     Unreachable();
+   }
+ 
++  Bind(&if_not_constructor);
++  {
++    Node* const message_id = SmiConstant(MessageTemplate::kNotConstructor);
++    CallRuntime(Runtime::kThrowTypeError, context, message_id, constructor);
++    Unreachable();
++  }
++
+   Bind(&out);
+   return var_result.value();
+ }
+@@ -310,6 +321,7 @@ Node* PromiseBuiltinsAssembler::SpeciesConstructor(Node* context, Node* object,
+ 
+   // 7. If IsConstructor(S) is true, return S.
+   Label throw_error(this);
++  GotoIf(TaggedIsSmi(species), &throw_error);
+   Node* species_bitfield = LoadMapBitField(LoadMap(species));
+   GotoIfNot(Word32Equal(Word32And(species_bitfield,
+                                   Int32Constant((1 << Map::kIsConstructor))),
+-- 
+2.17.1
+

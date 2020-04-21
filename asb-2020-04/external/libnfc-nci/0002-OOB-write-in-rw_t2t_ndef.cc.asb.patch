@@ -1,0 +1,72 @@
+From f27c1e7997fb39a8cd69d30ef03c127b75ae3a76 Mon Sep 17 00:00:00 2001
+From: Alisher Alikhodjaev <alisher@google.com>
+Date: Fri, 31 Jan 2020 20:15:30 -0800
+Subject: [PATCH 2/2] OOB write in rw_t2t_ndef.cc
+
+Bug: 147310721
+Bug: 148159613
+Bug: 147310271
+Test: R/W T2 tags
+Merged-In: Ib22c24a2098e79b8519d3984a752e4b661fb1e59
+Change-Id: Ia987049766f7a8123d46838759c18660798c42a1
+(cherry picked from commit 76a5f2be3f10fe904be58850430d029045fc6b54)
+---
+ src/nfc/tags/rw_t2t_ndef.c | 28 +++++++++++++++++++++++++---
+ 1 file changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/src/nfc/tags/rw_t2t_ndef.c b/src/nfc/tags/rw_t2t_ndef.c
+index 2080c6f..ce83439 100644
+--- a/src/nfc/tags/rw_t2t_ndef.c
++++ b/src/nfc/tags/rw_t2t_ndef.c
+@@ -675,8 +675,20 @@ static void rw_t2t_handle_tlv_detect_rsp (UINT8 *p_data)
+                         p_t2t->lock_tlv[p_t2t->num_lock_tlvs].offset  *= (UINT8) tags_pow (2, p_t2t->tlv_value[2] & 0x0F);
+                         p_t2t->lock_tlv[p_t2t->num_lock_tlvs].offset  += p_t2t->tlv_value[0] & 0x0F;
+                         p_t2t->lock_tlv[p_t2t->num_lock_tlvs].bytes_locked_per_bit = (UINT8) tags_pow (2, ((p_t2t->tlv_value[2] & 0xF0) >> 4));
+-                        p_t2t->lock_tlv[p_t2t->num_lock_tlvs].num_bits = p_t2t->tlv_value[1];
+-                        count = p_t2t->tlv_value[1] / 8 + ((p_t2t->tlv_value[1]%8 != 0)? 1:0);
++                        /* Note: 0 value in DLA_NbrLockBits means 256 */
++                        count = p_t2t->tlv_value[1];
++                        /* Set it to max value that can be stored in lockbytes */
++                        if (count == 0)
++                        {
++#if RW_T2T_MAX_LOCK_BYTES > 0x1F
++                            count = UCHAR_MAX;
++#else
++                            count = RW_T2T_MAX_LOCK_BYTES * TAG_BITS_PER_BYTE;
++#endif
++                        }
++                        p_t2t->lock_tlv[p_t2t->num_lock_tlvs].num_bits = count;
++                        count = count / TAG_BITS_PER_BYTE +
++                             ((count % TAG_BITS_PER_BYTE != 0) ? 1 : 0);
+ 
+                         /* Extract lockbytes info addressed by this Lock TLV */
+                         xx = 0;
+@@ -953,6 +965,15 @@ void rw_t2t_extract_default_locks_info (void)
+         num_dynamic_lock_bits   = ((p_t2t->tag_hdr[T2T_CC2_TMS_BYTE] * T2T_TMS_TAG_FACTOR) - (T2T_STATIC_SIZE - T2T_HEADER_SIZE)) / bytes_locked_per_lock_bit;
+         num_dynamic_lock_bytes  = num_dynamic_lock_bits / 8;
+         num_dynamic_lock_bytes += (num_dynamic_lock_bits % 8 == 0) ? 0:1;
++        if (num_dynamic_lock_bytes > RW_T2T_MAX_LOCK_BYTES)
++        {
++            RW_TRACE_ERROR2(
++                "rw_t2t_extract_default_locks_info - buffer size: %u less than "
++                "DynLock area sise: %u",
++                RW_T2T_MAX_LOCK_BYTES, num_dynamic_lock_bytes);
++            num_dynamic_lock_bytes = RW_T2T_MAX_LOCK_BYTES;
++            android_errorWriteLog(0x534e4554, "147310721");
++        }
+ 
+         p_t2t->lock_tlv[p_t2t->num_lock_tlvs].offset                = (p_t2t->tag_hdr[T2T_CC2_TMS_BYTE] * T2T_TMS_TAG_FACTOR) + (T2T_FIRST_DATA_BLOCK * T2T_BLOCK_LEN);
+         p_t2t->lock_tlv[p_t2t->num_lock_tlvs].bytes_locked_per_bit  = bytes_locked_per_lock_bit;
+@@ -2387,7 +2408,8 @@ static void rw_t2t_update_lock_attributes (void)
+                     if (p_t2t->lockbyte[num_dyn_lock_bytes].lock_byte & rw_t2t_mask_bits[xx])
+                     {
+                         /* If the bit is set then it is locked */
+-                        p_t2t->lock_attr[block_count] |= 0x01 << bits_covered;
++                        if (block_count < RW_T2T_SEGMENT_SIZE)
++                            p_t2t->lock_attr[block_count] |= 0x01 << bits_covered;
+                     }
+                     bytes_covered++;
+                     bits_covered++;
+-- 
+2.17.1
+

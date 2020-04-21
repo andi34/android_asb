@@ -1,0 +1,57 @@
+From daf11175dafbeed89cad5268b41e0b27b8ea431e Mon Sep 17 00:00:00 2001
+From: Hall Liu <hallliu@google.com>
+Date: Mon, 16 Dec 2019 11:30:53 -0800
+Subject: [PATCH] DO NOT MERGE Check permissions for URL_SIMINFO
+
+Check permissions if the query is attempting to access URL_SIMINFO,
+since it contains sensitive IDs.
+
+Test: atest android.provider.cts.TelephonyProviderTest
+Bug: 140622024
+Change-Id: Ibcf4cf01a965b5c91aebf65adc98110ba3be89f6
+(cherry picked from commit caab85d9144e83165637098ba8cb3c99fcf5cae2)
+---
+ .../telephony/TelephonyProvider.java          | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/src/com/android/providers/telephony/TelephonyProvider.java b/src/com/android/providers/telephony/TelephonyProvider.java
+index 3feb358..fd0ff7c 100644
+--- a/src/com/android/providers/telephony/TelephonyProvider.java
++++ b/src/com/android/providers/telephony/TelephonyProvider.java
+@@ -1761,6 +1761,9 @@ public class TelephonyProvider extends ContentProvider
+                 // null returns all columns, so need permission check
+                 checkPermission();
+             }
++        } else {
++            // For the sim_info table, we only require READ_PHONE_STATE
++            checkReadSimInfoPermission();
+         }
+ 
+         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
+@@ -2271,6 +2274,23 @@ public class TelephonyProvider extends ContentProvider
+         throw new SecurityException("No permission to write APN settings");
+     }
+ 
++    private void checkReadSimInfoPermission() {
++        try {
++            // Even if the caller doesn't have READ_PHONE_STATE, we'll let them access sim_info as
++            // long as they have the more restrictive write_apn_settings or carrier priv.
++            checkPermission();
++            return;
++        } catch (SecurityException e) {
++            int status = getContext().checkCallingOrSelfPermission(
++                    "android.permission.READ_PHONE_STATE");
++            if (status == PackageManager.PERMISSION_GRANTED) {
++                return;
++            }
++            EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
++            throw new SecurityException("No READ_PHONE_STATE permission");
++        }
++    }
++
+     private DatabaseHelper mOpenHelper;
+ 
+     private void restoreDefaultAPN(int subId) {
+-- 
+2.17.1
+

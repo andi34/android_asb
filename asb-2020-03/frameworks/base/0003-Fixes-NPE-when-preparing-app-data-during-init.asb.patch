@@ -1,0 +1,40 @@
+From 39855af9d03ef79053c23adb4034f29eabf81dfc Mon Sep 17 00:00:00 2001
+From: Patrick Baumann <patb@google.com>
+Date: Wed, 6 Nov 2019 10:36:39 -0800
+Subject: [PATCH 3/3] Fixes NPE when preparing app data during init
+
+When deleting an unused static shared library on Q, the user manager was
+fetched via mContext.getSystemService. At this time during boot, the
+service wasn't registered and so null was returned. This has already
+been addressed in R with a move to injecting dependencies in the
+PackageManagerService constructor.
+
+Bug: 142083996
+Bug: 141413692
+Test: manual; remove static dependency on eng Q build and reboot
+Change-Id: I8ae4e331d09b4734c54cdc6887b273705dce88b1
+Merged-In: I8ae4e331d09b4734c54cdc6887b273705dce88b1
+(cherry picked from commit 5d3fc339b57950fd8621cb410865e8800ccb6873)
+---
+ .../java/com/android/server/pm/PackageManagerService.java     | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index 426a9c7dec5..a483fd3b311 100644
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -19976,9 +19976,9 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
+             mSettings.writeKernelMappingLPr(ps);
+         }
+ 
+-        final UserManager um = mContext.getSystemService(UserManager.class);
++        final UserManagerService um = sUserManager;
+         UserManagerInternal umInternal = getUserManagerInternal();
+-        for (UserInfo user : um.getUsers()) {
++        for (UserInfo user : um.getUsers(false /* excludeDying */)) {
+             final int flags;
+             if (umInternal.isUserUnlockingOrUnlocked(user.id)) {
+                 flags = StorageManager.FLAG_STORAGE_DE | StorageManager.FLAG_STORAGE_CE;
+-- 
+2.17.1
+

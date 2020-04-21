@@ -1,0 +1,64 @@
+From 4ac340ec80415f9b36619e6e332a581a4d9e9a47 Mon Sep 17 00:00:00 2001
+From: Hall Liu <hallliu@google.com>
+Date: Wed, 29 May 2019 16:09:49 -0700
+Subject: [PATCH] Add flag to default dialer change dialog
+
+Add PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS to default dialer
+change dialog to prevent clickjacking.
+
+Fixes: 132275252
+Test: manual. CTS infeasible since it's UI.
+Change-Id: I0d5997915a71e317d5c0d654a499d8cbd21f2299
+Merged-In: I0d5997915a71e317d5c0d654a499d8cbd21f2299
+(cherry picked from commit 1a02fa9e6ee08705b96fa2b32dfd2ee1d651e8ec)
+---
+ .../components/ChangeDefaultDialerDialog.java | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/src/com/android/server/telecom/components/ChangeDefaultDialerDialog.java b/src/com/android/server/telecom/components/ChangeDefaultDialerDialog.java
+index 107389be..2becabcc 100644
+--- a/src/com/android/server/telecom/components/ChangeDefaultDialerDialog.java
++++ b/src/com/android/server/telecom/components/ChangeDefaultDialerDialog.java
+@@ -16,6 +16,8 @@
+ 
+ package com.android.server.telecom.components;
+ 
++import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++
+ import android.content.Context;
+ import android.content.DialogInterface;
+ import android.content.pm.ApplicationInfo;
+@@ -34,6 +36,8 @@ import android.text.TextUtils;
+ import android.text.style.ForegroundColorSpan;
+ import android.text.style.StyleSpan;
+ import android.util.Log;
++import android.view.WindowManager;
++import android.view.Window;
+ 
+ import com.android.internal.app.AlertActivity;
+ import com.android.internal.app.AlertController;
+@@ -80,6 +84,21 @@ public class ChangeDefaultDialerDialog extends AlertActivity implements
+         }
+     }
+ 
++    @Override
++    public void onStart() {
++        super.onStart();
++        getWindow().addPrivateFlags(PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS);
++    }
++
++    @Override
++    public void onStop() {
++        final Window window = getWindow();
++        final WindowManager.LayoutParams attrs = window.getAttributes();
++        attrs.privateFlags &= ~PRIVATE_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
++        window.setAttributes(attrs);
++        super.onStop();
++    }
++
+     private boolean canChangeToProvidedPackage(String oldPackage, String newPackage) {
+         final TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+         if (!tm.isVoiceCapable()) {
+-- 
+2.17.1
+

@@ -1,0 +1,96 @@
+From 6579fc7db94892bf377a83155ce44fc099ac6a55 Mon Sep 17 00:00:00 2001
+From: "D. Richard Hipp" <drh@hwaci.com>
+Date: Tue, 3 Sep 2019 17:39:12 +0000
+Subject: [PATCH 1/2] Disable the undocumented rtreenode() SQL function that is
+ only used for testing, except when doing a build that is specifically
+ intended for testing.
+
+Change-Id: I51cf0c937234a38f0a21eceb93d9abb330cdc034
+---
+ README.version      | 4 ++--
+ dist/orig/sqlite3.c | 7 +++++--
+ dist/sqlite3.c      | 7 +++++--
+ 3 files changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/README.version b/README.version
+index 0c7f39c..8efcffd 100644
+--- a/README.version
++++ b/README.version
+@@ -1,4 +1,4 @@
+-URL: https://www.sqlite.org/src/info/4cb67252d39fc537
+-Version: 3.9.3 4cb67252d39fc537601f75532ec8271994aed8bae4d20ba48a3262b52ed004c0
++URL: https://sqlite.org/src/info/7b4583f932ff0933
++Version: 3.9.3 7b4583f932ff0933280aa73ee69294b488f96d4f2bdc8422cd0136d944d9fb60
+ This patch fixes Magellan SQLite Security Vulnerability as in b/121156452
+ BugComponent: 24950
+diff --git a/dist/orig/sqlite3.c b/dist/orig/sqlite3.c
+index 7021588..087e02e 100644
+--- a/dist/orig/sqlite3.c
++++ b/dist/orig/sqlite3.c
+@@ -157379,7 +157379,7 @@ static int rtreeInit(
+   return rc;
+ }
+ 
+-
++#if defined(SQLITE_TEST)
+ /*
+ ** Implementation of a scalar function that decodes r-tree nodes to
+ ** human readable strings. This can be used for debugging and analysis.
+@@ -157440,6 +157440,7 @@ static void rtreenode(sqlite3_context *ctx, int nArg, sqlite3_value **apArg){
+   
+   sqlite3_result_text(ctx, zText, -1, sqlite3_free);
+ }
++#endif
+ 
+ /* This routine implements an SQL function that returns the "depth" parameter
+ ** from the front of a blob that is an r-tree node.  For example:
+@@ -157469,9 +157470,11 @@ static void rtreedepth(sqlite3_context *ctx, int nArg, sqlite3_value **apArg){
+ */
+ SQLITE_PRIVATE int sqlite3RtreeInit(sqlite3 *db){
+   const int utf8 = SQLITE_UTF8;
+-  int rc;
++  int rc = SQLITE_OK;
+ 
++#if defined(SQLITE_TEST)
+   rc = sqlite3_create_function(db, "rtreenode", 2, utf8, 0, rtreenode, 0, 0);
++#endif
+   if( rc==SQLITE_OK ){
+     rc = sqlite3_create_function(db, "rtreedepth", 1, utf8, 0,rtreedepth, 0, 0);
+   }
+diff --git a/dist/sqlite3.c b/dist/sqlite3.c
+index ce99f63..581a6a4 100644
+--- a/dist/sqlite3.c
++++ b/dist/sqlite3.c
+@@ -157409,7 +157409,7 @@ static int rtreeInit(
+   return rc;
+ }
+ 
+-
++#if defined(SQLITE_TEST)
+ /*
+ ** Implementation of a scalar function that decodes r-tree nodes to
+ ** human readable strings. This can be used for debugging and analysis.
+@@ -157470,6 +157470,7 @@ static void rtreenode(sqlite3_context *ctx, int nArg, sqlite3_value **apArg){
+   
+   sqlite3_result_text(ctx, zText, -1, sqlite3_free);
+ }
++#endif
+ 
+ /* This routine implements an SQL function that returns the "depth" parameter
+ ** from the front of a blob that is an r-tree node.  For example:
+@@ -157499,9 +157500,11 @@ static void rtreedepth(sqlite3_context *ctx, int nArg, sqlite3_value **apArg){
+ */
+ SQLITE_PRIVATE int sqlite3RtreeInit(sqlite3 *db){
+   const int utf8 = SQLITE_UTF8;
+-  int rc;
++  int rc = SQLITE_OK;
+ 
++#if defined(SQLITE_TEST)
+   rc = sqlite3_create_function(db, "rtreenode", 2, utf8, 0, rtreenode, 0, 0);
++#endif
+   if( rc==SQLITE_OK ){
+     rc = sqlite3_create_function(db, "rtreedepth", 1, utf8, 0,rtreedepth, 0, 0);
+   }
+-- 
+2.17.1
+

@@ -1,0 +1,34 @@
+From b81604fd22a8fa8a30dd9ccfb8bb8863c336a2bc Mon Sep 17 00:00:00 2001
+From: Matthew Maurer <mmaurer@google.com>
+Date: Thu, 28 Mar 2019 14:51:45 -0700
+Subject: [PATCH] Remove potential double free
+
+Janis noticed that GetAuthTokenKey has ownership retained by the
+implementer, but the caller in libgatekeeper is delete[]ing it.
+
+Bug: 120610663
+Bug: 129768470
+Test: gatekeeper-unit-tests, Gatekeeper 1.0 VTS against Trusty
+Change-Id: I67171d707706b1ebe5caad47447762144495e28b
+(cherry picked from commit 6d2ee18a9af8eb9d8580850e434d21e4481fa36e)
+(cherry picked from commit 303e6db4d5fbdd42be5bfda1419c759f8e8e4626)
+(cherry picked from commit 9d4b63592231755c52124b2ea7d57ee2b2c35ef6)
+---
+ gatekeeper.cpp | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/gatekeeper.cpp b/gatekeeper.cpp
+index 44993cf..607da7a 100644
+--- a/gatekeeper.cpp
++++ b/gatekeeper.cpp
+@@ -235,7 +235,6 @@ void GateKeeper::MintAuthToken(UniquePtr<uint8_t> *auth_token, uint32_t *length,
+         uint32_t hash_len = (uint32_t)((uint8_t *)&token->hmac - (uint8_t *)token);
+         ComputeSignature(token->hmac, sizeof(token->hmac), auth_token_key, key_len,
+                 reinterpret_cast<uint8_t *>(token), hash_len);
+-        delete[] auth_token_key;
+     } else {
+         memset(token->hmac, 0, sizeof(token->hmac));
+     }
+-- 
+2.17.1
+

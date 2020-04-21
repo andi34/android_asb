@@ -1,0 +1,42 @@
+From e00db96362d18c0a76a6047fe7a08ad2870ab4e6 Mon Sep 17 00:00:00 2001
+From: Sterling Huber <hubers@google.com>
+Date: Thu, 7 Nov 2019 11:04:03 -0800
+Subject: [PATCH 3/3] RESTRICT AUTOMERGE Make toasts non-clickable
+
+Since enforcement was only on client-side, in Toast class, an app could
+use reflection (or other means) to make the Toast clickable. This is a
+security vulnerability since it allows tapjacking, that is, intercept touch
+events and do stuff like steal PINs and passwords.
+
+This CL brings the enforcement to the system by applying flag
+FLAG_NOT_TOUCHABLE.
+
+Test: atest CtsWindowManagetDeviceTestCases:ToastTest
+Test: Construct app that uses reflection to remove flag FLAG_NOT_TOUCHABLE and
+      log click events. Then:
+      1) Observe click events are logged without this CL.
+      2) Observer click events are not logged with this CL.
+Bug: 128674520
+
+(cherry picked from commit 6bf18c39d9fc727523fa3201567b836032bb2114)
+Change-Id: Ica346c853dcb9a1e494f7143ba1c38d22c0003d0
+---
+ .../core/java/com/android/server/policy/PhoneWindowManager.java | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/services/core/java/com/android/server/policy/PhoneWindowManager.java b/services/core/java/com/android/server/policy/PhoneWindowManager.java
+index 889c52afa37..4f5d17f6f25 100644
+--- a/services/core/java/com/android/server/policy/PhoneWindowManager.java
++++ b/services/core/java/com/android/server/policy/PhoneWindowManager.java
+@@ -2375,6 +2375,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+                     attrs.hideTimeoutMilliseconds = TOAST_WINDOW_TIMEOUT;
+                 }
+                 attrs.windowAnimations = com.android.internal.R.style.Animation_Toast;
++                // Toasts can't be clickable
++                attrs.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                 break;
+         }
+ 
+-- 
+2.17.1
+

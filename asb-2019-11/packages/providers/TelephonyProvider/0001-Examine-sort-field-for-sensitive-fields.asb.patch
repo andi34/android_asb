@@ -1,0 +1,48 @@
+From afcdcec1401660a7906f1630bf03417a6acb5084 Mon Sep 17 00:00:00 2001
+From: Hall Liu <hallliu@google.com>
+Date: Wed, 17 Jul 2019 15:51:07 -0700
+Subject: [PATCH 1/2] Examine sort field for sensitive fields
+
+Like with the selection field, the sort field poses a risk for SQL
+injection attacks that can expose sensitive information. Filter the
+supplied sort argument for sensitive fields and check permissions if
+it contains any.
+
+Bug: 135268868
+Test: CTS
+Change-Id: I3ded273feca374410bbe33312e5148ff5096975c
+Merged-In: I3ded273feca374410bbe33312e5148ff5096975c
+Merged-In: Ia7be0ecdfca5e7adf6163dc015a413a98f1b9287
+(cherry picked from commit 1e324464f36eff033af64099fe6bb6a7d1ab0463)
+---
+ .../android/providers/telephony/TelephonyProvider.java   | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/src/com/android/providers/telephony/TelephonyProvider.java b/src/com/android/providers/telephony/TelephonyProvider.java
+index 0dd6bdb..80b5954 100644
+--- a/src/com/android/providers/telephony/TelephonyProvider.java
++++ b/src/com/android/providers/telephony/TelephonyProvider.java
+@@ -1723,15 +1723,16 @@ public class TelephonyProvider extends ContentProvider
+ 
+         if (match != URL_SIMINFO) {
+             // Determine if we need to do a check for fields in the selection
+-            boolean selectionContainsSensitiveFields;
++            boolean selectionOrSortContainsSensitiveFields;
+             try {
+-                selectionContainsSensitiveFields = containsSensitiveFields(selection);
++                selectionOrSortContainsSensitiveFields = containsSensitiveFields(selection);
++                selectionOrSortContainsSensitiveFields |= containsSensitiveFields(sort);
+             } catch (Exception e) {
+                 // Malformed sql, check permission anyway.
+-                selectionContainsSensitiveFields = true;
++                selectionOrSortContainsSensitiveFields = true;
+             }
+ 
+-            if (selectionContainsSensitiveFields) {
++            if (selectionOrSortContainsSensitiveFields) {
+                 try {
+                     checkPermission();
+                 } catch (SecurityException e) {
+-- 
+2.17.1
+

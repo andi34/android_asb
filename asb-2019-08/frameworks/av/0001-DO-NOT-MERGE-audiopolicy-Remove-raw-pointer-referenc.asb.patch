@@ -1,0 +1,522 @@
+From 2f0244b9f281f03318900ed58fff51fbfcc020a3 Mon Sep 17 00:00:00 2001
+From: Mikhail Naganov <mnaganov@google.com>
+Date: Tue, 5 Mar 2019 16:55:28 -0800
+Subject: [PATCH 1/4] DO NOT MERGE: audiopolicy: Remove raw pointer references
+ to AudioMix
+
+AudioInputDescriptor, AudioOutputDescriptor, and AudioSession used
+to reference AudioMix instances using a raw pointer. This isn't
+safe as AudioMix was owned by AudioPolicyMix, which is not
+referenced by descriptors.
+
+Change AudioMix* pointers in Audio{Input|Output}Descriptor and
+AudioSession to wp<AudioPolicyMix> which reflects their
+relationship correctly.
+
+To ensure that code does not operate on AudioMix instances
+independently from AudioPolicyMix, and to avoid introducing
+a lot of getter / setter methods into AudioPolicyMix, make
+the latter to inherit AudioMix. This makes sense because
+AudioPolicyMix is essentially a ref-counted version of AudioMix.
+
+Bug: 124899895
+Test: build and sanity check on angler,
+      build angler with USE_CONFIGURABLE_AUDIO_POLICY := 1
+Merged-In: Ic508caedefe721ed7e7ba6ee3e9175ba9e8dc23a
+Change-Id: Ic508caedefe721ed7e7ba6ee3e9175ba9e8dc23a
+(cherry picked from commit 24ea4727726adbeebfc5779614a3cb0e44208cde)
+---
+ .../include/AudioInputDescriptor.h            |  4 +-
+ .../include/AudioOutputDescriptor.h           |  4 +-
+ .../include/AudioPolicyMix.h                  | 15 +++---
+ .../managerdefinitions/include/AudioSession.h |  5 +-
+ .../src/AudioInputDescriptor.cpp              |  1 +
+ .../src/AudioOutputDescriptor.cpp             | 10 ++--
+ .../managerdefinitions/src/AudioPolicyMix.cpp | 48 ++++++++-----------
+ .../managerdefinitions/src/AudioSession.cpp   |  8 ++--
+ .../managerdefault/AudioPolicyManager.cpp     | 46 +++++++++---------
+ .../managerdefault/AudioPolicyManager.h       |  4 +-
+ 10 files changed, 72 insertions(+), 73 deletions(-)
+
+diff --git a/services/audiopolicy/common/managerdefinitions/include/AudioInputDescriptor.h b/services/audiopolicy/common/managerdefinitions/include/AudioInputDescriptor.h
+index f2b39f2956..815f065f37 100644
+--- a/services/audiopolicy/common/managerdefinitions/include/AudioInputDescriptor.h
++++ b/services/audiopolicy/common/managerdefinitions/include/AudioInputDescriptor.h
+@@ -27,7 +27,7 @@
+ namespace android {
+ 
+ class IOProfile;
+-class AudioMix;
++class AudioPolicyMix;
+ 
+ // descriptor for audio inputs. Used to maintain current configuration of each opened audio input
+ // and keep track of the usage of this input.
+@@ -44,7 +44,7 @@ public:
+ 
+     audio_io_handle_t             mIoHandle;       // input handle
+     audio_devices_t               mDevice;         // current device this input is routed to
+-    AudioMix                      *mPolicyMix;     // non NULL when used by a dynamic policy
++    wp<AudioPolicyMix>            mPolicyMix;      // non NULL when used by a dynamic policy
+     const sp<IOProfile>           mProfile;        // I/O profile this output derives from
+ 
+     virtual void toAudioPortConfig(struct audio_port_config *dstConfig,
+diff --git a/services/audiopolicy/common/managerdefinitions/include/AudioOutputDescriptor.h b/services/audiopolicy/common/managerdefinitions/include/AudioOutputDescriptor.h
+index dd3f8ae353..b0cdba94cf 100644
+--- a/services/audiopolicy/common/managerdefinitions/include/AudioOutputDescriptor.h
++++ b/services/audiopolicy/common/managerdefinitions/include/AudioOutputDescriptor.h
+@@ -27,7 +27,7 @@
+ namespace android {
+ 
+ class IOProfile;
+-class AudioMix;
++class AudioPolicyMix;
+ class AudioPolicyClientInterface;
+ class DeviceDescriptor;
+ 
+@@ -124,7 +124,7 @@ public:
+     audio_io_handle_t mIoHandle;           // output handle
+     uint32_t mLatency;                  //
+     audio_output_flags_t mFlags;   //
+-    AudioMix *mPolicyMix;             // non NULL when used by a dynamic policy
++    wp<AudioPolicyMix> mPolicyMix;           // non NULL when used by a dynamic policy
+     sp<SwAudioOutputDescriptor> mOutput1;    // used by duplicated outputs: first output
+     sp<SwAudioOutputDescriptor> mOutput2;    // used by duplicated outputs: second output
+     uint32_t mDirectOpenCount; // number of clients using this output (direct outputs only)
+diff --git a/services/audiopolicy/common/managerdefinitions/include/AudioPolicyMix.h b/services/audiopolicy/common/managerdefinitions/include/AudioPolicyMix.h
+index 8f5ebefbae..c70da39de5 100644
+--- a/services/audiopolicy/common/managerdefinitions/include/AudioPolicyMix.h
++++ b/services/audiopolicy/common/managerdefinitions/include/AudioPolicyMix.h
+@@ -29,9 +29,11 @@ class SwAudioOutputDescriptor;
+ /**
+  * custom mix entry in mPolicyMixes
+  */
+-class AudioPolicyMix : public RefBase {
++class AudioPolicyMix : public AudioMix, public RefBase {
+ public:
+-    AudioPolicyMix() {}
++    AudioPolicyMix(const AudioMix &mix);
++    AudioPolicyMix(const AudioPolicyMix&) = delete;
++    AudioPolicyMix& operator=(const AudioPolicyMix&) = delete;
+ 
+     const sp<SwAudioOutputDescriptor> &getOutput() const;
+ 
+@@ -39,12 +41,7 @@ public:
+ 
+     void clearOutput();
+ 
+-    android::AudioMix *getMix();
+-
+-    void setMix(AudioMix &mix);
+-
+ private:
+-    AudioMix    mMix;                   // Audio policy mix descriptor
+     sp<SwAudioOutputDescriptor> mOutput;  // Corresponding output stream
+ };
+ 
+@@ -74,9 +71,9 @@ public:
+ 
+     audio_devices_t getDeviceAndMixForInputSource(audio_source_t inputSource,
+                                                   audio_devices_t availableDeviceTypes,
+-                                                  AudioMix **policyMix);
++                                                  sp<AudioPolicyMix> *policyMix);
+ 
+-    status_t getInputMixForAttr(audio_attributes_t attr, AudioMix **policyMix);
++    status_t getInputMixForAttr(audio_attributes_t attr, sp<AudioPolicyMix> *policyMix);
+ };
+ 
+ }; // namespace android
+diff --git a/services/audiopolicy/common/managerdefinitions/include/AudioSession.h b/services/audiopolicy/common/managerdefinitions/include/AudioSession.h
+index 388c25d11b..3b0ce71380 100644
+--- a/services/audiopolicy/common/managerdefinitions/include/AudioSession.h
++++ b/services/audiopolicy/common/managerdefinitions/include/AudioSession.h
+@@ -27,6 +27,7 @@
+ namespace android {
+ 
+ class AudioPolicyClientInterface;
++class AudioPolicyMix;
+ 
+ class AudioSession : public RefBase, public AudioSessionInfoUpdateListener
+ {
+@@ -39,7 +40,7 @@ public:
+                  audio_input_flags_t flags,
+                  uid_t uid,
+                  bool isSoundTrigger,
+-                 AudioMix* policyMix,
++                 const sp<AudioPolicyMix> &policyMix,
+                  AudioPolicyClientInterface *clientInterface);
+ 
+     status_t dump(int fd, int spaces, int index) const;
+@@ -72,7 +73,7 @@ private:
+     bool  mIsSoundTrigger;
+     uint32_t  mOpenCount;
+     uint32_t  mActiveCount;
+-    AudioMix* mPolicyMix; // non NULL when used by a dynamic policy
++    wp<AudioPolicyMix> mPolicyMix; // non NULL when used by a dynamic policy
+     AudioPolicyClientInterface* mClientInterface;
+     const AudioSessionInfoProvider* mInfoProvider;
+ };
+diff --git a/services/audiopolicy/common/managerdefinitions/src/AudioInputDescriptor.cpp b/services/audiopolicy/common/managerdefinitions/src/AudioInputDescriptor.cpp
+index c7d2ee4552..9a87751c8b 100644
+--- a/services/audiopolicy/common/managerdefinitions/src/AudioInputDescriptor.cpp
++++ b/services/audiopolicy/common/managerdefinitions/src/AudioInputDescriptor.cpp
+@@ -20,6 +20,7 @@
+ #include "AudioInputDescriptor.h"
+ #include "IOProfile.h"
+ #include "AudioGain.h"
++#include "AudioPolicyMix.h"
+ #include "HwModule.h"
+ #include <media/AudioPolicy.h>
+ #include <policy.h>
+diff --git a/services/audiopolicy/common/managerdefinitions/src/AudioOutputDescriptor.cpp b/services/audiopolicy/common/managerdefinitions/src/AudioOutputDescriptor.cpp
+index 79bbc548c6..124b73512a 100644
+--- a/services/audiopolicy/common/managerdefinitions/src/AudioOutputDescriptor.cpp
++++ b/services/audiopolicy/common/managerdefinitions/src/AudioOutputDescriptor.cpp
+@@ -19,6 +19,7 @@
+ 
+ #include <AudioPolicyInterface.h>
+ #include "AudioOutputDescriptor.h"
++#include "AudioPolicyMix.h"
+ #include "IOProfile.h"
+ #include "AudioGain.h"
+ #include "Volume.h"
+@@ -312,17 +313,18 @@ void SwAudioOutputDescriptor::changeRefCount(audio_stream_type_t stream,
+     } else {
+         mGlobalRefCount += delta;
+     }
++    sp<AudioPolicyMix> policyMix = mPolicyMix.promote();
+     if ((oldGlobalRefCount == 0) && (mGlobalRefCount > 0)) {
+-        if ((mPolicyMix != NULL) && ((mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0))
++        if ((policyMix != NULL) && ((policyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0))
+         {
+-            mClientInterface->onDynamicPolicyMixStateUpdate(mPolicyMix->mDeviceAddress,
++            mClientInterface->onDynamicPolicyMixStateUpdate(policyMix->mDeviceAddress,
+                     MIX_STATE_MIXING);
+         }
+ 
+     } else if ((oldGlobalRefCount > 0) && (mGlobalRefCount == 0)) {
+-        if ((mPolicyMix != NULL) && ((mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0))
++        if ((policyMix != NULL) && ((policyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0))
+         {
+-            mClientInterface->onDynamicPolicyMixStateUpdate(mPolicyMix->mDeviceAddress,
++            mClientInterface->onDynamicPolicyMixStateUpdate(policyMix->mDeviceAddress,
+                     MIX_STATE_IDLE);
+         }
+     }
+diff --git a/services/audiopolicy/common/managerdefinitions/src/AudioPolicyMix.cpp b/services/audiopolicy/common/managerdefinitions/src/AudioPolicyMix.cpp
+index 7ee98b675e..d88b2652a0 100644
+--- a/services/audiopolicy/common/managerdefinitions/src/AudioPolicyMix.cpp
++++ b/services/audiopolicy/common/managerdefinitions/src/AudioPolicyMix.cpp
+@@ -26,6 +26,10 @@
+ 
+ namespace android {
+ 
++AudioPolicyMix::AudioPolicyMix(const AudioMix &mix) : AudioMix(mix)
++{
++}
++
+ void AudioPolicyMix::setOutput(sp<SwAudioOutputDescriptor> &output)
+ {
+     mOutput = output;
+@@ -41,16 +45,6 @@ void AudioPolicyMix::clearOutput()
+     mOutput.clear();
+ }
+ 
+-void AudioPolicyMix::setMix(AudioMix &mix)
+-{
+-    mMix = mix;
+-}
+-
+-android::AudioMix *AudioPolicyMix::getMix()
+-{
+-    return &mMix;
+-}
+-
+ status_t AudioPolicyMixCollection::registerMix(String8 address, AudioMix mix,
+                                                sp<SwAudioOutputDescriptor> desc)
+ {
+@@ -59,12 +53,11 @@ status_t AudioPolicyMixCollection::registerMix(String8 address, AudioMix mix,
+         ALOGE("registerPolicyMixes(): mix for address %s already registered", address.string());
+         return BAD_VALUE;
+     }
+-    sp<AudioPolicyMix> policyMix = new AudioPolicyMix();
+-    policyMix->setMix(mix);
++    sp<AudioPolicyMix> policyMix = new AudioPolicyMix(mix);
+     add(address, policyMix);
+ 
+     if (desc != 0) {
+-        desc->mPolicyMix = policyMix->getMix();
++        desc->mPolicyMix = policyMix;
+         policyMix->setOutput(desc);
+     }
+     return NO_ERROR;
+@@ -110,8 +103,7 @@ status_t AudioPolicyMixCollection::getOutputForAttr(audio_attributes_t attribute
+     ALOGV("getOutputForAttr() querying %zu mixes:", size());
+     desc = 0;
+     for (size_t i = 0; i < size(); i++) {
+-        sp<AudioPolicyMix> policyMix = valueAt(i);
+-        AudioMix *mix = policyMix->getMix();
++        sp<AudioPolicyMix> mix = valueAt(i);
+ 
+         if (mix->mMixType == MIX_TYPE_PLAYERS) {
+             // TODO if adding more player rules (currently only 2), make rule handling "generic"
+@@ -208,7 +200,7 @@ status_t AudioPolicyMixCollection::getOutputForAttr(audio_attributes_t attribute
+                       (hasUidExcludeRules && uidExclusionFound) ||
+                       (hasUidMatchRules && !uidMatchFound))) {
+                 ALOGV("\tgetOutputForAttr will use mix %zu", i);
+-                desc = policyMix->getOutput();
++                desc = mix->getOutput();
+             }
+ 
+         } else if (mix->mMixType == MIX_TYPE_RECORDERS) {
+@@ -217,7 +209,7 @@ status_t AudioPolicyMixCollection::getOutputForAttr(audio_attributes_t attribute
+                     strncmp(attributes.tags + strlen("addr="),
+                             mix->mDeviceAddress.string(),
+                             AUDIO_ATTRIBUTES_TAGS_MAX_SIZE - strlen("addr=") - 1) == 0) {
+-                desc = policyMix->getOutput();
++                desc = mix->getOutput();
+             }
+         }
+         if (desc != 0) {
+@@ -228,12 +220,13 @@ status_t AudioPolicyMixCollection::getOutputForAttr(audio_attributes_t attribute
+     return BAD_VALUE;
+ }
+ 
+-audio_devices_t AudioPolicyMixCollection::getDeviceAndMixForInputSource(audio_source_t inputSource,
+-                                                                        audio_devices_t availDevices,
+-                                                                        AudioMix **policyMix)
++audio_devices_t AudioPolicyMixCollection::getDeviceAndMixForInputSource(
++        audio_source_t inputSource,
++        audio_devices_t availDevices,
++        sp<AudioPolicyMix> *policyMix)
+ {
+     for (size_t i = 0; i < size(); i++) {
+-        AudioMix *mix = valueAt(i)->getMix();
++        AudioPolicyMix *mix = valueAt(i).get();
+ 
+         if (mix->mMixType != MIX_TYPE_RECORDERS) {
+             continue;
+@@ -256,7 +249,8 @@ audio_devices_t AudioPolicyMixCollection::getDeviceAndMixForInputSource(audio_so
+     return AUDIO_DEVICE_NONE;
+ }
+ 
+-status_t AudioPolicyMixCollection::getInputMixForAttr(audio_attributes_t attr, AudioMix **policyMix)
++status_t AudioPolicyMixCollection::getInputMixForAttr(
++        audio_attributes_t attr, sp<AudioPolicyMix> *policyMix)
+ {
+     if (strncmp(attr.tags, "addr=", strlen("addr=")) != 0) {
+         return BAD_VALUE;
+@@ -266,8 +260,7 @@ status_t AudioPolicyMixCollection::getInputMixForAttr(audio_attributes_t attr, A
+ #ifdef LOG_NDEBUG
+     ALOGV("getInputMixForAttr looking for address %s\n  mixes available:", address.string());
+     for (size_t i = 0; i < size(); i++) {
+-            sp<AudioPolicyMix> policyMix = valueAt(i);
+-            AudioMix *mix = policyMix->getMix();
++            sp<AudioPolicyMix> mix = valueAt(i);
+             ALOGV("\tmix %zu address=%s", i, mix->mDeviceAddress.string());
+     }
+ #endif
+@@ -278,13 +271,14 @@ status_t AudioPolicyMixCollection::getInputMixForAttr(audio_attributes_t attr, A
+         return BAD_VALUE;
+     }
+     sp<AudioPolicyMix> audioPolicyMix = valueAt(index);
+-    AudioMix *mix = audioPolicyMix->getMix();
+ 
+-    if (mix->mMixType != MIX_TYPE_PLAYERS) {
++    if (audioPolicyMix->mMixType != MIX_TYPE_PLAYERS) {
+         ALOGW("getInputMixForAttr() bad policy mix type for address %s", address.string());
+         return BAD_VALUE;
+     }
+-    *policyMix = mix;
++    if (policyMix != nullptr) {
++        *policyMix = audioPolicyMix;
++    }
+     return NO_ERROR;
+ }
+ 
+diff --git a/services/audiopolicy/common/managerdefinitions/src/AudioSession.cpp b/services/audiopolicy/common/managerdefinitions/src/AudioSession.cpp
+index da983c5f94..498fa62135 100644
+--- a/services/audiopolicy/common/managerdefinitions/src/AudioSession.cpp
++++ b/services/audiopolicy/common/managerdefinitions/src/AudioSession.cpp
+@@ -18,6 +18,7 @@
+ //#define LOG_NDEBUG 0
+ 
+ #include <AudioPolicyInterface.h>
++#include "AudioPolicyMix.h"
+ #include "AudioSession.h"
+ #include "AudioGain.h"
+ #include "TypeConverter.h"
+@@ -34,7 +35,7 @@ AudioSession::AudioSession(audio_session_t session,
+                            audio_input_flags_t flags,
+                            uid_t uid,
+                            bool isSoundTrigger,
+-                           AudioMix* policyMix,
++                           const sp<AudioPolicyMix> &policyMix,
+                            AudioPolicyClientInterface *clientInterface) :
+     mSession(session), mInputSource(inputSource),
+     mConfig({ .format = format, .sample_rate = sampleRate, .channel_mask = channelMask}),
+@@ -77,9 +78,10 @@ uint32_t AudioSession::changeActiveCount(int delta)
+     if (event != RECORD_CONFIG_EVENT_NONE) {
+         // Dynamic policy callback:
+         // if input maps to a dynamic policy with an activity listener, notify of state change
+-        if ((mPolicyMix != NULL) && ((mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0))
++        sp<AudioPolicyMix> policyMix = mPolicyMix.promote();
++        if ((policyMix != NULL) && ((policyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0))
+         {
+-            mClientInterface->onDynamicPolicyMixStateUpdate(mPolicyMix->mDeviceAddress,
++            mClientInterface->onDynamicPolicyMixStateUpdate(policyMix->mDeviceAddress,
+                     (event == RECORD_CONFIG_EVENT_START) ? MIX_STATE_MIXING : MIX_STATE_IDLE);
+         }
+ 
+diff --git a/services/audiopolicy/managerdefault/AudioPolicyManager.cpp b/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
+index d265f11672..26453999e0 100644
+--- a/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
++++ b/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
+@@ -1106,10 +1106,9 @@ status_t AudioPolicyManager::startOutput(audio_io_handle_t output,
+     mOutputRoutes.incRouteActivity(session);
+ 
+     audio_devices_t newDevice;
+-    AudioMix *policyMix = NULL;
++    sp<AudioPolicyMix> policyMix = outputDesc->mPolicyMix.promote();
+     const char *address = NULL;
+-    if (outputDesc->mPolicyMix != NULL) {
+-        policyMix = outputDesc->mPolicyMix;
++    if (policyMix != NULL) {
+         address = policyMix->mDeviceAddress.string();
+         if ((policyMix->mRouteFlags & MIX_ROUTE_FLAG_RENDER) == MIX_ROUTE_FLAG_RENDER) {
+             newDevice = policyMix->mDeviceType;
+@@ -1262,12 +1261,13 @@ status_t AudioPolicyManager::stopOutput(audio_io_handle_t output,
+     if (outputDesc->mRefCount[stream] == 1) {
+         // Automatically disable the remote submix input when output is stopped on a
+         // re routing mix of type MIX_TYPE_RECORDERS
++        sp<AudioPolicyMix> policyMix = outputDesc->mPolicyMix.promote();
+         if (audio_is_remote_submix_device(outputDesc->mDevice) &&
+-                outputDesc->mPolicyMix != NULL &&
+-                outputDesc->mPolicyMix->mMixType == MIX_TYPE_RECORDERS) {
++                policyMix != NULL &&
++                policyMix->mMixType == MIX_TYPE_RECORDERS) {
+             setDeviceConnectionStateInt(AUDIO_DEVICE_IN_REMOTE_SUBMIX,
+                     AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE,
+-                    outputDesc->mPolicyMix->mDeviceAddress,
++                    policyMix->mDeviceAddress,
+                     "remote-submix");
+         }
+     }
+@@ -1415,7 +1415,7 @@ status_t AudioPolicyManager::getInputForAttr(const audio_attributes_t *attr,
+     String8 address = String8("");
+     audio_source_t inputSource = attr->source;
+     audio_source_t halInputSource;
+-    AudioMix *policyMix = NULL;
++    sp<AudioPolicyMix> policyMix;
+ 
+     if (inputSource == AUDIO_SOURCE_DEFAULT) {
+         inputSource = AUDIO_SOURCE_MIC;
+@@ -1491,7 +1491,7 @@ audio_io_handle_t AudioPolicyManager::getInputForDevice(audio_devices_t device,
+                                                         audio_format_t format,
+                                                         audio_channel_mask_t channelMask,
+                                                         audio_input_flags_t flags,
+-                                                        AudioMix *policyMix)
++                                                        const sp<AudioPolicyMix> &policyMix)
+ {
+     audio_io_handle_t input = AUDIO_IO_HANDLE_NONE;
+     audio_source_t halInputSource = inputSource;
+@@ -1681,10 +1681,11 @@ status_t AudioPolicyManager::startInput(audio_io_handle_t input,
+     mInputRoutes.incRouteActivity(session);
+ 
+     if (!inputDesc->isActive() || mInputRoutes.hasRouteChanged(session)) {
++        sp<AudioPolicyMix> policyMix = inputDesc->mPolicyMix.promote();
+         // if input maps to a dynamic policy with an activity listener, notify of state change
+-        if ((inputDesc->mPolicyMix != NULL)
+-                && ((inputDesc->mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0)) {
+-            mpClientInterface->onDynamicPolicyMixStateUpdate(inputDesc->mPolicyMix->mDeviceAddress,
++        if ((policyMix != NULL)
++                && ((policyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0)) {
++            mpClientInterface->onDynamicPolicyMixStateUpdate(policyMix->mDeviceAddress,
+                     MIX_STATE_MIXING);
+         }
+ 
+@@ -1703,10 +1704,10 @@ status_t AudioPolicyManager::startInput(audio_io_handle_t input,
+         // For remote submix (a virtual device), we open only one input per capture request.
+         if (audio_is_remote_submix_device(inputDesc->mDevice)) {
+             String8 address = String8("");
+-            if (inputDesc->mPolicyMix == NULL) {
++            if (policyMix == NULL) {
+                 address = String8("0");
+-            } else if (inputDesc->mPolicyMix->mMixType == MIX_TYPE_PLAYERS) {
+-                address = inputDesc->mPolicyMix->mDeviceAddress;
++            } else if (policyMix->mMixType == MIX_TYPE_PLAYERS) {
++                address = policyMix->mDeviceAddress;
+             }
+             if (address != "") {
+                 setDeviceConnectionStateInt(AUDIO_DEVICE_OUT_REMOTE_SUBMIX,
+@@ -1750,10 +1751,11 @@ status_t AudioPolicyManager::stopInput(audio_io_handle_t input,
+     mInputRoutes.decRouteActivity(session);
+ 
+     if (!inputDesc->isActive()) {
++        sp<AudioPolicyMix> policyMix = inputDesc->mPolicyMix.promote();
+         // if input maps to a dynamic policy with an activity listener, notify of state change
+-        if ((inputDesc->mPolicyMix != NULL)
+-                && ((inputDesc->mPolicyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0)) {
+-            mpClientInterface->onDynamicPolicyMixStateUpdate(inputDesc->mPolicyMix->mDeviceAddress,
++        if ((policyMix != NULL)
++                && ((policyMix->mCbFlags & AudioMix::kCbFlagNotifyActivity) != 0)) {
++            mpClientInterface->onDynamicPolicyMixStateUpdate(policyMix->mDeviceAddress,
+                     MIX_STATE_IDLE);
+         }
+ 
+@@ -1761,10 +1763,10 @@ status_t AudioPolicyManager::stopInput(audio_io_handle_t input,
+         // used by a policy mix of type MIX_TYPE_RECORDERS
+         if (audio_is_remote_submix_device(inputDesc->mDevice)) {
+             String8 address = String8("");
+-            if (inputDesc->mPolicyMix == NULL) {
++            if (policyMix == NULL) {
+                 address = String8("0");
+-            } else if (inputDesc->mPolicyMix->mMixType == MIX_TYPE_PLAYERS) {
+-                address = inputDesc->mPolicyMix->mDeviceAddress;
++            } else if (policyMix->mMixType == MIX_TYPE_PLAYERS) {
++                address = policyMix->mDeviceAddress;
+             }
+             if (address != "") {
+                 setDeviceConnectionStateInt(AUDIO_DEVICE_OUT_REMOTE_SUBMIX,
+@@ -3809,7 +3811,7 @@ status_t AudioPolicyManager::checkOutputsForDevice(const sp<DeviceDescriptor> de
+                                   address.string());
+                         }
+                         policyMix->setOutput(desc);
+-                        desc->mPolicyMix = policyMix->getMix();
++                        desc->mPolicyMix = policyMix;
+ 
+                     } else if (((desc->mFlags & AUDIO_OUTPUT_FLAG_DIRECT) == 0) &&
+                                     hasPrimaryOutput()) {
+@@ -4927,7 +4929,7 @@ sp<IOProfile> AudioPolicyManager::getInputProfile(audio_devices_t device,
+ 
+ 
+ audio_devices_t AudioPolicyManager::getDeviceAndMixForInputSource(audio_source_t inputSource,
+-                                                                  AudioMix **policyMix)
++                                                                  sp<AudioPolicyMix> *policyMix)
+ {
+     audio_devices_t availableDeviceTypes = mAvailableInputDevices.types() & ~AUDIO_DEVICE_BIT_IN;
+     audio_devices_t selectedDeviceFromMix =
+diff --git a/services/audiopolicy/managerdefault/AudioPolicyManager.h b/services/audiopolicy/managerdefault/AudioPolicyManager.h
+index 71bcd5f7e0..3db9dbc62a 100644
+--- a/services/audiopolicy/managerdefault/AudioPolicyManager.h
++++ b/services/audiopolicy/managerdefault/AudioPolicyManager.h
+@@ -627,7 +627,7 @@ private:
+                 audio_format_t format,
+                 audio_channel_mask_t channelMask,
+                 audio_input_flags_t flags,
+-                AudioMix *policyMix);
++                const sp<AudioPolicyMix> &policyMix);
+ 
+         // internal function to derive a stream type value from audio attributes
+         audio_stream_type_t streamTypefromAttributesInt(const audio_attributes_t *attr);
+@@ -641,7 +641,7 @@ private:
+         // select input device corresponding to requested audio source and return associated policy
+         // mix if any. Calls getDeviceForInputSource().
+         audio_devices_t getDeviceAndMixForInputSource(audio_source_t inputSource,
+-                                                        AudioMix **policyMix = NULL);
++                                                      sp<AudioPolicyMix> *policyMix = NULL);
+ 
+         // Called by setDeviceConnectionState().
+         status_t setDeviceConnectionStateInt(audio_devices_t device,
+-- 
+2.17.1
+

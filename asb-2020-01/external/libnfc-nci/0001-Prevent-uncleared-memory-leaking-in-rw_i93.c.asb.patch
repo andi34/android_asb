@@ -1,0 +1,44 @@
+From daa4d518d7c054b8025af2ac5a0839bb54d8d47d Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Sat, 5 Oct 2019 10:59:26 +0800
+Subject: [PATCH] Prevent uncleared memory leaking in rw_i93.c
+
+Bug: 139738828
+Test: manual
+Change-Id: I4e330d4ad1380dbd1e695f81b8183ca8b182b114
+Exempt-From-Owner-Approval: new owner approved
+(cherry picked from commit d8948d4a1fbb00abecc72227a1910d94633a84e8)
+---
+ src/nfc/tags/rw_i93.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/nfc/tags/rw_i93.c b/src/nfc/tags/rw_i93.c
+index b0e7fe7..b6d4472 100644
+--- a/src/nfc/tags/rw_i93.c
++++ b/src/nfc/tags/rw_i93.c
+@@ -2715,13 +2715,21 @@ void rw_i93_sm_format (BT_HDR *p_resp)
+         }
+ 
+         /* get buffer to store CC, zero length NDEF TLV and Terminator TLV */
+-        p_i93->p_update_data = (UINT8*) GKI_getbuf (RW_I93_FORMAT_DATA_LEN);
++        /* Block size could be either 4 or 8 or 16 or 32 bytes */
++        /* Get buffer for the largest block size I93_MAX_BLOCK_LENGH */
++        p_i93->p_update_data = (uint8_t*)GKI_getbuf(I93_MAX_BLOCK_LENGH);
+ 
+         if (!p_i93->p_update_data)
+         {
+             RW_TRACE_ERROR0 ("rw_i93_sm_format (): Cannot allocate buffer");
+             rw_i93_handle_error (NFC_STATUS_FAILED);
+             break;
++        } else if (p_i93->block_size > RW_I93_FORMAT_DATA_LEN) {
++            /* Possible leaking information from previous NFC transactions */
++            /* Clear previous values */
++            memset(p_i93->p_update_data, I93_ICODE_TLV_TYPE_NULL,
++                   I93_MAX_BLOCK_LENGH);
++            android_errorWriteLog(0x534e4554, "139738828");
+         }
+ 
+         p = p_i93->p_update_data;
+-- 
+2.17.1
+

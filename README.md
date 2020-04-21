@@ -17,6 +17,11 @@ repo forall -c "rm -rf *.asb.patch"
 
 - Add the next ASB folder and start from beginning
 
+## Rename all patch files
+
+```
+find . -name "*.patch" -exec rename 's/.patch$/.asb.patch/' {} \;
+```
 
 ### 2018
 
@@ -42,3 +47,15 @@ repo forall -c "rm -rf *.asb.patch"
 - https://review.lineageos.org/#/q/topic:n-asb-2019-05+(status:open+OR+status:merged)
 - https://review.lineageos.org/#/q/topic:n-asb-2019-06+(status:open OR status:merged)
 - https://review.lineageos.org/#/q/topic:n-asb-2019-07+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:n-asb-2019-08+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:N_asb_2019-09+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:n-asb-2019-10+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:n-asb-2019-11+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:n-asb-2019-12+(status:open OR status:merged)
+
+### 2020
+
+- https://review.lineageos.org/#/q/topic:N_asb_2020-01+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:N_asb_2020-02+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:N_asb_2020-03+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:N_asb_2020-04+(status:open OR status:merged)

@@ -1,0 +1,34 @@
+From 2cefd8fa9a99a254a23c260e9d8de266fe640421 Mon Sep 17 00:00:00 2001
+From: Chienyuan <chienyuanhuang@google.com>
+Date: Tue, 9 Jul 2019 15:09:56 +0800
+Subject: [PATCH 2/3] HidProfile: sync isPreferred() with HidHostService
+
+HidHostService allow to connect when priority is PRIORITY_UNDEFINED.
+HidProfile should return ture when priority is PRIORITY_UNDEFINED.
+Otherwise, the "Input device" toggle in off state when HID device
+connected.
+
+Bug: 132456322
+Test: manual
+Change-Id: Id7bae694c57aec17e019d591c0a677e3cb64f845
+(cherry picked from commit 830217f277e31e63d9ab8acd21ee2a8f81ee1c8f)
+---
+ .../src/com/android/settingslib/bluetooth/HidProfile.java       | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/packages/SettingsLib/src/com/android/settingslib/bluetooth/HidProfile.java b/packages/SettingsLib/src/com/android/settingslib/bluetooth/HidProfile.java
+index a9e8db59917..fb6a990a29f 100755
+--- a/packages/SettingsLib/src/com/android/settingslib/bluetooth/HidProfile.java
++++ b/packages/SettingsLib/src/com/android/settingslib/bluetooth/HidProfile.java
+@@ -121,7 +121,7 @@ public final class HidProfile implements LocalBluetoothProfile {
+ 
+     public boolean isPreferred(BluetoothDevice device) {
+         if (mService == null) return false;
+-        return mService.getPriority(device) > BluetoothProfile.PRIORITY_OFF;
++        return mService.getPriority(device) != BluetoothProfile.PRIORITY_OFF;
+     }
+ 
+     public int getPreferred(BluetoothDevice device) {
+-- 
+2.17.1
+

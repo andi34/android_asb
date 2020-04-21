@@ -1,0 +1,48 @@
+From a4d2977e804b299945ee1dc1d18ca6a4094d0b6f Mon Sep 17 00:00:00 2001
+From: George Chang <georgekgchang@google.com>
+Date: Tue, 9 Jul 2019 15:46:28 +0800
+Subject: [PATCH] [DO NOT MERGE]Prevent length underflow in NfcTag.cpp
+
+Bug: 124940143
+Test: Read Type4B Tag
+Merged-In: Ibdab756410bf55d701875279df3e289dbc9369d6
+Change-Id: Ibdab756410bf55d701875279df3e289dbc9369d6
+(cherry picked from commit 96a10332c8157a26f442e05ca52da8a2ec65cfc8)
+---
+ nci/jni/NfcTag.cpp | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+ mode change 100755 => 100644 nci/jni/NfcTag.cpp
+
+diff --git a/nci/jni/NfcTag.cpp b/nci/jni/NfcTag.cpp
+old mode 100755
+new mode 100644
+index c6e074bd..adc26197
+--- a/nci/jni/NfcTag.cpp
++++ b/nci/jni/NfcTag.cpp
+@@ -21,6 +21,7 @@
+ #include "NfcTag.h"
+ #include "JavaClassConstants.h"
+ #include "config.h"
++#include <log/log.h>
+ #include <ScopedLocalRef.h>
+ #include <ScopedPrimitiveArray.h>
+ 
+@@ -741,7 +742,14 @@ void NfcTag::fillNativeNfcTagMembers3 (JNIEnv* e, jclass tag_cls, jobject tag, t
+                 *****************/
+                 ALOGD ("%s: tech B; TARGET_TYPE_ISO14443_3B", fn);
+                 len = mTechParams [i].param.pb.sensb_res_len;
+-                len = len - 4; //subtract 4 bytes for NFCID0 at byte 2 through 5
++                if (len >= NFC_NFCID0_MAX_LEN) {
++                    // subtract 4 bytes for NFCID0 at byte 2 through 5
++                    len = len - NFC_NFCID0_MAX_LEN;
++                } else {
++                    android_errorWriteLog(0x534e4554, "124940143");
++                    ALOGE ("%s: sensb_res_len error", fn);
++                    len = 0;
++                }
+                 pollBytes.reset(e->NewByteArray(len));
+                 e->SetByteArrayRegion(pollBytes.get(), 0, len, (jbyte*) (mTechParams [i].param.pb.sensb_res+4));
+             }
+-- 
+2.17.1
+

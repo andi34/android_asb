@@ -1,0 +1,49 @@
+From 93c988f23f34ba54a9198bef6039c1166091185c Mon Sep 17 00:00:00 2001
+From: Steven Moreland <smoreland@google.com>
+Date: Mon, 7 Oct 2019 17:31:17 -0700
+Subject: [PATCH] FlattenableUtils::align memsets
+
+Bug: 141890807
+Test: boot, check data is zero'd
+
+[basilgello: Back-ported to 14.1:
+ libutils/include/utils/Flattenable.h -> include/utils/Flattenable.h]
+
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+
+Change-Id: I45aaeac369f4c5cf3eb44f61c233e00f870a5c79
+(cherry picked from commit bf824f8fa50d9f7390057278fefb58e83323a644)
+(cherry picked from commit e62a9d7669ac85844d4424474f5c88c096f7160b)
+---
+ include/utils/Flattenable.h | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/include/utils/Flattenable.h b/include/utils/Flattenable.h
+index 882a8b249..70204c417 100644
+--- a/include/utils/Flattenable.h
++++ b/include/utils/Flattenable.h
+@@ -19,6 +19,7 @@
+ 
+ 
+ #include <stdint.h>
++#include <string.h>
+ #include <sys/types.h>
+ #include <utils/Errors.h>
+ #include <utils/Debug.h>
+@@ -44,7 +45,12 @@ public:
+ 
+     template<int N>
+     static size_t align(void*& buffer) {
+-        return align<N>( const_cast<void const*&>(buffer) );
++        static_assert(!(N & (N - 1)), "Can only align to a power of 2.");
++        void* b = buffer;
++        buffer = reinterpret_cast<void*>((uintptr_t(buffer) + (N-1)) & ~(N-1));
++        size_t delta = size_t(uintptr_t(buffer) - uintptr_t(b));
++        memset(b, 0, delta);
++        return delta;
+     }
+ 
+     static void advance(void*& buffer, size_t& size, size_t offset) {
+-- 
+2.17.1
+

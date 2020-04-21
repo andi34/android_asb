@@ -1,0 +1,91 @@
+From 24f744bbfbb84e70507bd494abb144fc602a2f39 Mon Sep 17 00:00:00 2001
+From: Louis Dionne <ldionne@apple.com>
+Date: Wed, 4 Sep 2019 13:35:03 +0000
+Subject: [PATCH 3/5] DO NOT MERGE: [libc++] Move __clamp_to_integral to
+ <cmath>, and harden against min()/max() macros
+
+git-svn-id: https://llvm.org/svn/llvm-project/libcxx/trunk@370900 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit 87e6185621d332d2ef8695b94778663380c83bb9)
+
+Bug: https://bugs.chromium.org/p/chromium/issues/detail?id=994957
+Bug: http://b/139690488
+Change-Id: Ice92a8ea6f675be069a70c5ad1003cf99b4fc474
+(cherry picked from commit 82e0483c4a47233ed2f7bab545b32e5ddd474e59)
+(cherry picked from commit c2ca4c16d1e26b4a628cf7f3a21ef90daef9116f)
+[basilgello: Backport to 14.1
+ - add the code directly to include/cmath
+ - add <limits> for std::numeric_limits ]
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+---
+ include/cmath | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/include/cmath b/include/cmath
+index 5f9aaedd5..035cea840 100644
+--- a/include/cmath
++++ b/include/cmath
+@@ -299,6 +299,7 @@ long double    truncl(long double x);
+ 
+ #include <__config>
+ #include <math.h>
++#include <limits>
+ #include <type_traits>
+ 
+ #ifdef _LIBCPP_MSVCRT
+@@ -633,6 +634,9 @@ isunordered(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
+ 
+ #endif  // isunordered
+ 
++_LIBCPP_PUSH_MACROS
++#include <__undef_macros>
++
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+ using ::signbit;
+@@ -1624,6 +1628,36 @@ inline _LIBCPP_INLINE_VISIBILITY
+ typename enable_if<is_integral<_A1>::value, double>::type
+ trunc(_A1 __lcpp_x) _NOEXCEPT {return trunc((double)__lcpp_x);}
+ 
++template <class _IntT, class _FloatT,
++    bool _FloatBigger = (numeric_limits<_FloatT>::digits > numeric_limits<_IntT>::digits),
++    int _Bits = (numeric_limits<_IntT>::digits - numeric_limits<_FloatT>::digits)>
++_LIBCPP_INLINE_VISIBILITY
++_LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float() _NOEXCEPT {
++  static_assert(is_floating_point<_FloatT>::value, "must be a floating point type");
++  static_assert(is_integral<_IntT>::value, "must be an integral type");
++  static_assert(numeric_limits<_FloatT>::radix == 2, "FloatT has incorrect radix");
++  static_assert(is_same<_FloatT, float>::value || is_same<_FloatT, double>::value
++               || is_same<_FloatT,long double>::value, "unsupported floating point type");
++  return _FloatBigger ? numeric_limits<_IntT>::max() :  (numeric_limits<_IntT>::max() >> _Bits << _Bits);
++}
++
++// Convert a floating point number to the specified integral type after
++// clamping to the integral types representable range.
++//
++// The behavior is undefined if `__r` is NaN.
++template <class _IntT, class _RealT>
++_LIBCPP_INLINE_VISIBILITY
++_IntT __clamp_to_integral(_RealT __r) _NOEXCEPT {
++  using _Lim = numeric_limits<_IntT>;
++  const _IntT _MaxVal = std::__max_representable_int_for_float<_IntT, _RealT>();
++  if (__r >= ::nextafter(static_cast<_RealT>(_MaxVal), INFINITY)) {
++    return _Lim::max();
++  } else if (__r <= _Lim::lowest()) {
++    return _Lim::min();
++  }
++  return static_cast<_IntT>(__r);
++}
++
+ #endif // !_LIBCPP_MSVCRT
+ 
+ using ::acosl;
+@@ -1694,4 +1728,6 @@ using ::lgammaf;
+ #endif // __sun__
+ _LIBCPP_END_NAMESPACE_STD
+ 
++_LIBCPP_POP_MACROS
++
+ #endif  // _LIBCPP_CMATH
+-- 
+2.17.1
+

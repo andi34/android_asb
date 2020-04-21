@@ -1,0 +1,129 @@
+From 7416dc83c96b1814c4782c0f30684cde5fdc84aa Mon Sep 17 00:00:00 2001
+From: Louis Dionne <ldionne@apple.com>
+Date: Wed, 4 Sep 2019 12:48:32 +0000
+Subject: [PATCH 2/5] DO NOT MERGE: [libc++] Add `__truncating_cast` for safely
+ casting float types to integers
+
+This is needed anytime we need to clamp an arbitrary floating point
+value to an integer type.
+
+Thanks to Eric Fiselier for the patch.
+
+Differential Revision: https://reviews.llvm.org/D66836
+
+git-svn-id: https://llvm.org/svn/llvm-project/libcxx/trunk@370891 91177308-0d34-0410-b5e6-96231b3b80d8
+(cherry picked from commit c9ac8d533010d8915bcfdecab891fb451f71ce74)
+(cherry picked from commit 4561f55204960c0b3bc4594089ddcf56e5655cad)
+
+Bug: https://bugs.chromium.org/p/chromium/issues/detail?id=994957
+Bug: http://b/139690488
+Change-Id: Icc81b5f68f0f87b74ccd4eba5971fd1e14ef13a5
+(cherry picked from commit 66ddc699d1ffc37f4ced50af186b480dbc88d44e)
+[basilgello: Backport to 14.1
+ - the include/math.h does not exist, and the next commit moves the code
+   added in this commit to include/cmath so adding only test here ]
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+---
+ .../numerics/clamp_to_integral.pass.cpp       | 90 +++++++++++++++++++
+ 1 file changed, 90 insertions(+)
+ create mode 100644 test/libcxx/numerics/clamp_to_integral.pass.cpp
+
+diff --git a/test/libcxx/numerics/clamp_to_integral.pass.cpp b/test/libcxx/numerics/clamp_to_integral.pass.cpp
+new file mode 100644
+index 000000000..cb3336f52
+--- /dev/null
++++ b/test/libcxx/numerics/clamp_to_integral.pass.cpp
+@@ -0,0 +1,90 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++// __clamp_to_integral<IntT>(RealT)
++
++// Test the conversion function that truncates floating point types to the
++// closest representable value for the specified integer type, or
++// numeric_limits<IntT>::max()/min() if the value isn't representable.
++
++#include <limits>
++#include <cassert>
++#include <cmath>
++
++template <class IntT>
++void test() {
++  typedef std::numeric_limits<IntT> Lim;
++  const bool MaxIsRepresentable = sizeof(IntT) < 8;
++  const bool IsSigned = std::is_signed<IntT>::value;
++  struct TestCase {
++    double Input;
++    IntT Expect;
++    bool IsRepresentable;
++  } TestCases[] = {
++      {0, 0, true},
++      {1, 1, true},
++      {IsSigned ? static_cast<IntT>(-1) : 0,
++       IsSigned ? static_cast<IntT>(-1) : 0, true},
++      {Lim::lowest(), Lim::lowest(), true},
++      {static_cast<double>(Lim::max()), Lim::max(), MaxIsRepresentable},
++      {static_cast<double>(Lim::max()) + 1, Lim::max(), false},
++      {static_cast<double>(Lim::max()) + 1024, Lim::max(), false},
++      {nextafter(static_cast<double>(Lim::max()), INFINITY), Lim::max(), false},
++  };
++  for (TestCase TC : TestCases) {
++    auto res = std::__clamp_to_integral<IntT>(TC.Input);
++    assert(res == TC.Expect);
++    if (TC.IsRepresentable) {
++      auto other = static_cast<IntT>(std::trunc(TC.Input));
++      assert(res == other);
++    } else
++      assert(res == Lim::min() || res == Lim::max());
++  }
++}
++
++template <class IntT>
++void test_float() {
++  typedef std::numeric_limits<IntT> Lim;
++  const bool MaxIsRepresentable = sizeof(IntT) < 4;
++  ((void)MaxIsRepresentable);
++  const bool IsSigned = std::is_signed<IntT>::value;
++  struct TestCase {
++    float Input;
++    IntT Expect;
++    bool IsRepresentable;
++  } TestCases[] = {
++      {0, 0, true},
++      {1, 1, true},
++      {IsSigned ? static_cast<IntT>(-1) : 0,
++       IsSigned ? static_cast<IntT>(-1) : 0, true},
++      {Lim::lowest(), Lim::lowest(), true},
++      {static_cast<float>(Lim::max()), Lim::max(), MaxIsRepresentable },
++       {nextafter(static_cast<float>(Lim::max()), INFINITY), Lim::max(), false},
++  };
++  for (TestCase TC : TestCases) {
++    auto res = std::__clamp_to_integral<IntT>(TC.Input);
++    assert(res == TC.Expect);
++    if (TC.IsRepresentable) {
++      auto other = static_cast<IntT>(std::trunc(TC.Input));
++      assert(res == other);
++    } else
++      assert(res == Lim::min() || res == Lim::max());
++  }
++}
++
++int main() {
++  test<short>();
++  test<unsigned short>();
++  test<int>();
++  test<unsigned>();
++  test<long long>();
++  test<unsigned long long>();
++  test_float<short>();
++  test_float<int>();
++  test_float<long long>();
++}
+-- 
+2.17.1
+

@@ -1,0 +1,50 @@
+From 5884e9a9ad6f2ab24497d49f1795f2fe7480d292 Mon Sep 17 00:00:00 2001
+From: Cheney Ni <cheneyni@google.com>
+Date: Fri, 23 Aug 2019 23:05:19 +0800
+Subject: [PATCH] DO NOT MERGE: AdapterService: Check the PIN code length
+ before using
+
+The length is assigned by the framework. We should be better to check
+again before using, and dropped any unexcepted input.
+
+Bug: 139287605
+Test: PoC
+Change-Id: Ie2dd01e0b192e7ed1fe4b464618ddfa415dbf15c
+(cherry picked from commit 3d7549de501ec15f973ff176435c07de018643b5)
+---
+ .../android/bluetooth/btservice/AdapterService.java  | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/src/com/android/bluetooth/btservice/AdapterService.java b/src/com/android/bluetooth/btservice/AdapterService.java
+index 14901c6e..0b2cd21d 100644
+--- a/src/com/android/bluetooth/btservice/AdapterService.java
++++ b/src/com/android/bluetooth/btservice/AdapterService.java
+@@ -1984,6 +1984,12 @@ public class AdapterService extends Service {
+             return false;
+         }
+ 
++        if (pinCode.length != len) {
++            android.util.EventLog.writeEvent(0x534e4554, "139287605", -1,
++                    "PIN code length mismatch");
++            return false;
++        }
++
+         byte[] addr = Utils.getBytesFromAddress(device.getAddress());
+         return pinReplyNative(addr, accept, len, pinCode);
+     }
+@@ -1995,6 +2001,12 @@ public class AdapterService extends Service {
+             return false;
+         }
+ 
++        if (passkey.length != len) {
++            android.util.EventLog.writeEvent(0x534e4554, "139287605", -1,
++                    "Passkey length mismatch");
++            return false;
++        }
++
+         byte[] addr = Utils.getBytesFromAddress(device.getAddress());
+         return sspReplyNative(addr, AbstractionLayer.BT_SSP_VARIANT_PASSKEY_ENTRY, accept,
+                 Utils.byteArrayToInt(passkey));
+-- 
+2.17.1
+

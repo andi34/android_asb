@@ -1,0 +1,29 @@
+From c344e2572eee309d465423a129fb0668a0196b54 Mon Sep 17 00:00:00 2001
+From: Todd Kennedy <toddke@google.com>
+Date: Fri, 20 Sep 2019 13:45:15 -0700
+Subject: [PATCH 2/3] Only allow INSTALL_ALLOW_TEST from shell or root
+
+Bug: 141169173
+Test: Manual. App can't be installed as test-only
+Change-Id: Ib6dcca7901aa549d620448c0165c22270a3042be
+Merged-In: Ib6dcca7901aa549d620448c0165c22270a3042be
+(cherry picked from commit 702d394762a9b162cb2a2b04bb726fd8053f24d3)
+---
+ .../core/java/com/android/server/pm/PackageInstallerService.java | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/services/core/java/com/android/server/pm/PackageInstallerService.java b/services/core/java/com/android/server/pm/PackageInstallerService.java
+index d25abbf1ff8..f0385d39490 100644
+--- a/services/core/java/com/android/server/pm/PackageInstallerService.java
++++ b/services/core/java/com/android/server/pm/PackageInstallerService.java
+@@ -591,6 +591,7 @@ public class PackageInstallerService extends IPackageInstaller.Stub {
+ 
+             params.installFlags &= ~PackageManager.INSTALL_FROM_ADB;
+             params.installFlags &= ~PackageManager.INSTALL_ALL_USERS;
++            params.installFlags &= ~PackageManager.INSTALL_ALLOW_TEST;
+             params.installFlags |= PackageManager.INSTALL_REPLACE_EXISTING;
+         }
+ 
+-- 
+2.17.1
+
