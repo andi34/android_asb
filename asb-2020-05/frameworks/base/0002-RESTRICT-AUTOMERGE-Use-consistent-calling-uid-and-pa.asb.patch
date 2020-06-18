@@ -1,0 +1,71 @@
+From 1366ca0650e5539a6c5d34969814206e3c50b6ac Mon Sep 17 00:00:00 2001
+From: Riddle Hsu <riddlehsu@google.com>
+Date: Tue, 3 Mar 2020 14:36:21 +0800
+Subject: [PATCH 2/2] RESTRICT AUTOMERGE Use consistent calling uid and package
+ in navigateUpTo
+
+Originally, if the caller of navigateUpTo is alive, even the calling
+uid is set to the caller who launched the existing destination activity,
+the uid from caller process has higher priority to replace the given
+calling uid. So this change doesn't modify the existing behavior if
+the caller process is valid. Besides, the case of delivering new intent
+uses the source record as calling identity too, so the case of starting
+new activity should be consistent.
+
+Also forbid attaching null application thread to avoid unexpected state
+in process record.
+
+Bug: 144285917
+Test: bit FrameworksServicesTests:ActivityStackTests
+Test: bit CtsSecurityTestCases:ActivityManagerTest# \
+      testActivityManager_attachNullApplication
+Merged-In: I60732f430256d37cb926d08d093581f051c4afed
+Change-Id: I60732f430256d37cb926d08d093581f051c4afed
+(cherry picked from commit 1c9bf5cc54d0b32d8f3046c452e710b017c477c0)
+---
+ .../java/com/android/server/am/ActivityManagerService.java   | 5 ++++-
+ services/core/java/com/android/server/am/ActivityStack.java  | 5 +++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
+index aa6f124d63c..bfadc5d91eb 100644
+--- a/services/core/java/com/android/server/am/ActivityManagerService.java
++++ b/services/core/java/com/android/server/am/ActivityManagerService.java
+@@ -6456,7 +6456,7 @@ public final class ActivityManagerService extends ActivityManagerNative
+         }
+     }
+ 
+-    private final boolean attachApplicationLocked(IApplicationThread thread,
++    private boolean attachApplicationLocked(@NonNull IApplicationThread thread,
+             int pid) {
+ 
+         // Find the application record that is being attached...  either via
+@@ -6702,6 +6702,9 @@ public final class ActivityManagerService extends ActivityManagerNative
+ 
+     @Override
+     public final void attachApplication(IApplicationThread thread) {
++        if (thread == null) {
++            throw new SecurityException("Invalid application interface");
++        }
+         synchronized (this) {
+             int callingPid = Binder.getCallingPid();
+             final long origId = Binder.clearCallingIdentity();
+diff --git a/services/core/java/com/android/server/am/ActivityStack.java b/services/core/java/com/android/server/am/ActivityStack.java
+index de858e39b80..6b09879e907 100644
+--- a/services/core/java/com/android/server/am/ActivityStack.java
++++ b/services/core/java/com/android/server/am/ActivityStack.java
+@@ -3676,6 +3676,11 @@ final class ActivityStack {
+ 
+     final boolean navigateUpToLocked(ActivityRecord srec, Intent destIntent, int resultCode,
+             Intent resultData) {
++        if (srec.app == null || srec.app.thread == null) {
++            // Nothing to do if the caller is not attached, because this method should be called
++            // from an alive activity.
++            return false;
++        }
+         final TaskRecord task = srec.task;
+         final ArrayList<ActivityRecord> activities = task.mActivities;
+         final int start = activities.indexOf(srec);
+-- 
+2.17.1
+

@@ -1,0 +1,30 @@
+From 96d965ae7e2243c1d422f494433a0da576525984 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Fri, 20 Mar 2020 15:24:00 +0100
+Subject: [PATCH] Fix potential stack overflow caused by integer overflow
+
+Bug: 151155194
+Merged-In: I0655b0b62301f78cd8705cc7b0e4fc11522f00ca
+Change-Id: I0655b0b62301f78cd8705cc7b0e4fc11522f00ca
+(cherry picked from commit 1570b62c88d7c5b9c6bfe43da8cc16ea30d3e8df)
+---
+ stack/smp/smp_cmac.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/stack/smp/smp_cmac.c b/stack/smp/smp_cmac.c
+index b16466948..1c023fbb2 100644
+--- a/stack/smp/smp_cmac.c
++++ b/stack/smp/smp_cmac.c
+@@ -291,7 +291,8 @@ static BOOLEAN cmac_generate_subkey(BT_OCTET16 key)
+ BOOLEAN aes_cipher_msg_auth_code(BT_OCTET16 key, UINT8 *input, UINT16 length,
+                                  UINT16 tlen, UINT8 *p_signature)
+ {
+-    UINT16  len, diff;
++    UINT32  len;
++    UINT16  diff;
+     UINT16  n = (length + BT_OCTET16_LEN - 1) / BT_OCTET16_LEN;       /* n is number of rounds */
+     BOOLEAN ret = FALSE;
+ 
+-- 
+2.17.1
+

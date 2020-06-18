@@ -1,0 +1,55 @@
+From c820c9853d863c2f596f0425593aebc2f8fdde16 Mon Sep 17 00:00:00 2001
+From: Vasyl Gello <vasek.gello@gmail.com>
+Date: Tue, 5 May 2020 06:16:59 +0000
+Subject: [PATCH] Bump Security String to 2020-05-05
+
+Implemented:
+============
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+CVE-2020-0024   A-137015265     EoP     High            8.0, 8.1, 9, 10
+CVE-2020-0093   A-148705132     ID      High            8.0, 8.1, 9, 10
+CVE-2020-0096   A-145669109     EoP     Critical        8.0, 8.1, 9
+CVE-2020-0098   A-144285917     EoP     High            8.0, 8.1, 9, 10
+CVE-2020-0100   A-150156584     ID      High            8.0, 8.1
+CVE-2020-0101   A-144767096     ID      High            8.0, 8.1, 9, 10
+CVE-2020-0102   A-143231677     EoP     High            8.0, 8.1, 9, 10
+
+Not Implemented:
+================
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+None
+
+Not Applicable (platform source):
+=================================
+CVE:            References:     Type:   Severity:       Updated AOSP versions:
+CVE-2020-0092   A-145135488     ID      High            10
+CVE-2020-0094   A-148223871     EoP     High            9, 10
+CVE-2020-0097   A-145981139     EoP     High            9, 10
+CVE-2020-0103   A-148107188     RCE     Critical        9, 10
+CVE-2020-0104   A-144430870     ID      Moderate        9, 10
+CVE-2020-0105   A-144285084     EoP     High            9, 10
+CVE-2020-0106   A-148414207     ID      High            10
+CVE-2020-0109   A-148059175     EoP     High            9, 10
+
+Signed-off-by: Vasyl Gello <vasek.gello@gmail.com>
+Change-Id: Ide09bd6adbc346726f49eddc7ccaba488f6a4205
+---
+ core/version_defaults.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/version_defaults.mk b/core/version_defaults.mk
+index b3377d3670..94caf22679 100644
+--- a/core/version_defaults.mk
++++ b/core/version_defaults.mk
+@@ -131,7 +131,7 @@ ifeq "" "$(PLATFORM_SECURITY_PATCH)"
+     #  It must be of the form "YYYY-MM-DD" on production devices.
+     #  It must match one of the Android Security Patch Level strings of the Public Security Bulletins.
+     #  If there is no $PLATFORM_SECURITY_PATCH set, keep it empty.
+-    PLATFORM_SECURITY_PATCH := 2020-04-05
++    PLATFORM_SECURITY_PATCH := 2020-05-05
+ endif
+ 
+ ifeq "" "$(PLATFORM_BASE_OS)"
+-- 
+2.17.1
+

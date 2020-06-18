@@ -59,3 +59,5 @@ find . -name "*.patch" -exec rename 's/.patch$/.asb.patch/' {} \;
 - https://review.lineageos.org/#/q/topic:N_asb_2020-02+(status:open OR status:merged)
 - https://review.lineageos.org/#/q/topic:N_asb_2020-03+(status:open OR status:merged)
 - https://review.lineageos.org/#/q/topic:N_asb_2020-04+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:N_asb_2020-05+(status:open OR status:merged)
+- https://review.lineageos.org/#/q/topic:N_asb_2020-06+(status:open OR status:merged)

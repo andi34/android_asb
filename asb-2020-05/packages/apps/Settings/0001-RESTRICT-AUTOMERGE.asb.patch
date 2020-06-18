@@ -1,0 +1,73 @@
+From d23cbf92c7bb8a0a3e37dc6f1bff6b4e8a10a985 Mon Sep 17 00:00:00 2001
+From: Mill Chen <millchen@google.com>
+Date: Wed, 26 Feb 2020 23:55:51 +0800
+Subject: [PATCH] RESTRICT AUTOMERGE Allow LockScreenPattern to be launched in
+ the pinning screen
+
+If work profile lock is enabled and work app is pinned, users will get a
+black/white screen on the phone. That's because Settings is prevented
+from other apps launch any pages of Settings in the pinning mode.
+
+In order to launch some pages of Settings from other apps, we add a
+condition to the preventive mechanism and allow the activity inherited
+from SettingsBaseActivity to override the condition to have the activity
+to be launched from other apps in the pinning mode.
+
+Bug: 137015265
+Bug: 135604684
+Test: manual test
+Change-Id: I8070de79a83350d1658efcb19e983669dad0e673
+Merged-In: I8070de79a83350d1658efcb19e983669dad0e673
+(cherry picked from commit 3f4d3b4ac257451ccc1676f65321dedb2cb1870e)
+---
+ .../settings/ConfirmDeviceCredentialBaseActivity.java  |  5 +++++
+ src/com/android/settings/SettingsActivity.java         | 10 +++++++++-
+ 2 files changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/settings/ConfirmDeviceCredentialBaseActivity.java b/src/com/android/settings/ConfirmDeviceCredentialBaseActivity.java
+index d488d7a26c..6b6e5b9fb2 100644
+--- a/src/com/android/settings/ConfirmDeviceCredentialBaseActivity.java
++++ b/src/com/android/settings/ConfirmDeviceCredentialBaseActivity.java
+@@ -109,6 +109,11 @@ public abstract class ConfirmDeviceCredentialBaseActivity extends SettingsActivi
+         }
+     }
+ 
++    @Override
++    public boolean isLaunchableInTaskModePinned() {
++        return true;
++    }
++
+     public void prepareEnterAnimation() {
+         getFragment().prepareEnterAnimation();
+     }
+diff --git a/src/com/android/settings/SettingsActivity.java b/src/com/android/settings/SettingsActivity.java
+index aa1e890379..017c06a20e 100644
+--- a/src/com/android/settings/SettingsActivity.java
++++ b/src/com/android/settings/SettingsActivity.java
+@@ -523,7 +523,7 @@ public class SettingsActivity extends SettingsDrawerActivity
+     protected void onCreate(Bundle savedState) {
+         super.onCreate(savedState);
+ 
+-        if (isLockTaskModePinned() && !isSettingsRunOnTop()) {
++        if (isLockTaskModePinned() && !isSettingsRunOnTop() && !isLaunchableInTaskModePinned()) {
+             Log.w(LOG_TAG, "Devices lock task mode pinned.");
+             finish();
+         }
+@@ -1293,6 +1293,14 @@ public class SettingsActivity extends SettingsDrawerActivity
+         }
+         super.onActivityResult(requestCode, resultCode, data);
+     }
++
++    /**
++     * @return whether or not the activity can be launched from other apps in the pinning screen.
++     */
++    public boolean isLaunchableInTaskModePinned() {
++        return false;
++    }
++
+     private boolean isLockTaskModePinned() {
+         final ActivityManager activityManager =
+             getApplicationContext().getSystemService(ActivityManager.class);
+-- 
+2.17.1
+

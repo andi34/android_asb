@@ -1,0 +1,43 @@
+From a761e4f1cbbd381deaead82b14030c34b87abfb4 Mon Sep 17 00:00:00 2001
+From: Hansong Zhang <hsz@google.com>
+Date: Thu, 13 Feb 2020 11:40:44 -0800
+Subject: [PATCH] GattServcer: Check invalid offset
+
+Test: manual
+Bug: 143231677
+Merged-In: I0396380f431cdb7f91c78db6de9043ea0f373dfe
+Merged-In: I0ca22e7c60292d61c758120c1cd67f6e6edd8ae8
+Change-Id: I0ca22e7c60292d61c758120c1cd67f6e6edd8ae8
+(cherry picked from commit 30a2860ed19866159a0870c57a94ad8df0b1a683)
+---
+ service/gatt_server.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/service/gatt_server.cpp b/service/gatt_server.cpp
+index e70f093bc..41439b33f 100644
+--- a/service/gatt_server.cpp
++++ b/service/gatt_server.cpp
+@@ -16,6 +16,7 @@
+ 
+ #include "service/gatt_server.h"
+ 
++#include "osi/include/log.h"
+ #include "service/common/bluetooth/util/address_helper.h"
+ #include "service/hal/gatt_helpers.h"
+ #include "service/logging_helpers.h"
+@@ -312,6 +313,12 @@ bool GattServer::SendResponse(
+     return false;
+   }
+ 
++  if (offset < 0) {
++    android_errorWriteLog(0x534e4554, "143231677");
++    LOG(ERROR) << "Offset is less than 0 offset: " << offset;
++    return false;
++  }
++
+   if (value.size() + offset > BTGATT_MAX_ATTR_LEN) {
+     LOG(ERROR) << "Value is too large";
+     return false;
+-- 
+2.17.1
+

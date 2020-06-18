@@ -1,0 +1,34 @@
+From 5066f7a962f74ea22a1fd1df8a8ef62c507b92d4 Mon Sep 17 00:00:00 2001
+From: Shuzhen Wang <shuzhenwang@google.com>
+Date: Mon, 2 Mar 2020 14:52:12 -0800
+Subject: [PATCH] libexif: Fix read buffer overflow
+
+Make sure the number of bytes being copied from doesn't exceed the
+source buffer size.
+
+Test: testPocBug_148705132
+Bug: 148705132
+Change-Id: Ib0f8441f2d0d4ed33c324630a9400a8412209da7
+(cherry picked from commit 127f882f67b38def9b5424987c32e21064f4d49c)
+---
+ libexif/exif-data.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/libexif/exif-data.c b/libexif/exif-data.c
+index 67df4db..b8324b8 100644
+--- a/libexif/exif-data.c
++++ b/libexif/exif-data.c
+@@ -295,7 +295,9 @@ exif_data_save_data_entry (ExifData *data, ExifEntry *e,
+ 	/* Write the data. Fill unneeded bytes with 0. Do not crash with
+ 	 * e->data is NULL */
+ 	if (e->data) {
+-		memcpy (*d + 6 + doff, e->data, s);
++		unsigned int len = s;
++		if (e->size < s) len = e->size;
++		memcpy (*d + 6 + doff, e->data, len);
+ 	} else {
+ 		memset (*d + 6 + doff, 0, s);
+ 	}
+-- 
+2.17.1
+

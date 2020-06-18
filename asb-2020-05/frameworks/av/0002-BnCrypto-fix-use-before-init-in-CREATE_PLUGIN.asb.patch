@@ -1,0 +1,49 @@
+From 0599cad9d593185dd77c5120824282f90ce42c23 Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Tue, 4 Feb 2020 17:23:58 -0800
+Subject: [PATCH 2/2] BnCrypto: fix use-before-init in CREATE_PLUGIN
+
+Bug: 144767096
+Test: poc_ICrypto_283
+Merged-In: Id67dc9e793ee886e4cc49370d800c7f3580df313
+Merged-In: I81ff7cde5e1693f05c90380e879f74d0c4bce5f1
+Change-Id: If268553440b8a0cbbe011b5396974fd864a7d083
+(cherry picked from commit 4bbfb6d8815002fc79b26aebba5f3ad2226c468e)
+---
+ media/libmedia/ICrypto.cpp | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/media/libmedia/ICrypto.cpp b/media/libmedia/ICrypto.cpp
+index 0045cffc6..d9ab1078e 100644
+--- a/media/libmedia/ICrypto.cpp
++++ b/media/libmedia/ICrypto.cpp
+@@ -238,15 +238,23 @@ status_t BnCrypto::onTransact(
+         {
+             CHECK_INTERFACE(ICrypto, data, reply);
+ 
+-            uint8_t uuid[16];
+-            data.read(uuid, sizeof(uuid));
++            uint8_t uuid[16] = {0};
++            if (data.read(uuid, sizeof(uuid)) != NO_ERROR) {
++                android_errorWriteLog(0x534e4554, "144767096");
++                reply->writeInt32(BAD_VALUE);
++                return OK;
++            }
+ 
+             size_t opaqueSize = data.readInt32();
+             void *opaqueData = NULL;
+ 
+             if (opaqueSize > 0) {
+                 opaqueData = malloc(opaqueSize);
+-                data.read(opaqueData, opaqueSize);
++                if (data.read(opaqueData, opaqueSize) != NO_ERROR) {
++                    android_errorWriteLog(0x534e4554, "144767096");
++                    reply->writeInt32(BAD_VALUE);
++                    return OK;
++                }
+             }
+ 
+             reply->writeInt32(createPlugin(uuid, opaqueData, opaqueSize));
+-- 
+2.17.1
+
