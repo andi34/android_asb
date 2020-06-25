@@ -1,0 +1,125 @@
+From 7b01b0395aec5a3acc1d02bd1aef43d41ac8bec8 Mon Sep 17 00:00:00 2001
+From: Ted Wang <tedwang@google.com>
+Date: Tue, 26 Nov 2019 11:46:38 +0800
+Subject: [PATCH 1/2] Fix potential OOB write in
+ btm_read_remote_ext_features_complete
+
+Add event length check to avoid hci event sent from controller not
+correct.
+Add page number check to avoid page number is bigger than
+HCI_EXT_FEATURES_PAGE_MAX.
+
+Bug: 141552859
+Bug: 144205318
+Test: inject function
+Merged-In: Iaca4db4ee9bf27362f62aba0da088727e98955d1
+Change-Id: Iaca4db4ee9bf27362f62aba0da088727e98955d1
+(cherry picked from commit 140d8297ace9cd54a903a9cd3a079fd805030f1e)
+---
+ stack/btm/btm_acl.c     | 27 ++++++++++++++++++++++++++-
+ stack/btm/btm_int.h     |  2 +-
+ stack/btu/btu_hcif.c    |  2 +-
+ stack/include/hcidefs.h |  2 ++
+ 4 files changed, 30 insertions(+), 3 deletions(-)
+
+diff --git a/stack/btm/btm_acl.c b/stack/btm/btm_acl.c
+index 629c8b4e2..95f5bbc4c 100644
+--- a/stack/btm/btm_acl.c
++++ b/stack/btm/btm_acl.c
+@@ -37,6 +37,7 @@
+ #include "btm_int.h"
+ #include "l2c_int.h"
+ #include "hcidefs.h"
++#include "log/log.h"
+ 
+ static void btm_establish_continue (tACL_CONN *p_acl_cb);
+ static void btm_read_remote_features (UINT16 handle);
+@@ -1478,7 +1479,7 @@ void btm_read_remote_features_complete (UINT8 *p)
+ ** Returns          void
+ **
+ *******************************************************************************/
+-void btm_read_remote_ext_features_complete (UINT8 *p)
++void btm_read_remote_ext_features_complete (UINT8 *p, UINT16 evt_len)
+ {
+     tACL_CONN   *p_acl_cb;
+     UINT8       status, page_num, max_page;
+@@ -1487,6 +1488,15 @@ void btm_read_remote_ext_features_complete (UINT8 *p)
+ 
+     BTM_TRACE_DEBUG0 ("btm_read_remote_ext_features_complete");
+ 
++    if (evt_len < HCI_EXT_FEATURES_SUCCESS_EVT_LEN)
++    {
++        android_errorWriteLog(0x534e4554, "141552859");
++        BTM_TRACE_ERROR1(
++            "btm_read_remote_ext_features_complete evt length too short. length=%d",
++            evt_len);
++        return;
++    }
++
+     STREAM_TO_UINT8  (status, p);
+     STREAM_TO_UINT16 (handle, p);
+     STREAM_TO_UINT8  (page_num, p);
+@@ -1505,6 +1515,21 @@ void btm_read_remote_ext_features_complete (UINT8 *p)
+         return;
+     }
+ 
++    if (page_num > HCI_EXT_FEATURES_PAGE_MAX)
++    {
++        android_errorWriteLog(0x534e4554, "141552859");
++        BTM_TRACE_ERROR1("btm_read_remote_ext_features_complete num_page=%d invalid",
++                        page_num);
++        return;
++    }
++
++    if (page_num > max_page)
++    {
++        BTM_TRACE_WARNING2(
++            "btm_read_remote_ext_features_complete num_page=%d, max_page=%d "
++            "invalid", page_num, max_page);
++    }
++
+     p_acl_cb = &btm_cb.acl_db[acl_idx];
+ 
+     /* Copy the received features page */
+diff --git a/stack/btm/btm_int.h b/stack/btm/btm_int.h
+index c0f28df8f..c5c438920 100644
+--- a/stack/btm/btm_int.h
++++ b/stack/btm/btm_int.h
+@@ -983,7 +983,7 @@ extern void         btm_acl_encrypt_change (UINT16 handle, UINT8 status, UINT8 e
+ BTM_API extern UINT16       btm_get_acl_disc_reason_code (void);
+ BTM_API extern tBTM_STATUS  btm_remove_acl (BD_ADDR bd_addr);
+ extern void         btm_read_remote_features_complete (UINT8 *p);
+-extern void         btm_read_remote_ext_features_complete (UINT8 *p);
++extern void         btm_read_remote_ext_features_complete (UINT8 *p, UINT16 evt_len);
+ extern void         btm_read_remote_ext_features_failed (UINT8 status, UINT16 handle);
+ extern void         btm_read_remote_version_complete (UINT8 *p);
+ // btla-specific ++
+diff --git a/stack/btu/btu_hcif.c b/stack/btu/btu_hcif.c
+index ed395fc7c..9ceeaf5a6 100644
+--- a/stack/btu/btu_hcif.c
++++ b/stack/btu/btu_hcif.c
+@@ -877,7 +877,7 @@ static void btu_hcif_read_rmt_ext_features_comp_evt (UINT8 *p, UINT16 evt_len)
+     STREAM_TO_UINT8 (status, p_cur);
+ 
+     if (status == HCI_SUCCESS)
+-        btm_read_remote_ext_features_complete(p);
++        btm_read_remote_ext_features_complete(p, evt_len);
+     else
+     {
+         STREAM_TO_UINT16 (handle, p_cur);
+diff --git a/stack/include/hcidefs.h b/stack/include/hcidefs.h
+index ad31d52bb..858ddb114 100644
+--- a/stack/include/hcidefs.h
++++ b/stack/include/hcidefs.h
+@@ -1313,6 +1313,8 @@ typedef struct
+ 
+ #define HCI_FEATURE_BYTES_PER_PAGE      8
+ 
++#define HCI_EXT_FEATURES_SUCCESS_EVT_LEN 13
++
+ #define HCI_FEATURES_KNOWN(x) ((x[0] | x[1] | x[2] | x[3] | x[4] | x[5] | x[6] | x[7]) != 0)
+ 
+ /*
+-- 
+2.17.1
+

@@ -1,0 +1,41 @@
+From 68ab220a89ec66610e29b71ad84710d862cc526a Mon Sep 17 00:00:00 2001
+From: Zongheng Wang <wangzongheng@google.com>
+Date: Tue, 12 Nov 2019 12:59:44 -0800
+Subject: [PATCH 2/2] SDP: add return after SDP disconnection
+
+A return is needed after sdp_disconnect(). It is the logic
+expected and it prevents the use of p_ccb after it's freed.
+
+Bug: 144177780
+Bug: 117105007
+Test: manual test
+Change-Id: I7a64382b36adca37a8ff0c7e361d89ecdc8f3b55
+(cherry picked from commit 30efc8c90a846460359a489e17e1461c725958b3)
+(cherry picked from commit 5edd605227af9a1b9eedf4fd9f02373a47fd49fb)
+---
+ stack/sdp/sdp_discovery.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/stack/sdp/sdp_discovery.c b/stack/sdp/sdp_discovery.c
+index 2d40fa4ab..834906a72 100644
+--- a/stack/sdp/sdp_discovery.c
++++ b/stack/sdp/sdp_discovery.c
+@@ -553,6 +553,7 @@ static void process_service_attr_rsp (tCONN_CB *p_ccb, UINT8 *p_reply,
+             if (!sdp_copy_raw_data(p_ccb, FALSE)) {
+                 SDP_TRACE_ERROR0("sdp_copy_raw_data failed");
+                 sdp_disconnect(p_ccb, SDP_ILLEGAL_PARAMETER);
++                return;
+             }
+ #endif
+ 
+@@ -813,6 +814,7 @@ static void process_service_search_attr_rsp (tCONN_CB *p_ccb, UINT8 *p_reply,
+     if (!sdp_copy_raw_data (p_ccb, TRUE)) {
+         SDP_TRACE_ERROR0("sdp_copy_raw_data failed");
+         sdp_disconnect(p_ccb, SDP_ILLEGAL_PARAMETER);
++        return;
+     }
+ #endif
+ 
+-- 
+2.17.1
+

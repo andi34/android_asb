@@ -1,0 +1,38 @@
+From e48d35a52182cf85a6087629bd5b548f14859d28 Mon Sep 17 00:00:00 2001
+From: Chong Zhang <chz@google.com>
+Date: Thu, 27 Feb 2020 10:20:17 -0800
+Subject: [PATCH 1/2] Fix uninitialized data in IHDCP decrypt
+
+bug: 150156584
+test: build
+Change-Id: Ia4ab8e4b4db0b895d0ca36592c0469adb3b89aac
+(cherry picked from commit 58af3de44d17e6ba716178e147474a20765c1441)
+---
+ media/libmedia/IHDCP.cpp | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/media/libmedia/IHDCP.cpp b/media/libmedia/IHDCP.cpp
+index 1e2cddbd7..98c3dd659 100644
+--- a/media/libmedia/IHDCP.cpp
++++ b/media/libmedia/IHDCP.cpp
+@@ -323,11 +323,12 @@ status_t BnHDCP::onTransact(
+ 
+             void *outData = (uint8_t *)inData + size;
+ 
+-            data.read(inData, size);
+-
+-            uint32_t streamCTR = data.readInt32();
+-            uint64_t inputCTR = data.readInt64();
+-            status_t err = decrypt(inData, size, streamCTR, inputCTR, outData);
++            status_t err = data.read(inData, size);
++            if (err == OK) {
++                uint32_t streamCTR = data.readInt32();
++                uint64_t inputCTR = data.readInt64();
++                err = decrypt(inData, size, streamCTR, inputCTR, outData);
++            }
+ 
+             reply->writeInt32(err);
+ 
+-- 
+2.17.1
+

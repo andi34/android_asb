@@ -1,0 +1,37 @@
+From 77f69267bcbc7cc4ca90a0e6d55e58f19df735e1 Mon Sep 17 00:00:00 2001
+From: Michael Wachenschwanz <mwachens@google.com>
+Date: Tue, 15 Oct 2019 11:49:22 -0700
+Subject: [PATCH] Resize object capacity when shrinking Parcel
+
+Bug: 140419401
+Test: atest android.os.cts.ParcelTest
+(cherry picked from commit c67d9f33b36cbb95b121d058f51d6653f1ec4334)
+(cherry picked from commit d9d10dbdf2f20af3dd01376d2130c71c052e42f3)
+
+Change-Id: I04edee415e1984ba5fb97c5c1b09892a360cf221
+---
+ libs/binder/Parcel.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index 30e28437f..9caab71e1 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -1651,11 +1651,13 @@ status_t Parcel::continueWrite(size_t desired)
+             if (objectsSize == 0) {
+                 free(mObjects);
+                 mObjects = NULL;
+-            } else { 
++                mObjectsCapacity = 0;
++            } else {
+                 size_t* objects =
+                     (size_t*)realloc(mObjects, objectsSize*sizeof(size_t));
+                 if (objects) {
+                     mObjects = objects;
++                    mObjectsCapacity = objectsSize;
+                 }
+             }
+             mObjectsSize = objectsSize;
+-- 
+2.17.1
+
